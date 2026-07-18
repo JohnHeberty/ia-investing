@@ -1,0 +1,95 @@
+[project]
+name = "stock-intelligence"
+version = "0.1.0"
+description = "Plataforma de pesquisa financeira com IA para o mercado brasileiro"
+requires-python = ">=3.12"
+dependencies = [
+    # API framework
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "pydantic[email]>=2.10",
+
+    # Database
+    "sqlalchemy[asyncio]>=2.0",
+    "alembic>=1.14",
+    "psycopg[binary,pool]>=3.2",
+    "pgvector>=0.3",
+
+    # Orchestration
+    "temporalio>=1.8",
+
+    # Agents
+    "openai-agents>=0.1",
+    "litellm>=1.60",
+
+    # Data processing
+    "polars>=1.20",
+    "duckdb>=1.1",
+    "pyarrow>=18",
+
+    # Optimization
+    "cvxpy>=1.5",
+
+    # Storage
+    "boto3[s3]>=1.36",
+
+    # HTTP / connectors
+    "httpx[socks]>=0.28",
+    "aiofiles>=24.1",
+
+    # Parsing
+    "python-docx>=1.1",
+    "openpyxl>=3.1",
+    "pdfplumber>=0.11",
+
+    # Observability
+    "opentelemetry-api>=1.28",
+    "opentelemetry-sdk>=1.28",
+    "opentelemetry-instrumentation-fastapi>=0.49b",
+    "opentelemetry-exporter-otlp-proto-grpc>=1.28",
+
+    # ML / experiments
+    "mlflow>=2.17",
+
+    # Utilities
+    "pydantic-settings>=2.6",
+    "python-dotenv>=1.0",
+    "rich>=13.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "pytest-asyncio>=0.25",
+    "pytest-cov>=6.0",
+    "ruff>=0.9",
+    "mypy>=1.14",
+    "pre-commit>=4.0",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["*"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "RUF", "B", "C4", "SIM"]
+ignore = ["B008"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
