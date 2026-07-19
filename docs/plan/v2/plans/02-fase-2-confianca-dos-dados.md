@@ -152,7 +152,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [ ] Extrair texto preservando página, seção, ordem e referência de tabela.
 - [x] Criar chunks semânticos com hash e referência à versão do documento.
 - [x] Versionar modelo, dimensão e versão de embedding.
-- [x] Implementar filtro temporal, threshold e busca híbrida mínima.
+- [ ] Implementar filtro temporal, threshold e busca híbrida mínima. *(repositório tem lógica híbrida mas rota FastAPI não expõe parâmetro `embedding` — inacessível pela API)*
 - [x] Retornar evidence reference com localização verificável.
 - [ ] Testar PDF multipágina, tabela, documento revisado e ausência de evidência.
 
