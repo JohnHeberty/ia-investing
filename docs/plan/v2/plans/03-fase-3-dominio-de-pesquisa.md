@@ -68,7 +68,7 @@ Valuation retorna bear/base/bull, ponderado, reverse DCF, relativo e cenário im
 - [x] Definir permissões para criar, atribuir, submeter, revisar, fechar e reabrir.
 - [x] Impedir fechamento com perguntas obrigatórias pendentes.
 - [x] Emitir eventos de domínio/outbox em cada transição material.
-- [ ] Testar transições válidas, inválidas, concorrentes e expiradas.
+- [ ] Testar transições válidas, inválidas, concorrentes e expiradas. *(Parcial: test_research_domain.py testa 6 transições válidas + 1 inválida. Falta: transições concurrent (lock_version mismatch/ResearchConcurrencyError) e expiradas (due_at). Transições review->rejected e rejected->closed também não testadas)*
 
 ### `F3-PR02` — Evidence e claims
 
@@ -77,7 +77,7 @@ Valuation retorna bear/base/bull, ponderado, reverse DCF, relativo e cenário im
 - [x] Modelar claim com tipo fato/inferência/recomendação, materialidade e validade.
 - [x] Suportar evidência favorável, contrária e relação de contradição.
 - [x] Bloquear estado `verified` para claim material sem evidence válido.
-- [ ] Testar evidence revogado, temporalmente futuro, sem permissão e contraditório.
+- [ ] Testar evidence revogado, temporalmente futuro, sem permissão e contraditório. *(Nenhum teste existe: ClaimService.verify() filtra revoked_at, knowledge_at <= cutoff, valid_until > cutoff e permissions — mas nenhum teste exercita esses caminhos. ClaimContradiction model existe mas não testado)*
 
 ### `F3-PR03` — Assessments e revisão humana
 
@@ -86,7 +86,7 @@ Valuation retorna bear/base/bull, ponderado, reverse DCF, relativo e cenário im
 - [x] Registrar before/after hash, razão e correlation ID no audit event.
 - [x] Aplicar segregação entre autor e aprovador conforme policy.
 - [x] Preservar dissenso e contradições após aprovação.
-- [ ] Testar autorização, dupla submissão, revisão expirada e concorrência.
+- [ ] Testar autorização, dupla submissão, revisão expirada e concorrência. *(Parcial: test_research_reviews.py testa ensure_segregation (segregation of duties). Falta: testes dos 3 service-level permissions (create/request/decide), double submission (status != pending), expired assessment (expires_at <= now), e pessimistic locking (with_for_update))*
 
 ### `F3-PR04` — Teses versionadas
 
@@ -95,7 +95,7 @@ Valuation retorna bear/base/bull, ponderado, reverse DCF, relativo e cenário im
 - [x] Criar draft a partir da versão ativa com diff estruturado.
 - [x] Ativar nova versão e fechar anterior em transação atômica.
 - [x] Implementar expiração/stale e revisão sem renovação automática.
-- [ ] Testar invalidação, rollback lógico, duas revisões e consulta `as_of`.
+- [ ] Testar invalidação, rollback lógico, duas revisões e consulta `as_of`. *(Nenhum teste existe: test_thesis_domain.py testa apenas hash reprodutível, diff e serialização. ThesisService tem revise/activate/active_as_of mas nenhum teste cobre invalidation, rollback, two revisions ou as_of queries)*
 
 ### `F3-PR05` — Valuation determinístico
 
@@ -117,22 +117,22 @@ Valuation retorna bear/base/bull, ponderado, reverse DCF, relativo e cenário im
 
 ### `F3-PR07` — API e eventos
 
-- [ ] Criar handlers de query/command sem acesso direto a ORM nas routes.
+- [ ] Criar handlers de query/command sem acesso direto a ORM nas routes. *(Parcial: create_case, transition_case, verify_claim, create_thesis, revise_thesis, activate_thesis delegam a services. Porém list_cases, get_case e get_thesis_as_of em research.py ainda têm ORM inline)*
 - [x] Implementar cursor, filtros, `as_of`, ETag e `If-Match`.
 - [x] Retornar response schemas dedicados e Problem Details.
 - [x] Publicar OpenAPI e client fixtures para casos/claims/teses/valuation.
-- [ ] Implementar outbox idempotente e consumidores de timeline.
-- [ ] Testar autorização, concorrência, paginação e compatibilidade de schema.
+- [ ] Implementar outbox idempotente e consumidores de timeline. *(Parcial: DomainOutboxEvent model existe com idempotency_key unique; eventos são publicados atomicamente em research.py, theses.py, reviews.py. Porém: nenhum consumer/poller existe — published_at nunca é populado por consumidor, nenhum timeline worker)*
+- [ ] Testar autorização, concorrência, paginação e compatibilidade de schema. *(Nenhum teste HTTP-level: test_api_contracts.py valida OpenAPI shape mas não testa 403/412/409, nenhum teste de cursor pagination, nenhum teste de schema backward-compatibility)*
 
 ### `F3-PR08` — ThesisReviewWorkflow E2E
 
-- [ ] Carregar versão ativa e somente fatos/evidências válidos no cutoff.
-- [ ] Executar especialistas mockados com outputs canônicos.
-- [ ] Verificar contradições e recalcular valuation/risco relevante.
-- [ ] Gerar diff e pausar para aprovação humana.
-- [ ] Ativar/rejeitar versão sem perder histórico ou dissenso.
-- [ ] Responder pela API por que PETR4 tinha recomendação X na data Y.
-- [ ] Testar retry, replay, cancelamento, expiração e idempotência.
+- [ ] Carregar versão ativa e somente fatos/evidências válidos no cutoff. *(ThesisReviewWorkflow não existe — nenhum dos 12 workflows exportados em __init__.py é de revisão de tese)*
+- [ ] Executar especialistas mockados com outputs canônicos. *(Atividades mock existem em research_mock.py mas não são orquestradas por workflow de tese)*
+- [ ] Verificar contradições e recalcular valuation/risco relevante. *(Não implementado — nenhum workflow de revisão de tese)*
+- [ ] Gerar diff e pausar para aprovação humana. *(ApprovalGateWorkflow é genérico, não implementa diff de tese nem lógica específica)*
+- [ ] Ativar/rejeitar versão sem perder histórico ou dissenso. *(Não implementado em workflow)*
+- [ ] Responder pela API por que PETR4 tinha recomendação X na data Y. *(Nenhum teste E2E nem endpoint demonstra isso — PETR4 aparece apenas em fixtures B3)*
+- [ ] Testar retry, replay, cancelamento, expiração e idempotência. *(Nenhum teste de ThesisReviewWorkflow — workflow não existe)*
 
 ## Migration, rollout e rollback
 
@@ -161,7 +161,7 @@ Adicionar tabelas e eventos sem substituir schemas antigos de imediato. Adaptado
 - [x] Toda recomendação possui responsável, validade, dados `as_of` e evidências. *(verificado: ValuationRun com Assumptions vinculadas a evidence/financial_facts/metric_observations)*
 - [x] Fórmulas e scorecards são determinísticos e versionados.
 - [x] Diffs e contradições são visíveis e auditáveis. *(verificado: ThesisVersionEvidence, ThesisVersionClaim, ResearchEvidence com CheckConstraints)*
-- [ ] A pergunta de aceite sobre PETR4 é respondida por API/teste E2E.
+- [ ] A pergunta de aceite sobre PETR4 é respondida por API/teste E2E. *(Nenhum teste E2E existe — PETR4 aparece apenas em fixtures B3, não no domínio de pesquisa)*
 - [x] Runbooks cobrem revisão, expiração, conflito e correção de evidência.
 
 ## Riscos e passagem para a Fase 4
@@ -170,4 +170,17 @@ O risco é permitir que texto narrativo se torne verdade canônica. Fatos perman
 
 ## Auditoria de implementação (2026-07-19)
 
-Todos os 5 artefatos verificados existem e são implementações reais: `research.py` (ResearchCase 7 states, OutboxEvent, Assignments), `evidence.py` (DocumentChunk com pgvector 1536, TSVECTOR, HNSW index), `thesis_domain.py` (Thesis 4 states, Version 12 checks, Evidence/Claim links), `valuation.py` (ValuationRun 6 states, Assumptions com source checks), `_scorecard.py` (5 sector profiles, veto rules, coverage). Pendências: E2E workflow com API, contract tests de handlers.
+Todos os 5 artefatos verificados existem e são implementações reais: `research.py` (ResearchCase 7 states, OutboxEvent, Assignments), `evidence.py` (DocumentChunk com pgvector 1536, TSVECTOR, HNSW index), `thesis_domain.py` (Thesis 4 states, Version 12 checks, Evidence/Claim links), `valuation.py` (ValuationRun 6 states, Assumptions com source checks), `_scorecard.py` (5 sector profiles, veto rules, coverage).
+
+**Itens marcados como [x] confirmados:** Research case model/state machine, evidence imutável, claims, assessments, theses versionadas, valuation determinístico com golden tests, scorecards com vetos, API com ETag/If-Match/Problem Details, OpenAPI publicado.
+
+**Pendências restantes (não implementadas ou parciais):**
+- Testes de transições concorrentes e expiradas do research case
+- Testes de evidence revogada, futura, sem permissão e contraditória
+- Testes de autorização/dupla-submissão/revisão-expirada/concorrência em assessments
+- Testes de invalidação/rollback/duas-revisões/as_of em teses
+- Routes research.py com ORM inline (list_cases, get_case, get_thesis_as_of)
+- Outbox model existe mas nenhum consumer/poller
+- Nenhum teste HTTP-level de autorização/concorrência/paginação/schema
+- ThesisReviewWorkflow NÃO EXISTE (nenhum dos 12 workflows é de revisão de tese)
+- Cenário PETR4 de aceite não respondido
