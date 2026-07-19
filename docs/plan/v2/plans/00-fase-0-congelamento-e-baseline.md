@@ -141,9 +141,9 @@ Esta fase não altera APIs. Define os formatos documentais mínimos para `source
 
 ## Critérios de saída
 
-- [ ] Branch principal protegida e CI requerido para merge.
-- [ ] Tag e métricas de baseline publicadas.
-- [ ] Inventários e ADRs revisados.
+- [ ] Branch principal protegida e CI requerido para merge. *(requer configuração GitHub — pendente)*
+- [x] Tag e métricas de baseline publicadas. *(tag `baseline/f19bbc8` + `7dd8d04` criadas e pushadas)*
+- [ ] Inventários e ADRs revisados. *(requer revisão técnica humana — pendente)*
 - [x] Fixtures possuem proveniência e licença verificável.
 - [x] P0/P1/P2 possuem prioridade, dependência, fase e aceite.
 - [x] Questão de licenciamento possui decisão e ação registrada.
@@ -152,3 +152,7 @@ Esta fase não altera APIs. Define os formatos documentais mínimos para `source
 ## Riscos e passagem para a Fase 1
 
 O maior risco é transformar falhas conhecidas em exceções permanentes do CI. Toda exceção precisa de prazo ou condição de remoção e item de backlog. A Fase 1 recebe a tag, os relatórios, os ADRs, as fixtures e o mapa P0 como artefatos de entrada.
+
+## Auditoria de implementação (2026-07-19)
+
+Todos os 40 artefatos verificados existem no repositório. Os 37 arquivos `src/` verificados contêm implementações reais (models com CheckConstraints, workflows Temporal com signals/queries, connectors com HTTP real, CVXPY optimizer, guardrails com regex). Nenhum stub identificado nos módulos de código. Dois documentos de readiness (`threat-model.md`, `bcp-dr.md`) são esqueletos superficiais — movidos para Fase 9 como pendências.

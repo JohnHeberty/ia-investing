@@ -181,3 +181,7 @@ Não há rollout live. Correções de controle seguem rollout normal, feature fl
 - **`go`:** autorizar a criação de um novo plano para arquitetura e implementação live, com fornecedor, controles e rollout próprios. Não autoriza implementação ou envio de ordem real.
 
 O gate deve falhar fechado diante de parecer ausente, licença incerta, finding crítico, controle não testado, paper instável ou decisão expirada.
+
+## Auditoria de implementação (2026-07-19)
+
+5 arquivos de readiness/ verificados: `README.md`, `product-perimeter.md`, `control-matrix.md` (REAL — 3 arquivos mapeiam obrigações/controles/owners/evidências). **2 STUBS identificados**: `threat-model.md` (19 linhas, esqueleto sem STRIDE/mitigations) e `bcp-dr.md` (21 linhas, skeleton sem RTO/RPO/runbook concreto). 2 baseline docs: `quality-baseline.md` (REAL — dados empíricos: 98 testes, 24% coverage, ruff/mypy) e `security-baseline.md` (REAL — detect-secrets + pip-audit findings). Pendências críticas: ambos os stubs devem ser expandidos para documentação completa antes do gate Fase 9.

@@ -181,3 +181,7 @@ Manter o provider mock como fallback de teste, nunca como fallback silencioso em
 ## Riscos e passagem para a Fase 5
 
 O principal risco é confundir fluência com confiabilidade. Decisões de carteira só consumirão outputs aprovados, citáveis e não expirados. A Fase 5 recebe avaliações estruturadas e tools de valuation/risco, mas mantém cálculo e constraints em serviços determinísticos.
+
+## Auditoria de implementação (2026-07-19)
+
+Todos os 14 arquivos `src/ia_investing/ai/` verificados contêm implementações reais: `coordinator.py` (budget enforcement, capability allowlist), `guardrails.py` (prompt injection regex, CPF PII detection, RunBudget, citation coverage), `tools.py` (ToolRegistry, forbidden names, CommandReceipt), `_runner.py`, `_config.py`, `_pricing.py`, `artifacts.py`, `contracts.py`, `domain_tools.py`, `eval_datasets.py`, `evals.py`, `execution.py`, `provider.py`. `agent_runtime.py` tem 4 ORM models com token/cost tracking. Pendências: tracing correlation ponta a ponta, dashboards de custo/erro, shadow runs, multi-agent E2E.

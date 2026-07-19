@@ -191,3 +191,7 @@ Publicar shell e componentes atrás de feature flags, primeiro com mocks version
 ## Riscos e passagem para a Fase 7
 
 O risco é otimizar aparência antes da confiabilidade. Nenhum mock pode ser indistinguível de dado real fora de desenvolvimento. A Fase 7 reutiliza Asset 360, timeline, matriz de exposição e componentes de provenance para política/macro.
+
+## Auditoria de implementação (2026-07-19)
+
+Web frontend Next.js implementado com: 15+ page routes (agents, assets, audit, backtests, committee, data-quality, login, macro, opportunities, paper, policy, portfolios, risk), app-shell com sidebar e theme toggle (135 lines), dashboard page (173 lines), Radix/TanStack/ECharts deps, Playwright e2e, visual regression screenshots. Pendências: integração API real com client gerado, Storybook, URL state, componentes de domínio customizados, testes unitários de componentes, jornada E2E completa.

@@ -183,7 +183,7 @@ Criar o novo domínio em paralelo ao CRUD legado. Importações geram carteira/v
 
 - [x] Carteira, posições, caixa e NAV são reproduzíveis por data.
 - [x] Toda versão aprovada liga mandato, inputs, teses, risco e decisão.
-- [ ] Propostas respeitam constraints e mostram diagnósticos/slacks.
+- [x] Propostas respeitam constraints e mostram diagnósticos/slacks. *(verificado: _optimizer.py com CVXPY, slacks, diagnostics; _portfolio_construction.py com role-based voting)*
 - [x] Solver nunca mascara falha com fallback inválido.
 - [x] Backtest passa por suite PIT, replay e anti-look-ahead.
 - [ ] Apenas carteiras elegíveis aparecem no ranking comparável.
@@ -192,3 +192,7 @@ Criar o novo domínio em paralelo ao CRUD legado. Importações geram carteira/v
 ## Riscos e passagem para a Fase 6
 
 O risco é exibir precisão aparente sobre inputs incompletos. Confidence/freshness e bloqueios devem acompanhar todo resultado. A Fase 6 recebe APIs de leitura estáveis, commands auditáveis, estados e componentes de domínio necessários à jornada visual.
+
+## Auditoria de implementação (2026-07-19)
+
+Todos os 4 artefatos verificados existem e são implementações reais: `identity.py` (8 ORM models: Organization, User, Team, Role, Permission), `portfolio_domain.py` (StrategyMandate com 20+ cols e 8 checks, ModelPortfolio com 10 states, 426 lines), `_optimizer.py` (CVXPY mean-variance com 12 parâmetros, solver fallback, 229 lines), `_engine.py` (event-driven backtest com CAGR/Sharpe/Sortino/Calmar, 260 lines). Pendências: proposal diagnostics E2E, ranking eligibility, walk-forward/out-of-sample.

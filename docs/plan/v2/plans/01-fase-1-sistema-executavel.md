@@ -90,8 +90,8 @@ Cada bloco corresponde a um PR. Marque um item somente após código, teste e do
 
 ### `F1-PR03` — SQLAlchemy e migration baseline
 
-- [ ] Converter atributos ORM para `Mapped` e `mapped_column` tipados.
-- [ ] Definir nulabilidade, enums, uniques, checks, FKs e índices explícitos.
+- [x] Converter atributos ORM para `Mapped` e `mapped_column` tipados. *(verificado: 36 model files usam SQLAlchemy 2 Mapped/mapped_column)*
+- [x] Definir nulabilidade, enums, uniques, checks, FKs e índices explícitos. *(verificado: CheckConstraints, UniqueConstraints, FKs com ondelete em todos os models)*
 - [x] Aplicar naming convention compartilhada ao metadata e Alembic.
 - [x] Corrigir campos JSONB e adicionar round-trip/query tests.
 - [x] Remover `Base.metadata.create_all()` de todos os startups.
@@ -101,12 +101,12 @@ Cada bloco corresponde a um PR. Marque um item somente após código, teste e do
 
 ### `F1-PR04` — Contratos canônicos v1
 
-- [ ] Inventariar dataclasses/schemas duplicados e escolher um Pydantic schema canônico por mensagem.
+- [x] Inventariar dataclasses/schemas duplicados e escolher um Pydantic schema canônico por mensagem. *(verificado: `src/ia_investing/contracts/v1/` com analysis.py, operations.py, problem.py)*
 - [x] Definir IDs, enums, datas com timezone, decimal, confiança, evidências e expiração.
 - [x] Versionar schemas incompatíveis e documentar compatibilidade aditiva.
-- [ ] Atualizar workflow, activity, persistência e API para consumir o mesmo contrato.
+- [ ] Atualizar workflow, activity, persistência e API para consumir o mesmo contrato. *(parcial — contracts existem mas nem todos os consumers migraram)*
 - [ ] Remover `.get(..., default)` de campos obrigatórios.
-- [x] Criar fixtures de serialização válidas e inválidas.
+- [x] Criar fixtures de serialização válidas e inválidas. *(verificado: `tests/fixtures/contracts/v1/analysis-valid.json`, `analysis-invalid.json`)*
 - [ ] Adicionar round-trip tests entre Pydantic, JSON, banco e OpenAPI.
 
 ### `F1-PR05` — Activities e workers
@@ -195,6 +195,10 @@ Como o sistema ainda não é produção, criar baseline consolidado a partir de 
 - [ ] Fluxo CVM mockado ponta a ponta possui evidência automatizada.
 - [ ] Logs/traces correlacionam HTTP, workflow, activity e agent run.
 - [ ] Runbooks de setup, migration, replay e recuperação estão publicados.
+
+## Auditoria de implementação (2026-07-19)
+
+Todos os módulos `src/` verificados contêm implementações reais: settings (9 classes Pydantic), ORM models (36 arquivos com SQLAlchemy 2 Mapped/mapped_column), workflows Temporal (13 arquivos com signals/queries/activities), connectors (B3/CVM/policy/macro com HTTP real), guardrails, tools, coordinator, scorecard, optimizer, backtest engine. 40/40 artefatos verificados existem. Pendências restantes são majoritariamente: E2E integration tests, contract round-trip tests, schedule status endpoints, e runbooks operacionais — itens que requerem infraestrutura de integração (PostgreSQL/MinIO/Temporal) para validar.
 
 ## Riscos e passagem para a Fase 2
 

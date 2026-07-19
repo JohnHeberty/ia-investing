@@ -53,3 +53,22 @@ As Fases 0 e 7–9 introduzem PRs próprios que não constam na lista inicial da
 ## Definition of Done comum
 
 Para cada PR, registrar requisito, decisão de domínio, impacto de schema/migration, autorização, auditoria, telemetria, testes e rollback. Para cada fase, publicar evidências dos critérios de aceite, atualizar ADRs e runbooks e manter um backlog explícito de débitos que não bloqueiam o gate seguinte.
+
+## Auditoria de implementação
+
+**Última auditoria:** 2026-07-19 (commit `92e2981`)
+
+| Fase | Artefatos verificados | Implementação real | Stubs | Pendências |
+|:---:|:---:|:---:|:---:|:---|
+| 0 | 7/7 | 7 | 0 | Review técnico, branch protection, CI clone test |
+| 1 | 6/6 | 6 | 0 | E2E integration, contract round-trip tests |
+| 2 | 5/5 | 5 | 0 | Golden tests multi-setoriais, dashboards qualidade |
+| 3 | 5/5 | 5 | 0 | E2E workflow, contract tests handlers |
+| 4 | 3/3 | 3 | 0 | Tracing correlation, dashboards, shadow runs |
+| 5 | 4/4 | 4 | 0 | Walk-forward/out-of-sample, ranking eligibility |
+| 6 | 2/2 | 2 | 0 | Integração API real, Storybook, component tests |
+| 7 | 3/3 | 3 | 0 | DOU/Reguladores, probabilidade calibrada |
+| 8 | 3/3 | 3 | 0 | Simulator golden tests, kill switch drills |
+| 9 | 2/2 | 0 | 2 | **threat-model.md** e **bcp-dr.md** são stubs |
+
+**Total:** 40/40 artefatos existem. 38/40 são implementações reais. 2 stubs em Fase 9 (readiness docs).

@@ -172,3 +172,7 @@ Ativar fontes uma por vez, inicialmente em shadow ingestion e sem alertas. Valid
 ## Riscos e passagem para a Fase 8
 
 Risco político não pode ser apresentado como certeza. Incerteza, corroboration e fonte devem permanecer visíveis. A Fase 8 recebe eventos e cenários como inputs de risco, nunca como instruções diretas de negociação.
+
+## Auditoria de implementação (2026-07-19)
+
+Conectores policy/ e macro/ verificados como implementações reais: `_official.py` (268 lines, Câmara/Senado/DOU com egress allowlist, parallel fetch), `_bcb.py` (146 lines, BCB SGS API com Selic/IPCA/USD), `_sidra.py` (145 lines, SIDRA GDP/IP). 7 fixtures sintéticos para Câmara/Senado/DOU. Policy graph modelado com proposal, version, stage, actor, vote. Pendências: DOU e reguladores completos, BCB/SIDRA com PIT tests, probabilidades calibradas, workflow completo com agents.

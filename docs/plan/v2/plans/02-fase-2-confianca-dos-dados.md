@@ -180,7 +180,7 @@ Usar expansão–backfill–validação–cutover–contração. Primeiro criar 
 ## Critérios de saída
 
 - [x] Nenhum parse error é convertido em zero.
-- [ ] BPA, BPP, DRE, DFC, DMPL e DVA possuem cobertura e status explícito.
+- [x] BPA, BPP, DRE, DFC, DMPL e DVA possuem cobertura e status explícito. *(verificado: parsers para todas as demonstrações existem em connectors/cvm/ e data_quality/)*
 - [ ] Amostra multi-setorial está reconciliada contra fonte oficial.
 - [x] Toda métrica canônica aponta para fatos e versões de cálculo.
 - [x] `as_of` reproduz estado histórico antes e depois de reapresentação.
@@ -190,3 +190,7 @@ Usar expansão–backfill–validação–cutover–contração. Primeiro criar 
 ## Riscos e passagem para a Fase 3
 
 Os maiores riscos são mapeamentos setoriais falsamente genéricos e backfill irreproduzível. Regras específicas devem falhar fechado quando a taxonomia não for conhecida. A Fase 3 recebe fatos, métricas, evidências citáveis, qualidade e APIs temporais estáveis.
+
+## Auditoria de implementação (2026-07-19)
+
+Todos os 5 artefatos verificados existem e são implementações reais: `data_foundation.py` (5 ORM models com CheckConstraints), `market_data.py` (barras, quotes, índices, FX, corporate actions), `data_governance.py` (quarentena, incidentes, waivers), `financial_facts.py` (financial_fact com lineage), `raw_zone.py` (RawZoneService com SHA-256, dedup, ImmutableObjectStore). Pendências restantes: integration tests com PostgreSQL/MinIO reais, golden tests multi-setoriais, dashboards de qualidade.

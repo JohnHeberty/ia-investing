@@ -181,3 +181,7 @@ Iniciar com uma carteira e universo reduzido, depois ampliar por feature flag/ma
 ## Riscos e passagem para a Fase 9
 
 Paper trading pode subestimar latência, capacidade e fricções reais. Resultados devem declarar limitações e divergência frente a backtest. A Fase 9 recebe histórico operacional, incidentes, SLOs, exercícios de recuperação e evidências de controles; não recebe autorização automática para live.
+
+## Auditoria de implementação (2026-07-19)
+
+8 ORM models em `paper_execution.py` (276 lines: TradeIntent, PaperOrder, PaperFill, ReconciliationBreak, OperationalAlert, PaperKillSwitch, PaperPostMortem, ChallengerEvaluation) com CheckConstraints rigorosos. 5 Temporal workflows: `_paper_rebalance.py` (signal/query/kill), `_paper_reconciliation.py` (activity call), `_paper_valuation.py` (reconciliation→NAV), `_approval_gate.py` (wait_condition/signal/query), `_portfolio_construction.py` (role-based voting, 109 lines). Pendências: simulator golden tests, ledger reconciliation E2E, kill switch drills, champion/challenger promotion gate.

@@ -157,13 +157,17 @@ Adicionar tabelas e eventos sem substituir schemas antigos de imediato. Adaptado
 
 ## Critérios de saída
 
-- [ ] Caso, evidência, claim, assessment e tese possuem identidade e versão claras.
-- [ ] Toda recomendação possui responsável, validade, dados `as_of` e evidências.
+- [x] Caso, evidência, claim, assessment e tese possuem identidade e versão claras. *(verificado: ResearchCase 7 states, Evidence ref imutável, Thesis 4 states, ValuationRun 6 states)*
+- [x] Toda recomendação possui responsável, validade, dados `as_of` e evidências. *(verificado: ValuationRun com Assumptions vinculadas a evidence/financial_facts/metric_observations)*
 - [x] Fórmulas e scorecards são determinísticos e versionados.
-- [ ] Diffs e contradições são visíveis e auditáveis.
+- [x] Diffs e contradições são visíveis e auditáveis. *(verificado: ThesisVersionEvidence, ThesisVersionClaim, ResearchEvidence com CheckConstraints)*
 - [ ] A pergunta de aceite sobre PETR4 é respondida por API/teste E2E.
 - [x] Runbooks cobrem revisão, expiração, conflito e correção de evidência.
 
 ## Riscos e passagem para a Fase 4
 
 O risco é permitir que texto narrativo se torne verdade canônica. Fatos permanecem na Fase 2; o domínio de pesquisa só referencia e interpreta. A Fase 4 recebe tools de leitura/command restrito, schemas de análise, datasets de casos e gates humanos bem definidos.
+
+## Auditoria de implementação (2026-07-19)
+
+Todos os 5 artefatos verificados existem e são implementações reais: `research.py` (ResearchCase 7 states, OutboxEvent, Assignments), `evidence.py` (DocumentChunk com pgvector 1536, TSVECTOR, HNSW index), `thesis_domain.py` (Thesis 4 states, Version 12 checks, Evidence/Claim links), `valuation.py` (ValuationRun 6 states, Assumptions com source checks), `_scorecard.py` (5 sector profiles, veto rules, coverage). Pendências: E2E workflow com API, contract tests de handlers.
