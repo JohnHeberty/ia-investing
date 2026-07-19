@@ -82,12 +82,12 @@ Execute os itens na ordem apresentada. Cada PR deve terminar com evidências ane
 
 ### `F0-PR03` — ADRs e convenções
 
-- [ ] Registrar ADR do monólito modular com deployables separados.
-- [ ] Registrar ADR de Temporal para execução durável e schedules.
-- [ ] Registrar ADR de Raw Zone imutável e fatos canônicos point-in-time.
-- [ ] Registrar ADR de Alembic como único mecanismo de schema.
-- [ ] Definir convenções para IDs, nomes, datas, dinheiro, enums, erros e eventos.
-- [ ] Definir regra explícita de separação entre fato, inferência e recomendação.
+- [x] Registrar ADR do monólito modular com deployables separados.
+- [x] Registrar ADR de Temporal para execução durável e schedules.
+- [x] Registrar ADR de Raw Zone imutável e fatos canônicos point-in-time.
+- [x] Registrar ADR de Alembic como único mecanismo de schema.
+- [x] Definir convenções para IDs, nomes, datas, dinheiro, enums, erros e eventos.
+- [x] Definir regra explícita de separação entre fato, inferência e recomendação.
 - [ ] Obter revisão técnica e registrar decisões divergentes nos ADRs.
 
 ### `F0-PR04` — Fixtures CVM/B3
