@@ -60,15 +60,4 @@ def validate_dre(line_items: dict) -> list[ValidationResult]:
         difference=lucro_liquido - expected_lucro,
     ))
 
-    has_negative_revenue = line_items.get("allow_negative_revenue", False)
-    if not has_negative_revenue:
-        results.append(_make(
-            "no_negative_revenue",
-            receita_liquida >= 0,
-            entity_type,
-            entity_id,
-            severity="error" if receita_liquida < 0 else "info",
-            receita_liquida=receita_liquida,
-        ))
-
     return results

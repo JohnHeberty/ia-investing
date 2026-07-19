@@ -16,6 +16,26 @@ from portfolio import PortfolioOptimizer
 router = APIRouter(prefix="/api/v1/portfolio", tags=["portfolio"])
 
 
+def _portfolio_to_dict(p: Portfolio) -> dict[str, Any]:
+    return {
+        "id": str(p.id),
+        "name": p.name,
+        "description": p.description,
+        "is_paper_trading": p.is_paper_trading,
+        "base_currency": p.base_currency,
+    }
+
+
+def _position_to_dict(p: Position) -> dict[str, Any]:
+    return {
+        "id": str(p.id),
+        "ticker_symbol": p.ticker_symbol,
+        "quantity": float(p.quantity) if p.quantity else None,
+        "avg_cost_per_share": float(p.avg_cost_per_share) if p.avg_cost_per_share else None,
+        "weight_pct": p.weight_pct,
+    }
+
+
 class PortfolioCreate(BaseModel):
     name: str
     description: str | None = None
@@ -56,12 +76,8 @@ async def create_portfolio(
     )
     session.add(portfolio)
     await session.flush()
-    return {
-        "id": str(portfolio.id),
-        "name": portfolio.name,
-        "is_paper_trading": portfolio.is_paper_trading,
-        "base_currency": portfolio.base_currency,
-    }
+    d = _portfolio_to_dict(portfolio)
+    return {k: d[k] for k in ("id", "name", "is_paper_trading", "base_currency")}
 
 
 @router.get("")
@@ -71,16 +87,7 @@ async def list_portfolios(
     stmt = select(Portfolio).order_by(Portfolio.created_at.desc())
     result = await session.execute(stmt)
     rows = result.scalars().all()
-    return [
-        {
-            "id": str(r.id),
-            "name": r.name,
-            "description": r.description,
-            "is_paper_trading": r.is_paper_trading,
-            "base_currency": r.base_currency,
-        }
-        for r in rows
-    ]
+    return [_portfolio_to_dict(r) for r in rows]
 
 
 @router.get("/{portfolio_id}")
@@ -99,21 +106,8 @@ async def get_portfolio(
     positions = pos_result.scalars().all()
 
     return {
-        "id": str(row.id),
-        "name": row.name,
-        "description": row.description,
-        "is_paper_trading": row.is_paper_trading,
-        "base_currency": row.base_currency,
-        "positions": [
-            {
-                "id": str(p.id),
-                "ticker_symbol": p.ticker_symbol,
-                "quantity": float(p.quantity) if p.quantity else None,
-                "avg_cost_per_share": float(p.avg_cost_per_share) if p.avg_cost_per_share else None,
-                "weight_pct": p.weight_pct,
-            }
-            for p in positions
-        ],
+        **_portfolio_to_dict(row),
+        "positions": [_position_to_dict(p) for p in positions],
     }
 
 

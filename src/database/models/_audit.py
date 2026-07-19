@@ -45,7 +45,7 @@ class ExecutionReconciliation(Base):
         return f"ExecutionReconciliation(status={self.status!r}, broker_order_id={self.broker_order_id!r})"
 
 
-class EvaluationResult(Base):
+class EvaluationResultRecord(Base):
     """Avaliações de qualidade dos agentes."""
 
     __tablename__ = "evaluation_results"
@@ -66,7 +66,7 @@ class EvaluationResult(Base):
 
     def __repr__(self) -> str:
         return (
-            f"EvaluationResult(evaluation_type={self.evaluation_type!r}, "
+            f"EvaluationResultRecord(evaluation_type={self.evaluation_type!r}, "
             f"metric_name={self.metric_name!r}, value={self.value})"
         )
 

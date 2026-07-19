@@ -29,6 +29,10 @@ from __future__ import annotations
 
 import logging
 from datetime import date
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..base import HttpClient
 
 from ._downloader import _fetch
 from ._models import CotahistTrade
@@ -87,6 +91,7 @@ async def get_cotahist_day(
 
 async def get_cotahist_csv(
     year: int, month: int, ticker: str | None = None,
+    client: HttpClient | None = None,
 ) -> list[CotahistTrade]:
     """Ler via CSV simplificado da B3 (formato mais leve).
 
@@ -95,12 +100,13 @@ async def get_cotahist_csv(
 
     import csv as _csv
 
-    from ..base import DEFAULT_TIMEOUT, HttpClient
+    from ..base import DEFAULT_TIMEOUT
 
     url = f"https://api.b3.com.br/api/MarketData/Cotahist/{ticker}/{year:04d}{month:02d}"
 
     try:
-        client = HttpClient(timeout=DEFAULT_TIMEOUT)
+        if client is None:
+            client = HttpClient(timeout=DEFAULT_TIMEOUT)
         text = await client.get_text(url)
         lines = text.strip().split("\n")
         if len(lines) < 2:

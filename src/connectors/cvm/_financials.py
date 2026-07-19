@@ -6,6 +6,7 @@ ITR: demonstrativos trimestrais."""
 from __future__ import annotations
 
 import logging
+from dataclasses import dataclass, fields
 from enum import StrEnum
 
 from ..base import HttpClient
@@ -30,46 +31,23 @@ class StatementType(StrEnum):
     DMPL_IND = "DMPL_ind"     # Mutação do Patrimônio Líquido - Individual
 
 
+@dataclass(slots=True)
 class FinancialEntry:
     """Linha de demonstrativo financeiro."""
 
-    __slots__ = (
-        "cnpj",
-        "cod_conta",
-        "cod_cvm",
-        "desc_conta",
-        "dt_referencia",
-        "escala",
-        "moeda",
-        "nome_empresa",
-        "valor",
-        "versao",
-    )
-
-    def __init__(
-        self, cnpj: str, nome_empresa: str, cod_cvm: str, dt_referencia: str,
-        versao: int = 0, cod_conta: str = "", desc_conta: str = "", valor: float = 0.0,
-        moeda: str = "REAL", escala: str = "MIL",
-    ):
-        self.cnpj = cnpj
-        self.nome_empresa = nome_empresa
-        self.cod_cvm = cod_cvm
-        self.dt_referencia = dt_referencia
-        self.versao = versao
-        self.cod_conta = cod_conta
-        self.desc_conta = desc_conta
-        self.valor = valor
-        self.moeda = moeda
-        self.escala = escala
+    cnpj: str
+    nome_empresa: str
+    cod_cvm: str
+    dt_referencia: str
+    versao: int = 0
+    cod_conta: str = ""
+    desc_conta: str = ""
+    valor: float = 0.0
+    moeda: str = "REAL"
+    escala: str = "MIL"
 
     def to_dict(self) -> dict[str, object]:
-        return {s: getattr(self, s) for s in self.__slots__}
-
-    def __repr__(self) -> str:
-        return (
-            f"FinancialEntry(cnpj={self.cnpj!r}, cod_conta={self.cod_conta!r}, "
-            f"valor={self.valor}, dt_referencia={self.dt_referencia!r})"
-        )
+        return {f.name: getattr(self, f.name) for f in fields(self)}
 
 
 def _parse_valor(raw: str) -> float:
@@ -140,6 +118,22 @@ def _parse(rows: list[dict[str, str]], cnpj_filter: str | None) -> list[Financia
     return results
 
 
+async def _get_statements(
+    url_template: str,
+    prefix_template: str,
+    year: int,
+    statement: StatementType,
+    cnpj: str | None,
+    client: HttpClient | None,
+) -> list[FinancialEntry]:
+    url = url_template.format(year=year)
+    from ._parser import fetch_csv_from_zip
+
+    prefix = prefix_template.format(statement=statement.value, year=year)
+    rows = await fetch_csv_from_zip(url, prefix, client=client)
+    return _parse(rows, cnpj)
+
+
 async def get_dfp(
     year: int,
     statement: StatementType = StatementType.DRE_CON,
@@ -147,14 +141,7 @@ async def get_dfp(
     client: HttpClient | None = None,
 ) -> list[FinancialEntry]:
     """Buscar demonstrativo financeiro anual (DFP)."""
-    url = _DFP_URL_TEMPLATE.format(year=year)
-
-    from ._parser import fetch_csv_from_zip
-
-    prefix = f"dfp_cia_aberta_{statement.value}_{year}"
-    rows = await fetch_csv_from_zip(url, prefix, client=client)
-
-    return _parse(rows, cnpj)
+    return await _get_statements(_DFP_URL_TEMPLATE, "dfp_cia_aberta_{statement}_{year}", year, statement, cnpj, client)
 
 
 async def get_itr(
@@ -164,14 +151,7 @@ async def get_itr(
     client: HttpClient | None = None,
 ) -> list[FinancialEntry]:
     """Buscar demonstrativo financeiro trimestral (ITR)."""
-    url = _ITR_URL_TEMPLATE.format(year=year)
-
-    from ._parser import fetch_csv_from_zip
-
-    prefix = f"itr_cia_aberta_{statement.value}_{year}"
-    rows = await fetch_csv_from_zip(url, prefix, client=client)
-
-    return _parse(rows, cnpj)
+    return await _get_statements(_ITR_URL_TEMPLATE, "itr_cia_aberta_{statement}_{year}", year, statement, cnpj, client)
 
 
 async def get_dfp_all(

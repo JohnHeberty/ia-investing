@@ -28,10 +28,9 @@ async def _run_ingest_cvm() -> None:
 
 
 async def _run_fetch_news() -> None:
-
     logger.info("Running news fetch")
     try:
-        logger.info("News fetch scheduled (workflow class loaded)")
+        logger.warning("News fetch not yet implemented")
     except Exception:
         logger.exception("News fetch failed")
 

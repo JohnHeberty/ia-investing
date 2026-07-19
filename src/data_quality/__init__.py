@@ -5,10 +5,8 @@ from ._accounting import (
     validate_cash_flow,
     validate_dre,
 )
-from ._completeness import (
-    check_data_completeness,
-    check_temporal_consistency,
-)
+from ._completeness import check_data_completeness
+from ._temporal import check_temporal_consistency
 
 __all__ = [
     "ValidationResult",

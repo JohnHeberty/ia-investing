@@ -13,6 +13,18 @@ from database.models.catalog import Issuer, Sector
 router = APIRouter(prefix="/api/v1/issuers", tags=["issuers"])
 
 
+def _issuer_to_dict(row: Issuer) -> dict[str, Any]:
+    return {
+        "id": str(row.id),
+        "name_pt": row.name_pt,
+        "cnpj": row.cnpj,
+        "cvm_code": row.cvm_code,
+        "industry_id": str(row.industry_id) if row.industry_id else None,
+        "website_ri_url": row.website_ri_url,
+        "is_active": row.is_active,
+    }
+
+
 @router.get("/cnpj/{cnpj}")
 async def get_issuer_by_cnpj(
     cnpj: str,
@@ -23,15 +35,7 @@ async def get_issuer_by_cnpj(
     row = result.scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="Issuer not found")
-    return {
-        "id": str(row.id),
-        "name_pt": row.name_pt,
-        "cnpj": row.cnpj,
-        "cvm_code": row.cvm_code,
-        "industry_id": str(row.industry_id) if row.industry_id else None,
-        "website_ri_url": row.website_ri_url,
-        "is_active": row.is_active,
-    }
+    return _issuer_to_dict(row)
 
 
 @router.get("/{issuer_id}")
@@ -44,15 +48,7 @@ async def get_issuer(
     row = result.scalar_one_or_none()
     if row is None:
         raise HTTPException(status_code=404, detail="Issuer not found")
-    return {
-        "id": str(row.id),
-        "name_pt": row.name_pt,
-        "cnpj": row.cnpj,
-        "cvm_code": row.cvm_code,
-        "industry_id": str(row.industry_id) if row.industry_id else None,
-        "website_ri_url": row.website_ri_url,
-        "is_active": row.is_active,
-    }
+    return _issuer_to_dict(row)
 
 
 @router.get("")

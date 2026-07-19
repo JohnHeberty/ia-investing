@@ -87,7 +87,7 @@ class TestDREValidation:
             "lucro_liquido": 0,
         }
         results = validate_dre(line_items)
-        check = next(r for r in results if r.check_name == "no_negative_revenue")
+        check = next(r for r in results if r.check_name == "receita_liquida_non_negative")
         assert not check.passed
         assert check.severity == "error"
 
