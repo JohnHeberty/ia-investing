@@ -29,11 +29,14 @@ class Industry(Base):
     name_pt = sa.Column(sa.String(100), nullable=False)
     name_en = sa.Column(sa.String(100))
     sector_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("sectors.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("sectors.id", ondelete="CASCADE"),
+        nullable=False,
     )
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     sector = sa.orm.relationship("Sector", back_populates="industries")
+    issuers = sa.orm.relationship("Issuer", back_populates="industry")
 
     def __repr__(self) -> str:
         return f"Industry(name_pt={self.name_pt!r})"
@@ -47,7 +50,8 @@ class Issuer(Base):
     cnpj = sa.Column(sa.String(14), unique=True, index=True)
     cvm_code = sa.Column(sa.Integer, unique=True, index=True)
     industry_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("industries.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("industries.id", ondelete="SET NULL"),
     )
     website_ri_url = sa.Column(sa.Text)
     is_active = sa.Column(sa.Boolean, default=True)
@@ -60,6 +64,7 @@ class Issuer(Base):
     )
 
     tickers = sa.orm.relationship("Ticker", back_populates="issuer")
+    industry = sa.orm.relationship("Industry", back_populates="issuers")
 
     def __repr__(self) -> str:
         return f"Issuer(name_pt={self.name_pt!r}, cnpj={self.cnpj!r})"
@@ -71,7 +76,9 @@ class Ticker(Base):
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     symbol = sa.Column(sa.String(10), nullable=False)
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="CASCADE"),
+        nullable=False,
     )
     market_segment = sa.Column(sa.String(20))  # "BOVESPA", "SADR" (Novo Mercado), etc.
     listing_date = sa.Column(sa.Date)
@@ -81,9 +88,7 @@ class Ticker(Base):
 
     issuer = sa.orm.relationship("Issuer", back_populates="tickers")
 
-    __table_args__ = (
-        sa.UniqueConstraint("symbol", "issuer_id"),
-    )
+    __table_args__ = (sa.UniqueConstraint("symbol", "issuer_id"),)
 
     def __repr__(self) -> str:
         return f"Ticker(symbol={self.symbol!r}, market_segment={self.market_segment!r})"
@@ -96,7 +101,9 @@ class MarketPrice(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     ticker_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("tickers.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("tickers.id", ondelete="CASCADE"),
+        nullable=False,
     )
     trade_date = sa.Column(sa.Date, nullable=False)
     open_price = sa.Column(sa.Numeric(14, 6))
@@ -127,10 +134,8 @@ class Embedding(Base):
     content_type = sa.Column(sa.String(50))  # "document", "news", "thesis"
     entity_id = sa.Column(UUID(as_uuid=True), nullable=False)
     text_snippet = sa.Column(sa.Text)
-    vector = sa.Column(Vector(dimensions=1536))
-    __table_args__ = (
-        sa.Index("ix_embeddings_entity_id", "entity_id"),
-    )
+    vector = sa.Column(Vector(1536))
+    __table_args__ = (sa.Index("ix_embeddings_entity_id", "entity_id"),)
 
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 

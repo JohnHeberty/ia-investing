@@ -32,10 +32,10 @@ def _make(
     )
 
 
-def _get(line_items: dict, key: str, default: float = 0.0) -> float:
+def _get(line_items: dict, key: str) -> float:
     raw = line_items.get(key)
     if raw is None:
-        return default
+        raise ValueError(f"required financial field is missing: {key}")
     return float(raw)
 
 

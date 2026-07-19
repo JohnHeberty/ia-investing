@@ -62,17 +62,11 @@ def _confidence_calibration(
     ]
 
 
-async def evaluate_interpretation(
-    agent_output: dict, expected_verdict: str
-) -> list[EvaluationResult]:
+async def evaluate_interpretation(agent_output: dict, expected_verdict: str) -> list[EvaluationResult]:
     agent_name = agent_output.get("agent_name", "unknown")
     results: list[EvaluationResult] = []
 
-    results.extend(
-        _classification_accuracy(
-            agent_output, expected_verdict, agent_name, "interpretation", "verdict"
-        )
-    )
+    results.extend(_classification_accuracy(agent_output, expected_verdict, agent_name, "interpretation", "verdict"))
 
     results.extend(
         _confidence_calibration(

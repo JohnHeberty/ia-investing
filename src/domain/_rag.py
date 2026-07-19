@@ -26,9 +26,7 @@ class RAGManager:
     def chunk_text(self, text: str, chunk_size: int = 500, overlap: int = 50) -> list[str]:
         return self._chunker.chunk_text(text, chunk_size, overlap)
 
-    async def embed_chunks(
-        self, chunks: list[str], model: str = "text-embedding-3-small"
-    ) -> list[list[float]]:
+    async def embed_chunks(self, chunks: list[str], model: str = "text-embedding-3-small") -> list[list[float]]:
         return await self._embedder.embed_chunks(chunks, model)
 
     async def store_chunks(self, chunks: list[Chunk]) -> None:
@@ -44,9 +42,7 @@ class RAGManager:
         embeddings = await self._embedder.embed_chunks([query])
         if not embeddings:
             return []
-        return await self._store.search(
-            embeddings[0], content_type=content_type, entity_id=entity_id, top_k=top_k
-        )
+        return await self._store.search(embeddings[0], content_type=content_type, entity_id=entity_id, top_k=top_k)
 
     async def index_document(
         self,

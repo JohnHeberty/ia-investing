@@ -51,7 +51,9 @@ COTAHIST_BASE_URL = "https://bvmf.bmfbovespa.com.br/InstDados/SerHist"
 
 
 async def get_cotahist_year(
-    year: int, ticker: str | None = None, market_codes: list[str] | None = None,
+    year: int,
+    ticker: str | None = None,
+    market_codes: list[str] | None = None,
 ) -> list[CotahistTrade]:
     """Ler todos os registros de um ano.
 
@@ -74,7 +76,10 @@ async def get_cotahist_year(
 
 
 async def get_cotahist_month(
-    year: int, month: int, ticker: str | None = None, market_codes: list[str] | None = None,
+    year: int,
+    month: int,
+    ticker: str | None = None,
+    market_codes: list[str] | None = None,
 ) -> list[CotahistTrade]:
     """Ler um mês de COTAHIST (menor e mais rápido que anual)."""
     url = f"{COTAHIST_BASE_URL}/COTAHIST_M{month:02d}{year}.ZIP"
@@ -82,7 +87,11 @@ async def get_cotahist_month(
 
 
 async def get_cotahist_day(
-    year: int, month: int, day: int, ticker: str | None = None, market_codes: list[str] | None = None,
+    year: int,
+    month: int,
+    day: int,
+    ticker: str | None = None,
+    market_codes: list[str] | None = None,
 ) -> list[CotahistTrade]:
     """Ler um dia útil de COTAHIST."""
     url = f"{COTAHIST_BASE_URL}/COTAHIST_D{day:02d}{month:02d}{year}.ZIP"
@@ -90,7 +99,9 @@ async def get_cotahist_day(
 
 
 async def get_cotahist_csv(
-    year: int, month: int, ticker: str | None = None,
+    year: int,
+    month: int,
+    ticker: str | None = None,
     client: HttpClient | None = None,
 ) -> list[CotahistTrade]:
     """Ler via CSV simplificado da B3 (formato mais leve).
@@ -124,23 +135,25 @@ async def get_cotahist_csv(
             if ticker and symbol != ticker.upper():
                 continue
 
-            results.append(CotahistTrade(
-                trade_date=trade_date_obj,
-                ticker=symbol,
-                cod_bdi=row.get("CODBDI", "").strip(),
-                nome_resumido=row.get("Nome", "").strip(),
-                especificacao=row.get("Especificacao", "").strip(),
-                moeda="R$",
-                preco_abertura=_parse_csv_price(row.get("Abertura") or row.get("PREABE")),
-                preco_maximo=_parse_csv_price(row.get("Maxima") or row.get("PREMAX")),
-                preco_minimo=_parse_csv_price(row.get("Minima") or row.get("PREMIN")),
-                preco_medio=_parse_csv_price(row.get("Media") or row.get("PREMED")),
-                preco_ultimo=_parse_csv_price(row.get("Fechamento") or row.get("PREULT")),
-                num_negocios=_parse_csv_int(row.get("Negocios") or row.get("TOTNEG")),
-                qtd_titulos_negociados=_parse_csv_int(row.get("Quantidade") or row.get("QUATOT")),
-                volume_financeiro=_parse_csv_price(row.get("Volume") or row.get("VOLTOT")),
-                isin=row.get("ISIN", "").strip(),
-            ))
+            results.append(
+                CotahistTrade(
+                    trade_date=trade_date_obj,
+                    ticker=symbol,
+                    cod_bdi=row.get("CODBDI", "").strip(),
+                    nome_resumido=row.get("Nome", "").strip(),
+                    especificacao=row.get("Especificacao", "").strip(),
+                    moeda="R$",
+                    preco_abertura=_parse_csv_price(row.get("Abertura") or row.get("PREABE")),
+                    preco_maximo=_parse_csv_price(row.get("Maxima") or row.get("PREMAX")),
+                    preco_minimo=_parse_csv_price(row.get("Minima") or row.get("PREMIN")),
+                    preco_medio=_parse_csv_price(row.get("Media") or row.get("PREMED")),
+                    preco_ultimo=_parse_csv_price(row.get("Fechamento") or row.get("PREULT")),
+                    num_negocios=_parse_csv_int(row.get("Negocios") or row.get("TOTNEG")),
+                    qtd_titulos_negociados=_parse_csv_int(row.get("Quantidade") or row.get("QUATOT")),
+                    volume_financeiro=_parse_csv_price(row.get("Volume") or row.get("VOLTOT")),
+                    isin=row.get("ISIN", "").strip(),
+                )
+            )
 
         return sorted(results, key=lambda x: (x.trade_date or date.min, x.ticker))
 

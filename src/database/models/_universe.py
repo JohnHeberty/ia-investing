@@ -14,7 +14,7 @@ class UniverseFilter(Base):
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     name = sa.Column(sa.String(200))  # "Small Cap", "Dividend Aristocrats"
 
-    criteria = JSONB()  # Critérios de filtro: min_market_cap, sectors_include...
+    criteria = sa.Column(JSONB)  # Critérios de filtro: min_market_cap, sectors_include...
     is_active = sa.Column(sa.Boolean, default=True)
 
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
@@ -30,11 +30,13 @@ class UniverseMembership(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     universe_filter_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("universe_filters.id", ondelete="CASCADE"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("universe_filters.id", ondelete="CASCADE"),
         nullable=False,
     )
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
     added_at = sa.Column(sa.DateTime(timezone=True))  # Quando entrou no universo

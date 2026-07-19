@@ -10,7 +10,8 @@ CAD_URL = "https://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.cs
 
 
 async def get_companies(
-    cnpj: str | None = None, client: HttpClient | None = None,
+    cnpj: str | None = None,
+    client: HttpClient | None = None,
 ) -> list[dict[str, str]]:
     """Listar todas as companhias abertas cadastradas na CVM.
 
@@ -32,7 +33,8 @@ async def get_companies(
 
 
 async def get_company_by_cnpj(
-    cnpj: str, client: HttpClient | None = None,
+    cnpj: str,
+    client: HttpClient | None = None,
 ) -> dict[str, str] | None:
     """Buscar companhia aberta por CNPJ.
 

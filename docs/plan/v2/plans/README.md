@@ -4,7 +4,7 @@ Este diretório transforma o roadmap do [plano mestre](../PLAN.md) em planos de 
 
 ## Como usar
 
-Execute as fases em ordem. Uma fase só pode começar quando seus critérios de entrada estiverem satisfeitos e só termina após todos os critérios de saída. Dentro de uma fase, cada item `F<n>-PR<nn>` representa um pull request pequeno, revisável e reversível. Um PR não deve misturar mudanças de fases diferentes.
+Execute as fases em ordem. Uma fase só pode começar quando seus critérios de entrada estiverem satisfeitos e só termina após todos os critérios de saída. Dentro de uma fase, cada item `F<n>-PR<nn>` representa um pull request pequeno, revisável e reversível e possui um checklist atômico próprio. O Dev deve concluir e validar todos os itens do bloco antes de considerar o PR pronto; um PR não deve misturar mudanças de fases diferentes.
 
 | Fase | Plano | Gate principal |
 | ---: | --- | --- |
@@ -36,6 +36,19 @@ F0 -> F1 -> F2 -> F3 -> F4 -> F5 -> F6 -> F7 -> F8 -> F9
 ```
 
 O design system da Fase 6 pode ser prototipado após os contratos da Fase 1, com mocks versionados. A integração de dados reais no painel continua bloqueada pelos gates das Fases 2–5. A Fase 9 não autoriza integração com corretora nem envio de ordens reais.
+
+## Mapeamento dos PRs iniciais do plano mestre
+
+| PRs do plano mestre | Fase de implementação | Observação |
+| --- | --- | --- |
+| PR-001 a PR-006 e PR-008 | Fase 1 | Estabilização, contratos, Temporal e infraestrutura |
+| PR-009 e PR-010 | Fase 2 | Source Registry, Raw Zone e fatos financeiros |
+| PR-011 | Fase 3 | Domínio de pesquisa |
+| PR-007 | Fase 4 | Runtime completo; a Fase 1 entrega somente o mock E2E |
+| PR-012 e PR-013 | Fase 5 | Identidade institucional antes de carteira/risco |
+| PR-014 e PR-015 | Fase 6 | Web shell, design system e primeiros painéis |
+
+As Fases 0 e 7–9 introduzem PRs próprios que não constam na lista inicial da seção 29.
 
 ## Definition of Done comum
 

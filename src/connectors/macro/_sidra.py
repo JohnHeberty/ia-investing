@@ -23,9 +23,18 @@ _SIDRA_IP_VARIABLE = 4375
 _SIDRA_IP_CLASSIFICATION = "c112"
 
 _MONTH_NAME_MAP = {
-    "janeiro": 1, "fevereiro": 2, "março": 3, "abril": 4,
-    "maio": 5, "junho": 6, "julho": 7, "agosto": 8,
-    "setembro": 9, "outubro": 10, "novembro": 11, "dezembro": 12,
+    "janeiro": 1,
+    "fevereiro": 2,
+    "março": 3,
+    "abril": 4,
+    "maio": 5,
+    "junho": 6,
+    "julho": 7,
+    "agosto": 8,
+    "setembro": 9,
+    "outubro": 10,
+    "novembro": 11,
+    "dezembro": 12,
 }
 
 
@@ -84,15 +93,16 @@ async def _fetch_sidra(
     results: list[MacroObservation] = []
     for item in data[1:]:
         period_str = item.get("D3N", "")
-        value_str = item.get("V", "0")
+        value_str = item.get("V")
         period_date = parse_period(period_str)
-        if period_date is None:
+        value = _parse_value(value_str) if isinstance(value_str, str) else None
+        if period_date is None or value is None:
             continue
         results.append(
             MacroObservation(
                 indicator_name=indicator_name,
                 period_date=period_date,
-                value=_parse_value(value_str) or 0.0,
+                value=value,
                 unit=unit,
                 source="IBGE",
                 series_code=f"SIDRA_{table}",

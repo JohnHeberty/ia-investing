@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, fields
+from decimal import Decimal, InvalidOperation
 from enum import StrEnum
 
 from ..base import HttpClient
@@ -21,14 +22,20 @@ _ITR_URL_TEMPLATE = "https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/ITR/DADOS/itr
 class StatementType(StrEnum):
     """Tipos de demonstrativo financeiro."""
 
-    BPA_CON = "BPA_con"       # Balanço Patrimonial Ativo - Consolidado
-    BPA_IND = "BPA_ind"       # Balanço Patrimonial Ativo - Individual
-    BPP_CON = "BPP_con"       # Balanço Patrimonial Passivo - Consolidado
-    BPP_IND = "BPP_ind"       # Balanço Patrimonial Passivo - Individual
-    DRE_CON = "DRE_con"       # Demonstração de Resultado do Exercício - Consolidado
-    DRE_IND = "DRE_ind"       # Demonstração de Resultado do Exercício - Individual
-    DMPL_CON = "DMPL_con"     # Mutação do Patrimônio Líquido - Consolidado
-    DMPL_IND = "DMPL_ind"     # Mutação do Patrimônio Líquido - Individual
+    BPA_CON = "BPA_con"  # Balanço Patrimonial Ativo - Consolidado
+    BPA_IND = "BPA_ind"  # Balanço Patrimonial Ativo - Individual
+    BPP_CON = "BPP_con"  # Balanço Patrimonial Passivo - Consolidado
+    BPP_IND = "BPP_ind"  # Balanço Patrimonial Passivo - Individual
+    DRE_CON = "DRE_con"  # Demonstração de Resultado do Exercício - Consolidado
+    DRE_IND = "DRE_ind"  # Demonstração de Resultado do Exercício - Individual
+    DFC_MD_CON = "DFC_MD_con"  # Fluxo de Caixa - Método Direto - Consolidado
+    DFC_MD_IND = "DFC_MD_ind"  # Fluxo de Caixa - Método Direto - Individual
+    DFC_MI_CON = "DFC_MI_con"  # Fluxo de Caixa - Método Indireto - Consolidado
+    DFC_MI_IND = "DFC_MI_ind"  # Fluxo de Caixa - Método Indireto - Individual
+    DMPL_CON = "DMPL_con"  # Mutação do Patrimônio Líquido - Consolidado
+    DMPL_IND = "DMPL_ind"  # Mutação do Patrimônio Líquido - Individual
+    DVA_CON = "DVA_con"  # Demonstração do Valor Adicionado - Consolidado
+    DVA_IND = "DVA_ind"  # Demonstração do Valor Adicionado - Individual
 
 
 @dataclass(slots=True)
@@ -45,6 +52,10 @@ class FinancialEntry:
     valor: float = 0.0
     moeda: str = "REAL"
     escala: str = "MIL"
+    dt_inicio_exercicio: str = ""
+    ordem_exercicio: str = ""
+    grupo_demonstracao: str = ""
+    coluna_demonstracao: str = ""
 
     def to_dict(self) -> dict[str, object]:
         return {f.name: getattr(self, f.name) for f in fields(self)}
@@ -59,7 +70,7 @@ def _parse_valor(raw: str) -> float:
     """
     s = raw.strip()
     if not s:
-        return 0.0
+        raise ValueError("VL_CONTA is empty")
 
     # Remove thousands separators (dots before comma or at end)
     if "," in s:
@@ -74,9 +85,27 @@ def _parse_valor(raw: str) -> float:
 
     try:
         return float(s)
-    except ValueError:
-        return 0.0
+    except ValueError as exc:
+        raise ValueError(f"invalid VL_CONTA: {raw!r}") from exc
 
+
+def parse_value_status(raw: str) -> tuple[Decimal | None, str]:
+    """Parse a CVM value without converting absence or parser failure into zero."""
+    normalized = raw.strip()
+    if not normalized:
+        return None, "missing"
+    if normalized.casefold() in {"n/a", "na", "não aplicável", "nao aplicavel"}:
+        return None, "not_applicable"
+    if normalized in {"-", "--"}:
+        return None, "suppressed"
+    if "," in normalized:
+        normalized = normalized.replace(".", "").replace(",", ".")
+    elif normalized.count(".") > 1:
+        normalized = normalized.replace(".", "")
+    try:
+        return Decimal(normalized), "reported"
+    except InvalidOperation:
+        return None, "parse_error"
 
 
 def _parse(rows: list[dict[str, str]], cnpj_filter: str | None) -> list[FinancialEntry]:
@@ -85,35 +114,33 @@ def _parse(rows: list[dict[str, str]], cnpj_filter: str | None) -> list[Financia
         if cnpj_filter and (r.get("CNPJ_CIA") or "").strip() != cnpj_filter.strip():
             continue
 
-        raw_valor = (r.get("VL_CONTA") or "0").strip()
+        raw_valor = (r.get("VL_CONTA") or "").strip()
         valor = _parse_valor(raw_valor)
-        if valor == 0.0 and raw_valor and raw_valor != "0":
-            logger.warning(
-                "Could not parse VL_CONTA=%r for CNPJ=%s, cod_conta=%s — defaulting to 0.0",
-                raw_valor,
-                r.get("CNPJ_CIA"),
-                r.get("CD_CONTA"),
-            )
 
-        raw_versao = (r.get("VERSAO") or "0").strip() or "0"
+        raw_versao = (r.get("VERSAO") or "").strip()
         try:
             versao = int(raw_versao)
-        except (ValueError, TypeError):
-            logger.warning("Could not parse VERSAO=%r for CNPJ=%s — defaulting to 0", raw_versao, r.get("CNPJ_CIA"))
-            versao = 0
+        except (ValueError, TypeError) as exc:
+            raise ValueError(f"invalid VERSAO for CNPJ={r.get('CNPJ_CIA')}: {raw_versao!r}") from exc
 
-        results.append(FinancialEntry(
-            cnpj=(r.get("CNPJ_CIA") or "").strip(),
-            nome_empresa=(r.get("DENOM_CIA") or "").strip(),
-            cod_cvm=(r.get("CD_CVM") or "").strip(),
-            dt_referencia=(r.get("DT_REFER") or "").strip(),
-            versao=versao,
-            cod_conta=(r.get("CD_CONTA") or "").strip(),
-            desc_conta=(r.get("DS_CONTA") or "").strip(),
-            valor=valor,
-            moeda=(r.get("MOEDA") or "REAL").strip(),
-            escala=(r.get("ESCALA_MOEDA") or "MIL").strip(),
-        ))
+        results.append(
+            FinancialEntry(
+                cnpj=(r.get("CNPJ_CIA") or "").strip(),
+                nome_empresa=(r.get("DENOM_CIA") or "").strip(),
+                cod_cvm=(r.get("CD_CVM") or "").strip(),
+                dt_referencia=(r.get("DT_REFER") or "").strip(),
+                versao=versao,
+                cod_conta=(r.get("CD_CONTA") or "").strip(),
+                desc_conta=(r.get("DS_CONTA") or "").strip(),
+                valor=valor,
+                moeda=(r.get("MOEDA") or "REAL").strip(),
+                escala=(r.get("ESCALA_MOEDA") or "MIL").strip(),
+                dt_inicio_exercicio=(r.get("DT_INI_EXERC") or "").strip(),
+                ordem_exercicio=(r.get("ORDEM_EXERC") or "").strip(),
+                grupo_demonstracao=(r.get("GRUPO_DFP") or r.get("GRUPO_ITR") or "").strip(),
+                coluna_demonstracao=(r.get("COLUNA_DF") or "").strip(),
+            )
+        )
 
     return results
 

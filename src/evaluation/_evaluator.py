@@ -37,19 +37,13 @@ class AgentEvaluator:
         except Exception:
             logger.exception("Failed to load golden docs from %s", self._golden_docs_path)
 
-    async def evaluate_extraction(
-        self, agent_output: dict, ground_truth: dict
-    ) -> list[EvaluationResult]:
+    async def evaluate_extraction(self, agent_output: dict, ground_truth: dict) -> list[EvaluationResult]:
         return await evaluate_extraction(agent_output, ground_truth)
 
-    async def evaluate_interpretation(
-        self, agent_output: dict, expected_verdict: str
-    ) -> list[EvaluationResult]:
+    async def evaluate_interpretation(self, agent_output: dict, expected_verdict: str) -> list[EvaluationResult]:
         return await evaluate_interpretation(agent_output, expected_verdict)
 
-    async def evaluate_decision(
-        self, agent_output: dict, expected_action: str
-    ) -> list[EvaluationResult]:
+    async def evaluate_decision(self, agent_output: dict, expected_action: str) -> list[EvaluationResult]:
         return await evaluate_decision(agent_output, expected_action)
 
     def calculate_accuracy(self, results: list[EvaluationResult]) -> dict:
@@ -75,18 +69,13 @@ class AgentEvaluator:
                 by_type[r.evaluation_type]["passed"] += 1
 
         for v in by_type.values():
-            v["accuracy"] = round(
-                v["passed"] / v["total"], 4
-            ) if v["total"] > 0 else 0.0
+            v["accuracy"] = round(v["passed"] / v["total"], 4) if v["total"] > 0 else 0.0
 
         by_metric: dict[str, list[float]] = {}
         for r in results:
             by_metric.setdefault(r.metric_name, []).append(r.value)
 
-        by_metric_avg = {
-            k: round(sum(v) / len(v), 4) if v else 0.0
-            for k, v in by_metric.items()
-        }
+        by_metric_avg = {k: round(sum(v) / len(v), 4) if v else 0.0 for k, v in by_metric.items()}
 
         return {
             "total_metrics": total,

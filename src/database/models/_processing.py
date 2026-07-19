@@ -13,7 +13,9 @@ class DocumentProcessingLog(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     raw_document_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("raw_documents.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("raw_documents.id", ondelete="CASCADE"),
+        nullable=False,
     )
     step_name = sa.Column(sa.String(100))  # "download", "hash_check", "parse", "validate"
     status = sa.Column(sa.String(20))  # "started", "success", "failed"
@@ -33,10 +35,14 @@ class DocumentDuplicate(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     original_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("raw_documents.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("raw_documents.id", ondelete="CASCADE"),
+        nullable=False,
     )
     duplicate_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("raw_documents.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("raw_documents.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     similarity_method = sa.Column(sa.String(50))  # "sha256", "fuzzy_title"
@@ -55,11 +61,13 @@ class DocumentEvent(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     raw_document_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("raw_documents.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("raw_documents.id", ondelete="CASCADE"),
+        nullable=False,
     )
     event_type = sa.Column(sa.String(100))  # "document.downloaded", "document.parsed"
 
-    payload = JSONB()
+    payload = sa.Column(JSONB)
 
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 

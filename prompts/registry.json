@@ -1,0 +1,47 @@
+{
+  "registry_version": 1,
+  "capabilities": [
+    {
+      "logical_id": "filing",
+      "prompt": {"path": "filing_analyst/system-v2.md", "sha256": "0854683a8faec5b39716bbf280816e97b155037c19d5a397c3a42901c88085fe"},
+      "schema": {"path": "specialist-output.schema.json", "sha256": "603a7c7ee1063420fd480fb2739533efef8619ea2a496e16b33343f96ebce55f"},
+      "model_profile": {"provider": "openai", "model": "gpt-4o", "temperature": 0.2},
+      "tools": ["get_financial_metrics", "search_evidence", "calculate_valuation"]
+    },
+    {
+      "logical_id": "news",
+      "prompt": {"path": "news_analyst/system-v2.md", "sha256": "a9ab25b23862e0465fc12f8258c5822d76c9856580b41ecedf57af1264d4fa68"},
+      "schema": {"path": "specialist-output.schema.json", "sha256": "603a7c7ee1063420fd480fb2739533efef8619ea2a496e16b33343f96ebce55f"},
+      "model_profile": {"provider": "openai", "model": "gpt-4o", "temperature": 0.2},
+      "tools": ["search_evidence"]
+    },
+    {
+      "logical_id": "macro",
+      "prompt": {"path": "macro/system.md", "sha256": "49614197773fda8645ca31e67766aaa4d9966d80a4b3fb3b3607d0b919c05f27"},
+      "schema": {"path": "specialist-output.schema.json", "sha256": "603a7c7ee1063420fd480fb2739533efef8619ea2a496e16b33343f96ebce55f"},
+      "model_profile": {"provider": "openai", "model": "gpt-4o", "temperature": 0.2},
+      "tools": ["search_evidence"]
+    },
+    {
+      "logical_id": "political",
+      "prompt": {"path": "political/system.md", "sha256": "2c860ac82e19493a290bdb3ebde5d955ea6ba1d95d60a54193db00f99873e785"},
+      "schema": {"path": "specialist-output.schema.json", "sha256": "603a7c7ee1063420fd480fb2739533efef8619ea2a496e16b33343f96ebce55f"},
+      "model_profile": {"provider": "openai", "model": "gpt-4o", "temperature": 0.2},
+      "tools": ["search_evidence"]
+    },
+    {
+      "logical_id": "critic",
+      "prompt": {"path": "critic/system-v2.md", "sha256": "473dfed1f8262e5806e40fb29f4c4ad4ea13d66f0f665a2ce24916c749360c23"},
+      "schema": {"path": "specialist-output.schema.json", "sha256": "603a7c7ee1063420fd480fb2739533efef8619ea2a496e16b33343f96ebce55f"},
+      "model_profile": {"provider": "openai", "model": "gpt-4o", "temperature": 0.1},
+      "tools": ["search_evidence", "get_financial_metrics"]
+    },
+    {
+      "logical_id": "research_coordinator",
+      "prompt": {"path": "coordinator/system.md", "sha256": "fe8843a463673fccadf241b2ed8cdc818e5c05cc03122b0ae7ce0069c1c4ead7"},
+      "schema": {"path": "coordinator-output.schema.json", "sha256": "18d4e8016cb342c0bc27156e147b1e5bc6d06e4dc185a76cdadc4fc0805f3d02"},
+      "model_profile": {"provider": "openai", "model": "gpt-4o", "temperature": 0.1},
+      "tools": ["filing", "news", "macro", "political", "critic"]
+    }
+  ]
+}

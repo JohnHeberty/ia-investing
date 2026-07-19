@@ -28,7 +28,9 @@ class NewsItem(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     source_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("news_sources.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("news_sources.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     title = sa.Column(sa.Text)
@@ -41,7 +43,7 @@ class NewsItem(Base):
     language = sa.Column(sa.String(10))
     sentiment_score = sa.Column(sa.Float)
 
-    raw_data = JSONB()
+    raw_data = sa.Column(JSONB)
     is_processed = sa.Column(sa.Boolean, default=False)
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
@@ -54,10 +56,13 @@ class NewsEntityLink(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     news_item_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("news_items.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("news_items.id", ondelete="CASCADE"),
+        nullable=False,
     )
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
     relevance_score = sa.Column(sa.Float)
@@ -72,10 +77,12 @@ class DetectedEvent(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     news_item_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("news_items.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("news_items.id", ondelete="SET NULL"),
     )
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
     event_type = sa.Column(sa.String(50))  # "earnings", "guidance", "ma", "regulation"
@@ -85,7 +92,7 @@ class DetectedEvent(Base):
     direction_hint = sa.Column(sa.String(20))  # "positive", "negative", "neutral"
     time_horizon = sa.Column(sa.String(20))
 
-    affected_metrics = JSONB()
+    affected_metrics = sa.Column(JSONB)
     agent_run_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True)
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
@@ -98,7 +105,9 @@ class EventImpact(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     event_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("detected_events.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("detected_events.id", ondelete="CASCADE"),
+        nullable=False,
     )
     thesis_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("investment_theses.id", ondelete="SET NULL"), nullable=True)
 
@@ -118,10 +127,14 @@ class EventDuplicate(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     original_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("detected_events.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("detected_events.id", ondelete="CASCADE"),
+        nullable=False,
     )
     duplicate_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("detected_events.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("detected_events.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     similarity_method = sa.Column(sa.String(50))

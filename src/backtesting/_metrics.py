@@ -78,9 +78,7 @@ def _compute_calmar(cagr: float, max_dd: float) -> float:
     return cagr / max_dd
 
 
-def _compute_information_ratio(
-    portfolio_returns: np.ndarray, benchmark_returns: np.ndarray
-) -> float:
+def _compute_information_ratio(portfolio_returns: np.ndarray, benchmark_returns: np.ndarray) -> float:
     if len(portfolio_returns) < 2:
         return 0.0
     active = portfolio_returns - benchmark_returns
@@ -99,10 +97,7 @@ def compute_metrics(
     periods = len(equity_curve) - 1
     cagr = _compute_cagr(equity_curve, periods_per_year)
 
-    ret_arr = np.array([
-        equity_curve[i] / equity_curve[i - 1] - 1.0
-        for i in range(1, len(equity_curve))
-    ])
+    ret_arr = np.array([equity_curve[i] / equity_curve[i - 1] - 1.0 for i in range(1, len(equity_curve))])
 
     benchmark_return = 0.0
     alpha = 0.0
@@ -111,14 +106,11 @@ def compute_metrics(
     if benchmark_prices and len(benchmark_prices) >= 2:
         benchmark_return = benchmark_prices[-1] / benchmark_prices[0] - 1.0
         benchmark_cagr = (
-            (benchmark_prices[-1] / benchmark_prices[0])
-            ** (periods_per_year / periods)
-            - 1.0
-        ) if periods > 0 else 0.0
-        bench_rets = np.array([
-            benchmark_prices[i] / benchmark_prices[i - 1] - 1.0
-            for i in range(1, len(benchmark_prices))
-        ])
+            ((benchmark_prices[-1] / benchmark_prices[0]) ** (periods_per_year / periods) - 1.0) if periods > 0 else 0.0
+        )
+        bench_rets = np.array(
+            [benchmark_prices[i] / benchmark_prices[i - 1] - 1.0 for i in range(1, len(benchmark_prices))]
+        )
         min_len = min(len(ret_arr), len(bench_rets))
         alpha = cagr - benchmark_cagr
         ir = _compute_information_ratio(ret_arr[:min_len], bench_rets[:min_len])
@@ -128,11 +120,7 @@ def compute_metrics(
     max_dd = _compute_max_drawdown(equity_curve)
     calmar = _compute_calmar(cagr, max_dd)
     win_rate = float(np.mean(ret_arr > 0)) if len(ret_arr) > 0 else 0.0
-    annual_vol = (
-        float(np.std(ret_arr, ddof=1) * np.sqrt(TRADING_DAYS_PER_YEAR))
-        if len(ret_arr) > 1
-        else 0.0
-    )
+    annual_vol = float(np.std(ret_arr, ddof=1) * np.sqrt(TRADING_DAYS_PER_YEAR)) if len(ret_arr) > 1 else 0.0
 
     return BacktestMetrics(
         cagr=round(cagr, 6),

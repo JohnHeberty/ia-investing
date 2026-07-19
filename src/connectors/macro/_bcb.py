@@ -91,8 +91,12 @@ async def get_selic(
     client: HttpClient | None = None,
 ) -> list[MacroObservation]:
     return await get_bcb_series(
-        SERIES_SELIC, start_date, end_date, client,
-        indicator_name="SELIC", unit="% a.a.",
+        SERIES_SELIC,
+        start_date,
+        end_date,
+        client,
+        indicator_name="SELIC",
+        unit="% a.a.",
     )
 
 
@@ -102,8 +106,12 @@ async def get_ipca(
     client: HttpClient | None = None,
 ) -> list[MacroObservation]:
     return await get_bcb_series(
-        SERIES_IPCA, start_date, end_date, client,
-        indicator_name="IPCA", unit="% a.m.",
+        SERIES_IPCA,
+        start_date,
+        end_date,
+        client,
+        indicator_name="IPCA",
+        unit="% a.m.",
     )
 
 
@@ -114,8 +122,12 @@ async def get_ipca_monthly(
     start = date(year, 1, 1)
     end = date(year, 12, 31)
     return await get_bcb_series(
-        SERIES_IPCA_MONTHLY, start, end, client,
-        indicator_name="IPCA_Mensal", unit="% a.m.",
+        SERIES_IPCA_MONTHLY,
+        start,
+        end,
+        client,
+        indicator_name="IPCA_Mensal",
+        unit="% a.m.",
     )
 
 
@@ -125,6 +137,10 @@ async def get_usd_brl(
     client: HttpClient | None = None,
 ) -> list[MacroObservation]:
     return await get_bcb_series(
-        SERIES_USD_BRL, start_date, end_date, client,
-        indicator_name="USD/BRL", unit="BRL",
+        SERIES_USD_BRL,
+        start_date,
+        end_date,
+        client,
+        indicator_name="USD/BRL",
+        unit="BRL",
     )

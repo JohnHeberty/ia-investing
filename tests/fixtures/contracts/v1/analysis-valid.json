@@ -1,0 +1,36 @@
+{
+  "schema_version": "1.0",
+  "analysis_id": "00000000-0000-4000-8000-000000000001",
+  "research_case_id": "00000000-0000-4000-8000-000000000002",
+  "agent_run_id": "00000000-0000-4000-8000-000000000003",
+  "data_as_of": "2026-01-31T21:00:00Z",
+  "verdict": "positive",
+  "confidence": {"model": "0.80", "evidence": "0.70", "data": "0.90"},
+  "summary": "Receita cresceu com evidência verificada.",
+  "claims": [{
+    "claim_id": "00000000-0000-4000-8000-000000000004",
+    "text": "A receita cresceu.",
+    "status": "verified",
+    "evidence_ids": ["00000000-0000-4000-8000-000000000005"]
+  }],
+  "facts": [{
+    "name": "revenue",
+    "value": "1234567890.12",
+    "unit": "BRL",
+    "as_of": "2026-01-31T21:00:00Z",
+    "evidence_id": "00000000-0000-4000-8000-000000000005"
+  }],
+  "inferences": [{
+    "text": "O crescimento foi material.",
+    "based_on_claim_ids": ["00000000-0000-4000-8000-000000000004"]
+  }],
+  "risks": [],
+  "evidence": [{
+    "evidence_id": "00000000-0000-4000-8000-000000000005",
+    "source_object_id": "00000000-0000-4000-8000-000000000006",
+    "locator": "DFP 2025, DRE, linha 3",
+    "content_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }],
+  "contradictions": [],
+  "expires_at": "2026-03-02T21:00:00Z"
+}

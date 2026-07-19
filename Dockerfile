@@ -1,39 +1,37 @@
-FROM python:3.12-slim AS builder
+FROM python:3.12.7-slim-bookworm AS builder
 
+COPY --from=ghcr.io/astral-sh/uv:0.11.29 /uv /uvx /bin/
 WORKDIR /app
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc libpq-dev && \
-    rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY pyproject.toml .
-RUN pip install --no-cache-dir .
-
+COPY pyproject.toml uv.lock README.md ./
 COPY src/ ./src/
 COPY prompts/ ./prompts/
+RUN uv sync --frozen --no-dev --no-editable
 
-# --- Runtime stage ---
-FROM python:3.12-slim
+FROM python:3.12.7-slim-bookworm AS runtime
 
 WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl libpq5 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --system appuser \
+    && useradd --system --gid appuser --home-dir /app --shell /usr/sbin/nologin appuser
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends libpq5 && \
-    rm -rf /var/lib/apt/lists/*
+COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
+COPY --from=builder --chown=appuser:appuser /app/src /app/src
+COPY --from=builder --chown=appuser:appuser /app/prompts /app/prompts
+COPY --chown=appuser:appuser alembic.ini ./
+COPY --chown=appuser:appuser migrations/ ./migrations/
 
-RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
-
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
-COPY --from=builder /app/src ./src
-COPY --from=builder /app/prompts ./prompts
-
-RUN chown -R appuser:appuser /app
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONPATH=/app/src \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
 
 USER appuser
-
-ENV PYTHONPATH=/app/src
-
 EXPOSE 8000
-
 CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

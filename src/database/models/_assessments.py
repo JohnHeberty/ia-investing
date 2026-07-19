@@ -11,10 +11,13 @@ class AgentAssessment(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     agent_run_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("agent_runs.id", ondelete="CASCADE"),
+        nullable=False,
     )
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
     assessment_type = sa.Column(sa.String(50))  # "filing_review", "news_analysis"
@@ -25,10 +28,10 @@ class AgentAssessment(Base):
     materiality_score = sa.Column(sa.Float)
     time_horizon = sa.Column(sa.String(30))
 
-    claims = JSONB()
-    risks = JSONB()
-    assumptions = JSONB()
-    data_gaps = JSONB()
+    claims = sa.Column(JSONB)
+    risks = sa.Column(JSONB)
+    assumptions = sa.Column(JSONB)
+    data_gaps = sa.Column(JSONB)
     invalidation_triggers = sa.Column(JSONB)
 
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
@@ -45,7 +48,8 @@ class EvidenceItem(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     assessment_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("agent_assessments.id", ondelete="CASCADE"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("agent_assessments.id", ondelete="CASCADE"),
         nullable=False,
     )
 
@@ -53,10 +57,11 @@ class EvidenceItem(Base):
     status = sa.Column(sa.String(20))  # "verified", "unverified"
 
     source_document_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("raw_documents.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("raw_documents.id", ondelete="SET NULL"),
     )
     source_location = sa.Column(sa.Text)  # "DFP, nota 24, pagina 71"
-    metric_ids = JSONB()
+    metric_ids = sa.Column(JSONB)
 
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 

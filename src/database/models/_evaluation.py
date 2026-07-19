@@ -13,7 +13,9 @@ class Scorecard(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     scorecard_type = sa.Column(sa.String(50))  # "bank", "industrial", "utility"
@@ -25,7 +27,7 @@ class Scorecard(Base):
     valuation_score = sa.Column(sa.Float)
     overall_score = sa.Column(sa.Float)
 
-    veto_conditions_triggered = JSONB()  # Condições de veto ativadas
+    veto_conditions_triggered = sa.Column(JSONB)  # Condições de veto ativadas
 
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
@@ -54,7 +56,7 @@ class BacktestResult(Base):
     benchmark_name = sa.Column(sa.String(100))  # "IBOVESPA"
     benchmark_cagr_pct = sa.Column(sa.Float)
 
-    details = JSONB()
+    details = sa.Column(JSONB)
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
     def __repr__(self) -> str:

@@ -28,10 +28,13 @@ class Position(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     portfolio_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("portfolios.id", ondelete="CASCADE"),
+        nullable=False,
     )
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
     ticker_symbol = sa.Column(sa.String(10))
@@ -51,7 +54,9 @@ class Transaction(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     portfolio_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("portfolios.id", ondelete="CASCADE"),
+        nullable=False,
     )
     position_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("positions.id", ondelete="SET NULL"), nullable=True)
 
@@ -74,7 +79,9 @@ class PortfolioConstraint(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     portfolio_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("portfolios.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     constraint_type = sa.Column(sa.String(50))  # "max_position", "sector_limit"
@@ -92,13 +99,15 @@ class RiskSnapshot(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     portfolio_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("portfolios.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     snapshot_date = sa.Column(sa.DateTime(timezone=True))
     total_exposure = sa.Column(sa.Numeric(20, 4))
-    sector_concentration = JSONB()
-    top_risks = JSONB()
+    sector_concentration = sa.Column(JSONB)
+    top_risks = sa.Column(JSONB)
 
     sharpe_ratio = sa.Column(sa.Float)
     max_drawdown_pct = sa.Column(sa.Float)
@@ -115,11 +124,13 @@ class RebalanceProposal(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     portfolio_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("portfolios.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("portfolios.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
-    current_allocation = JSONB()
-    proposed_allocation = JSONB()
+    current_allocation = sa.Column(JSONB)
+    proposed_allocation = sa.Column(JSONB)
     rationale_pt = sa.Column(sa.Text)
 
     expected_return_change = sa.Column(sa.Float)
@@ -137,7 +148,8 @@ class ProposedTrade(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     rebalance_proposal_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("rebalance_proposals.id", ondelete="CASCADE"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("rebalance_proposals.id", ondelete="CASCADE"),
         nullable=False,
     )
 

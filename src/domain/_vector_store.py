@@ -57,11 +57,7 @@ class VectorStore:
         distance_col = Embedding.__table__.c.vector.cosine_distance(query_embedding).label("distance")
         score_col = (1 - distance_col).label("score")
 
-        stmt = (
-            sa.select(Embedding, score_col, distance_col)
-            .order_by(distance_col)
-            .limit(top_k)
-        )
+        stmt = sa.select(Embedding, score_col, distance_col).order_by(distance_col).limit(top_k)
 
         if content_type is not None:
             stmt = stmt.where(Embedding.content_type == content_type)

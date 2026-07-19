@@ -54,7 +54,7 @@ class StructuredOutputSchema(Base):
     name = sa.Column(sa.String(100))  # "filing_review", "news_analysis"
     version_number = sa.Column(sa.Integer)
 
-    json_schema = JSONB()  # Schema JSON completo
+    json_schema = sa.Column(JSONB)  # Schema JSON completo
 
     is_active = sa.Column(sa.Boolean, default=True)
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))

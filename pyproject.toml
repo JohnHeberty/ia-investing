@@ -12,6 +12,7 @@ dependencies = [
     # Database
     "sqlalchemy[asyncio]>=2.0",
     "alembic>=1.14",
+    "asyncpg>=0.30",
     "psycopg[binary,pool]>=3.2",
     "pgvector>=0.3",
 
@@ -20,7 +21,6 @@ dependencies = [
 
     # Agents
     "openai-agents>=0.1",
-    "litellm>=1.60",
 
     # Data processing
     "polars>=1.20",
@@ -31,11 +31,12 @@ dependencies = [
     "cvxpy>=1.5",
 
     # Storage
-    "boto3[s3]>=1.36",
+    "boto3>=1.36",
 
     # HTTP / connectors
     "httpx[socks]>=0.28",
     "aiofiles>=24.1",
+    "pyjwt[crypto]>=2.10",
 
     # Parsing
     "python-docx>=1.1",
@@ -46,6 +47,8 @@ dependencies = [
     "opentelemetry-api>=1.28",
     "opentelemetry-sdk>=1.28",
     "opentelemetry-instrumentation-fastapi>=0.49b",
+    "opentelemetry-instrumentation-httpx>=0.49b",
+    "opentelemetry-instrumentation-sqlalchemy>=0.49b",
     "opentelemetry-exporter-otlp-proto-grpc>=1.28",
 
     # ML / experiments
@@ -66,6 +69,9 @@ dev = [
     "mypy>=1.14",
     "pre-commit>=4.0",
 ]
+
+[project.scripts]
+check-config = "ia_investing.cli:check_config"
 
 [build-system]
 requires = ["setuptools>=75"]
@@ -93,3 +99,4 @@ python_version = "3.12"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
+explicit_package_bases = true

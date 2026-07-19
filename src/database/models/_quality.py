@@ -17,7 +17,7 @@ class DataQualityCheck(Base):
 
     check_name = sa.Column(sa.String(100))  # "balance_sheet_balances", "negative_revenue"
     passed = sa.Column(sa.Boolean, nullable=False)
-    details = JSONB()
+    details = sa.Column(JSONB)
 
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 

@@ -7,6 +7,7 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from data_quality._accounting import ValidationResult
+    from ia_investing.orchestration.policies import DEFAULT_ACTIVITY_RETRY_POLICY, EXTERNAL_IO_RETRY_POLICY
 
 
 @dataclass(slots=True)
@@ -30,7 +31,6 @@ class IngestCVMOutput:
 
 @workflow.defn
 class IngestCVMWorkflow:
-
     @workflow.run
     async def run(self, input: IngestCVMInput) -> IngestCVMOutput:
         output = IngestCVMOutput(
@@ -43,12 +43,14 @@ class IngestCVMWorkflow:
             "download_cvm_filing",
             args=[input.cnpj, input.year, input.statement_type],
             start_to_close_timeout=timedelta(seconds=120),
+            retry_policy=EXTERNAL_IO_RETRY_POLICY,
         )
 
         parsed_records = await workflow.execute_activity(
             "parse_cvm_csv",
             args=[raw_entries, input.scale_factor],
             start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         validation_results: list[ValidationResult] = []
@@ -57,6 +59,7 @@ class IngestCVMWorkflow:
                 "run_accounting_validations",
                 args=[input.statement_type, record],
                 start_to_close_timeout=timedelta(seconds=30),
+                retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
             )
             validation_results.extend(checks)
 
@@ -70,6 +73,7 @@ class IngestCVMWorkflow:
             "store_financial_statements",
             args=[input.issuer_id, input.statement_type, parsed_records, input.year],
             start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
         output.records_inserted = stored_count
 
@@ -86,6 +90,7 @@ class IngestCVMWorkflow:
                 },
             ],
             start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         return output

@@ -32,9 +32,7 @@ def _field_accuracy(
                 is_match = True
                 detail["match_type"] = "exact"
             else:
-                similarity = SequenceMatcher(
-                    None, str(extracted_val), str(expected_val)
-                ).ratio()
+                similarity = SequenceMatcher(None, str(extracted_val), str(expected_val)).ratio()
                 detail["similarity"] = round(similarity, 4)
                 if similarity >= 0.85:
                     is_match = True
@@ -71,9 +69,7 @@ def _field_accuracy(
     return results
 
 
-async def evaluate_extraction(
-    agent_output: dict, ground_truth: dict
-) -> list[EvaluationResult]:
+async def evaluate_extraction(agent_output: dict, ground_truth: dict) -> list[EvaluationResult]:
     agent_name = agent_output.get("agent_name", "unknown")
     extracted_fields = agent_output.get("extracted_fields", agent_output)
     gt_fields = ground_truth.get("fields", ground_truth)

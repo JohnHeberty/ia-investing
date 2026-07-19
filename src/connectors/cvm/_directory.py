@@ -81,7 +81,9 @@ async def list_files(
 
 
 async def list_periods(
-    category: str, product: str, client: HttpClient | None = None,
+    category: str,
+    product: str,
+    client: HttpClient | None = None,
 ) -> list[str]:
     """Extrair carimbos de período (YYYYMM ou YYYY) da listagem."""
     files = await list_files(category, product, client=client)
@@ -94,7 +96,9 @@ async def list_periods(
 
 
 async def latest_period(
-    category: str, product: str, client: HttpClient | None = None,
+    category: str,
+    product: str,
+    client: HttpClient | None = None,
 ) -> str | None:
     """Período mais recente disponível para um produto da CVM."""
     periods = await list_periods(category, product, client=client)

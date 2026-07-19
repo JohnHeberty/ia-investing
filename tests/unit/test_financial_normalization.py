@@ -6,6 +6,7 @@ from connectors.cvm._financials import (
     FinancialEntry,
     StatementType,
     _parse_valor,
+    parse_value_status,
 )
 
 
@@ -24,14 +25,17 @@ class TestParseValor:
     def test_valid_formats(self, raw, expected):
         assert _parse_valor(raw) == pytest.approx(expected)
 
-    def test_empty_string_returns_zero(self):
-        assert _parse_valor("") == 0.0
+    def test_empty_string_is_rejected(self):
+        with pytest.raises(ValueError, match="empty"):
+            _parse_valor("")
 
-    def test_whitespace_only_returns_zero(self):
-        assert _parse_valor("   ") == 0.0
+    def test_whitespace_only_is_rejected(self):
+        with pytest.raises(ValueError, match="empty"):
+            _parse_valor("   ")
 
-    def test_non_numeric_returns_zero(self):
-        assert _parse_valor("N/A") == 0.0
+    def test_non_numeric_is_rejected(self):
+        with pytest.raises(ValueError, match="invalid VL_CONTA"):
+            _parse_valor("N/A")
 
     def test_negative_brazilian_format(self):
         assert _parse_valor("-1.234,56") == pytest.approx(-1234.56)
@@ -45,9 +49,41 @@ class TestParseValor:
 
 class TestStatementType:
     def test_all_members_exist(self):
-        expected = {"BPA_con", "BPA_ind", "BPP_con", "BPP_ind", "DRE_con", "DRE_ind", "DMPL_con", "DMPL_ind"}
+        expected = {
+            "BPA_con",
+            "BPA_ind",
+            "BPP_con",
+            "BPP_ind",
+            "DRE_con",
+            "DRE_ind",
+            "DFC_MD_con",
+            "DFC_MD_ind",
+            "DFC_MI_con",
+            "DFC_MI_ind",
+            "DMPL_con",
+            "DMPL_ind",
+            "DVA_con",
+            "DVA_ind",
+        }
         actual = {s.value for s in StatementType}
         assert actual == expected
+
+
+@pytest.mark.parametrize(
+    "raw,expected,status",
+    [
+        ("1.234,50", "1234.50", "reported"),
+        ("", None, "missing"),
+        ("N/A", None, "not_applicable"),
+        ("--", None, "suppressed"),
+        ("valor inválido", None, "parse_error"),
+    ],
+)
+def test_value_status_is_explicit(raw, expected, status):
+    value, actual_status = parse_value_status(raw)
+    actual_value = str(value) if value is not None else None
+    assert actual_value == expected
+    assert actual_status == status
 
 
 class TestFinancialEntry:

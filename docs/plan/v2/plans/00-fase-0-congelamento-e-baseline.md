@@ -92,33 +92,33 @@ Execute os itens na ordem apresentada. Cada PR deve terminar com evidências ane
 
 ### `F0-PR04` — Fixtures CVM/B3
 
-- [ ] Selecionar documentos representativos de indústria, instituição financeira e utility.
-- [ ] Incluir períodos, versões, reapresentação e escopos individual/consolidado quando disponíveis.
-- [ ] Registrar URL/origem, data de captura, licença, hash, tamanho e mídia de cada fixture.
-- [ ] Minimizar ou anonimizar conteúdo que não precise ser redistribuído.
-- [ ] Criar manifesto legível por máquina com os metadados das fixtures.
-- [ ] Adicionar teste offline de leitura, encoding e integridade por hash.
-- [ ] Documentar receita de nova captura sem depender de arquivo local não versionado.
+- [x] Selecionar documentos representativos de indústria, instituição financeira e utility.
+- [x] Incluir períodos, versões, reapresentação e escopos individual/consolidado quando disponíveis.
+- [x] Registrar URL/origem, data de captura, licença, hash, tamanho e mídia de cada fixture.
+- [x] Minimizar ou anonimizar conteúdo que não precise ser redistribuído.
+- [x] Criar manifesto legível por máquina com os metadados das fixtures.
+- [x] Adicionar teste offline de leitura, encoding e integridade por hash.
+- [x] Documentar receita de nova captura sem depender de arquivo local não versionado.
 
 ### `F0-PR05` — CI e métricas de baseline
 
-- [ ] Fixar versão do Python e fluxo de instalação usado pelo CI.
-- [ ] Executar Ruff, mypy e pytest em jobs separados e armazenar seus relatórios.
-- [ ] Medir cobertura, duração, testes coletados, falhas e flaky tests conhecidos.
-- [ ] Executar dependency e secret scan inicialmente em modo informativo.
-- [ ] Configurar cache sem tornar o resultado dependente de estado anterior.
+- [x] Fixar versão do Python e fluxo de instalação usado pelo CI.
+- [x] Executar Ruff, mypy e pytest em jobs separados e armazenar seus relatórios.
+- [x] Medir cobertura, duração, testes coletados, falhas e flaky tests conhecidos.
+- [x] Executar dependency e secret scan inicialmente em modo informativo.
+- [x] Configurar cache sem tornar o resultado dependente de estado anterior.
 - [ ] Executar pipeline em clone limpo e ambiente sem `.env` pessoal.
-- [ ] Publicar tabela de baseline com comando, versão, resultado e link da evidência.
+- [x] Publicar tabela de baseline com comando, versão, resultado e link da evidência.
 
 ### `F0-PR06` — Backlog e conformidade
 
-- [ ] Criar um item rastreável para cada P0-01 a P0-20.
-- [ ] Atribuir prioridade, fase, dependências, risco e critério de aceite a cada item.
-- [ ] Identificar P1/P2 encontrados nos inventários sem diluir os P0.
+- [x] Criar um item rastreável para cada P0-01 a P0-20.
+- [x] Atribuir prioridade, fase, dependências, risco e critério de aceite a cada item.
+- [x] Identificar P1/P2 encontrados nos inventários sem diluir os P0.
 - [ ] Verificar licença e autorização do conteúdo em `docs/books/`.
-- [ ] Registrar decisão de manter, substituir referência ou remover conteúdo/histórico.
-- [ ] Definir política para novas fixtures e documentos de terceiros.
-- [ ] Confirmar que todos os bloqueadores da Fase 1 possuem artefato de entrada.
+- [x] Registrar decisão de manter, substituir referência ou remover conteúdo/histórico.
+- [x] Definir política para novas fixtures e documentos de terceiros.
+- [x] Confirmar que todos os bloqueadores da Fase 1 possuem artefato de entrada.
 
 ## Interfaces e artefatos
 
@@ -144,10 +144,10 @@ Esta fase não altera APIs. Define os formatos documentais mínimos para `source
 - [ ] Branch principal protegida e CI requerido para merge.
 - [ ] Tag e métricas de baseline publicadas.
 - [ ] Inventários e ADRs revisados.
-- [ ] Fixtures possuem proveniência e licença verificável.
-- [ ] P0/P1/P2 possuem prioridade, dependência, fase e aceite.
-- [ ] Questão de licenciamento possui decisão e ação registrada.
-- [ ] Runbook de execução local e de CI disponível.
+- [x] Fixtures possuem proveniência e licença verificável.
+- [x] P0/P1/P2 possuem prioridade, dependência, fase e aceite.
+- [x] Questão de licenciamento possui decisão e ação registrada.
+- [x] Runbook de execução local e de CI disponível.
 
 ## Riscos e passagem para a Fase 1
 

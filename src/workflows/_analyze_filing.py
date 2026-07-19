@@ -6,6 +6,9 @@ from typing import Any, Literal
 
 from temporalio import workflow
 
+with workflow.unsafe.imports_passed_through():
+    from ia_investing.orchestration.policies import DEFAULT_ACTIVITY_RETRY_POLICY, EXTERNAL_IO_RETRY_POLICY
+
 
 @dataclass(slots=True)
 class FilingData:
@@ -32,25 +35,27 @@ class FilingReviewVerdict:
 
 @workflow.defn
 class AnalyzeFilingWorkflow:
-
     @workflow.run
     async def run(self, filing: FilingData) -> FilingReviewVerdict:
         metrics = await workflow.execute_activity(
             "calculate_financial_metrics",
             args=[filing.issuer_id, filing.line_items, filing.statement_type],
             start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         analyst_output = await workflow.execute_activity(
             "run_filing_analyst",
             args=[filing.issuer_id, filing.issuer_name, filing.line_items, metrics],
             start_to_close_timeout=timedelta(seconds=120),
+            retry_policy=EXTERNAL_IO_RETRY_POLICY,
         )
 
         critic_output = await workflow.execute_activity(
             "run_critic_agent",
             args=[analyst_output, filing.line_items, metrics],
             start_to_close_timeout=timedelta(seconds=120),
+            retry_policy=EXTERNAL_IO_RETRY_POLICY,
         )
 
         verdict = FilingReviewVerdict(
@@ -67,13 +72,17 @@ class AnalyzeFilingWorkflow:
 
         await workflow.execute_activity(
             "update_investment_thesis",
-            args=[filing.issuer_id, {
-                "verdict": verdict.verdict,
-                "confidence": verdict.confidence,
-                "thesis_effect": verdict.thesis_effect,
-                "materiality_score": verdict.materiality_score,
-            }],
+            args=[
+                filing.issuer_id,
+                {
+                    "verdict": verdict.verdict,
+                    "confidence": verdict.confidence,
+                    "thesis_effect": verdict.thesis_effect,
+                    "materiality_score": verdict.materiality_score,
+                },
+            ],
             start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         await workflow.execute_activity(
@@ -88,6 +97,7 @@ class AnalyzeFilingWorkflow:
                 },
             ],
             start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         return verdict

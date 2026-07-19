@@ -8,8 +8,14 @@ from dataclasses import dataclass, field
 class ScorecardResult:
     pillar_scores: dict[str, float]
     overall_score: float
+    coverage: float
+    data_quality: float
+    thesis_freshness: float
+    eligibility: str
+    eligibility_reasons: list[str]
     veto_triggered: list[str] = field(default_factory=list)
     scorecard_type: str = "industrial"
+    definition_version: str = "scorecard-v1"
 
 
 _DEFAULT_WEIGHTS: dict[str, float] = {
@@ -99,9 +105,7 @@ class ScorecardCalculator:
         clamped = max(0.0, min(1.0, float(value)))
         return clamped
 
-    def _check_vetoes(
-        self, metrics: dict[str, float | None], scorecard_type: str
-    ) -> list[str]:
+    def _check_vetoes(self, metrics: dict[str, float | None], scorecard_type: str) -> list[str]:
         vetoes: list[str] = []
 
         debt_ebitda = metrics.get("debt_ebitda")
@@ -120,13 +124,19 @@ class ScorecardCalculator:
         return vetoes
 
     def calculate(
-        self, metrics: dict[str, float | None], scorecard_type: str = "industrial"
+        self,
+        metrics: dict[str, float | None],
+        scorecard_type: str = "industrial",
+        data_quality: float = 1.0,
+        thesis_freshness: float = 1.0,
     ) -> ScorecardResult:
         weights = self._get_weights(scorecard_type)
+        if abs(sum(weights.values()) - 1.0) > 1e-9:
+            raise ValueError("scorecard weights must sum to one")
         vetoes = self._check_vetoes(metrics, scorecard_type)
 
         pillar_scores: dict[str, float] = {}
-        total_weight = 0.0
+        covered_weight = 0.0
         weighted_sum = 0.0
 
         for pillar, weight in weights.items():
@@ -134,16 +144,19 @@ class ScorecardCalculator:
             if score is not None:
                 pillar_scores[pillar] = round(score, 4)
                 weighted_sum += score * weight
-                total_weight += weight
+                covered_weight += weight
 
-        overall = round(weighted_sum / total_weight, 4) if total_weight > 0 else 0.0
-
-        if vetoes:
-            overall = min(overall, 0.2)
+        overall = round(weighted_sum, 4)
+        eligibility = "blocked" if vetoes else "eligible"
 
         return ScorecardResult(
             pillar_scores=pillar_scores,
             overall_score=overall,
+            coverage=round(covered_weight, 4),
+            data_quality=max(0.0, min(1.0, data_quality)),
+            thesis_freshness=max(0.0, min(1.0, thesis_freshness)),
+            eligibility=eligibility,
+            eligibility_reasons=vetoes,
             veto_triggered=vetoes,
             scorecard_type=scorecard_type,
         )

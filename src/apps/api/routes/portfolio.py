@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Any
 
-import polars as pl
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from database.models.portfolio import Portfolio, Position
-from portfolio import PortfolioOptimizer
+from ia_investing.application.portfolio import BackendPortfolioOptimizationService
+from ia_investing.domain.identity import InstitutionalAccessContext
 
 router = APIRouter(prefix="/api/v1/portfolio", tags=["portfolio"])
 
@@ -53,13 +55,8 @@ class PositionCreate(BaseModel):
 
 
 class OptimizationRequest(BaseModel):
-    portfolio_id: str
-    returns_data: list[dict[str, Any]]
-    current_weights: dict[str, float] | None = None
-    risk_aversion: float = 1.0
-    max_weight: float = 0.10
-    max_sector: float = 0.30
-    max_turnover: float = 0.20
+    portfolio_id: uuid.UUID
+    as_of: datetime
 
 
 @router.post("", status_code=201)
@@ -141,20 +138,28 @@ async def add_position(
 
 
 @router.post("/optimize")
-async def run_optimization(body: OptimizationRequest) -> dict[str, Any]:
-    returns_df = pl.DataFrame(body.returns_data)
-    optimizer = PortfolioOptimizer(
-        risk_aversion=body.risk_aversion,
-        max_weight=body.max_weight,
-        max_sector=body.max_sector,
-        max_turnover=body.max_turnover,
-    )
-    result = await optimizer.optimize(returns_df, body.current_weights)
+async def run_optimization(
+    body: OptimizationRequest,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="Institutional organization context is required")
+    context = InstitutionalAccessContext(auth.subject, auth.organization_id, auth.team_ids, auth.permissions, "paper")
+    try:
+        run = await BackendPortfolioOptimizationService(session).optimize(body.portfolio_id, body.as_of, context)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return {
-        "weights": result.weights,
-        "expected_return": result.expected_return,
-        "expected_risk": result.expected_risk,
-        "sharpe_ratio": result.sharpe_ratio,
-        "turnover": result.turnover,
-        "transactions": result.transactions,
+        "operation_id": str(run.id),
+        "status": run.status,
+        "weights": run.weights,
+        "trades": run.trades,
+        "slacks": run.slacks,
+        "diagnostics": run.diagnostics,
+        "input_sha256": run.input_sha256,
     }

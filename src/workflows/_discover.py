@@ -6,6 +6,9 @@ from typing import Any
 
 from temporalio import workflow
 
+with workflow.unsafe.imports_passed_through():
+    from ia_investing.orchestration.policies import DEFAULT_ACTIVITY_RETRY_POLICY, EXTERNAL_IO_RETRY_POLICY
+
 
 @dataclass(slots=True)
 class ScreenFilters:
@@ -31,44 +34,51 @@ class DiscoveryBrief:
 
 @workflow.defn
 class DiscoverStocksWorkflow:
-
     @workflow.run
     async def run(self, filters: ScreenFilters) -> list[DiscoveryBrief]:
         universe = await workflow.execute_activity(
             "fetch_b3_universe",
             args=[],
             start_to_close_timeout=timedelta(seconds=120),
+            retry_policy=EXTERNAL_IO_RETRY_POLICY,
         )
 
         filtered = await workflow.execute_activity(
             "apply_screen_filters",
-            args=[universe, {
-                "min_market_cap": filters.min_market_cap,
-                "max_market_cap": filters.max_market_cap,
-                "sectors_include": filters.sectors_include,
-                "sectors_exclude": filters.sectors_exclude,
-                "min_volume_avg": filters.min_volume_avg,
-                "exclude_penny_stocks": filters.exclude_penny_stocks,
-            }],
+            args=[
+                universe,
+                {
+                    "min_market_cap": filters.min_market_cap,
+                    "max_market_cap": filters.max_market_cap,
+                    "sectors_include": filters.sectors_include,
+                    "sectors_exclude": filters.sectors_exclude,
+                    "min_volume_avg": filters.min_volume_avg,
+                    "exclude_penny_stocks": filters.exclude_penny_stocks,
+                },
+            ],
             start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         scored = await workflow.execute_activity(
             "calculate_screening_metrics",
             args=[filtered],
             start_to_close_timeout=timedelta(seconds=180),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         anomalies = await workflow.execute_activity(
             "identify_anomalies",
             args=[scored],
             start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         briefs = await workflow.execute_activity(
             "generate_discovery_briefs",
             args=[scored, anomalies],
             start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         results = [
@@ -97,6 +107,7 @@ class DiscoverStocksWorkflow:
                 },
             ],
             start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         return results

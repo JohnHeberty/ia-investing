@@ -14,7 +14,7 @@ class AgentDefinition(Base):
     display_name_pt = sa.Column(sa.String(200))
 
     system_prompt_id = sa.Column(UUID(as_uuid=True))
-    model_config = JSONB()
+    model_config = sa.Column(JSONB)
 
     is_active = sa.Column(sa.Boolean, default=True)
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
@@ -28,12 +28,13 @@ class AgentRun(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     agent_definition_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("agent_definitions.id", ondelete="CASCADE"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("agent_definitions.id", ondelete="CASCADE"),
         nullable=False,
     )
 
-    input_data = JSONB()
-    output_data = JSONB()
+    input_data = sa.Column(JSONB)
+    output_data = sa.Column(JSONB)
 
     model_used = sa.Column(sa.String(100))
     tokens_prompt = sa.Column(sa.Integer)
@@ -55,12 +56,14 @@ class AgentToolCall(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     agent_run_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("agent_runs.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("agent_runs.id", ondelete="CASCADE"),
+        nullable=False,
     )
 
     tool_name = sa.Column(sa.String(100))
-    input_params = JSONB()
-    output_result = JSONB()
+    input_params = sa.Column(JSONB)
+    output_result = sa.Column(JSONB)
 
     status = sa.Column(sa.String(20))  # "success", "failed"
     duration_ms = sa.Column(sa.Float)

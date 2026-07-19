@@ -6,17 +6,11 @@ from ._evaluator import EvaluationResult
 from ._interpretation import _classification_accuracy
 
 
-async def evaluate_decision(
-    agent_output: dict, expected_action: str
-) -> list[EvaluationResult]:
+async def evaluate_decision(agent_output: dict, expected_action: str) -> list[EvaluationResult]:
     agent_name = agent_output.get("agent_name", "unknown")
     results: list[EvaluationResult] = []
 
-    results.extend(
-        _classification_accuracy(
-            agent_output, expected_action, agent_name, "decision", "action"
-        )
-    )
+    results.extend(_classification_accuracy(agent_output, expected_action, agent_name, "decision", "action"))
 
     size = agent_output.get("position_size_pct")
     if size is not None:

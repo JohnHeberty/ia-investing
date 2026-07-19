@@ -117,7 +117,9 @@ async def get_fca_geral(year: int, cnpj: str | None = None, client: HttpClient |
 
 
 async def get_fca_valores_mobiliarios(
-    year: int, cnpj: str | None = None, ticker: str | None = None,
+    year: int,
+    cnpj: str | None = None,
+    ticker: str | None = None,
     client: HttpClient | None = None,
 ) -> list[FCASecurity]:
     """Valores mobiliários emitidos — útil como mapa ticker → CNPJ."""
@@ -157,7 +159,9 @@ async def get_fca_valores_mobiliarios(
 
 
 async def get_fca_dri(
-    year: int, cnpj: str | None = None, client: HttpClient | None = None,
+    year: int,
+    cnpj: str | None = None,
+    client: HttpClient | None = None,
 ) -> list[FCAInvestorRelations]:
     """Diretor de Relações com Investidores."""
     url = FCA_URL_TEMPLATE.format(year=year)

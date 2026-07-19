@@ -89,7 +89,10 @@ class HttpClient:
                         delay = self._retry_delay * (2 ** (attempt - 1))
                         logger.warning(
                             "Attempt %d failed for %s: %s. Retrying in %.1fs...",
-                            attempt, full_url, exc, delay,
+                            attempt,
+                            full_url,
+                            exc,
+                            delay,
                         )
                         await asyncio.sleep(delay)
 

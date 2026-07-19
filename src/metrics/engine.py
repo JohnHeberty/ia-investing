@@ -38,6 +38,7 @@ PILLARS: dict[str, dict[str, Callable[[LineItems, MarketData], float | None]]] =
 # API pública
 # ---------------------------------------------------------------------------
 
+
 def calculate_pillar(
     pillar_name: str,
     line_items: LineItems,
@@ -74,10 +75,7 @@ def calculate_all(
     Returns:
         Dicionário pilar → {métrica → valor calculado}.
     """
-    return {
-        pillar_name: calculate_pillar(pillar_name, line_items, market_data)
-        for pillar_name in PILLARS
-    }
+    return {pillar_name: calculate_pillar(pillar_name, line_items, market_data) for pillar_name in PILLARS}
 
 
 def get_pillar_names() -> list[str]:
@@ -126,12 +124,14 @@ def build_metrics_dataframe(
         for pillar_name, metrics in PILLARS.items():
             for metric_name, fn in metrics.items():
                 value = fn(li, md)
-                records.append({
-                    "period": period,
-                    "pillar": pillar_name,
-                    "metric": metric_name,
-                    "value": value,
-                })
+                records.append(
+                    {
+                        "period": period,
+                        "pillar": pillar_name,
+                        "metric": metric_name,
+                        "value": value,
+                    }
+                )
 
     if not records:
         return pl.DataFrame({"period": [], "pillar": [], "metric": [], "value": []})

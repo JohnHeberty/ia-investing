@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from database.models import Base
+from ia_investing.settings import get_settings
 
 config = context.config
 
@@ -18,9 +19,13 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
+def database_url() -> str:
+    return get_settings().database.url
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode (generates SQL without connecting)."""
-    url = config.get_main_option("sqlalchemy.url")
+    url = database_url()
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -32,7 +37,7 @@ def run_migrations_offline() -> None:
         context.run_migrations()
 
 
-def do_run_migrations(connection):
+def do_run_migrations(connection) -> None:
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
@@ -44,14 +49,13 @@ def do_run_migrations(connection):
 
 def run_migrations_online() -> None:
     """Run migrations against a live database."""
-    url = config.get_main_option("sqlalchemy.url")
-    if not url:
-        raise RuntimeError("sqlalchemy.url not configured in alembic.ini")
+    url = database_url()
     connectable = create_async_engine(url)
 
-    async def go():
+    async def go() -> None:
         async with connectable.connect() as connection:
             await connection.run_sync(do_run_migrations)
+        await connectable.dispose()
 
     asyncio.run(go())
 

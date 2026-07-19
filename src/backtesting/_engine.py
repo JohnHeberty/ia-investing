@@ -78,9 +78,7 @@ REBALANCE_STRATEGIES: dict[str, Callable[[list[date]], set[date]]] = {
 }
 
 
-def _get_rebalance_dates(
-    dates: list[date], freq: str
-) -> set[date]:
+def _get_rebalance_dates(dates: list[date], freq: str) -> set[date]:
     strategy = REBALANCE_STRATEGIES.get(freq)
     if strategy is None:
         raise ValueError(f"Unknown rebalance frequency: {freq!r}")
@@ -107,6 +105,7 @@ def _rebalance_on_date(
     current_date: date,
     price_cols: list[str],
     current_weights: dict[str, float],
+    target_weights: dict[str, float],
     new_equity: float,
     cost_bps: float,
     slippage_bps: float,
@@ -116,7 +115,7 @@ def _rebalance_on_date(
     if available_history.height < MIN_HISTORY_BARS:
         return current_weights.copy(), new_equity, []
 
-    new_weights = current_weights.copy()
+    new_weights = {ticker: target_weights.get(ticker, 0.0) for ticker in price_cols}
     trades: list[dict] = []
 
     for ticker in price_cols:
@@ -125,18 +124,24 @@ def _rebalance_on_date(
         delta = new_w - old_w
         if abs(delta) > WEIGHT_THRESHOLD:
             trade_value, cost_amount = _compute_transaction_costs(
-                old_w, new_w, new_equity, cost_bps, slippage_bps,
+                old_w,
+                new_w,
+                new_equity,
+                cost_bps,
+                slippage_bps,
             )
             new_equity -= cost_amount
-            trades.append({
-                "date": str(current_date),
-                "ticker": ticker,
-                "side": "BUY" if delta > 0 else "SELL",
-                "weight_from": round(old_w, 6),
-                "weight_to": round(new_w, 6),
-                "value_brl": round(trade_value, 2),
-                "cost_brl": round(cost_amount, 2),
-            })
+            trades.append(
+                {
+                    "date": str(current_date),
+                    "ticker": ticker,
+                    "side": "BUY" if delta > 0 else "SELL",
+                    "weight_from": round(old_w, 6),
+                    "weight_to": round(new_w, 6),
+                    "value_brl": round(trade_value, 2),
+                    "cost_brl": round(cost_amount, 2),
+                }
+            )
 
     w_sum = sum(new_weights.values())
     if w_sum > 0:
@@ -170,8 +175,7 @@ class BacktestEngine:
     ) -> BacktestResult:
         price_cols = [c for c in universe_data.columns if c != "date"]
         filtered = universe_data.filter(
-            (pl.col("date") >= pl.lit(start_date))
-            & (pl.col("date") <= pl.lit(end_date))
+            (pl.col("date") >= pl.lit(start_date)) & (pl.col("date") <= pl.lit(end_date))
         ).sort("date")
 
         if filtered.height < 2:
@@ -181,9 +185,7 @@ class BacktestEngine:
         rebalance_dates = _get_rebalance_dates(dates, rebalance_freq)
 
         prices_df = filtered.select(["date", *price_cols])
-        returns_df = prices_df.drop("date").select(
-            [pl.col(c).pct_change() for c in price_cols]
-        )
+        returns_df = prices_df.drop("date").select([pl.col(c).pct_change() for c in price_cols])
 
         equity_curve: list[float] = [self.initial_capital]
         current_weights: dict[str, float] = dict.fromkeys(price_cols, 0.0)
@@ -191,10 +193,7 @@ class BacktestEngine:
 
         for i in range(1, len(dates)):
             daily_returns = returns_df.row(i - 1, named=True)
-            portfolio_return = sum(
-                current_weights.get(c, 0.0) * (daily_returns.get(c, 0.0) or 0.0)
-                for c in price_cols
-            )
+            portfolio_return = sum(current_weights.get(c, 0.0) * (daily_returns.get(c, 0.0) or 0.0) for c in price_cols)
             new_equity = equity_curve[-1] * (1.0 + portfolio_return)
             equity_curve.append(new_equity)
 
@@ -210,8 +209,14 @@ class BacktestEngine:
                     new_weights = current_weights.copy()
 
                 current_weights, new_equity, new_trades = _rebalance_on_date(
-                    prices_df, dates[i], price_cols, new_weights,
-                    new_equity, self.transaction_cost_bps, self.slippage_bps,
+                    prices_df,
+                    dates[i],
+                    price_cols,
+                    current_weights,
+                    new_weights,
+                    new_equity,
+                    self.transaction_cost_bps,
+                    self.slippage_bps,
                 )
                 equity_curve[-1] = new_equity
                 trades_log.extend(new_trades)

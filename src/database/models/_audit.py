@@ -11,10 +11,12 @@ class Approval(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     portfolio_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("portfolios.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("portfolios.id", ondelete="SET NULL"),
     )
     rebalance_proposal_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("rebalance_proposals.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("rebalance_proposals.id", ondelete="SET NULL"),
     )
 
     approver_name = sa.Column(sa.String(200))
@@ -32,7 +34,8 @@ class ExecutionReconciliation(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     transaction_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("transactions.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("transactions.id", ondelete="SET NULL"),
     )
 
     broker_order_id = sa.Column(sa.String(100))
@@ -52,7 +55,8 @@ class EvaluationResultRecord(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     agent_definition_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("agent_definitions.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("agent_definitions.id", ondelete="SET NULL"),
     )
 
     evaluation_type = sa.Column(sa.String(50))  # "extraction", "interpretation", "decision"
@@ -77,15 +81,16 @@ class AuditLog(Base):
     __tablename__ = "audit_logs"
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    actor_type = sa.Column(sa.String(50))  # "agent", "human", "system"
-    actor_id = sa.Column(UUID(as_uuid=True))
+    actor_type = sa.Column(sa.String(50), nullable=False)  # "agent", "human", "system"
+    actor_id = sa.Column(sa.String(255), nullable=False)
 
-    action = sa.Column(sa.String(100))
-    entity_type = sa.Column(sa.String(50))
-    entity_id = sa.Column(UUID(as_uuid=True))
+    action = sa.Column(sa.String(100), nullable=False)
+    entity_type = sa.Column(sa.String(50), nullable=False)
+    entity_id = sa.Column(UUID(as_uuid=True), nullable=False)
+    correlation_id = sa.Column(UUID(as_uuid=True), nullable=False, index=True)
 
-    details = JSONB()
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    details = sa.Column(JSONB, nullable=False)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
 
     def __repr__(self) -> str:
         return f"AuditLog(actor_type={self.actor_type!r}, action={self.action!r})"

@@ -7,14 +7,23 @@ receivers:
         endpoint: 0.0.0.0:4318
 
 exporters:
-  logging:
-    loglevel: info
-
-  # Uncomment to export to Jaeger
-  # jaeger:
-  #   endpoint: jaeger:14250
-  #   tls:
-  #     insecure: true
+  debug:
+    verbosity: basic
+  file/traces:
+    path: /var/lib/otelcol/traces.json
+    rotation:
+      max_megabytes: 100
+      max_backups: 5
+  file/metrics:
+    path: /var/lib/otelcol/metrics.json
+    rotation:
+      max_megabytes: 100
+      max_backups: 5
+  file/logs:
+    path: /var/lib/otelcol/logs.json
+    rotation:
+      max_megabytes: 100
+      max_backups: 5
 
 processors:
   batch:
@@ -36,12 +45,12 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [logging]
+      exporters: [debug, file/traces]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [logging]
+      exporters: [debug, file/metrics]
     logs:
       receivers: [otlp]
       processors: [memory_limiter, batch]
-      exporters: [logging]
+      exporters: [debug, file/logs]

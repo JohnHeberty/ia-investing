@@ -18,9 +18,7 @@ class EmbeddingProvider:
     def __init__(self, backend: EmbeddingBackend | None = None) -> None:
         self._backend = backend or AsyncOpenAI()
 
-    async def embed_chunks(
-        self, chunks: list[str], model: str = "text-embedding-3-small"
-    ) -> list[list[float]]:
+    async def embed_chunks(self, chunks: list[str], model: str = "text-embedding-3-small") -> list[list[float]]:
         if not chunks:
             return []
 

@@ -35,6 +35,18 @@ class TestScorecardCalculator:
         assert result.scorecard_type == "industrial"
         assert result.overall_score == pytest.approx(0.5, abs=0.01)
 
+    @pytest.mark.parametrize("scorecard_type", ["industrial", "bank", "utility"])
+    def test_sector_golden_score_and_missing_never_increase_score(self, scorecard_type):
+        calc = ScorecardCalculator()
+        complete_metrics = dict.fromkeys(_SCORECARD_WEIGHTS[scorecard_type], 0.5)
+        complete = calc.calculate(complete_metrics, scorecard_type)
+        missing = calc.calculate({next(iter(_SCORECARD_WEIGHTS[scorecard_type])): 0.5}, scorecard_type)
+
+        assert complete.overall_score == pytest.approx(0.5)
+        assert complete.coverage == pytest.approx(1.0)
+        assert missing.overall_score <= complete.overall_score
+        assert missing.coverage < complete.coverage
+
     def test_negative_equity_triggers_veto(self):
         calc = ScorecardCalculator()
         metrics = {
@@ -48,7 +60,7 @@ class TestScorecardCalculator:
         }
         result = calc.calculate(metrics, "industrial")
         assert "negative_equity" in result.veto_triggered
-        assert result.overall_score <= 0.2
+        assert result.eligibility == "blocked"
 
     def test_debt_ebitda_above_5_triggers_veto(self):
         calc = ScorecardCalculator()
@@ -63,7 +75,7 @@ class TestScorecardCalculator:
         }
         result = calc.calculate(metrics, "industrial")
         assert "debt_ebitda_exceeds_5" in result.veto_triggered
-        assert result.overall_score <= 0.2
+        assert result.eligibility == "blocked"
 
     def test_no_vetoes_when_clean(self):
         calc = ScorecardCalculator()
@@ -93,6 +105,15 @@ class TestScorecardCalculator:
         result = calc.calculate(metrics, "industrial")
         assert "valuation" in result.pillar_scores
         assert len(result.pillar_scores) == 1
+        assert result.overall_score == pytest.approx(0.16)
+        assert result.coverage == pytest.approx(0.20)
+
+    def test_missing_does_not_reweight_available_pillars(self):
+        calc = ScorecardCalculator()
+        incomplete = calc.calculate({"quality": 1.0}, "industrial")
+        complete = calc.calculate(dict.fromkeys(_SCORECARD_WEIGHTS["industrial"], 1.0), "industrial")
+        assert incomplete.overall_score == pytest.approx(0.25)
+        assert complete.overall_score == pytest.approx(1.0)
 
     def test_custom_weights_override(self):
         custom = {"quality": 1.0}

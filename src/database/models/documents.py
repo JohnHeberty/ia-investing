@@ -13,7 +13,8 @@ class RawDocument(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
     source_url = sa.Column(sa.Text)
     document_type = sa.Column(
@@ -29,9 +30,7 @@ class RawDocument(Base):
     http_etag = sa.Column(sa.Text)
     http_last_modified = sa.Column(sa.DateTime(timezone=True))
 
-    retrieved_at = sa.Column(
-        sa.DateTime(timezone=True), default=lambda: datetime.now(UTC)
-    )
+    retrieved_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
     published_at = sa.Column(sa.DateTime(timezone=True))  # Data de publicação do documento
 
     reporting_period_start = sa.Column(sa.Date, index=True)
@@ -53,10 +52,13 @@ class DocumentMetadata(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     raw_document_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("raw_documents.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("raw_documents.id", ondelete="CASCADE"),
+        nullable=False,
     )
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
     title = sa.Column(sa.Text)
@@ -64,7 +66,7 @@ class DocumentMetadata(Base):
     page_count = sa.Column(sa.Integer)
     language = sa.Column(sa.String(10))  # "pt", "en"
 
-    parsed_data = JSONB()  # Dados estruturados extraídos pelo parser
+    parsed_data = sa.Column(JSONB)  # Dados estruturados extraídos pelo parser
     extraction_errors = sa.Column(JSONB)  # Erros encontrados durante parsing
 
     is_validated = sa.Column(sa.Boolean, default=False)
@@ -83,10 +85,13 @@ class Document(Base):
 
     id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
     raw_document_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("raw_documents.id", ondelete="CASCADE"), nullable=False,
+        UUID(as_uuid=True),
+        sa.ForeignKey("raw_documents.id", ondelete="CASCADE"),
+        nullable=False,
     )
     issuer_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("issuers.id", ondelete="SET NULL"),
+        UUID(as_uuid=True),
+        sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
     document_type = sa.Column(sa.String(50))
@@ -94,7 +99,7 @@ class Document(Base):
     reporting_period_end = sa.Column(sa.Date)
     published_at = sa.Column(sa.DateTime(timezone=True))  # Data de publicação oficial
 
-    canonical_data = JSONB()  # Dados canônicos validados e normalizados
+    canonical_data = sa.Column(JSONB)  # Dados canônicos validados e normalizados
 
     created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
 

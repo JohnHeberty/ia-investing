@@ -2,18 +2,20 @@
 
 ## Project Structure & Module Organization
 
-Application code lives under `src/`. Deployable entry points are in `src/apps/` (`api`, `scheduler`, and `worker`), while business capabilities are grouped by concern: `connectors/` fetches B3, CVM, macroeconomic, and news data; `normalization/`, `metrics/`, and `data_quality/` transform and validate it; `domain/`, `portfolio/`, `backtesting/`, and `evaluation/` implement core analysis. Database models and configuration live in `src/database/`, with Alembic support in `migrations/`. Agent prompts are versioned in `prompts/<agent>/system.md`. Unit tests belong in `tests/unit/`; infrastructure configuration is under `infra/`, and planning/reference material is under `docs/`.
+Application code lives under `src/`; deployable entry points are in `src/apps/`. Connectors fetch source data, while `domain/`, `portfolio/`, `backtesting/`, and `evaluation/` implement analysis. Database models live in `src/database/`, with Alembic migrations in `migrations/`. Prompts are versioned in `prompts/`. Tests belong in `tests/unit/`, infrastructure in `infra/`, and plans in `docs/`.
 
 ## Build, Test, and Development Commands
 
 - `uv sync --all-extras` installs Python 3.12 runtime and development dependencies.
 - `Copy-Item .env.example .env` creates local configuration on PowerShell; never commit the populated file.
-- `docker compose up -d` starts PostgreSQL/pgvector, MinIO, Temporal, MLflow, and OpenTelemetry.
+- `docker compose --profile dev up -d` starts PostgreSQL, MinIO, Temporal, migrations, API, and workers.
+- `docker compose --profile observability up -d` adds the persistent telemetry collector and MLflow.
 - `alembic upgrade head` applies database migrations.
 - `uvicorn apps.api.main:app --reload --app-dir src` runs the API locally.
 - `pytest` runs all tests; use `pytest tests/unit/test_metrics_engine.py -q` for a focused run.
 - `ruff check .` checks formatting-independent style and import order; `ruff format --check .` verifies formatting.
 - `mypy src` performs strict static type checking.
+- From `web/`, `npm ci && npm run build` validates the Next.js application and generated OpenAPI client.
 
 ## Coding Style & Naming Conventions
 

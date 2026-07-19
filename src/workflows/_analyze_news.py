@@ -6,6 +6,9 @@ from typing import Any, Literal
 
 from temporalio import workflow
 
+with workflow.unsafe.imports_passed_through():
+    from ia_investing.orchestration.policies import DEFAULT_ACTIVITY_RETRY_POLICY, EXTERNAL_IO_RETRY_POLICY
+
 
 @dataclass(slots=True)
 class NewsArticle:
@@ -32,19 +35,20 @@ class NewsAnalysis:
 
 @workflow.defn
 class AnalyzeNewsWorkflow:
-
     @workflow.run
     async def run(self, article: NewsArticle) -> NewsAnalysis:
         analyst_output = await workflow.execute_activity(
             "run_news_analyst",
             args=[article.news_item_id, article.title, article.body, article.url],
             start_to_close_timeout=timedelta(seconds=120),
+            retry_policy=EXTERNAL_IO_RETRY_POLICY,
         )
 
         thesis_comparisons = await workflow.execute_activity(
             "compare_with_active_theses",
             args=[analyst_output, article.issuer_ids],
             start_to_close_timeout=timedelta(seconds=60),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         analysis = NewsAnalysis(
@@ -60,15 +64,19 @@ class AnalyzeNewsWorkflow:
 
         await workflow.execute_activity(
             "update_event_log",
-            args=[article.news_item_id, {
-                "event_type": analysis.event_type,
-                "description": analysis.description,
-                "materiality_score": analysis.materiality_score,
-                "direction_hint": analysis.direction_hint,
-                "affected_issuers": analysis.affected_issuers,
-                "thesis_effects": analysis.thesis_effects,
-            }],
+            args=[
+                article.news_item_id,
+                {
+                    "event_type": analysis.event_type,
+                    "description": analysis.description,
+                    "materiality_score": analysis.materiality_score,
+                    "direction_hint": analysis.direction_hint,
+                    "affected_issuers": analysis.affected_issuers,
+                    "thesis_effects": analysis.thesis_effects,
+                },
+            ],
             start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         await workflow.execute_activity(
@@ -84,6 +92,7 @@ class AnalyzeNewsWorkflow:
                 },
             ],
             start_to_close_timeout=timedelta(seconds=10),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
         return analysis

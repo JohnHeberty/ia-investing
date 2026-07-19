@@ -17,7 +17,10 @@ RECORD_TIPREG = "01"
 
 
 async def _fetch(
-    url: str, *, ticker: str | None = None, market_codes: list[str] | None = None,
+    url: str,
+    *,
+    ticker: str | None = None,
+    market_codes: list[str] | None = None,
     client: HttpClient | None = None,
 ) -> list[CotahistTrade]:
     """Download e parse do ZIP da B3 com filtros inline."""
@@ -39,9 +42,7 @@ async def _fetch(
 
             logger.info("Parsing B3 file: %s", name)
 
-            text_wrapper = io.TextIOWrapper(
-                io.BytesIO(zf.read(name)), encoding="iso-8859-1"
-            )
+            text_wrapper = io.TextIOWrapper(io.BytesIO(zf.read(name)), encoding="iso-8859-1")
 
             for line in text_wrapper:
                 stripped_line = line.rstrip("\r\n")

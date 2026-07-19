@@ -30,18 +30,27 @@ class TestBalanceSheetValidation:
             "total_assets": 1000,
             "total_liabilities": 400,
             "equity": 300,
+            "current_assets": 300,
+            "non_current_assets": 700,
+            "cash": 100,
+            "accounts_receivable": 50,
+            "inventory": 150,
         }
         results = validate_balance_sheet(line_items)
         balance_check = next(r for r in results if r.check_name == "balance_sheet_balances")
         assert not balance_check.passed
         assert balance_check.severity == "error"
 
-    def test_missing_required_accounts_still_validates(self):
+    def test_missing_required_accounts_are_not_converted_to_zero(self):
         line_items = {"entity_id": "BS003"}
         results = validate_balance_sheet(line_items)
-        assert len(results) > 0
-        balance_check = next(r for r in results if r.check_name == "balance_sheet_balances")
-        assert balance_check.passed
+        assert not results[0].passed
+        assert "total_assets" in results[0].details["missing_fields"]
+
+    def test_run_all_checks_reports_missing_accounts(self):
+        results = run_all_checks("BALANCE_SHEET", {"entity_id": "BS003"})
+        assert not results[0].passed
+        assert "total_assets" in results[0].details["missing_fields"]
 
     def test_negative_current_assets_flagged(self):
         line_items = {
@@ -50,6 +59,10 @@ class TestBalanceSheetValidation:
             "total_liabilities": 50,
             "equity": 50,
             "current_assets": -10,
+            "non_current_assets": 110,
+            "cash": 10,
+            "accounts_receivable": 20,
+            "inventory": 30,
         }
         results = validate_balance_sheet(line_items)
         check = next(r for r in results if r.check_name == "current_assets_non_negative")
@@ -117,15 +130,31 @@ class TestRunAllChecks:
         assert not results[0].passed
 
     def test_dispatches_balance_sheet(self):
-        data = {"entity_id": "X", "total_assets": 100, "total_liabilities": 50, "equity": 50}
+        data = {
+            "entity_id": "X",
+            "total_assets": 100,
+            "total_liabilities": 50,
+            "equity": 50,
+            "current_assets": 40,
+            "non_current_assets": 60,
+            "cash": 10,
+            "accounts_receivable": 15,
+            "inventory": 15,
+        }
         results = run_all_checks("BALANCE_SHEET", data)
         assert any(r.entity_type == "balance_sheet" for r in results)
 
     def test_dispatches_dre(self):
         data = {
-            "entity_id": "X", "receita_liquida": 100, "custo_receita": 50,
-            "despesas_operacionais": 20, "ebitda": 30, "ebit": 25,
-            "despesas_financeiras": 5, "impostos": 5, "lucro_liquido": 15,
+            "entity_id": "X",
+            "receita_liquida": 100,
+            "custo_receita": 50,
+            "despesas_operacionais": 20,
+            "ebitda": 30,
+            "ebit": 25,
+            "despesas_financeiras": 5,
+            "impostos": 5,
+            "lucro_liquido": 15,
         }
         results = run_all_checks("DRE", data)
         assert any(r.entity_type == "dre" for r in results)

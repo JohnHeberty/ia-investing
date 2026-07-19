@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date as _date
 
-from ._accounting import ValidationResult
+from ._models import ValidationResult
 
 
 def check_temporal_consistency(
@@ -11,14 +11,16 @@ def check_temporal_consistency(
     value_field: str,
 ) -> list[ValidationResult]:
     if not time_series:
-        return [ValidationResult(
-            check_name="temporal_empty_series",
-            passed=False,
-            entity_type="time_series",
-            entity_id="",
-            details={"record_count": 0},
-            severity="error",
-        )]
+        return [
+            ValidationResult(
+                check_name="temporal_empty_series",
+                passed=False,
+                entity_type="time_series",
+                entity_id="",
+                details={"record_count": 0},
+                severity="error",
+            )
+        ]
 
     entity_id = str(time_series[0].get("entity_id", ""))
     results: list[ValidationResult] = []
@@ -32,17 +34,19 @@ def check_temporal_consistency(
             sorted_ok = False
             out_of_order_indices.append(i)
 
-    results.append(ValidationResult(
-        check_name="temporal_sorted",
-        passed=sorted_ok,
-        entity_type="time_series",
-        entity_id=entity_id,
-        details={
-            "out_of_order_count": len(out_of_order_indices),
-            "out_of_order_indices": out_of_order_indices[:20],
-        },
-        severity="error" if not sorted_ok else "info",
-    ))
+    results.append(
+        ValidationResult(
+            check_name="temporal_sorted",
+            passed=sorted_ok,
+            entity_type="time_series",
+            entity_id=entity_id,
+            details={
+                "out_of_order_count": len(out_of_order_indices),
+                "out_of_order_indices": out_of_order_indices[:20],
+            },
+            severity="error" if not sorted_ok else "info",
+        )
+    )
 
     seen_dates: dict[str, int] = {}
     duplicates: list[tuple[int, str]] = []
@@ -56,17 +60,19 @@ def check_temporal_consistency(
         seen_dates[date_key] = seen_dates.get(date_key, 0) + 1
 
     has_duplicates = len(duplicates) > 0
-    results.append(ValidationResult(
-        check_name="temporal_no_duplicates",
-        passed=not has_duplicates,
-        entity_type="time_series",
-        entity_id=entity_id,
-        details={
-            "duplicate_count": len(duplicates),
-            "duplicate_dates": [d for _, d in duplicates[:20]],
-        },
-        severity="error" if has_duplicates else "info",
-    ))
+    results.append(
+        ValidationResult(
+            check_name="temporal_no_duplicates",
+            passed=not has_duplicates,
+            entity_type="time_series",
+            entity_id=entity_id,
+            details={
+                "duplicate_count": len(duplicates),
+                "duplicate_dates": [d for _, d in duplicates[:20]],
+            },
+            severity="error" if has_duplicates else "info",
+        )
+    )
 
     gaps: list[dict[str, str]] = []
     dates_list = [str(r.get(date_field, "")) for r in time_series if r.get(date_field) is not None]
@@ -84,13 +90,15 @@ def check_temporal_consistency(
             except (ValueError, TypeError):
                 pass
 
-    results.append(ValidationResult(
-        check_name="temporal_no_large_gaps",
-        passed=len(gaps) == 0,
-        entity_type="time_series",
-        entity_id=entity_id,
-        details={"gap_count": len(gaps), "gaps": gaps[:10]},
-        severity="warning" if gaps else "info",
-    ))
+    results.append(
+        ValidationResult(
+            check_name="temporal_no_large_gaps",
+            passed=len(gaps) == 0,
+            entity_type="time_series",
+            entity_id=entity_id,
+            details={"gap_count": len(gaps), "gaps": gaps[:10]},
+            severity="warning" if gaps else "info",
+        )
+    )
 
     return results
