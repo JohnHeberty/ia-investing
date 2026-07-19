@@ -12,7 +12,7 @@ from .agents import (  # noqa: F401
     AgentToolCall,
     Approval,
     AuditLog,
-    EvaluationResult,
+    EvaluationResultRecord,
     EvidenceItem,
     ExecutionReconciliation,
     InvestmentThesis,

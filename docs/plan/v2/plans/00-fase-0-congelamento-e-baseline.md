@@ -72,13 +72,13 @@ Execute os itens na ordem apresentada. Cada PR deve terminar com evidências ane
 
 ### `F0-PR02` — Inventários técnicos
 
-- [ ] Listar schemas Pydantic com versão, consumidores e mensagens duplicadas.
-- [ ] Listar modelos/tabelas SQLAlchemy, chaves, constraints, índices e campos JSONB.
-- [ ] Listar workflows, activities esperadas, task queues, schedules e políticas atuais.
-- [ ] Listar agents, prompts, schemas de saída, modelos e arquivos ausentes.
-- [ ] Listar fontes, conectores, formatos, autenticação, rate limits, licenças e SLAs conhecidos.
-- [ ] Mapear variáveis de ambiente por serviço, obrigatoriedade, default e sensibilidade.
-- [ ] Marcar colisões, órfãos e incompatibilidades com um identificador de backlog.
+- [x] Listar schemas Pydantic com versão, consumidores e mensagens duplicadas.
+- [x] Listar modelos/tabelas SQLAlchemy, chaves, constraints, índices e campos JSONB.
+- [x] Listar workflows, activities esperadas, task queues, schedules e políticas atuais.
+- [x] Listar agents, prompts, schemas de saída, modelos e arquivos ausentes.
+- [x] Listar fontes, conectores, formatos, autenticação, rate limits, licenças e SLAs conhecidos.
+- [x] Mapear variáveis de ambiente por serviço, obrigatoriedade, default e sensibilidade.
+- [x] Marcar colisões, órfãos e incompatibilidades com um identificador de backlog.
 
 ### `F0-PR03` — ADRs e convenções
 
