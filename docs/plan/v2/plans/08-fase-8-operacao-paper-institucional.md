@@ -72,8 +72,8 @@ Comparar dentro do mesmo mandato, benchmark, risco, horizonte e janela out-of-sa
 - [x] Implementar state machines e tabela de transições autorizadas.
 - [x] Aplicar unique/idempotency constraints a submit e eventos de fill.
 - [x] Impedir overfill, fill pós-cancelamento e instrumento fora do mandato.
-- [ ] Emitir audit/domain events em cada transição material.
-- [ ] Testar concorrência, duplicidade, expiração, cancelamento e rejeição.
+- [ ] Emitir audit/domain events em cada transição material. *(Parcial: DomainOutboxEvent emitido para intent (Created/Approved/Rejected/Cancelled) e simulate (OrderSimulated). Falta: PaperOrder status changes (accepted→partially_filled→filled/cancelled/rejected/expired) não emitem outbox events individuais)*
+- [ ] Testar concorrência, duplicidade, expiração, cancelamento e rejeição. *(NÃO TESTADO: test_paper_execution.py cobre state machine e simulação determinística. Falta: concurrent order submission, duplicate fill prevention (submit_key), intent expiration no service, cancel/reject paths)*
 
 ### `F8-PR02` — Simulador de execução
 
@@ -83,37 +83,37 @@ Comparar dentro do mesmo mandato, benchmark, risco, horizonte e janela out-of-sa
 - [x] Calcular fees/taxes conforme perfil e configuração versionados.
 - [x] Garantir preço posterior ao sinal e approvals.
 - [x] Persistir input snapshot, seed e versão do simulador.
-- [ ] Criar golden tests para cenários líquidos/ilíquidos e gap de mercado.
+- [ ] Criar golden tests para cenários líquidos/ilíquidos e gap de mercado. *(NÃO IMPLEMENTADO: nenhum golden test para paper execution. test_simulation_is_deterministic testa cenário líquido único. Falta: cenário ilíquido (baixa liquidez), gap de mercado (market_open=False), e golden tests com outputs esperados)*
 
 ### `F8-PR03` — RebalanceWorkflow completo
 
-- [ ] Carregar somente versão aprovada e validar freshness/risco novamente.
-- [ ] Calcular diff, custos, liquidez e intents determinísticos.
+- [ ] Carregar somente versão aprovada e validar freshness/risco novamente. *(Parcial: create_intent e simulate verificam status=="approved". PaperRebalanceWorkflow NÃO carrega versão nem re-valida freshness/risco — é puro approval gate)*
+- [ ] Calcular diff, custos, liquidez e intents determinísticos. *(NÃO IMPLEMENTADO no workflow: PaperRebalanceWorkflow é 59 linhas puro approval gate. Domínio tem simulate_order e fill_to_ledger, mas não há diff de posições, agregação de custos, ou validação de liquidez)*
 - [x] Pausar para approvals exigidos por mandato e segregação.
 - [x] Submeter ao simulador de forma idempotente.
-- [ ] Tratar fill parcial, cancelamento, janela expirada e kill switch.
+- [ ] Tratar fill parcial, cancelamento, janela expirada e kill switch. *(Parcial: domínio/serviço tratam partial fill, cancel, expiry e kill switch. Porém PaperRebalanceWorkflow não manipula nenhum desses — são lógicas de serviço, não do workflow)*
 - [x] Atualizar estado sem escrever diretamente em snapshots reconciliados.
-- [ ] Testar crash/retry/replay e aprovação duplicada/expirada.
+- [ ] Testar crash/retry/replay e aprovação duplicada/expirada. *(NÃO TESTADO: nenhum teste de workflow temporal para PaperRebalanceWorkflow. Falta: crash recovery, retry, replay determinism, duplicate approval signal, expired timeout, kill signal)*
 
 ### `F8-PR04` — Ledger e reconciliação
 
 - [x] Registrar fills como lançamentos append-only no ledger paper.
-- [ ] Atualizar projeções de posição/caixa por processamento idempotente.
-- [ ] Calcular e publicar NAV somente após reconciliação.
-- [ ] Comparar intents, orders, fills, ledger, posições, caixa e NAV.
+- [ ] Atualizar projeções de posição/caixa por processamento idempotente. *(Parcial: idempotência existe para intents, simulation e reconciliation breaks. Porém simulate() cria fills e ledger entries MAS NÃO atualiza PositionSnapshot ou CashSnapshot — projeções não são derivadas incrementalmente)*
+- [ ] Calcular e publicar NAV somente após reconciliação. *(verificado: PaperValuationWorkflow executa reconcile_paper_portfolio antes de publish_paper_nav; activity-level verifica publication.reconciled==True)*
+- [ ] Comparar intents, orders, fills, ledger, posições, caixa e NAV. *(Parcial: reconcile_execution compara orders↔fills e fills↔ledger. Falta: intent-level invariants, positions vs ledger aggregate, cash balance vs ledger, NAV vs computed)*
 - [x] Criar break com severidade, impacto, owner role e estado.
-- [ ] Corrigir por lançamento compensatório/nova versão, nunca editando fill.
-- [ ] Testar identidade contábil, corporate actions e quebra injetada.
+- [ ] Corrigir por lançamento compensatório/nova versão, nunca editando fill. *(Parcial: API aceita compensating_reference, mas resolve_break() apenas seta status="resolved" — não cria lançamento compensatório. Fills são append-only imutáveis)*
+- [ ] Testar identidade contábil, corporate actions e quebra injetada. *(Parcial: identidade contábil testada (test_nav_preserves_accounting_identity). Corporate actions testadas no backtest, não no paper NAV. Reconciliation breaks testados em domain unit, não via service layer com injeção)*
 
 ### `F8-PR05` — Alertas e operação
 
-- [ ] Definir catálogo de alertas, severidades, canais e escalonamento.
-- [ ] Alertar rejeição, atraso, slippage/custo, break, breach e schedule.
+- [ ] Definir catálogo de alertas, severidades, canais e escalonamento. *(Parcial: OperationalAlert model existe com severity/route/status. Falta: catálogo de tipos (só "reconciliation_break" é gerado), canais de notificação (route é string livre), regras de escalation)*
+- [ ] Alertar rejeição, atraso, slippage/custo, break, breach e schedule. *(NÃO IMPLEMENTADO: único alert_type gerado é "reconciliation_break". Falta: alertas de rejeição, atraso, slippage/custo acima do limite, breach de risco, schedule atrasado)*
 - [x] Deduplicar por recurso/regra/janela e permitir acknowledge auditado.
 - [x] Bloquear novas operações diante de condição crítica configurada.
 - [x] Implementar kill switch por carteira e global com autoridade explícita.
-- [ ] Criar dashboards/SLOs e testar notification outage/flood control.
-- [ ] Exercitar runbooks de suspensão, recuperação e reconciliação.
+- [ ] Criar dashboards/SLOs e testar notification outage/flood control. *(NÃO IMPLEMENTADO: nenhum endpoint de dashboard, definição de SLO, tratamento de notification outage, ou flood control)*
+- [ ] Exercitar runbooks de suspensão, recuperação e reconciliação. *(NÃO EXERCITADO: runbook existe em docs/plan/v2/runbooks/paper-operations.md, mas nenhum teste/exercício valida o procedimento end-to-end)*
 
 ### `F8-PR06` — Attribution e post-mortem
 
@@ -123,7 +123,7 @@ Comparar dentro do mesmo mandato, benchmark, risco, horizonte e janela out-of-sa
 - [x] Classificar erro de dado, modelo, decisão, execução ou operação.
 - [x] Registrar ação corretiva, owner role, prazo e verificação.
 - [x] Preservar versão do relatório e dissenso humano.
-- [ ] Criar golden/E2E de lineage decisão-resultado.
+- [ ] Criar golden/E2E de lineage decisão-resultado. *(NÃO IMPLEMENTADO: validate_post_mortem_lineage existe no domínio, mas nenhum teste E2E/golden traça lineage de decisão → trade → fill → ledger → NAV)*
 
 ### `F8-PR07` — Champion/challenger
 
@@ -132,18 +132,18 @@ Comparar dentro do mesmo mandato, benchmark, risco, horizonte e janela out-of-sa
 - [x] Calcular performance, drawdown, estabilidade e divergências.
 - [x] Aplicar gates de dados, tese, risco, liquidez e histórico mínimo.
 - [x] Criar promotion pack imutável com evidências/limitações.
-- [ ] Exigir comitê e nova versão para qualquer promoção.
-- [ ] Testar survivorship, mudança metodológica e tentativa automática.
+- [ ] Exigir comitê e nova versão para qualquer promoção. *(Parcial: comitê obrigatório (4-eyes, DB constraint decision_requires_human). Falta: decide_challenger NÃO cria nova InstitutionalPortfolioVersion — promove decisão mas não gera nova versão)*
+- [ ] Testar survivorship, mudança metodológica e tentativa automática. *(NÃO TESTADO: methodology_version existe no model mas não há testes de survivorship, mudança metodológica, ou prevenção de auto-promoção)*
 
 ### `F8-PR08` — Operação E2E
 
 - [x] Criar telas/queries/actions para intents, orders, fills e breaks.
 - [x] Exibir permanentemente o ambiente paper em todos os recursos.
 - [x] Configurar schedules de valuation, rebalance e reconciliação.
-- [ ] Executar ciclo completo sem intervenção técnica rotineira.
-- [ ] Injetar falha de fonte, worker, preço, fill e reconciliação.
-- [ ] Exercitar kill switch e retomada sob aprovação.
-- [ ] Publicar evidências de SLO, attribution, auditoria e post-mortem.
+- [ ] Executar ciclo completo sem intervenção técnica rotineira. *(NÃO AUTÔNOMO: schedules definidos (reconciliation, valuation diários; rebalance semanal). Porém PaperRebalanceWorkflow SEMPRE pausa em awaiting_approval — ciclo completo requer intervenção humana)*
+- [ ] Injetar falha de fonte, worker, preço, fill e reconciliação. *(NÃO IMPLEMENTADO: nenhum teste de fault injection em todo o test suite)*
+- [ ] Exercitar kill switch e retomada sob aprovação. *(Parcial: kill switch implementado com 4-eyes release. Falta: zero testes exercitam ativação → blocking → release → retomada)*
+- [ ] Publicar evidências de SLO, attribution, auditoria e post-mortem. *(Parcial: post-mortem create endpoint existe, audit log populado. Falta: endpoints de SLO, query de audit logs, list de post-mortems/challenger evaluations)*
 - [x] Confirmar ausência de endpoint, SDK, secret ou egress de corretora.
 
 ## Migration, rollout e rollback
@@ -169,14 +169,14 @@ Iniciar com uma carteira e universo reduzido, depois ampliar por feature flag/ma
 
 ## Critérios de saída
 
-- [ ] Carteira paper opera pelos schedules sem intervenção técnica manual rotineira.
+- [ ] Carteira paper opera pelos schedules sem intervenção técnica manual rotineira. *(PaperRebalanceWorkflow sempre requer approval manual — ciclo não é autônomo)*
 - [x] Toda negociação referencia versão, proposta e decisão aprovadas.
-- [ ] Ledger, posições, caixa e NAV reconciliam diariamente.
+- [ ] Ledger, posições, caixa e NAV reconciliam diariamente. *(Parcial: reconciliation diária agendada, compara orders/fills/ledger. Falta: reconciliação explícita de positions e cash como entidades independentes)*
 - [x] Divergências críticas bloqueiam e alertam conforme policy.
 - [x] Custos/slippage são versionados e atribuídos.
 - [x] Champion/challenger usa janela comparável e aprovação humana.
 - [x] Post-mortem liga decisão, expectativa e resultado realizado.
-- [ ] Runbooks e kill switch foram exercitados.
+- [ ] Runbooks e kill switch foram exercitados. *(Runbook paper-operations.md existe. Kill switch não foi exercitado/testado)*
 
 ## Riscos e passagem para a Fase 9
 
@@ -184,4 +184,23 @@ Paper trading pode subestimar latência, capacidade e fricções reais. Resultad
 
 ## Auditoria de implementação (2026-07-19)
 
-8 ORM models em `paper_execution.py` (276 lines: TradeIntent, PaperOrder, PaperFill, ReconciliationBreak, OperationalAlert, PaperKillSwitch, PaperPostMortem, ChallengerEvaluation) com CheckConstraints rigorosos. 5 Temporal workflows: `_paper_rebalance.py` (signal/query/kill), `_paper_reconciliation.py` (activity call), `_paper_valuation.py` (reconciliation→NAV), `_approval_gate.py` (wait_condition/signal/query), `_portfolio_construction.py` (role-based voting, 109 lines). Pendências: simulator golden tests, ledger reconciliation E2E, kill switch drills, champion/challenger promotion gate.
+8 ORM models em `paper_execution.py` (276 lines: TradeIntent, PaperOrder, PaperFill, ReconciliationBreak, OperationalAlert, PaperKillSwitch, PaperPostMortem, ChallengerEvaluation) com CheckConstraints rigorosos. 5 Temporal workflows: `_paper_rebalance.py` (signal/query/kill — 59 linhas, puro approval gate), `_paper_reconciliation.py` (activity call), `_paper_valuation.py` (reconciliation→NAV), `_approval_gate.py` (wait_condition/signal/query), `_portfolio_construction.py` (role-based voting, 109 lines).
+
+**Pendências restantes (não implementadas ou parciais):**
+- Domain events incompletos (falta order-level outbox events)
+- Testes de concorrência/duplicidade/expiração/cancelamento/rejeição inexistentes
+- Golden tests para cenários ilíquidos/gap de mercado inexistentes
+- PaperRebalanceWorkflow é puro approval gate — não calcula diff/custos/liquidez
+- Testes de workflow behavioral (crash/retry/replay/idempotency) inexistentes
+- Reconciliação não cobre intents/positions/cash/NAV como entidades independentes
+- Compensating entries não implementadas (só documenta referência)
+- Alertas limitados a "reconciliation_break" — falta catálogo, canais, escalation
+- Dashboards/SLOs/notification outage/flood control inexistentes
+- Runbook paper-operations.md existe mas não foi exercitado
+- Kill switch implementado mas zero testes
+- E2E lineage decisão-resultado inexistente
+- Champion/challenger: committee enforced mas nova versão não criada na promoção
+- Survivorship/methodology change testing inexistente
+- Ciclo completo não é autônomo (rebalance sempre requer approval manual)
+- Fault injection testing inexistente
+- Post-mortem/attribution endpoints de list inexistentes
