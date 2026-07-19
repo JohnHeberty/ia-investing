@@ -109,13 +109,13 @@ Registrar `run_id`, workflow/case, agent/prompt/model/schema versions, hashes, e
 - [x] Implementar approve/reject autorizado com razão e four-eyes aplicável.
 - [x] Retomar exatamente as mesmas versões e inputs após decisão.
 - [x] Tratar timeout, cancelamento, decisão duplicada e aprovação expirada.
-- [x] Testar replay Temporal antes/depois da pausa.
+- [ ] Testar replay Temporal antes/depois da pausa. *(testes de replay Temporal para HITL não existem)*
 
 ### `F4-PR06` — Tracing e custos
 
 - [ ] Correlacionar trace/span com workflow, case, run e tool call IDs.
 - [x] Registrar tokens, custo, latência, modelo e status por etapa.
-- [x] Redigir prompts, secrets, dados pessoais e conteúdo licenciado dos logs.
+- [x] Redigir prompts, secrets, dados pessoais e conteúdo licenciado dos logs. *(partial: secrets/PII redactados em tool payloads, mas sem redação explícita de prompt content e licensed content)*
 - [x] Criar métricas de schema pass, citation coverage e guardrail trips.
 - [ ] Criar dashboards/alerts de erro, custo e latência anormais.
 - [ ] Verificar amostra ponta a ponta da API ao agent output.
@@ -131,10 +131,10 @@ Registrar `run_id`, workflow/case, agent/prompt/model/schema versions, hashes, e
 
 ### `F4-PR08` — Specialists
 
-- [x] Definir inputs/outputs/tools de Filing, News, Macro, Political e Critic.
-- [x] Criar prompt/schema/version e testes de existência para cada agent.
+- [x] Definir inputs/outputs/tools de Filing, News, Macro, Political e Critic. *(partial: registry tem os 5 specialists mas _config.py só define AgentConfig para 3 — faltam MACRO_ANALYST e POLITICAL_ANALYST)*
+- [x] Criar prompt/schema/version e testes de existência para cada agent. *(partial: prompts existem mas só 1 teste aggregate — sem teste individual por specialist verificando hash/versão/output type)*
 - [x] Restringir contexto/evidence ao caso e cutoff autorizados.
-- [x] Criar eval dataset específico por capability.
+- [ ] Criar eval dataset específico por capability. *(framework de validação existe mas nenhum dataset JSON foi criado)*
 - [ ] Executar shadow runs antes de permitir output em research workflow.
 - [ ] Aprovar thresholds e documentar limitações/runbook de falha.
 
