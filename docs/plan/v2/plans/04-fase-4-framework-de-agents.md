@@ -126,7 +126,7 @@ Registrar `run_id`, workflow/case, agent/prompt/model/schema versions, hashes, e
 - [x] Definir baseline, candidato e thresholds por capability.
 - [ ] Medir extração, classificação, claims, citações, custo e latência.
 - [x] Incluir prompt injection, evidência conflitante e datas futuras.
-- [ ] Integrar eval ao CI para mudança de prompt/model/tool/schema.
+- [ ] Integrar eval ao pipeline de validação para mudança de prompt/model/tool/schema.
 - [x] Bloquear ativação de candidato reprovado e auditar override.
 
 ### `F4-PR08` — Specialists

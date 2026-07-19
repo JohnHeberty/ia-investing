@@ -44,7 +44,7 @@ Usar SSE para operações/notificações e polling de fallback. Filtros ficam na
 
 ## Interfaces frontend/backend
 
-- Gerar client a partir do OpenAPI fixado no build; diff incompatível falha CI.
+- Gerar client a partir do OpenAPI fixado no build; diff incompatível falha na verificação.
 - Datas são apresentadas no timezone da organização; dinheiro permanece decimal/string até formatação.
 - Commands enviam `Idempotency-Key` e `If-Match`; respostas 202 alimentam status via SSE.
 - Deep links preservam organização, recurso, aba e `as_of`, sem incluir secrets.
@@ -54,7 +54,7 @@ Usar SSE para operações/notificações e polling de fallback. Filtros ficam na
 
 | PR | Conteúdo | Origem no plano mestre |
 | --- | --- | --- |
-| `F6-PR01` | Next.js, client OpenAPI, auth, shell e CI frontend | PR-014 |
+| `F6-PR01` | Next.js, client OpenAPI, auth e shell | PR-014 |
 | `F6-PR02` | Tokens, temas, componentes e Storybook | PR-014 |
 | `F6-PR03` | Estados comuns, SSE, notificações e URL filters | Design 13.7/13.8 |
 | `F6-PR04` | Mission Control e Top carteiras | PR-015 |
@@ -69,7 +69,7 @@ Usar SSE para operações/notificações e polling de fallback. Filtros ficam na
 ### `F6-PR01` — Fundação web
 
 - [x] Criar workspace/app Next.js com TypeScript strict e comandos canônicos.
-- [x] Configurar lint, format, type check, Vitest, Playwright e build no CI.
+- [x] Configurar lint, format, type check, Vitest, Playwright e build.
 - [x] Gerar client a partir de uma versão fixada do OpenAPI.
 - [x] Integrar OIDC, refresh/logout e contexto de organização/timezone.
 - [x] Criar app shell, sidebar, topbar, rotas protegidas e error boundary.
@@ -185,7 +185,7 @@ Publicar shell e componentes atrás de feature flags, primeiro com mocks version
 - [ ] Top X compara apenas carteiras elegíveis da mesma categoria.
 - [ ] Permissões são coerentes entre frontend e API.
 - [ ] Estados obrigatórios existem em todas as telas críticas.
-- [ ] Acessibilidade, visual regression e E2E passam no CI.
+- [ ] Acessibilidade, visual regression e E2E passam.
 - [ ] Runbooks cobrem auth, SSE, feature flags e falhas de dependência.
 
 ## Riscos e passagem para a Fase 7

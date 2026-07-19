@@ -15,7 +15,7 @@ Adotar Alembic como único mecanismo de schema:
 1. **Remover `create_all()`** — Substituir por `alembic upgrade head` no startup
 2. **Gerar migration inicial** — A partir do schema atual (51 tabelas)
 3. **Todas as mudanças de schema** — Devem ser migrations, não alterações manuais
-4. **CI deve verificar** — `alembic check` para detectar drift
+4. **Verificação local** — `alembic check` para detectar drift
 5. **Naming convention** — `%(year)4d%(month)02d%(day)02d_%(hour)02d%(minute)02d_<description>`
 
 ## Alternativas Consideradas
@@ -30,7 +30,7 @@ Adotar Alembic como único mecanismo de schema:
 
 - **Positivas:** Versionamento de schema, upgrades/downgrades, drift detection, collaboração segura, audit trail.
 - **Negativas:** Overhead de gerar migrations para cada mudança, learning curve para time.
-- **Mitigações:** CI com `alembic check`, naming convention clara, migration generator automático.
+- **Mitigações:** `alembic check` regular, naming convention clara, migration generator automático.
 
 ## Referências
 

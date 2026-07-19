@@ -24,7 +24,7 @@ Atualizado em 2026-07-18. O identificador permanece estável até o aceite. “F
 | P0-16 Evidência/RAG | F2-PR10, F3-PR02 | Document versions | Claim não citável | Chunk preserva página/seção/tabela e claim material exige evidence |
 | P0-17 Observabilidade | F1-PR08, F4-PR06 | Infra/IDs | Incidente sem correlação | API/workers/connectors/agents correlacionados e dashboards ativos |
 | P0-18 Infra local | F1-PR08 | Settings/migrations | Stack não reproduzível | Compose completo, versões fixas e healthchecks saudáveis |
-| P0-19 Testes | Todas | CI F0 | Regressões silenciosas | Gates específicos por fórmula, connector, workflow, prompt e frontend |
+| P0-19 Testes | Todas | Baseline local F0 | Regressões silenciosas | Gates específicos por fórmula, connector, workflow, prompt e frontend |
 | P0-20 Licenciamento | F0-PR06, F9-PR02 | Evidência do titular | Redistribuição não autorizada | Direito comprovado ou conteúdo removido/substituído e histórico tratado |
 
 ## P1 — Débitos encontrados no baseline
@@ -44,9 +44,9 @@ Atualizado em 2026-07-18. O identificador permanece estável até o aceite. “F
 
 | ID | Fase | Aceite |
 | --- | --- | --- |
-| P2-01 Padronizar documentação | F1 | Markdown/links/UTF-8 verificados no CI |
+| P2-01 Padronizar documentação | F1 | Markdown/links/UTF-8 verificados |
 | P2-02 Pin de actions por SHA | F1/F9 | Todas as third-party actions pinadas e atualizadas por processo controlado |
-| P2-03 Renovação automatizada de dependências | F1 | Renovate/Dependabot abre PRs com CI e changelog |
+| P2-03 Renovação automatizada de dependências | F1 | Renovate/Dependabot abre PRs com changelog |
 | P2-04 Métricas de duração/flakiness | F1 | Histórico por teste/job e quarentena com owner/expiração |
 | P2-05 Developer CLI | F1 | Um comando verifica config, infra, migration e dependências |
 

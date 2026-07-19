@@ -18,7 +18,7 @@ Somente versionar conteúdo de terceiro quando origem, licença, atribuição, f
 - Mudança de licença pausa nova ingestão e abre incidente.
 - Conteúdo expirado/proibido é removido do branch e artefatos; reescrita de histórico é uma operação separada, aprovada pelo owner e coordenada com consumidores.
 - Outputs derivados mantêm lineage para permitir avaliação de impacto e exclusão.
-- Fixtures sem redistribuição são recriadas em CI/ambiente autorizado ou substituídas por equivalentes sintéticos.
+- Fixtures sem redistribuição são recriadas em ambiente autorizado ou substituídas por equivalentes sintéticos.
 
 ## Estado dos conteúdos atuais
 

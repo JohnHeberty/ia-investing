@@ -4064,9 +4064,9 @@ Salvar fixtures representativas sem redistribuir conteúdo sem licença.
 * E2E de fluxos críticos.
 * Erros e estados vazios.
 
-## 27.8 CI
+## 27.8 Verificações de qualidade
 
-Gate mínimo:
+Gate mínimo (executado localmente):
 
 ```text
 ruff
@@ -4105,15 +4105,12 @@ Criar segurança para modificar o código.
 * Inventário de schemas.
 * Inventário de fontes.
 * Fixtures CVM/B3.
-* CI básico.
 * Relatório de dependências.
 * Backlog P0/P1/P2.
 * Convenções de domínio.
 
 ### Aceite
 
-* Branch protegido.
-* CI obrigatório.
 * Testes atuais executados.
 * Métricas de baseline registradas.
 

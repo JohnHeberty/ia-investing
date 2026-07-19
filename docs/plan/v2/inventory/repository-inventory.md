@@ -27,7 +27,7 @@
 | Dependências dev | 6 |
 | Variáveis de ambiente | 18+ |
 | Migrations Alembic | 0 (não utilizado) |
-| Pipelines CI | 0 (nenhum configurado) |
+| Pipelines CI | 0 (não aplicável) |
 
 ---
 
@@ -205,7 +205,8 @@ docker compose up -d postgres minio     # apenas infraestrutura
 - Porta: 8000
 
 ### CI/CD
-**Nenhum configurado.** Sem `.github/`, `.gitlab-ci.yml`, `Jenkinsfile`.
+
+Nenhum pipeline configurado. Verificações de qualidade executadas localmente (Ruff, mypy, pytest, compileall).
 
 ---
 
@@ -213,8 +214,7 @@ docker compose up -d postgres minio     # apenas infraestrutura
 
 1. **Migrations não utilizadas** — Alembic configurado mas schema via `create_all`
 2. **3 prompts ausentes** — Agentes referenciam arquivos que não existem
-3. **Sem CI** — Nenhum pipeline de integração contínua
-4. **`docs/books/`** — PDF licenciado requer verificação de conformidade
-5. **`database/models/` extenso** — 50+ modelos em 17 arquivos, convenções mistas
-6. **`evaluation/` sem testes** — Módulo não integrado à API
-7. **`domain/` stub** — Implementações mínimas (198 linhas total)
+3. **`docs/books/`** — PDF licenciado requer verificação de conformidade
+4. **`database/models/` extenso** — 50+ modelos em 17 arquivos, convenções mistas
+5. **`evaluation/` sem testes** — Módulo não integrado à API
+6. **`domain/` stub** — Implementações mínimas (198 linhas total)

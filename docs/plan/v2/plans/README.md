@@ -8,7 +8,7 @@ Execute as fases em ordem. Uma fase só pode começar quando seus critérios de 
 
 | Fase | Plano | Gate principal |
 | ---: | --- | --- |
-| 0 | [Congelamento e baseline](00-fase-0-congelamento-e-baseline.md) | CI obrigatório e baseline registrado |
+| 0 | [Congelamento e baseline](00-fase-0-congelamento-e-baseline.md) | Baseline registrado |
 | 1 | [Sistema executável](01-fase-1-sistema-executavel.md) | Fluxo CVM mockado ponta a ponta |
 | 2 | [Confiança dos dados](02-fase-2-confianca-dos-dados.md) | Consulta histórica point-in-time reproduzível |
 | 3 | [Domínio de pesquisa](03-fase-3-dominio-de-pesquisa.md) | Recomendação explicável por evidência e versão |
@@ -60,7 +60,7 @@ Para cada PR, registrar requisito, decisão de domínio, impacto de schema/migra
 
 | Fase | Artefatos verificados | Implementação real | Stubs | Pendências |
 |:---:|:---:|:---:|:---:|:---|
-| 0 | 7/7 | 7 | 0 | Review técnico, branch protection, CI clone test |
+| 0 | 7/7 | 7 | 0 | Review técnico |
 | 1 | 6/6 | 6 | 0 | E2E integration, contract round-trip tests |
 | 2 | 5/5 | 5 | 0 | Golden tests multi-setoriais, dashboards qualidade |
 | 3 | 5/5 | 5 | 0 | E2E workflow, contract tests handlers |

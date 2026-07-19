@@ -3,7 +3,7 @@
 ## Pré-requisitos
 
 - Git, Docker Desktop/Engine com Compose e Python conforme `.python-version`.
-- `uv` na versão definida pelo workflow de CI.
+- `uv` na versão mais recente estável.
 - Cópia local de `.env.example` como `.env`; nunca versionar `.env`.
 
 ## Setup

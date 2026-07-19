@@ -12,7 +12,7 @@ Ativos: raw documents, dados licenciados, evidence/claims, prompts, decisões, p
 - Poisoning, schema drift, duplicação e knowledge leakage.
 - Replay/concorrência criando ordem ou fill duplicado.
 - Alteração destrutiva de raw, evidence, forecast, fill ou ledger.
-- Supply-chain compromise em Python, npm, imagens e CI.
+- Supply-chain compromise em Python, npm e imagens.
 
 ## Controles a auditar
 

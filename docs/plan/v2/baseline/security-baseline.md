@@ -12,13 +12,13 @@ Data: 2026-07-18
 | `alembic.ini:4` | Basic Auth Credentials | URL hardcoded; remover em F1-PR03 |
 | `src/database/config.py:19` | Basic Auth Credentials | Default local; produção deve falhar fechado em F1-PR02 |
 
-Esses achados não são secrets reais, mas representam defaults inseguros e não devem ser allowlisted permanentemente. O CI preserva o relatório informativo até a correção.
+Esses achados não são secrets reais, mas representam defaults inseguros e não devem ser allowlisted permanentemente. O relatório deve ser preservado até a correção.
 
 ## Dependency audit
 
 `pip-audit 2.10.1` foi iniciado diretamente contra o projeto. A resolução falhou antes da consulta de vulnerabilidades ao preparar metadata de `litellm`, que tentou usar Cargo/Rust no ambiente isolado. Portanto, não há resultado de vulnerabilidades local válido.
 
-O CI resolve o grafo com `uv`, exporta versões pinadas e executa `pip-audit` contra o arquivo resultante. O artifact do primeiro run remoto deve ser anexado a este baseline; falha de resolução continua visível e não pode ser interpretada como “zero vulnerabilidades”.
+Execute localmente: resolva o grafo com `uv`, exporte versões pinadas e execute `pip-audit` contra o arquivo resultante. Falha de resolução continua visível e não pode ser interpretada como "zero vulnerabilidades".
 
 ## Próximas ações
 
