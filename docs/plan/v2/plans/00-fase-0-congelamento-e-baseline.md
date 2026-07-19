@@ -56,6 +56,70 @@ Converter P0-01 a P0-20 em itens rastreáveis, com fase de destino, dependência
 | `F0-PR05` | CI básico e relatório de baseline | Pipeline executa em clone limpo |
 | `F0-PR06` | Backlog priorizado e parecer sobre conteúdo licenciado | Todos os P0 possuem destino e gate |
 
+## Checklist detalhado de implementação
+
+Execute os itens na ordem apresentada. Cada PR deve terminar com evidências anexadas à descrição e sem misturar correções funcionais da Fase 1.
+
+### `F0-PR01` — Baseline e mapa do repositório
+
+- [x] Confirmar o commit exato de início e registrar SHA, branch, data e autor da captura.
+- [x] Criar tag anotada de baseline seguindo a convenção aprovada no ADR.
+- [x] Inventariar todos os diretórios de código, testes, prompts, migrations, infraestrutura e documentação.
+- [x] Identificar entrypoints de API, scheduler, workers, CLI e scripts operacionais.
+- [x] Registrar comandos atuais de instalação, inicialização, lint, type check e testes.
+- [x] Classificar cada módulo como preservar, refatorar, substituir ou remover, com justificativa curta.
+- [x] Revisar o inventário contra `rg --files` e anexar a evidência da conferência.
+
+### `F0-PR02` — Inventários técnicos
+
+- [ ] Listar schemas Pydantic com versão, consumidores e mensagens duplicadas.
+- [ ] Listar modelos/tabelas SQLAlchemy, chaves, constraints, índices e campos JSONB.
+- [ ] Listar workflows, activities esperadas, task queues, schedules e políticas atuais.
+- [ ] Listar agents, prompts, schemas de saída, modelos e arquivos ausentes.
+- [ ] Listar fontes, conectores, formatos, autenticação, rate limits, licenças e SLAs conhecidos.
+- [ ] Mapear variáveis de ambiente por serviço, obrigatoriedade, default e sensibilidade.
+- [ ] Marcar colisões, órfãos e incompatibilidades com um identificador de backlog.
+
+### `F0-PR03` — ADRs e convenções
+
+- [ ] Registrar ADR do monólito modular com deployables separados.
+- [ ] Registrar ADR de Temporal para execução durável e schedules.
+- [ ] Registrar ADR de Raw Zone imutável e fatos canônicos point-in-time.
+- [ ] Registrar ADR de Alembic como único mecanismo de schema.
+- [ ] Definir convenções para IDs, nomes, datas, dinheiro, enums, erros e eventos.
+- [ ] Definir regra explícita de separação entre fato, inferência e recomendação.
+- [ ] Obter revisão técnica e registrar decisões divergentes nos ADRs.
+
+### `F0-PR04` — Fixtures CVM/B3
+
+- [ ] Selecionar documentos representativos de indústria, instituição financeira e utility.
+- [ ] Incluir períodos, versões, reapresentação e escopos individual/consolidado quando disponíveis.
+- [ ] Registrar URL/origem, data de captura, licença, hash, tamanho e mídia de cada fixture.
+- [ ] Minimizar ou anonimizar conteúdo que não precise ser redistribuído.
+- [ ] Criar manifesto legível por máquina com os metadados das fixtures.
+- [ ] Adicionar teste offline de leitura, encoding e integridade por hash.
+- [ ] Documentar receita de nova captura sem depender de arquivo local não versionado.
+
+### `F0-PR05` — CI e métricas de baseline
+
+- [ ] Fixar versão do Python e fluxo de instalação usado pelo CI.
+- [ ] Executar Ruff, mypy e pytest em jobs separados e armazenar seus relatórios.
+- [ ] Medir cobertura, duração, testes coletados, falhas e flaky tests conhecidos.
+- [ ] Executar dependency e secret scan inicialmente em modo informativo.
+- [ ] Configurar cache sem tornar o resultado dependente de estado anterior.
+- [ ] Executar pipeline em clone limpo e ambiente sem `.env` pessoal.
+- [ ] Publicar tabela de baseline com comando, versão, resultado e link da evidência.
+
+### `F0-PR06` — Backlog e conformidade
+
+- [ ] Criar um item rastreável para cada P0-01 a P0-20.
+- [ ] Atribuir prioridade, fase, dependências, risco e critério de aceite a cada item.
+- [ ] Identificar P1/P2 encontrados nos inventários sem diluir os P0.
+- [ ] Verificar licença e autorização do conteúdo em `docs/books/`.
+- [ ] Registrar decisão de manter, substituir referência ou remover conteúdo/histórico.
+- [ ] Definir política para novas fixtures e documentos de terceiros.
+- [ ] Confirmar que todos os bloqueadores da Fase 1 possuem artefato de entrada.
+
 ## Interfaces e artefatos
 
 Esta fase não altera APIs. Define os formatos documentais mínimos para `source inventory`, `schema inventory`, ADR, registro de fixture e backlog. IDs usados nesses artefatos devem ser estáveis para serem citados pelas fases posteriores.
