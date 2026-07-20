@@ -296,20 +296,13 @@ async def test_reprocessing_does_not_change_historical_result() -> None:
 # ---------------------------------------------------------------------------
 
 
-async def test_metric_observation_links_to_source_facts() -> None:
+def test_metric_observation_links_to_source_facts() -> None:
     """MetricFactLineage connects a MetricObservation to its source FinancialFacts."""
-    session = AsyncMock(spec=AsyncSession)
-
     fact_a = _fact_stub(id=uuid4(), original_account_code="1.01")
     fact_b = _fact_stub(id=uuid4(), original_account_code="2.01")
 
     obs = _metric_observation_stub()
 
-    # Simulate session.add + flush
-    session.add = MagicMock()
-    session.flush = AsyncMock()
-
-    # Manually create lineage rows (simulating what MetricService does)
     lineage_a = MetricFactLineage(
         metric_observation_id=obs.id,
         financial_fact_id=fact_a.id,
@@ -321,14 +314,6 @@ async def test_metric_observation_links_to_source_facts() -> None:
         input_role="current_liabilities",
     )
 
-    # Query lineage back
-    lineage_rows = [lineage_a, lineage_b]
-
-    mock_lineage_result = MagicMock()
-    mock_lineage_result.scalars.return_value.all.return_value = lineage_rows
-    session.execute.return_value = mock_lineage_result
-
-    # Verify traceability
     assert lineage_a.metric_observation_id == obs.id
     assert lineage_a.financial_fact_id == fact_a.id
     assert lineage_a.input_role == "current_assets"
@@ -337,8 +322,7 @@ async def test_metric_observation_links_to_source_facts() -> None:
     assert lineage_b.financial_fact_id == fact_b.id
     assert lineage_b.input_role == "current_liabilities"
 
-    # Verify we can trace from observation -> facts
-    traced_fact_ids = {ln.financial_fact_id for ln in lineage_rows}
+    traced_fact_ids = {lineage_a.financial_fact_id, lineage_b.financial_fact_id}
     assert fact_a.id in traced_fact_ids
     assert fact_b.id in traced_fact_ids
 

@@ -25,6 +25,7 @@ from apps.api.routes.portfolio import router as portfolio_router
 from apps.api.routes.quality import router as quality_router
 from apps.api.routes.readiness import router as readiness_router
 from apps.api.routes.research import router as research_router
+from apps.api.routes.schedules import router as schedules_router
 from apps.api.routes.sources import router as sources_router
 from ia_investing.settings import get_settings
 from observability import setup_telemetry
@@ -70,3 +71,4 @@ app.include_router(policy_router)
 app.include_router(macro_router)
 app.include_router(paper_execution_router)
 app.include_router(readiness_router)
+app.include_router(schedules_router)
