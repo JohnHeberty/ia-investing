@@ -1,66 +1,174 @@
+"use client";
+
+import { Suspense } from "react";
+
 import { AsOfIndicator, Badge, Metric, StatePanel } from "@/components/domain";
+import {
+  DataStatePanel,
+  LoadingSkeleton,
+  StaleWarning,
+} from "@/components/data-state-components";
+import { usePolicy } from "@/hooks/use-policy";
 
-const impacts = [
-  ["Câmara · PL 123/2026", "Comissão", "42–68%", "Energia", "Revisão humana"],
-  ["Senado · PL 456/2026", "Apresentado", "18–39%", "Financeiro", "Monitorar"],
-] as const;
+function PolicyContent() {
+  const {
+    policyEvents,
+    materialEvents,
+    monitoredObjects,
+    staleSources,
+    isLoading,
+    isError,
+    dataState,
+  } = usePolicy();
 
-export default function PolicyPage() {
+  if (isLoading) {
+    return (
+      <>
+        <div className="page-head">
+          <div>
+            <div className="eyebrow">Policy intelligence</div>
+            <h1>Fato, chance e impacto separados.</h1>
+            <p className="subtitle">
+              Tracker legislativo versionado, com fonte oficial, diff, intervalo e caminho de
+              exposição.
+            </p>
+          </div>
+        </div>
+        <section className="grid grid-4">
+          <LoadingSkeleton lines={4} />
+          <LoadingSkeleton lines={4} />
+          <LoadingSkeleton lines={4} />
+          <LoadingSkeleton lines={4} />
+        </section>
+        <section style={{ marginTop: 14 }}>
+          <LoadingSkeleton lines={6} />
+        </section>
+      </>
+    );
+  }
+
+  if (isError) {
+    return (
+      <>
+        <div className="page-head">
+          <div>
+            <div className="eyebrow">Policy intelligence</div>
+            <h1>Erro ao carregar dados de política</h1>
+          </div>
+        </div>
+        <DataStatePanel
+          state="error"
+          title="Erro ao carregar dados de política"
+          detail="Não foi possível acessar os eventos políticos. Verifique a conexão com a API."
+        />
+      </>
+    );
+  }
+
+  const hasLiveEvents = policyEvents.length > 0;
+
   return (
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Policy intelligence · demo</div>
+          <div className="eyebrow">Policy intelligence</div>
           <h1>Fato, chance e impacto separados.</h1>
           <p className="subtitle">
             Tracker legislativo versionado, com fonte oficial, diff, intervalo e caminho de
             exposição.
           </p>
         </div>
-        <AsOfIndicator freshness="Fixtures sintéticas" />
+        <AsOfIndicator
+          freshness={dataState === "stale" ? "Desatualizado" : hasLiveEvents ? "Atual" : "Fixtures sintéticas"}
+        />
       </div>
+
+      {dataState === "stale" && (
+        <div style={{ marginBottom: 14 }}>
+          <StaleWarning lastUpdated={new Date().toISOString()} source="policy/events" />
+        </div>
+      )}
+
       <section className="grid grid-4">
-        <Metric label="Eventos materiais" value="1" note="aguarda revisão" tone="warning" />
-        <Metric label="Objetos monitorados" value="2" note="Câmara e Senado" />
-        <Metric label="Diffs novos" value="1" note="texto versionado" />
-        <Metric label="Fontes stale" value="0" note="ambiente demo" tone="positive" />
+        <Metric
+          label="Eventos materiais"
+          value={hasLiveEvents ? String(materialEvents.length) : "—"}
+          note={materialEvents.length > 0 ? "aguarda revisão" : "dado ausente não vira zero"}
+          tone={materialEvents.length > 0 ? "warning" : undefined}
+        />
+        <Metric
+          label="Objetos monitorados"
+          value={hasLiveEvents ? String(monitoredObjects) : "—"}
+          note={hasLiveEvents ? `${monitoredObjects} objeto${monitoredObjects !== 1 ? "s" : ""}` : "dado ausente não vira zero"}
+        />
+        <Metric
+          label="Diffs novos"
+          value={hasLiveEvents ? String(Math.min(materialEvents.length, 3)) : "—"}
+          note="texto versionado"
+        />
+        <Metric
+          label="Fontes stale"
+          value={hasLiveEvents ? String(staleSources) : "—"}
+          note={staleSources > 0 ? "requer atenção" : "todas atualizadas"}
+          tone={staleSources > 0 ? "warning" : "positive"}
+        />
       </section>
+
       <section className="card card-pad" style={{ marginTop: 14 }}>
         <div className="card-title">
           <h2>Legislative tracker</h2>
           <span>estágio ≠ probabilidade ≠ impacto</span>
         </div>
-        <div className="table-wrap">
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Objeto oficial</th>
-                <th>Estágio jurídico</th>
-                <th>Probabilidade</th>
-                <th>Exposição</th>
-                <th>Controle</th>
-              </tr>
-            </thead>
-            <tbody>
-              {impacts.map(([object, stage, probability, exposure, control]) => (
-                <tr key={object}>
-                  <td>{object}</td>
-                  <td>
-                    <Badge tone="neutral">{stage}</Badge>
-                  </td>
-                  <td>
-                    <Badge tone="warn">{probability}</Badge>
-                  </td>
-                  <td>{exposure}</td>
-                  <td>
-                    <Badge tone={control === "Revisão humana" ? "bad" : "good"}>{control}</Badge>
-                  </td>
+        {hasLiveEvents ? (
+          <div className="table-wrap">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Objeto oficial</th>
+                  <th>Estágio jurídico</th>
+                  <th>Probabilidade</th>
+                  <th>Exposição</th>
+                  <th>Controle</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {policyEvents.map((event) => (
+                  <tr key={event.id}>
+                    <td>{event.object_name || event.title}</td>
+                    <td>
+                      <Badge tone="neutral">{event.stage}</Badge>
+                    </td>
+                    <td>
+                      <Badge tone="warn">{event.probability}</Badge>
+                    </td>
+                    <td>{event.exposure}</td>
+                    <td>
+                      <Badge
+                        tone={
+                          event.control === "Revisão humana"
+                            ? "bad"
+                            : event.control === "Monitorar"
+                              ? "good"
+                              : "neutral"
+                        }
+                      >
+                        {event.control}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <DataStatePanel
+            state="missing"
+            title="Nenhum evento político registrado"
+            detail="Tracker legislativo vazio. Eventos são adicionados quando há materialidade identificada."
+          />
+        )}
       </section>
+
       <section className="grid grid-3" style={{ marginTop: 14 }}>
         <article className="card card-pad">
           <h2>Timeline versionada</h2>
@@ -71,7 +179,8 @@ export default function PolicyPage() {
         <article className="card card-pad">
           <h2>Matriz de exposição</h2>
           <p className="subtitle">
-            Evento → setor → driver → métrica → emissor → tese → carteira, com confiança por aresta.
+            Evento → setor → driver → métrica → emissor → tese → carteira, com confiança por
+            aresta.
           </p>
         </article>
         <article className="card card-pad">
@@ -82,6 +191,7 @@ export default function PolicyPage() {
           </p>
         </article>
       </section>
+
       <div style={{ marginTop: 14 }}>
         <StatePanel
           title="Sem alteração automática"
@@ -89,5 +199,25 @@ export default function PolicyPage() {
         />
       </div>
     </>
+  );
+}
+
+export default function PolicyPage() {
+  return (
+    <Suspense
+      fallback={
+        <>
+          <div className="page-head">
+            <div>
+              <div className="eyebrow">Policy intelligence</div>
+              <h1>Fato, chance e impacto separados.</h1>
+            </div>
+          </div>
+          <LoadingSkeleton lines={6} />
+        </>
+      }
+    >
+      <PolicyContent />
+    </Suspense>
   );
 }

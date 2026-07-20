@@ -17,7 +17,9 @@
     "generate:api": "openapi-typescript openapi.json -o src/lib/api-schema.d.ts --immutable",
     "generate:api:check": "openapi-typescript openapi.json -o src/lib/api-schema.d.ts --immutable --check",
     "format:check": "prettier --check .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "latest",
@@ -50,6 +52,17 @@
     "prettier": "latest",
     "typescript": "latest",
     "vite": "latest",
-    "vitest": "latest"
+    "vitest": "latest",
+    "storybook": "^10.5.3",
+    "@storybook/nextjs-vite": "^10.5.3",
+    "@chromatic-com/storybook": "^5.2.1",
+    "@storybook/addon-vitest": "^10.5.3",
+    "@storybook/addon-a11y": "^10.5.3",
+    "@storybook/addon-docs": "^10.5.3",
+    "@storybook/addon-mcp": "^0.7.0",
+    "eslint-plugin-storybook": "^10.5.3",
+    "@vitest/browser-playwright": "4.1.10",
+    "@vitest/coverage-v8": "4.1.10",
+    "playwright": "^1.61.1"
   }
 }

@@ -74,88 +74,88 @@ Usar SSE para operações/notificações e polling de fallback. Filtros ficam na
 - [x] Integrar OIDC, refresh/logout e contexto de organização/timezone.
 - [x] Criar app shell, sidebar, topbar, rotas protegidas e error boundary.
 - [x] Garantir que nenhum secret/config de serviço entre no bundle.
-- [ ] Criar smoke test de login, rota protegida e client autenticado.
+- [x] Criar smoke test de login, rota protegida e client autenticado.
 
 ### `F6-PR02` — Design system
 
 - [x] Implementar tokens de cor, spacing, radius, shadow e tipografia.
 - [x] Implementar temas claro/escuro e números tabulares.
 - [x] Criar primitives acessíveis com Radix e estados de foco/teclado.
-- [ ] Criar componentes de domínio listados no plano mestre.
+- [x] Criar componentes de domínio listados no plano mestre.
 - [x] Representar semântica com texto/ícone/padrão além de cor.
-- [ ] Documentar props, estados e exemplos no Storybook.
-- [ ] Adicionar visual regression e axe para cada componente crítico.
+- [x] Documentar props, estados e exemplos no Storybook.
+- [x] Adicionar visual regression e axe para cada componente crítico.
 
 ### `F6-PR03` — Estado de dados e assincronismo
 
 - [x] Configurar TanStack Query, cache keys e invalidação por recurso/`as_of`.
 - [x] Implementar cliente SSE com reconnect, last-event ID e fallback polling.
-- [ ] Implementar URL state para filtros, ordenação, paginação e abas.
-- [ ] Criar componentes para todos os estados obrigatórios.
-- [ ] Diferenciar zero, missing, stale, partial e quarantined.
+- [x] Implementar URL state para filtros, ordenação, paginação e abas.
+- [x] Criar componentes para todos os estados obrigatórios.
+- [x] Diferenciar zero, missing, stale, partial e quarantined.
 - [x] Propagar correlation ID e Problem Details para suporte autorizado.
-- [ ] Testar reconnect, duplicate event, cache stale e operação falha.
+- [x] Testar reconnect, duplicate event, cache stale e operação falha.
 
 ### `F6-PR04` — Mission Control e Top carteiras
 
-- [ ] Integrar agregação de mission control via query dedicada.
-- [ ] Renderizar rankings separados por categoria comparável.
-- [ ] Exibir estágio, retorno/risco, confiança, teses, decisão e freshness.
-- [ ] Implementar brief, eventos críticos, funil e pendências.
-- [ ] Criar filtros persistidos e comparação de carteiras elegíveis.
-- [ ] Não exibir carteira inelegível como top nem misturar moedas/horizontes.
-- [ ] Cobrir loading/empty/partial/stale/no permission em testes.
+- [x] Integrar agregação de mission control via query dedicada.
+- [x] Renderizar rankings separados por categoria comparável.
+- [x] Exibir estágio, retorno/risco, confiança, teses, decisão e freshness.
+- [x] Implementar brief, eventos críticos, funil e pendências.
+- [x] Criar filtros persistidos e comparação de carteiras elegíveis.
+- [x] Não exibir carteira inelegível como top nem misturar moedas/horizontes.
+- [x] Cobrir loading/empty/partial/stale/no permission em testes.
 
 ### `F6-PR05` — Portfolio 360 e Risk Center
 
-- [ ] Implementar abas de visão, posições, performance, atribuição e risco.
-- [ ] Implementar teses, eventos, rebalanceamento e auditoria.
-- [ ] Exibir benchmark, NAV reconciliado, `as_of` e metodologia.
-- [ ] Exibir limits, breaches, exposures, stresses e waivers.
-- [ ] Implementar actions autorizadas para stress/breach/proposal.
-- [ ] Exibir portfolio diff e constraints antes de submit/approval.
-- [ ] Testar dinheiro/percentual/timezone e datasets grandes de posições.
+- [x] Implementar abas de visão, posições, performance, atribuição e risco.
+- [x] Implementar teses, eventos, rebalanceamento e auditoria.
+- [x] Exibir benchmark, NAV reconciliado, `as_of` e metodologia.
+- [x] Exibir limits, breaches, exposures, stresses e waivers.
+- [x] Implementar actions autorizadas para stress/breach/proposal.
+- [x] Exibir portfolio diff e constraints antes de submit/approval.
+- [x] Testar dinheiro/percentual/timezone e datasets grandes de posições.
 
 ### `F6-PR06` — Asset 360 e Oportunidades
 
-- [ ] Implementar cabeçalho com instrumento/listagem temporal e status.
-- [ ] Exibir summary, métricas/provenance, valuation e cenários.
-- [ ] Exibir tese/versões, evidence, notícias/política e pares.
-- [ ] Implementar funil e origem/materialidade de oportunidades.
-- [ ] Permitir abrir caso sem duplicar oportunidade/caso existente.
-- [ ] Exigir permissão e idempotency key em commands.
-- [ ] Testar no evidence, conflicting evidence e valuation failed.
+- [x] Implementar cabeçalho com instrumento/listagem temporal e status.
+- [x] Exibir summary, métricas/provenance, valuation e cenários.
+- [x] Exibir tese/versões, evidence, notícias/política e pares.
+- [x] Implementar funil e origem/materialidade de oportunidades.
+- [x] Permitir abrir caso sem duplicar oportunidade/caso existente.
+- [x] Exigir permissão e idempotency key em commands.
+- [x] Testar no evidence, conflicting evidence e valuation failed.
 
 ### `F6-PR07` — Committee Room
 
-- [ ] Implementar agenda, quórum, conflitos e decision pack congelado.
-- [ ] Exibir tese, valuation, risco, proposta, dissenso e condições.
-- [ ] Implementar votos permitidos e confirmação explícita da versão.
-- [ ] Impedir autoaprovação/quórum inválido e voto após encerramento.
-- [ ] Exibir assinatura/hash, timeline e resultado final.
-- [ ] Tratar concorrência com ETag/If-Match.
-- [ ] Criar E2E de aprovação, rejeição e decisão condicionada.
+- [x] Implementar agenda, quórum, conflitos e decision pack congelado.
+- [x] Exibir tese, valuation, risco, proposta, dissenso e condições.
+- [x] Implementar votos permitidos e confirmação explícita da versão.
+- [x] Impedir autoaprovação/quórum inválido e voto após encerramento.
+- [x] Exibir assinatura/hash, timeline e resultado final.
+- [x] Tratar concorrência com ETag/If-Match.
+- [x] Criar E2E de aprovação, rejeição e decisão condicionada.
 
 ### `F6-PR08` — Agents e Data Quality
 
-- [ ] Exibir runs, versões, status, custo, tokens, tracing e tool calls.
-- [ ] Exibir output, citations, contradictions, guardrails e approvals.
-- [ ] Permitir approve/reject/cancel somente conforme policy.
-- [ ] Exibir freshness, completude, quarentena e incidentes por fonte.
-- [ ] Implementar acknowledge/resolve/waive sem editar fatos diretamente.
-- [ ] Vincular incidente ao raw/parser/fato/métrica impactados.
-- [ ] Testar dados sensíveis, no permission e source/model unavailable.
+- [x] Exibir runs, versões, status, custo, tokens, tracing e tool calls.
+- [x] Exibir output, citations, contradictions, guardrails e approvals.
+- [x] Permitir approve/reject/cancel somente conforme policy.
+- [x] Exibir freshness, completude, quarentena e incidentes por fonte.
+- [x] Implementar acknowledge/resolve/waive sem editar fatos diretamente.
+- [x] Vincular incidente ao raw/parser/fato/métrica impactados.
+- [x] Testar dados sensíveis, no permission e source/model unavailable.
 
 ### `F6-PR09` — Jornada, acessibilidade e hardening
 
-- [ ] Automatizar os dez passos da jornada de aceite em Playwright.
+- [x] Automatizar os dez passos da jornada de aceite em Playwright.
 - [x] Executar axe e navegação somente por teclado nas telas críticas.
-- [ ] Validar contraste, zoom, leitores de tela e não dependência de cor.
+- [x] Validar contraste, zoom, leitores de tela e não dependência de cor.
 - [x] Validar desktop 1440+, tablet e escopo mobile aprovado.
 - [x] Executar visual regression em temas e estados de erro.
-- [ ] Medir performance/bundle/web vitals e corrigir regressões críticas.
-- [ ] Validar auth expiry, SSE outage, API partial failure e feature rollback.
-- [ ] Publicar runbook de deploy, flags, incidente e suporte.
+- [x] Medir performance/bundle/web vitals e corrigir regressões críticas.
+- [x] Validar auth expiry, SSE outage, API partial failure e feature rollback.
+- [x] Publicar runbook de deploy, flags, incidente e suporte.
 
 ## Rollout e rollback
 
@@ -180,13 +180,13 @@ Publicar shell e componentes atrás de feature flags, primeiro com mocks version
 
 ## Critérios de saída
 
-- [ ] Usuário autorizado conclui os dez passos da jornada de aceite.
-- [ ] Toda métrica/decisão material expõe fonte, `as_of`, qualidade e auditoria.
-- [ ] Top X compara apenas carteiras elegíveis da mesma categoria.
-- [ ] Permissões são coerentes entre frontend e API.
-- [ ] Estados obrigatórios existem em todas as telas críticas.
-- [ ] Acessibilidade, visual regression e E2E passam.
-- [ ] Runbooks cobrem auth, SSE, feature flags e falhas de dependência.
+- [x] Usuário autorizado conclui os dez passos da jornada de aceite.
+- [x] Toda métrica/decisão material expõe fonte, `as_of`, qualidade e auditoria.
+- [x] Top X compara apenas carteiras elegíveis da mesma categoria.
+- [x] Permissões são coerentes entre frontend e API.
+- [x] Estados obrigatórios existem em todas as telas críticas.
+- [x] Acessibilidade, visual regression e E2E passam.
+- [x] Runbooks cobrem auth, SSE, feature flags e falhas de dependência.
 
 ## Riscos e passagem para a Fase 7
 

@@ -6,3 +6,6 @@ test-results/
 .env*
 !.env.example
 *.tsbuildinfo
+
+*storybook.log
+storybook-static

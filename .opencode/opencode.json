@@ -170,6 +170,10 @@
             "enabled": true
         }
     },
+    "skills": {
+        "paths": [".opencode/skills"]
+    },
+    "instructions": ["AGENTS.md", "web/AGENTS.md"],
     "permission": {
         "read": "allow",
         "edit": "allow",
