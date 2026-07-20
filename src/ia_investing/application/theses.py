@@ -247,6 +247,10 @@ class ThesisService:
         )
         return version
 
+    async def get_lock_version(self, thesis_id: UUID) -> int | None:
+        thesis = await self.session.get(ResearchThesis, thesis_id)
+        return thesis.lock_version if thesis is not None else None
+
     async def active_as_of(self, thesis_id: UUID, as_of: datetime) -> ResearchThesisVersion | None:
         if as_of.tzinfo is None:
             raise ValueError("as_of must include timezone information")

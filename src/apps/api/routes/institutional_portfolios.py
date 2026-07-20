@@ -5,21 +5,13 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
-import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
-from database.models.portfolio_domain import (
-    InstitutionalPortfolioVersion,
-    InstitutionalRiskSnapshot,
-    ModelPortfolio,
-    NavPublication,
-    PositionSnapshot,
-    RiskBreach,
-)
+from database.models.portfolio_domain import ModelPortfolio
 from ia_investing.application.backtests import InstitutionalBacktestService
 from ia_investing.application.institutional_portfolio import (
     InstitutionalPortfolioService,
@@ -416,9 +408,9 @@ async def get_model_portfolio(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> ModelPortfolioV1:
-    portfolio = await session.get(ModelPortfolio, portfolio_id)
     context = institutional_context(auth)
-    if portfolio is None or portfolio.organization_id != context.organization_id:
+    portfolio = await InstitutionalPortfolioService(session).get_portfolio(portfolio_id, context.organization_id)
+    if portfolio is None:
         raise HTTPException(status_code=404, detail="portfolio not found")
     if "portfolio:read" not in context.permissions:
         raise HTTPException(status_code=403, detail="permission required: portfolio:read")
@@ -437,20 +429,11 @@ async def list_model_portfolios(
     context = institutional_context(auth)
     if "portfolio:read" not in context.permissions:
         raise HTTPException(status_code=403, detail="permission required: portfolio:read")
-    statement = (
-        sa.select(ModelPortfolio)
-        .where(ModelPortfolio.organization_id == context.organization_id)
-        .order_by(ModelPortfolio.id)
-        .limit(limit + 1)
+    rows, has_more = await InstitutionalPortfolioService(session).list_model_portfolios(
+        context.organization_id, limit=limit, after=after, state=state
     )
-    if after is not None:
-        statement = statement.where(ModelPortfolio.id > after)
-    if state is not None:
-        statement = statement.where(ModelPortfolio.state == state)
-    rows = list((await session.scalars(statement)).all())
-    if len(rows) > limit:
-        response.headers["X-Next-Cursor"] = str(rows[limit - 1].id)
-        rows = rows[:limit]
+    if has_more:
+        response.headers["X-Next-Cursor"] = str(rows[-1].id)
     return [ModelPortfolioV1.model_validate(item) for item in rows]
 
 
@@ -536,13 +519,14 @@ async def get_portfolio_version(
     session: AsyncSession = Depends(get_async_session),
 ) -> PortfolioVersionV1:
     context = institutional_context(auth)
-    version = await session.get(InstitutionalPortfolioVersion, version_id)
-    portfolio = await session.get(ModelPortfolio, version.portfolio_id) if version is not None else None
-    if portfolio is None or portfolio.organization_id != context.organization_id:
+    result = await InstitutionalPortfolioService(session).get_portfolio_version_with_portfolio(
+        version_id, context.organization_id
+    )
+    if result is None:
         raise HTTPException(status_code=404, detail="portfolio version not found")
     if "portfolio:read" not in context.permissions:
         raise HTTPException(status_code=403, detail="permission required: portfolio:read")
-    return PortfolioVersionV1.model_validate(version)
+    return PortfolioVersionV1.model_validate(result[0])
 
 
 @router.get("/portfolio-versions/{version_id}/positions", response_model=list[PositionSnapshotV1])
@@ -552,15 +536,7 @@ async def list_portfolio_positions(
     session: AsyncSession = Depends(get_async_session),
 ) -> list[PositionSnapshotV1]:
     await get_portfolio_version(version_id, auth, session)
-    rows = list(
-        (
-            await session.scalars(
-                sa.select(PositionSnapshot)
-                .where(PositionSnapshot.portfolio_version_id == version_id)
-                .order_by(PositionSnapshot.instrument_id)
-            )
-        ).all()
-    )
+    rows = await InstitutionalPortfolioService(session).list_positions(version_id)
     return [PositionSnapshotV1.model_validate(item) for item in rows]
 
 
@@ -592,14 +568,7 @@ async def list_nav_publications(
     session: AsyncSession = Depends(get_async_session),
 ) -> list[NavPublicationV1]:
     await get_model_portfolio(portfolio_id, Response(), auth, session)
-    statement = (
-        sa.select(NavPublication)
-        .where(NavPublication.portfolio_id == portfolio_id)
-        .order_by(NavPublication.as_of.desc(), NavPublication.revision.desc())
-    )
-    if as_of is not None:
-        statement = statement.where(NavPublication.as_of <= as_of)
-    rows = list((await session.scalars(statement)).all())
+    rows = await InstitutionalPortfolioService(session).list_nav_publications(portfolio_id, as_of=as_of)
     return [NavPublicationV1.model_validate(item) for item in rows]
 
 
@@ -640,20 +609,12 @@ async def list_risk_breaches(
     session: AsyncSession = Depends(get_async_session),
 ) -> list[RiskBreachV1]:
     context = institutional_context(auth)
-    snapshot = await session.get(InstitutionalRiskSnapshot, snapshot_id)
-    version = await session.get(InstitutionalPortfolioVersion, snapshot.portfolio_version_id) if snapshot else None
-    portfolio = await session.get(ModelPortfolio, version.portfolio_id) if version else None
-    if portfolio is None or portfolio.organization_id != context.organization_id:
+    result = await InstitutionalPortfolioService(session).list_risk_breaches(snapshot_id, context.organization_id)
+    if result is None:
         raise HTTPException(status_code=404, detail="risk assessment not found")
     if "portfolio:read" not in context.permissions:
         raise HTTPException(status_code=403, detail="permission required: portfolio:read")
-    rows = list(
-        (
-            await session.scalars(
-                sa.select(RiskBreach).where(RiskBreach.risk_snapshot_id == snapshot_id).order_by(RiskBreach.id)
-            )
-        ).all()
-    )
+    _, rows = result
     return [RiskBreachV1.model_validate(item) for item in rows]
 
 

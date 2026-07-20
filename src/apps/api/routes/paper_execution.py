@@ -5,14 +5,12 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID, uuid4
 
-import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
-from database.models.paper_execution import PaperFill, PaperOrder, TradeIntent
 from ia_investing.application.paper_execution import PaperExecutionService
 from ia_investing.domain.identity import InstitutionalAccessContext
 
@@ -363,13 +361,7 @@ async def list_trade_intents(
     context = context_from(auth)
     if "portfolio:read" not in context.permissions:
         raise HTTPException(status_code=403, detail="permission required: portfolio:read")
-    rows = (
-        await session.scalars(
-            sa.select(TradeIntent)
-            .where(TradeIntent.organization_id == context.organization_id)
-            .order_by(TradeIntent.created_at.desc())
-        )
-    ).all()
+    rows = await PaperExecutionService(session).list_trade_intents(context.organization_id)
     return [TradeIntentV1.model_validate(row) for row in rows]
 
 
@@ -380,17 +372,13 @@ async def get_paper_order(
     session: AsyncSession = Depends(get_async_session),
 ) -> SimulationResponseV1:
     context = context_from(auth)
-    order = await session.get(PaperOrder, order_id)
-    if order is None:
+    result = await PaperExecutionService(session).get_order_with_intent(order_id, context.organization_id)
+    if result is None:
         raise HTTPException(status_code=404, detail="paper order not found")
-    intent = await session.get(TradeIntent, order.trade_intent_id)
-    if intent is None or intent.organization_id != context.organization_id:
-        raise HTTPException(status_code=404, detail="paper order not found")
+    order, _intent = result
     if "portfolio:read" not in context.permissions:
         raise HTTPException(status_code=403, detail="permission required: portfolio:read")
-    fills = (
-        await session.scalars(sa.select(PaperFill).where(PaperFill.order_id == order.id).order_by(PaperFill.sequence))
-    ).all()
+    fills = await PaperExecutionService(session).list_fills_for_order(order.id)
     return SimulationResponseV1(
         order=PaperOrderV1.model_validate(order),
         fills=[PaperFillV1.model_validate(fill) for fill in fills],

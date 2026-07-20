@@ -83,14 +83,14 @@ class DiscoverStocksWorkflow:
 
         results = [
             DiscoveryBrief(
-                issuer_id=b.get("issuer_id", ""),
-                ticker_symbol=b.get("ticker_symbol", ""),
-                issuer_name=b.get("issuer_name", ""),
-                sector=b.get("sector", ""),
-                market_cap=b.get("market_cap", 0.0),
-                screening_score=b.get("screening_score", 0.0),
-                anomaly_flags=b.get("anomaly_flags", []),
-                metrics=b.get("metrics", {}),
+                issuer_id=b["issuer_id"],
+                ticker_symbol=b["ticker_symbol"],
+                issuer_name=b["issuer_name"],
+                sector=b["sector"],
+                market_cap=b["market_cap"],
+                screening_score=b["screening_score"],
+                anomaly_flags=b["anomaly_flags"],
+                metrics=b["metrics"],
             )
             for b in briefs
         ]

@@ -762,6 +762,37 @@ class PaperExecutionService:
         )
         return row
 
+    async def list_trade_intents(self, organization_id: UUID) -> list[TradeIntent]:
+        return list(
+            (
+                await self.session.scalars(
+                    sa.select(TradeIntent)
+                    .where(TradeIntent.organization_id == organization_id)
+                    .order_by(TradeIntent.created_at.desc())
+                )
+            ).all()
+        )
+
+    async def get_order_with_intent(
+        self, order_id: UUID, organization_id: UUID
+    ) -> tuple[PaperOrder, TradeIntent] | None:
+        order = await self.session.get(PaperOrder, order_id)
+        if order is None:
+            return None
+        intent = await self.session.get(TradeIntent, order.trade_intent_id)
+        if intent is None or intent.organization_id != organization_id:
+            return None
+        return order, intent
+
+    async def list_fills_for_order(self, order_id: UUID) -> list[PaperFill]:
+        return list(
+            (
+                await self.session.scalars(
+                    sa.select(PaperFill).where(PaperFill.order_id == order_id).order_by(PaperFill.sequence)
+                )
+            ).all()
+        )
+
     async def _require_operations_enabled(self, portfolio: ModelPortfolio) -> None:
         kill_switch = await self.session.scalar(
             sa.select(sa.func.count(PaperKillSwitch.id)).where(

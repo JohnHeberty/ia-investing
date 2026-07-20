@@ -805,6 +805,91 @@ class InstitutionalPortfolioService:
         await self.session.flush()
         return waiver
 
+    async def get_portfolio(self, portfolio_id: UUID, organization_id: UUID) -> ModelPortfolio | None:
+        portfolio = await self.session.get(ModelPortfolio, portfolio_id)
+        if portfolio is None or portfolio.organization_id != organization_id:
+            return None
+        return portfolio
+
+    async def list_model_portfolios(
+        self,
+        organization_id: UUID,
+        *,
+        limit: int = 50,
+        after: UUID | None = None,
+        state: str | None = None,
+    ) -> tuple[list[ModelPortfolio], bool]:
+        stmt = (
+            sa.select(ModelPortfolio)
+            .where(ModelPortfolio.organization_id == organization_id)
+            .order_by(ModelPortfolio.id)
+            .limit(limit + 1)
+        )
+        if after is not None:
+            stmt = stmt.where(ModelPortfolio.id > after)
+        if state is not None:
+            stmt = stmt.where(ModelPortfolio.state == state)
+        rows = list((await self.session.scalars(stmt)).all())
+        has_more = len(rows) > limit
+        if has_more:
+            rows = rows[:limit]
+        return rows, has_more
+
+    async def get_portfolio_version_with_portfolio(
+        self, version_id: UUID, organization_id: UUID
+    ) -> tuple[InstitutionalPortfolioVersion, ModelPortfolio] | None:
+        version = await self.session.get(InstitutionalPortfolioVersion, version_id)
+        if version is None:
+            return None
+        portfolio = await self.session.get(ModelPortfolio, version.portfolio_id)
+        if portfolio is None or portfolio.organization_id != organization_id:
+            return None
+        return version, portfolio
+
+    async def list_positions(self, version_id: UUID) -> list[PositionSnapshot]:
+        return list(
+            (
+                await self.session.scalars(
+                    sa.select(PositionSnapshot)
+                    .where(PositionSnapshot.portfolio_version_id == version_id)
+                    .order_by(PositionSnapshot.instrument_id)
+                )
+            ).all()
+        )
+
+    async def list_nav_publications(
+        self, portfolio_id: UUID, *, as_of: datetime | None = None
+    ) -> list[NavPublication]:
+        stmt = (
+            sa.select(NavPublication)
+            .where(NavPublication.portfolio_id == portfolio_id)
+            .order_by(NavPublication.as_of.desc(), NavPublication.revision.desc())
+        )
+        if as_of is not None:
+            stmt = stmt.where(NavPublication.as_of <= as_of)
+        return list((await self.session.scalars(stmt)).all())
+
+    async def list_risk_breaches(
+        self, snapshot_id: UUID, organization_id: UUID
+    ) -> tuple[InstitutionalRiskSnapshot, list[RiskBreach]] | None:
+        snapshot = await self.session.get(InstitutionalRiskSnapshot, snapshot_id)
+        if snapshot is None:
+            return None
+        version = await self.session.get(InstitutionalPortfolioVersion, snapshot.portfolio_version_id)
+        if version is None:
+            return None
+        portfolio = await self.session.get(ModelPortfolio, version.portfolio_id)
+        if portfolio is None or portfolio.organization_id != organization_id:
+            return None
+        rows = list(
+            (
+                await self.session.scalars(
+                    sa.select(RiskBreach).where(RiskBreach.risk_snapshot_id == snapshot_id).order_by(RiskBreach.id)
+                )
+            ).all()
+        )
+        return snapshot, rows
+
     async def expire_waivers(self, now: datetime) -> int:
         if now.tzinfo is None:
             raise ValueError("waiver expiry cutoff must be timezone-aware")

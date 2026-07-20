@@ -457,6 +457,9 @@ class AgentRuntimeService:
         await self.session.flush()
         return approval
 
+    async def get_run(self, run_id: UUID) -> AgentRuntimeRun | None:
+        return await self.session.get(AgentRuntimeRun, run_id)
+
     async def promote(
         self,
         *,

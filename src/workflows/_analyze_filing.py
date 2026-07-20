@@ -60,14 +60,14 @@ class AnalyzeFilingWorkflow:
 
         verdict = FilingReviewVerdict(
             issuer_id=filing.issuer_id,
-            verdict=critic_output.get("verdict", "neutral"),
-            confidence=critic_output.get("confidence", 0.0),
-            thesis_effect=critic_output.get("thesis_effect", "no_change"),
-            materiality_score=critic_output.get("materiality_score", 0.0),
-            key_claims=critic_output.get("key_claims", []),
-            risks=critic_output.get("risks", []),
-            agent_run_id=analyst_output.get("agent_run_id", ""),
-            critic_notes=critic_output.get("critic_notes", ""),
+            verdict=critic_output["verdict"],
+            confidence=critic_output["confidence"],
+            thesis_effect=critic_output["thesis_effect"],
+            materiality_score=critic_output["materiality_score"],
+            key_claims=critic_output["key_claims"],
+            risks=critic_output["risks"],
+            agent_run_id=analyst_output["agent_run_id"],
+            critic_notes=critic_output["critic_notes"],
         )
 
         await workflow.execute_activity(

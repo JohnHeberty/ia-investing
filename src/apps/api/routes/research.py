@@ -5,7 +5,6 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID, uuid4
 
-import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.security import AuthContext, get_auth_context, require_permission
 from database.core import get_async_session
 from database.models.research import ResearchCase
-from database.models.thesis_domain import ResearchThesis
 from ia_investing.application.evidence import EvidenceReferenceV1, EvidenceRepository
 from ia_investing.application.research import (
     ClaimService,
@@ -398,16 +396,11 @@ async def list_cases(
     session: AsyncSession = Depends(get_async_session),
 ) -> list[ResearchCaseV1]:
     require_research_read(auth)
-    statement = sa.select(ResearchCase).order_by(ResearchCase.id).limit(limit + 1)
-    if state is not None:
-        statement = statement.where(ResearchCase.state == state)
-    if as_of is not None:
-        if as_of.tzinfo is None:
-            raise HTTPException(status_code=422, detail="as_of must include timezone information")
-        statement = statement.where(ResearchCase.data_as_of <= as_of)
-    if after is not None:
-        statement = statement.where(ResearchCase.id > after)
-    rows = list((await session.scalars(statement)).all())
+    svc = ResearchCaseService(session)
+    try:
+        rows = await svc.list_cases(state=state, as_of=as_of, after=after, limit=limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     if len(rows) > limit:
         response.headers["X-Next-Cursor"] = str(rows[limit - 1].id)
         rows = rows[:limit]
@@ -422,7 +415,7 @@ async def get_case(
     session: AsyncSession = Depends(get_async_session),
 ) -> ResearchCaseV1:
     require_research_read(auth)
-    case = await session.get(ResearchCase, case_id)
+    case = await ResearchCaseService(session).get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="research case not found")
     return case_response(case, response)
@@ -496,6 +489,7 @@ async def transition_case(
 async def search_evidence(
     query: str = Query(min_length=1),
     as_of: datetime = Query(),
+    embedding: list[float] | None = Query(default=None),
     minimum_score: float = Query(default=0.05, ge=0, le=1),
     limit: int = Query(default=20, ge=1, le=100),
     auth: AuthContext = Depends(get_auth_context),
@@ -503,7 +497,9 @@ async def search_evidence(
 ) -> list[EvidenceReferenceV1]:
     require_research_read(auth)
     try:
-        return await EvidenceRepository(session).search(query, as_of, minimum_score=minimum_score, limit=limit)
+        return await EvidenceRepository(session).search(
+            query, as_of, embedding=embedding, minimum_score=minimum_score, limit=limit
+        )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
@@ -695,9 +691,9 @@ async def get_thesis_as_of(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if version is None:
         raise HTTPException(status_code=404, detail="active thesis version not found at cutoff")
-    thesis = await session.get(ResearchThesis, thesis_id)
-    if thesis is not None:
-        response.headers["ETag"] = f'"{thesis.lock_version}"'
+    lock_version = await ThesisService(session).get_lock_version(thesis_id)
+    if lock_version is not None:
+        response.headers["ETag"] = f'"{lock_version}"'
     return ThesisVersionV1.model_validate(version)
 
 

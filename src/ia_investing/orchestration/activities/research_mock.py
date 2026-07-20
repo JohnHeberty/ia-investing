@@ -107,7 +107,11 @@ def apply_screen_filters(universe: list[dict[str, Any]], filters: dict[str, Any]
 
 @activity.defn(name="calculate_screening_metrics")
 def calculate_screening_metrics(filtered: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    return [{**item, "screening_score": float(item.get("screening_score", 0.0))} for item in filtered]
+    result = []
+    for item in filtered:
+        score = float(item["screening_score"]) if "screening_score" in item else 0.0
+        result.append({**item, "screening_score": score})
+    return result
 
 
 @activity.defn(name="identify_anomalies")

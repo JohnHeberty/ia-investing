@@ -208,6 +208,28 @@ class ResearchCaseService:
         return case
 
 
+    async def list_cases(
+        self,
+        state: str | None,
+        as_of: datetime | None,
+        after: UUID | None,
+        limit: int,
+    ) -> list[ResearchCase]:
+        if as_of is not None and as_of.tzinfo is None:
+            raise ValueError("as_of must include timezone information")
+        stmt = sa.select(ResearchCase).order_by(ResearchCase.id).limit(limit + 1)
+        if state is not None:
+            stmt = stmt.where(ResearchCase.state == state)
+        if as_of is not None:
+            stmt = stmt.where(ResearchCase.data_as_of <= as_of)
+        if after is not None:
+            stmt = stmt.where(ResearchCase.id > after)
+        return list((await self.session.scalars(stmt)).all())
+
+    async def get_case(self, case_id: UUID) -> ResearchCase | None:
+        return await self.session.get(ResearchCase, case_id)
+
+
 class ClaimService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session

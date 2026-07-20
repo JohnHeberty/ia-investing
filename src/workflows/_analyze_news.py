@@ -53,13 +53,13 @@ class AnalyzeNewsWorkflow:
 
         analysis = NewsAnalysis(
             news_item_id=article.news_item_id,
-            event_type=analyst_output.get("event_type", "unknown"),
-            description=analyst_output.get("description", ""),
-            materiality_score=analyst_output.get("materiality_score", 0.0),
-            direction_hint=analyst_output.get("direction_hint", "neutral"),
-            affected_issuers=analyst_output.get("affected_issuers", []),
+            event_type=analyst_output["event_type"],
+            description=analyst_output["description"],
+            materiality_score=analyst_output["materiality_score"],
+            direction_hint=analyst_output["direction_hint"],
+            affected_issuers=analyst_output["affected_issuers"],
             thesis_effects=thesis_comparisons,
-            agent_run_id=analyst_output.get("agent_run_id", ""),
+            agent_run_id=analyst_output["agent_run_id"],
         )
 
         await workflow.execute_activity(

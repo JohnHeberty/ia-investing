@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, get_auth_context, require_permission
 from database.core import get_async_session
-from database.models.agent_runtime import AgentRuntimeRun
 from ia_investing.application.agent_runtime import AgentRuntimeService
 
 router = APIRouter(prefix="/api/v1/agent-runs", tags=["agent-runtime"])
@@ -125,7 +124,7 @@ async def get_agent_run(
 ) -> AgentRunV1:
     if "agent_runs:read" not in auth.permissions:
         raise HTTPException(status_code=403, detail="Permission denied")
-    run = await session.get(AgentRuntimeRun, run_id)
+    run = await AgentRuntimeService(session).get_run(run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="agent run not found")
     return AgentRunV1.model_validate(run)
