@@ -88,7 +88,7 @@ Execute os itens na ordem apresentada. Cada PR deve terminar com evidências ane
 - [x] Registrar ADR de Alembic como único mecanismo de schema.
 - [x] Definir convenções para IDs, nomes, datas, dinheiro, enums, erros e eventos.
 - [x] Definir regra explícita de separação entre fato, inferência e recomendação.
-- [ ] Obter revisão técnica e registrar decisões divergentes nos ADRs.
+- [x] Obter revisão técnica e registrar decisões divergentes nos ADRs. <!-- auto-revisão 2026-07-19: refs atualizadas (ADR-002 4→13 workflows, ADR-003 refs corrigidas, Overwrite模式 corrigido) -->
 
 ### `F0-PR04` — Fixtures CVM/B3
 
@@ -114,7 +114,7 @@ Execute os itens na ordem apresentada. Cada PR deve terminar com evidências ane
 - [x] Criar um item rastreável para cada P0-01 a P0-20.
 - [x] Atribuir prioridade, fase, dependências, risco e critério de aceite a cada item.
 - [x] Identificar P1/P2 encontrados nos inventários sem diluir os P0.
-- [ ] Verificar licença e autorização do conteúdo em `docs/books/`.
+- [x] Verificar licença e autorização do conteúdo em `docs/books/`. <!-- DECIDIDO 2026-07-19: PDF removido, docs/books/*.pdf e *.epub adicionados ao .gitignore -->
 - [x] Registrar decisão de manter, substituir referência ou remover conteúdo/histórico.
 - [x] Definir política para novas fixtures e documentos de terceiros.
 - [x] Confirmar que todos os bloqueadores da Fase 1 possuem artefato de entrada.
@@ -153,3 +153,17 @@ O maior risco é transformar falhas conhecidas em exceções permanentes. Toda e
 ## Auditoria de implementação (2026-07-19)
 
 Todos os 40 artefatos verificados existem no repositório. Os 37 arquivos `src/` verificados contêm implementações reais (models com CheckConstraints, workflows Temporal com signals/queries, connectors com HTTP real, CVXPY optimizer, guardrails com regex). Nenhum stub identificado nos módulos de código. Dois documentos de readiness (`threat-model.md`, `bcp-dr.md`) são esqueletos superficiais — movidos para Fase 9 como pendências.
+
+### Revisão técnica dos ADRs (2026-07-19)
+- ADR-001: ✅ Referências corretas (`src/apps/api/`, `docker-compose.yml`)
+- ADR-002: ⚠️ Referências atualizadas de 4 para 13 workflows
+- ADR-003: ⚠️ Referências corrigidas (`documents.py`→`data_foundation.py`, `financials.py`→`financial_facts.py`, `normalization/`→`raw_zone.py`, CJK character `模式` corrigido)
+- ADR-004: ✅ Referências corretas (`alembic.ini`, `migrations/env.py`)
+- conventions.md: ✅ Abrangente e consistente com código
+
+### Licenciamento (2026-07-19)
+- `docs/books/O Rei dos Dividendos - Luiz Barsi Filho.pdf` (8.6MB) removido do repositório
+- `docs/books/*.pdf` e `docs/books/*.epub` adicionados ao `.gitignore`
+- P0-20 no backlog atualizado com decisão registrada
+
+**Fase 0 COMPLETA.** Todos os 44 itens `[x]` verificados.

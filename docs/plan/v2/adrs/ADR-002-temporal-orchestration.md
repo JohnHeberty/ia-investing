@@ -12,7 +12,7 @@ O sistema precisa orquestrar fluxos de longa duração (ingestão de dados CVM, 
 
 Usar Temporal como motor de orquestração para workflows:
 
-- 4 workflows definidos: `IngestCVMWorkflow`, `AnalyzeFilingWorkflow`, `AnalyzeNewsWorkflow`, `DiscoverStocksWorkflow`
+- 13 workflows definidos em `src/workflows/`: paper_rebalance, paper_reconciliation, paper_valuation, approval_gate, portfolio_construction, portfolio_optimization, run_agent, policy_event e outros
 - Task queue: `stock-intelligence`
 - Worker registrado em `apps/worker/main.py`
 - Scheduling futuro via Temporal cron ou `TemporalSchedule`, não asyncio loop
@@ -35,7 +35,7 @@ Usar Temporal como motor de orquestração para workflows:
 
 ## Referências
 
-- `src/workflows/` — 4 workflows Temporal
+- `src/workflows/` — 13 workflows Temporal
 - `src/apps/worker/main.py` — worker registration
 - `src/apps/scheduler/main.py` — scheduler atual (será substituído)
 - `docker-compose.yml` — serviços temporal e temporal-ui

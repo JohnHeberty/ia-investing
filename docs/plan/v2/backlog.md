@@ -25,7 +25,7 @@ Atualizado em 2026-07-18. O identificador permanece estável até o aceite. “F
 | P0-17 Observabilidade | F1-PR08, F4-PR06 | Infra/IDs | Incidente sem correlação | API/workers/connectors/agents correlacionados e dashboards ativos |
 | P0-18 Infra local | F1-PR08 | Settings/migrations | Stack não reproduzível | Compose completo, versões fixas e healthchecks saudáveis |
 | P0-19 Testes | Todas | Baseline local F0 | Regressões silenciosas | Gates específicos por fórmula, connector, workflow, prompt e frontend |
-| P0-20 Licenciamento | F0-PR06, F9-PR02 | Evidência do titular | Redistribuição não autorizada | Direito comprovado ou conteúdo removido/substituído e histórico tratado |
+| P0-20 Licenciamento | F0-PR06 | Evidência do titular | Redistribuição não autorizada | **DECIDIDO (2026-07-19):** PDF removido (`docs/books/O Rei dos Dividendos - Luiz Barsi Filho.pdf`), `docs/books/*.pdf` e `*.epub` adicionados ao `.gitignore`. Conteúdo protegido por direitos autorais não deve ser commitado. Fechado. |
 
 ## P1 — Débitos encontrados no baseline
 

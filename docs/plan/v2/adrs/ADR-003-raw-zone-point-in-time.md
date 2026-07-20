@@ -30,7 +30,7 @@ Implementar dois camadas de dados:
 
 ## Alternativas Consideradas
 
-1. **Overwrite模式** — Sobrescrever dados ao atualizar. Rejeitado: perde histórico, impossível rastrear point-in-time.
+1. **Overwrite** — Sobrescrever dados ao atualizar. Rejeitado: perde histórico, impossível rastrear point-in-time.
 
 2. **SCD Type 2 (Slowly Changing Dimensions)** — Versão completa com effective_from/effective_to. Rejeitado: complexo demais para dados que são reavaliados frequentemente.
 
@@ -44,7 +44,8 @@ Implementar dois camadas de dados:
 
 ## Referências
 
-- `src/database/models/documents.py` — RawDocument, Document, DocumentMetadata
-- `src/database/models/financials.py` — FinancialStatement com published_at
-- `src/normalization/` — pipeline de normalização
-- `src/connectors/cvm/_directory.py` — descoberta de documentos
+- `src/database/models/data_foundation.py` — SourceLicense, DataSource, SourceSLA, SourceObject, SourceObjectVersion
+- `src/database/models/financial_facts.py` — FinancialFact com knowledge_at/valid_from/valid_to
+- `src/ia_investing/data/raw_zone.py` — RawZoneService com SHA-256 hash e ImmutableObjectStore
+- `src/connectors/cvm/_financials.py` — parser CVM (DFP/ITR)
+- `src/connectors/b3/_cotahist.py` — parser B3 COTAHIST

@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Licensed/reference books (copyright material — never commit)
+docs/books/*.pdf
+docs/books/*.epub

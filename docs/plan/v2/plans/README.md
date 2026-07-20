@@ -60,7 +60,7 @@ Para cada PR, registrar requisito, decisão de domínio, impacto de schema/migra
 
 | Fase | Artefatos verificados | Implementação real | Stubs | Pendências |
 |:---:|:---:|:---:|:---:|:---|
-| 0 | 7/7 | 7 | 0 | Review técnico |
+| 0 | 7/7 | 7 | 0 | ~~Review técnico~~ ✅ Concluído (2026-07-19) |
 | 1 | 6/6 | 6 | 0 | E2E integration, contract round-trip tests |
 | 2 | 5/5 | 5 | 0 | Golden tests multi-setoriais, dashboards qualidade |
 | 3 | 5/5 | 5 | 0 | E2E workflow, contract tests handlers |
@@ -72,3 +72,7 @@ Para cada PR, registrar requisito, decisão de domínio, impacto de schema/migra
 | 9 | 2/2 | 0 | 2 | **threat-model.md** e **bcp-dr.md** são stubs |
 
 **Total:** 40/40 artefatos existem. 38/40 são implementações reais. 2 stubs em Fase 9 (readiness docs).
+
+## Auditoria de implementação (2026-07-19, atualizado 2026-07-19)
+
+**Fase 0 CONCLUÍDA.** Licenciamento resolvido (PDF removido), ADRs revisados e referências atualizadas.
