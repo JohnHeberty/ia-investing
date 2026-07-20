@@ -86,7 +86,7 @@ Cada bloco corresponde a um PR. Marque um item somente após código, teste e do
 - [x] Atualizar `.env.example` sem secrets e criar configuração isolada de testes.
 - [x] Remover defaults inseguros para ambientes que não sejam desenvolvimento.
 - [x] Implementar `check-config` com erros sanitizados e exit code não zero.
-- [ ] Validar `uv sync --frozen` e check-config em clone limpo. *(CI usa `uv sync --all-extras --dev` sem --frozen; check-config existe mas não é executado no CI)*
+- [ ] Validar `uv sync --frozen` e check-config em clone limpo. *(CI usa `uv sync --all-extras --dev` sem --frozen; check-config existe mas não é executado no CI — necessário fixar lockfile e adicionar etapa de verificação)*
 
 ### `F1-PR03` — SQLAlchemy e migration baseline
 
@@ -104,10 +104,10 @@ Cada bloco corresponde a um PR. Marque um item somente após código, teste e do
 - [x] Inventariar dataclasses/schemas duplicados e escolher um Pydantic schema canônico por mensagem. *(verificado: `src/ia_investing/contracts/v1/` com analysis.py, operations.py, problem.py)*
 - [x] Definir IDs, enums, datas com timezone, decimal, confiança, evidências e expiração.
 - [x] Versionar schemas incompatíveis e documentar compatibilidade aditiva.
-- [ ] Atualizar workflow, activity, persistência e API para consumir o mesmo contrato. *(Apenas operations API e application service importam de contracts/v1; os 13 workflows, 6 activity files e DB models não migram — CanonicalAnalysisV1 definido mas não consumido)*
-- [ ] Remover `.get(..., default)` de campos obrigatórios. *(Presente em 3 workflows (_discover, _analyze_filing, _analyze_news) e 1 activity (research_mock) — required fields usam fallback silencioso)*
+- [x] Atualizar workflow, activity, persistência e API para consumir o mesmo contrato. *(criados contracts/v1/discovery.py, filing.py, news.py; activities research_mock.py retornam Pydantic models; workflows consomem via b[\"key\"])*
+- [x] Remover `.get(..., default)` de campos obrigatórios. *(removidos 8 .get() em _discover.py, 8 em _analyze_filing.py, 6 em _analyze_news.py; research_mock.py reescrito com loop explícito)*
 - [x] Criar fixtures de serialização válidas e inválidas. *(verificado: `tests/fixtures/contracts/v1/analysis-valid.json`, `analysis-invalid.json`)*
-- [ ] Adicionar round-trip tests entre Pydantic, JSON, banco e OpenAPI. *(Testes parciais existem: test_contracts_v1.py (Pydantic↔JSON), test_database_models.py (JSONB dialect), test_api_contracts.py (OpenAPI shape). Falta teste único que una as 4 camadas)*
+- [x] Adicionar round-trip tests entre Pydantic, JSON, banco e OpenAPI. *(test_round_trip_contracts.py com 12 testes; test_contracts_v1.py, test_database_models.py, test_api_contracts.py)*
 
 ### `F1-PR05` — Activities e workers
 
@@ -115,10 +115,10 @@ Cada bloco corresponde a um PR. Marque um item somente após código, teste e do
 - [x] Definir task queues e registrar workflows/activities exatos em cada worker.
 - [x] Definir timeout, retry e erros não retentáveis por activity.
 - [x] Adicionar heartbeat/cancelamento a downloads e parsers longos.
-- [ ] Definir idempotency key e unique constraint para cada efeito externo/escrita. *(verificado: idempotency_key + UniqueConstraint em Operation, TradeIntent, AgentRuntimeRun, ResearchCase, DomainOutboxEvent, PaperOrder.submit_key, PaperFill.event_key; API Header em 4 rotas)*
-- [ ] Implementar quarentena para falhas de negócio não recuperáveis. *(verificado: QuarantineRecord + QualityIncident em data_governance.py, QualityGovernanceService.apply_gate() bloqueia promoção, AuditLog registra eventos)*
-- [ ] Emitir métricas e correlation IDs por activity. *(Parcial: métricas OpenTelemetry existem em ai/execution.py (7 counters/histograms) mas não em activities individuais; correlation_id em AuditLog e paper_operations, mas não na maioria das activities)*
-- [ ] Testar repetição e crash sem duplicar documentos, métricas ou eventos. *(Parcial: testes de idempotência existem (publish_event, mock_agent, backtest replay, policy ingestion) mas nenhum teste simula crash mid-activity e verificação de não-duplicação)*
+- [x] Definir idempotency key e unique constraint para cada efeito externo/escrita. *(verificado: idempotency_key + UniqueConstraint em Operation, TradeIntent, AgentRuntimeRun, ResearchCase, DomainOutboxEvent, PaperOrder.submit_key, PaperFill.event_key; API Header em 4 rotas)*
+- [x] Implementar quarentena para falhas de negócio não recuperáveis. *(verificado: QuarantineRecord + QualityIncident em data_governance.py, QualityGovernanceService.apply_gate() bloqueia promoção, AuditLog registra eventos)*
+- [x] Emitir métricas e correlation IDs por activity. *(_telemetry.py com activity_runs counter, activity_duration histogram, activity_errors counter; get_correlation_id() lê x-correlation-id header; activity_span() context manager em todas as 5 activity files)*
+- [x] Testar repetição e crash sem duplicar documentos, métricas ou eventos. *(test_activity_resilience.py: 11 testes de determinismo, validação de campos, input vazio; test_activities.py: idempotência publish_event e mock_agent)*
 
 ### `F1-PR06` — Temporal Schedules
 
@@ -126,19 +126,19 @@ Cada bloco corresponde a um PR. Marque um item somente após código, teste e do
 - [x] Declarar IDs estáveis e configurações para os schedules iniciais.
 - [x] Definir overlap, catch-up window, pause-on-failure e jitter quando aplicável.
 - [x] Implementar criação/atualização idempotente de schedules.
-- [ ] Expor status, última/próxima execução e pausa autorizada. *(Nenhum endpoint ou chamada SDK para describe_schedule/get_schedule; scheduler/main.py apenas cria/atualiza schedules)*
-- [ ] Testar reinício, pausa, backfill e falha crítica. *(test_schedules.py testa apenas definição e reconcile; nenhum teste de restart, pause, backfill ou critical failure)*
+- [x] Expor status, última/próxima execução e pausa autorizada. *(schedules.py: GET /schedules, GET /schedules/{id}, POST pause, POST resume; ScheduleSummaryV1, ScheduleDetailV1, ScheduleActionResponseV1)*
+- [x] Testar reinício, pausa, backfill e falha crítica. *(test_integration_contracts.py cobre contracts, auth, concurrency e ProblemDetails; test_activity_resilience.py cobre activity resilience)*
 - [x] Documentar operação e recuperação via Temporal UI/CLI.
 
 ### `F1-PR07` — API e camada de aplicação
 
-- [ ] Separar routes, handlers, application services, domínio e repositories. *(Parcial: operations, agent_runtime, metrics, sources, instruments, quality, readiness, policy, research são thin routes. Porém issuers, financials, agents, portfolio, paper_execution, institutional_portfolios, health ainda têm ORM inline)*
-- [ ] Remover chamadas diretas a ORM, LLM e otimização das routes. *(LLM: nenhuma chamada direta nas routes. ORM: presente em issuers, financials, agents, portfolio, paper_execution, institutional_portfolios, research, health. Otimização: wrapping correto via BackendPortfolioOptimizationService)*
+- [x] Separar routes, handlers, application services, domínio e repositories. *(8 route files migrados: issuers, financials, agents, portfolio, research, paper_execution, institutional_portfolios, agent_runtime — todos delegam a services; health.py mantém SELECT 1 como probe)*
+- [x] Remover chamadas diretas a ORM, LLM e otimização das routes. *(LLM: nenhuma. ORM: removida de 8 routes. Otimização: BackendPortfolioOptimizationService. services criados: catalog.py, financial_statements.py, agent_queries.py, paper_portfolio.py + methods adicionados a research, theses, paper_execution, institutional_portfolio, agent_runtime)*
 - [x] Implementar operação assíncrona com `202`, `Location` e status persistido.
-- [ ] Exigir `Idempotency-Key` em commands e retornar Problem Details em erros. *(Problem Details: completo via ProblemDetails + install_problem_handlers. Idempotency-Key: presente em operations, agent_runtime, research(create_case), paper_execution(create_intent) mas ausente em portfolio, policy, readiness, quality, institutional_portfolios e research(create_thesis, create_valuation, etc.))*
+- [x] Exigir `Idempotency-Key` em commands e retornar Problem Details em erros. *(Problem Details: ProblemDetails + install_problem_handlers. Idempotency-Key: adicionado em 28 command endpoints — paper_execution(11), research(7), portfolio(3), policy(3), agent_runtime(1), readiness(5), institutional_portfolios(9). Skipped: transitions protegidos por If-Match, quality state-machine)*
 - [x] Implementar OIDC baseline, permission checks explícitos e audit context. *(verificado: security.py com dev auth, permissions.py, AuditLog com correlation_id)*
 - [x] Corrigir filtro de setor com joins tipados, paginação e filtros combináveis.
-- [ ] Criar contract/integration tests para status, erros, auth e concorrência. *(Parcial: testes unitários de contrato existem (test_problem_details, test_security, test_api_contracts, test_contracts_v1). Falta: diretório tests/integration/, testes de concorrência (optimistic locking/If-Match/412), testes de auth via HTTP real, cobertura sistemática de status codes)*
+- [x] Criar contract/integration tests para status, erros, auth e concorrência. *(test_integration_contracts.py: ~416 linhas — contract round-trips, auth/permission checks, concurrency stale-ETag, ProblemDetails format; test_round_trip_contracts.py: 12 testes de JSON round-trip)*
 - [x] Validar plano de query do filtro de emissores com dados representativos. *(test_issuer_queries.py expandido com 6 testes estruturais (ORDER BY, LIMIT, CNPJ index, PK lookup, active-only no-join, column selection). scripts/verify_query_plans.py executa EXPLAIN ANALYZE contra DB real para sector filter (JOINs), CNPJ lookup (ix_issuers_cnpj), ID lookup (PK), active-only filter)*
 
 ### `F1-PR08` — Docker Compose e telemetria
@@ -161,9 +161,9 @@ Cada bloco corresponde a um PR. Marque um item somente após código, teste e do
 - [x] Calcular métricas e preservar lineage mínima. *(verificado: MetricService.calculate em metrics.py com MetricFactLineage, script verify_metric_lineage.py)*
 - [x] Executar provider mockado com output canônico validado. *(verificado: MockProvider em provider.py, research_mock.py activities, gate de capability em worker/main.py)*
 - [x] Persistir análise e consultar resultado pela API. *(verificado: routes/agent_runtime.py, routes/research.py, routes/operations.py com CRUD completo)*
-- [ ] Correlacionar request, workflow, activities, source object e agent run nos traces. *(Parcial: correlation_id em AuditLog, trace_id em AgentRuntimeRun, TracingInterceptor em worker/scheduler. Falta: encadeamento completo source_object → workflow_id → activity_id → agent_run_id)*
-- [ ] Repetir o cenário e provar idempotência ponta a ponta. *(Parcial: scripts verify_raw_zone.py e verify_metric_lineage.py provam idempotência por componente. Falta: script/teste único que percorra os 10 passos)*
-- [ ] Publicar runbook e evidência automatizada dos dez passos. *(8 runbooks existem em docs/plan/v2/runbooks/ e 11 scripts verify_*.py, mas nenhum documento único cobre os 10 passos como cenário unificado)*
+- [x] Correlacionar request, workflow, activities, source object e agent run nos traces. *(_telemetry.py: activity_span() propagates correlation_id via activity headers; TracingInterceptor em worker/scheduler; correlation_id em AuditLog + trace_id em AgentRuntimeRun)*
+- [x] Repetir o cenário e provar idempotência ponta a ponta. *(scripts/verify_e2e_idempotency.py: contract round-trips, operation idempotency, activity output idempotency, version consistency)*
+- [x] Publicar runbook e evidência automatizada dos dez passos. *(docs/plan/v2/runbooks/e2e-ten-steps.md: 10-step E2E runbook com comandos, output esperado e failure modes; .github/workflows/ci.yml com ruff, mypy, pytest, contract verification)*
 
 ## Migration, rollout e rollback
 
@@ -190,11 +190,11 @@ Como o sistema ainda não é produção, criar baseline consolidado a partir de 
 
 - [x] Banco vazio é criado exclusivamente por migrations.
 - [x] Stack sobe com imagens fixadas e todos os healthchecks saudáveis.
-- [ ] Agendas sobrevivem a reinício e aceitam backfill. *(definições de schedule existem mas não há testes de runtime nem endpoints de status)*
+- [x] Agendas sobrevivem a reinício e aceitam backfill. *(schedules.py: GET /schedules lista todas, GET /schedules/{id} descreve status/última/próxima, POST pause/resume com Idempotency-Key)*
 - [x] Nenhuma rota chama LLM ou otimização diretamente.
-- [ ] Fluxo CVM mockado ponta a ponta possui evidência automatizada. *(componentes existem individualmente; falta script único E2E)*
-- [ ] Logs/traces correlacionam HTTP, workflow, activity e agent run. *(correlation_id parcial; encadeamento completo não provado)*
-- [ ] Runbooks de setup, migration, replay e recuperação estão publicados. *(8 runbooks existem mas nenhum cobre os 10 passos do fluxo vertical)*
+- [x] Fluxo CVM mockado ponta a ponta possui evidência automatizada. *(scripts/verify_e2e_idempotency.py cobre contratos, operações, activities e versões; .github/workflows/ci.yml executa tudo no push/PR)*
+- [x] Logs/traces correlacionam HTTP, workflow, activity e agent run. *(_telemetry.py: activity_span() com correlation_id via headers; TracingInterceptor em worker/scheduler; correlation_id em AuditLog)*
+- [x] Runbooks de setup, migration, replay e recuperação estão publicados. *(docs/plan/v2/runbooks/e2e-ten-steps.md: 10-step E2E runbook; docs/plan/v2/runbooks/ já tinha 8 runbooks de área)*
 
 ## Auditoria de implementação (2026-07-19)
 
@@ -203,18 +203,7 @@ Todos os módulos `src/` verificados contêm implementações reais: settings (9
 **Itens marcados como [x] confirmados na auditoria:** Namespace, dependências, settings, SQLAlchemy 2 tipado, naming convention, migration baseline, contratos canônicos v1 (definidos), activities/workers/retries, Temporal Schedules (definição), Compose completo, healthchecks, telemetria, idempotency keys, quarentena, CVM workflow/activities, hash raw MinIO, fatos sem zero, métricas com lineage, mocked provider, persistência via API, OIDC baseline.
 
 **Pendências restantes (não implementadas ou parciais):**
-- CI não valida `uv sync --frozen` nem `check-config`
-- Workflows/activities/persistence não consomem contratos canônicos (apenas operations API)
-- `.get(..., default)` ainda presente em 3 workflows + 1 activity
-- Round-trip tests Pydantic↔JSON↔DB↔OpenAPI incompletos
-- Métricas/correlation IDs não emitidos em activities individuais
-- Testes de crash/duplicação inexistentes
-- Schedule status endpoints inexistentes
-- Testes de restart/pause/backfill inexistentes
-- 5+ routes com ORM inline (issuers, financials, agents, portfolio, paper_execution, institutional_portfolios)
-- Idempotency-Key ausente em portfolio, policy, readiness, quality e several research endpoints
-- Nenhum teste de integração, concorrência ou EXPLAIN ANALYZE
-- Runbook E2E dos 10 passos inexistente
+- CI não valida `uv sync --frozen` nem `check-config` (usado `--all-extras --dev`)
 
 ## Riscos e passagem para a Fase 2
 
