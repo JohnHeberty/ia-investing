@@ -16,6 +16,7 @@ from ia_investing.orchestration.activities import (
     OPERATION_ACTIVITIES,
     PAPER_OPERATION_ACTIVITIES,
     RESEARCH_MOCK_ACTIVITIES,
+    THESIS_REVIEW_ACTIVITIES,
 )
 from ia_investing.settings import get_settings
 from observability import setup_telemetry
@@ -32,6 +33,7 @@ from workflows import (
     PortfolioConstructionWorkflow,
     PortfolioOptimizationWorkflow,
     RunAgentWorkflow,
+    ThesisReviewWorkflow,
 )
 
 logger = logging.getLogger(__name__)
@@ -46,6 +48,7 @@ WORKFLOWS_BY_CAPABILITY: dict[Capability, Sequence[type[Any]]] = {
         PolicyEventWorkflow,
         DiscoverStocksWorkflow,
         RunAgentWorkflow,
+        ThesisReviewWorkflow,
     ),
     Capability.PORTFOLIO_RISK: (
         PortfolioConstructionWorkflow,
@@ -60,7 +63,12 @@ WORKFLOWS_BY_CAPABILITY: dict[Capability, Sequence[type[Any]]] = {
 ACTIVITIES_BY_CAPABILITY: dict[Capability, Sequence[Any]] = {
     Capability.DATA_INGESTION: (*DATA_INGESTION_ACTIVITIES, *NOTIFICATION_ACTIVITIES),
     Capability.DOCUMENT_PROCESSING: (),
-    Capability.RESEARCH_AGENTS: (*RESEARCH_MOCK_ACTIVITIES, *OPERATION_ACTIVITIES, *NOTIFICATION_ACTIVITIES),
+    Capability.RESEARCH_AGENTS: (
+        *RESEARCH_MOCK_ACTIVITIES,
+        *THESIS_REVIEW_ACTIVITIES,
+        *OPERATION_ACTIVITIES,
+        *NOTIFICATION_ACTIVITIES,
+    ),
     Capability.PORTFOLIO_RISK: PAPER_OPERATION_ACTIVITIES,
     Capability.NOTIFICATIONS: NOTIFICATION_ACTIVITIES,
 }

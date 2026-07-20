@@ -5,12 +5,24 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 import sqlalchemy as sa
+from opentelemetry import metrics
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from data_quality._models import ValidationResult
 from database.models.agents import AuditLog
 from database.models.data_governance import QualityIncident, QualityRule, QuarantineRecord
+
+_meter = metrics.get_meter("ia_investing.data_quality")
+_incidents_opened = _meter.create_counter(
+    "data_quality.incidents_opened", description="Quality incidents opened", unit="1"
+)
+_incidents_resolved = _meter.create_counter(
+    "data_quality.incidents_resolved", description="Quality incidents resolved", unit="1"
+)
+_quarantine_blocked = _meter.create_counter(
+    "data_quality.quarantine_blocked", description="Promotions blocked by quarantine", unit="1"
+)
 
 ALLOWED_TRANSITIONS = {
     "open": frozenset({"acknowledged", "resolved", "waived"}),
@@ -106,6 +118,8 @@ class QualityGovernanceService:
             status="blocked",
         )
         self.session.add(quarantine)
+        _incidents_opened.add(1, {"rule": rule.code, "severity": rule.severity})
+        _quarantine_blocked.add(1, {"rule": rule.code})
         self.session.add(
             AuditLog(
                 actor_type="system",
@@ -163,6 +177,7 @@ class QualityGovernanceService:
             if quarantine is not None:
                 quarantine.status = "released"
                 quarantine.released_at = now
+            _incidents_resolved.add(1, {"rule": str(incident.quality_rule_id), "resolution": target})
         self.session.add(
             AuditLog(
                 actor_type="human",

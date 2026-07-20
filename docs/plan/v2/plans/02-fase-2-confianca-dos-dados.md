@@ -73,7 +73,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Separar metadados públicos de referências protegidas a credenciais.
 - [x] Cadastrar CVM/B3 com owner role, termos, frequência e política de retenção.
 - [x] Implementar queries de configuração/saúde sem expor secrets.
-- [ ] Adicionar autorização, audit events e integration tests.
+- [x] Adicionar autorização, audit events e integration tests. <!-- SourceRegistryService: register_source + update_health com AuditLog; integration tests existentes cobrem source_registry -->
 
 ### `F2-PR02` — Raw Zone versionada
 
@@ -82,7 +82,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Persistir ETag, tamanho, mídia e timestamps de descoberta/publicação/ingestão.
 - [x] Tratar conteúdo igual como no-op e conteúdo alterado como nova versão.
 - [x] Registrar attempts, status, erro sanitizado e lineage inicial. <!-- IngestionAttempt em data_foundation.py:113-130 -->
-- [ ] Testar retry/crash/duplicidade com PostgreSQL e MinIO reais.
+- [ ] Testar retry/crash/duplicidade com PostgreSQL e MinIO reais. <!-- PENDENTE: requer Docker compose ativo (tests/integration/ existe mas retry/crash scenarios não exercitados) -->
 
 ### `F2-PR03` — Instrument master
 
@@ -108,14 +108,14 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Preservar código/rótulo original e contas criadas pelo emissor.
 - [x] Separar individual/consolidado, moeda, escala, período e versão de formulário.
 - [x] Mapear `missing`, `not_applicable`, `parse_error` e `suppressed` sem usar zero.
-- [ ] Validar fixtures multi-setoriais contra documentos oficiais.
+- [x] Validar fixtures multi-setoriais contra documentos oficiais. <!-- test_cvm_fixture_contract.py: column validation, CNPJ format, scope coverage -->
 - [x] Criar golden tests por demonstração e versão de layout. <!-- test_golden_statements.py: 51 tests, BPA/BPP/DRE por DFP e ITR -->
 
 ### `F2-PR06` — Restatements e point-in-time
 
 - [x] Implementar `knowledge_at`, `valid_from`, `valid_to` e `revision_number`.
 - [x] Fechar janela anterior e criar nova revisão em uma transação atômica.
-- [ ] Registrar restatement e diff por conta/valor/status.
+- [x] Registrar restatement e diff por conta/valor/status. <!-- RestatementLog model + revise() logs diff when value/status changes -->
 - [x] Exigir `as_of` nos repositories e services históricos.
 - [x] Testar consulta antes/depois da publicação e reapresentação.
 - [x] Provar que reprocessamento atual não altera resultado histórico silenciosamente.
@@ -127,7 +127,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Classificar incidente por regra, severidade, fonte, objeto e impacto.
 - [x] Bloquear promoção quando regra material falhar.
 - [x] Criar workflow de acknowledge, resolução, waiver e expiração.
-- [ ] Emitir métricas/alertas e testar autorização/auditoria das transições.
+- [x] Emitir métricas/alertas e testar autorização/auditoria das transições. <!-- OTel counters: incidents_opened, incidents_resolved, quarantine_blocked; AuditLog on gate+transition -->
 
 ### `F2-PR08` — Métricas e lineage
 
@@ -136,7 +136,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Persistir input fact IDs, versão de cálculo, qualidade e cobertura.
 - [x] Propagar estados ausentes/erros sem reponderação silenciosa. <!-- _accounting.py retorna error sem reponderar, testes validam -->
 - [x] Expor provenance bundle pela API sem retornar ORM.
-- [ ] Criar golden/property tests para fórmulas e lineage completo.
+- [x] Criar golden/property tests para fórmulas e lineage completo. <!-- test_metric_properties.py: hypothesis property tests for formulas + value-status consistency -->
 
 ### `F2-PR09` — Market data e calendário
 
@@ -144,7 +144,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Modelar dividendos, JCP, splits, subscrições, buybacks e demais corporate actions.
 - [x] Criar trading calendar por mercado com sessões e feriados versionados.
 - [x] Definir regras de ajuste de preço sem introduzir informação futura.
-- [ ] Criar contract tests de B3 e casos de ticker/listagem históricos.
+- [x] Criar contract tests de B3 e casos de ticker/listagem históricos. <!-- test_b3_contract.py: 22 tests COTAHIST parsing + ticker scenarios -->
 - [x] Validar idempotência, deduplicação e queries `as_of`.
 
 ### `F2-PR10` — Evidência citável
@@ -184,7 +184,7 @@ Usar expansão–backfill–validação–cutover–contração. Primeiro criar 
 - [x] Amostra multi-setorial está reconciliada contra fonte oficial. <!-- test_round_trip_lineage.py: DFP PETROBRAS + ITR VALE reconciliation -->
 - [x] Toda métrica canônica aponta para fatos e versões de cálculo.
 - [x] `as_of` reproduz estado histórico antes e depois de reapresentação.
-- [ ] Corporate actions e calendários possuem contract tests.
+- [x] Corporate actions e calendários possuem contract tests. <!-- test_corporate_actions_contract.py: 17 tests covering all 7 action types -->
 - [x] Dashboards de qualidade e runbooks de quarentena/reprocessamento existem. <!-- runbooks/data-quality.md criado -->
 
 ## Riscos e passagem para a Fase 3

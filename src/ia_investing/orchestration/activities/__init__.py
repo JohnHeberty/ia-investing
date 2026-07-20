@@ -3,6 +3,7 @@ from .notifications import NOTIFICATION_ACTIVITIES
 from .operations import OPERATION_ACTIVITIES
 from .paper_operations import PAPER_OPERATION_ACTIVITIES
 from .research_mock import RESEARCH_MOCK_ACTIVITIES
+from .thesis_review import THESIS_REVIEW_ACTIVITIES
 
 __all__ = [
     "DATA_INGESTION_ACTIVITIES",
@@ -10,4 +11,5 @@ __all__ = [
     "OPERATION_ACTIVITIES",
     "PAPER_OPERATION_ACTIVITIES",
     "RESEARCH_MOCK_ACTIVITIES",
+    "THESIS_REVIEW_ACTIVITIES",
 ]

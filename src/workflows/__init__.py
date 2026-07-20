@@ -22,6 +22,11 @@ from workflows._portfolio_optimization import (
     PortfolioOptimizationWorkflow,
 )
 from workflows._run_agent import RunAgentInput, RunAgentWorkflow
+from workflows._thesis_review import (
+    ThesisReviewInput,
+    ThesisReviewResult,
+    ThesisReviewWorkflow,
+)
 
 __all__ = [
     "AnalyzeFilingWorkflow",
@@ -53,4 +58,7 @@ __all__ = [
     "PortfolioOptimizationWorkflow",
     "RunAgentInput",
     "RunAgentWorkflow",
+    "ThesisReviewInput",
+    "ThesisReviewResult",
+    "ThesisReviewWorkflow",
 ]

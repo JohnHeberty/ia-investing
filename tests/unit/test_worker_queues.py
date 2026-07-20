@@ -13,6 +13,7 @@ from workflows import (
     PortfolioConstructionWorkflow,
     PortfolioOptimizationWorkflow,
     RunAgentWorkflow,
+    ThesisReviewWorkflow,
 )
 
 
@@ -35,6 +36,7 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
         PolicyEventWorkflow,
         DiscoverStocksWorkflow,
         RunAgentWorkflow,
+        ThesisReviewWorkflow,
     )
     assert WORKFLOWS_BY_CAPABILITY[Capability.PORTFOLIO_RISK] == (
         PortfolioConstructionWorkflow,

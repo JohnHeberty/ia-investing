@@ -1,15 +1,13 @@
 """Contract tests for CorporateAction model."""
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 from uuid import uuid4
 
-import pytest
 from sqlalchemy import inspect as sa_inspect
 
 from database.models.market_data import CorporateAction
 
-
-_DUMMY_SOVID = uuid4()
 _DUMMY_INSTRUMENT = uuid4()
+_DUMMY_SOVID = uuid4()
 
 
 def test_dividend_action_type_valid() -> None:
@@ -24,7 +22,7 @@ def test_dividend_action_type_valid() -> None:
         amount_per_unit=2.50,
         currency_code="BRL",
         source_object_version_id=_DUMMY_SOVID,
-        knowledge_at=datetime(2024, 6, 15, tzinfo=timezone.utc),
+        knowledge_at=datetime(2024, 6, 15, tzinfo=UTC),
     )
     assert action.action_type == "dividend"
     assert action.amount_per_unit == 2.50
@@ -39,7 +37,7 @@ def test_split_action_type_valid() -> None:
         ex_date=date(2024, 3, 15),
         ratio=2.0,
         source_object_version_id=_DUMMY_SOVID,
-        knowledge_at=datetime(2024, 3, 1, tzinfo=timezone.utc),
+        knowledge_at=datetime(2024, 3, 1, tzinfo=UTC),
     )
     assert action.action_type == "split"
     assert action.ratio == 2.0
@@ -55,7 +53,7 @@ def test_jcp_action_type_valid() -> None:
         amount_per_unit=1.00,
         currency_code="BRL",
         source_object_version_id=_DUMMY_SOVID,
-        knowledge_at=datetime(2024, 12, 1, tzinfo=timezone.utc),
+        knowledge_at=datetime(2024, 12, 1, tzinfo=UTC),
     )
     assert action.action_type == "jcp"
 
@@ -69,7 +67,7 @@ def test_reverse_split_action_type_valid() -> None:
         ex_date=date(2024, 5, 15),
         ratio=0.5,
         source_object_version_id=_DUMMY_SOVID,
-        knowledge_at=datetime(2024, 5, 1, tzinfo=timezone.utc),
+        knowledge_at=datetime(2024, 5, 1, tzinfo=UTC),
     )
     assert action.action_type == "reverse_split"
 
@@ -84,7 +82,7 @@ def test_subscription_action_type_valid() -> None:
         amount_per_unit=10.00,
         currency_code="BRL",
         source_object_version_id=_DUMMY_SOVID,
-        knowledge_at=datetime(2024, 8, 1, tzinfo=timezone.utc),
+        knowledge_at=datetime(2024, 8, 1, tzinfo=UTC),
     )
     assert action.action_type == "subscription"
 
@@ -97,7 +95,7 @@ def test_buyback_action_type_valid() -> None:
         announcement_date=date(2024, 9, 1),
         ex_date=date(2024, 9, 15),
         source_object_version_id=_DUMMY_SOVID,
-        knowledge_at=datetime(2024, 9, 1, tzinfo=timezone.utc),
+        knowledge_at=datetime(2024, 9, 1, tzinfo=UTC),
     )
     assert action.action_type == "buyback"
 
@@ -111,7 +109,7 @@ def test_bonus_action_type_valid() -> None:
         ex_date=date(2024, 4, 15),
         ratio=0.1,
         source_object_version_id=_DUMMY_SOVID,
-        knowledge_at=datetime(2024, 4, 1, tzinfo=timezone.utc),
+        knowledge_at=datetime(2024, 4, 1, tzinfo=UTC),
     )
     assert action.action_type == "bonus"
 
@@ -133,7 +131,7 @@ def test_corporate_action_nullable_fields() -> None:
         action_type="dividend",
         announcement_date=date(2024, 1, 1),
         source_object_version_id=_DUMMY_SOVID,
-        knowledge_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+        knowledge_at=datetime(2024, 1, 1, tzinfo=UTC),
     )
     assert action.ex_date is None
     assert action.record_date is None
