@@ -24,9 +24,7 @@ class AgentRunQueryService:
         if status:
             stmt = stmt.where(AgentRun.status == status)
         if agent_name:
-            stmt = stmt.join(
-                AgentDefinition, AgentRun.agent_definition_id == AgentDefinition.id
-            )
+            stmt = stmt.join(AgentDefinition, AgentRun.agent_definition_id == AgentDefinition.id)
             stmt = stmt.where(AgentDefinition.name == agent_name)
         stmt = stmt.order_by(AgentRun.started_at.desc()).offset(offset).limit(limit)
         result = await self._session.execute(stmt)

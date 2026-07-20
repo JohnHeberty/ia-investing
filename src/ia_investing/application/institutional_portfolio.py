@@ -857,9 +857,7 @@ class InstitutionalPortfolioService:
             ).all()
         )
 
-    async def list_nav_publications(
-        self, portfolio_id: UUID, *, as_of: datetime | None = None
-    ) -> list[NavPublication]:
+    async def list_nav_publications(self, portfolio_id: UUID, *, as_of: datetime | None = None) -> list[NavPublication]:
         stmt = (
             sa.select(NavPublication)
             .where(NavPublication.portfolio_id == portfolio_id)

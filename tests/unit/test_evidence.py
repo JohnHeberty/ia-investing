@@ -1,5 +1,8 @@
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
+
+import pytest
 
 from ia_investing.application.evidence import EvidenceReferenceV1, chunks_from_pages
 
@@ -24,3 +27,37 @@ def test_evidence_contract_has_verifiable_location() -> None:
         data_as_of=datetime(2026, 7, 18, tzinfo=UTC),
     )
     assert evidence.page_start == 2
+
+
+@pytest.mark.asyncio
+async def test_search_accepts_embedding_parameter() -> None:
+    from ia_investing.application.evidence import EvidenceRepository
+
+    mock_session = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.all.return_value = []
+    mock_session.execute.return_value = mock_result
+
+    repo = EvidenceRepository(mock_session)
+    embedding = [0.1] * 1536
+    result = await repo.search(
+        "receita líquida",
+        datetime(2026, 7, 18, tzinfo=UTC),
+        embedding=embedding,
+    )
+
+    assert result == []
+    mock_session.execute.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_search_embedding_wrong_length_raises() -> None:
+    from ia_investing.application.evidence import EvidenceRepository
+
+    repo = EvidenceRepository(AsyncMock())
+    with pytest.raises(ValueError, match="1536"):
+        await repo.search(
+            "receita líquida",
+            datetime(2026, 7, 18, tzinfo=UTC),
+            embedding=[0.1] * 100,
+        )

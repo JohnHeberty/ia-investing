@@ -207,7 +207,6 @@ class ResearchCaseService:
         )
         return case
 
-
     async def list_cases(
         self,
         state: str | None,

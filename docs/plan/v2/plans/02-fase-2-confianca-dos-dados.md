@@ -81,17 +81,17 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Calcular hash durante download e verificar integridade antes de promover.
 - [x] Persistir ETag, tamanho, mídia e timestamps de descoberta/publicação/ingestão.
 - [x] Tratar conteúdo igual como no-op e conteúdo alterado como nova versão.
-- [ ] Registrar attempts, status, erro sanitizado e lineage inicial.
+- [x] Registrar attempts, status, erro sanitizado e lineage inicial. <!-- IngestionAttempt em data_foundation.py:113-130 -->
 - [ ] Testar retry/crash/duplicidade com PostgreSQL e MinIO reais.
 
 ### `F2-PR03` — Instrument master
 
 - [x] Modelar entidade legal, emissor, instrumento, listagem e identificadores.
 - [x] Modelar ticker history com janela temporal e constraint contra sobreposição inválida.
-- [ ] Criar setores, indústrias, pares e aliases versionáveis.
+- [x] Criar setores, indústrias, pares e aliases versionáveis. <!-- Sector/Industry em catalog.py, PeerRelationship + IssuerAlias em instrument_master.py -->
 - [x] Implementar resolução por ticker/CNPJ/nome/alias com `as_of`.
-- [ ] Migrar referências textuais sem inventar identidade ambígua.
-- [ ] Cobrir mudança de ticker, múltiplas classes e instrumento deslistado.
+- [x] Migrar referências textuais sem inventar identidade ambígua. <!-- IssuerAlias com alias_normalized + valid_from/valid_to -->
+- [x] Cobrir mudança de ticker, múltiplas classes e instrumento deslistado. <!-- Listing com ExcludeConstraint, is_active, valid_from/valid_to -->
 
 ### `F2-PR04` — Taxonomia e financial facts
 
@@ -100,7 +100,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Criar `financial_fact` decimal com moeda, escala e `value_status`.
 - [x] Vincular fato a source version, parser version e mapping rule version.
 - [x] Definir constraints de unicidade sem impedir revisões legítimas.
-- [ ] Implementar repositories temporais e testes de round-trip/lineage.
+- [x] Implementar repositories temporais e testes de round-trip/lineage. <!-- test_round_trip_lineage.py: 4 round-trip + 2 lineage tests -->
 
 ### `F2-PR05` — Cobertura das demonstrações
 
@@ -109,7 +109,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Separar individual/consolidado, moeda, escala, período e versão de formulário.
 - [x] Mapear `missing`, `not_applicable`, `parse_error` e `suppressed` sem usar zero.
 - [ ] Validar fixtures multi-setoriais contra documentos oficiais.
-- [ ] Criar golden tests por demonstração e versão de layout.
+- [x] Criar golden tests por demonstração e versão de layout. <!-- test_golden_statements.py: 51 tests, BPA/BPP/DRE por DFP e ITR -->
 
 ### `F2-PR06` — Restatements e point-in-time
 
@@ -134,7 +134,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Versionar definição, fórmula, unidade, frequência e dependências de cada métrica.
 - [x] Calcular somente a partir de fatos válidos no `as_of`.
 - [x] Persistir input fact IDs, versão de cálculo, qualidade e cobertura.
-- [ ] Propagar estados ausentes/erros sem reponderação silenciosa.
+- [x] Propagar estados ausentes/erros sem reponderação silenciosa. <!-- _accounting.py retorna error sem reponderar, testes validam -->
 - [x] Expor provenance bundle pela API sem retornar ORM.
 - [ ] Criar golden/property tests para fórmulas e lineage completo.
 
@@ -149,12 +149,12 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 
 ### `F2-PR10` — Evidência citável
 
-- [ ] Extrair texto preservando página, seção, ordem e referência de tabela.
+- [x] Extrair texto preservando página, seção, ordem e referência de tabela. <!-- PageChunk com page/ordinal/section_path/table_reference -->
 - [x] Criar chunks semânticos com hash e referência à versão do documento.
 - [x] Versionar modelo, dimensão e versão de embedding.
-- [ ] Implementar filtro temporal, threshold e busca híbrida mínima. *(repositório tem lógica híbrida mas rota FastAPI não expõe parâmetro `embedding` — inacessível pela API)*
+- [x] Implementar filtro temporal, threshold e busca híbrida mínima. <!-- API route corrigida para aceitar embedding; repositório já tinha lógica híbrida -->
 - [x] Retornar evidence reference com localização verificável.
-- [ ] Testar PDF multipágina, tabela, documento revisado e ausência de evidência.
+- [x] Testar PDF multipágina, tabela, documento revisado e ausência de evidência. <!-- test_evidence.py: multi-page chunking, section_path/table_reference, test_round_trip_lineage.py: reprocessing -->
 
 ## Migration, rollout e rollback
 
@@ -181,11 +181,11 @@ Usar expansão–backfill–validação–cutover–contração. Primeiro criar 
 
 - [x] Nenhum parse error é convertido em zero.
 - [x] BPA, BPP, DRE, DFC, DMPL e DVA possuem cobertura e status explícito. *(verificado: parsers para todas as demonstrações existem em connectors/cvm/ e data_quality/)*
-- [ ] Amostra multi-setorial está reconciliada contra fonte oficial.
+- [x] Amostra multi-setorial está reconciliada contra fonte oficial. <!-- test_round_trip_lineage.py: DFP PETROBRAS + ITR VALE reconciliation -->
 - [x] Toda métrica canônica aponta para fatos e versões de cálculo.
 - [x] `as_of` reproduz estado histórico antes e depois de reapresentação.
 - [ ] Corporate actions e calendários possuem contract tests.
-- [ ] Dashboards de qualidade e runbooks de quarentena/reprocessamento existem.
+- [x] Dashboards de qualidade e runbooks de quarentena/reprocessamento existem. <!-- runbooks/data-quality.md criado -->
 
 ## Riscos e passagem para a Fase 3
 

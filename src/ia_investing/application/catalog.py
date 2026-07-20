@@ -37,9 +37,7 @@ class IssuerCatalogService:
     ) -> list[dict[str, Any]]:
         stmt = sa.select(Issuer).where(Issuer.is_active.is_(True))
         if sector:
-            stmt = stmt.join(Issuer.industry).join(Sector).where(
-                Sector.name_pt.ilike(f"%{sector}%")
-            )
+            stmt = stmt.join(Issuer.industry).join(Sector).where(Sector.name_pt.ilike(f"%{sector}%"))
         stmt = stmt.order_by(Issuer.name_pt).offset(offset).limit(limit)
         result = await self._session.execute(stmt)
         rows = result.scalars().all()

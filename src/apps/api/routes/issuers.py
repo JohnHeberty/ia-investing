@@ -41,6 +41,4 @@ async def list_issuers(
     limit: int = Query(50, ge=1, le=200),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[dict[str, Any]]:
-    return await IssuerCatalogService(session).list_active(
-        sector=sector, offset=offset, limit=limit
-    )
+    return await IssuerCatalogService(session).list_active(sector=sector, offset=offset, limit=limit)

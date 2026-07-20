@@ -102,13 +102,9 @@ async def run_optimization(
 ) -> dict[str, Any]:
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="Institutional organization context is required")
-    context = InstitutionalAccessContext(
-        auth.subject, auth.organization_id, auth.team_ids, auth.permissions, "paper"
-    )
+    context = InstitutionalAccessContext(auth.subject, auth.organization_id, auth.team_ids, auth.permissions, "paper")
     try:
-        run = await BackendPortfolioOptimizationService(session).optimize(
-            body.portfolio_id, body.as_of, context
-        )
+        run = await BackendPortfolioOptimizationService(session).optimize(body.portfolio_id, body.as_of, context)
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
