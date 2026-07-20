@@ -93,6 +93,9 @@ ignore = ["B008"]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
+markers = [
+    "integration: marks tests requiring running infrastructure (deselect with '-m not integration')",
+]
 
 [tool.mypy]
 python_version = "3.12"

@@ -1,0 +1,31 @@
+# docker/compose.test.yml
+# Override leve para rodar pytest com infra real (PostgreSQL + MinIO).
+# Uso:
+#   cd docker && docker compose -f compose.yml -f compose.test.yml --profile test up -d --wait
+#   pytest tests/ -x -q
+#   cd docker && docker compose -f compose.yml -f compose.test.yml --profile test down -v
+#
+# RAM total: ~2.3GB | CPU total: ~4 cores
+
+services:
+  postgres:
+    # pgvector:0.8.1-pg17 — 1.5GB limit
+    # Cria databases: stock_intelligence, temporal, temporal_visibility, mlflow
+    # Extensões: vector, btree_gist
+    # Role app com acesso total ao schema public
+
+  minio:
+    # 512MB limit — bucket raw-documents com versionamento
+
+  minio-init:
+    # 128MB — cria e configura bucket
+
+  migrate:
+    # 256MB — aplica todas as 27 migrations do Alembic
+
+  # Serviços que NÃO sobem no perfil test (economia de RAM):
+  # - temporal / temporal-ui (1.3GB)
+  # - api / workers / scheduler (~2.5GB)
+  # - otel / mlflow (~768MB)
+  #
+  # Total economizado: ~4.6GB
