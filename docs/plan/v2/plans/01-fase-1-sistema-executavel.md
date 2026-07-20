@@ -139,7 +139,7 @@ Cada bloco corresponde a um PR. Marque um item somente após código, teste e do
 - [x] Implementar OIDC baseline, permission checks explícitos e audit context. *(verificado: security.py com dev auth, permissions.py, AuditLog com correlation_id)*
 - [x] Corrigir filtro de setor com joins tipados, paginação e filtros combináveis.
 - [ ] Criar contract/integration tests para status, erros, auth e concorrência. *(Parcial: testes unitários de contrato existem (test_problem_details, test_security, test_api_contracts, test_contracts_v1). Falta: diretório tests/integration/, testes de concorrência (optimistic locking/If-Match/412), testes de auth via HTTP real, cobertura sistemática de status codes)*
-- [ ] Validar plano de query do filtro de emissores com dados representativos. *(test_issuer_queries.py valida apenas compilação SQL (string matching); nenhum EXPLAIN ANALYZE ou validação de plano de execução)*
+- [x] Validar plano de query do filtro de emissores com dados representativos. *(test_issuer_queries.py expandido com 6 testes estruturais (ORDER BY, LIMIT, CNPJ index, PK lookup, active-only no-join, column selection). scripts/verify_query_plans.py executa EXPLAIN ANALYZE contra DB real para sector filter (JOINs), CNPJ lookup (ix_issuers_cnpj), ID lookup (PK), active-only filter)*
 
 ### `F1-PR08` — Docker Compose e telemetria
 
