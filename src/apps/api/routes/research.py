@@ -508,6 +508,7 @@ async def search_evidence(
 async def verify_claim(
     claim_id: UUID,
     body: VerifyClaimV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     correlation_id: UUID | None = Header(default=None, alias="X-Correlation-ID"),
     session: AsyncSession = Depends(get_async_session),
@@ -529,6 +530,7 @@ async def verify_claim(
 async def create_assessment(
     case_id: UUID,
     body: AssessmentInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> AssessmentV1:
@@ -550,6 +552,7 @@ async def create_assessment(
 async def request_review(
     assessment_id: UUID,
     body: ReviewRequestInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> ReviewRequestV1:
@@ -572,6 +575,7 @@ async def request_review(
 async def decide_review(
     review_request_id: UUID,
     body: ReviewDecisionInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     correlation_id: UUID | None = Header(default=None, alias="X-Correlation-ID"),
     session: AsyncSession = Depends(get_async_session),
@@ -601,6 +605,7 @@ async def decide_review(
 async def create_thesis(
     body: CreateThesisV1,
     response: Response,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> ThesisCreatedV1:
@@ -655,6 +660,7 @@ async def revise_thesis(
 async def activate_thesis(
     version_id: UUID,
     body: ActivateThesisV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     correlation_id: UUID | None = Header(default=None, alias="X-Correlation-ID"),
     session: AsyncSession = Depends(get_async_session),
@@ -701,6 +707,7 @@ async def get_thesis_as_of(
 async def create_valuation(
     body: CreateValuationV1,
     response: Response,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> ValuationRunV1:

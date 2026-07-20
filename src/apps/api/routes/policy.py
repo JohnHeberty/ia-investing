@@ -5,7 +5,7 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -123,6 +123,7 @@ def require_policy_read(auth: AuthContext) -> None:
 @router.post("/objects", response_model=PolicyObjectVersionV1, status_code=201)
 async def ingest_policy_object(
     body: PolicyObjectInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> PolicyObjectVersionV1:
@@ -191,6 +192,7 @@ async def get_policy_graph(
 @macro_router.post("/series", response_model=MacroDefinitionV1, status_code=201)
 async def register_macro_series(
     body: MacroDefinitionInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> MacroDefinitionV1:
@@ -209,6 +211,7 @@ async def register_macro_series(
 async def ingest_macro_observation(
     definition_id: UUID,
     body: MacroObservationInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> MacroObservationV1:

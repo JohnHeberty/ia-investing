@@ -128,6 +128,7 @@ class DecisionV1(BaseModel):
 @router.post("/evidence", response_model=EvidenceV1, status_code=201)
 async def register_evidence(
     body: RegisterEvidenceV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -145,6 +146,7 @@ async def register_evidence(
 async def verify_evidence(
     evidence_id: UUID,
     body: VerifyEvidenceV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -164,6 +166,7 @@ async def verify_evidence(
 @router.post("/decision-packs", response_model=DecisionPackV1, status_code=201)
 async def freeze_decision_pack(
     body: FreezePackV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -183,6 +186,7 @@ async def freeze_decision_pack(
 async def sign_readiness_vote(
     pack_id: UUID,
     body: VoteInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -202,6 +206,7 @@ async def sign_readiness_vote(
 @router.post("/decision-packs/{pack_id}/decision", response_model=DecisionV1)
 async def record_readiness_decision(
     pack_id: UUID,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),

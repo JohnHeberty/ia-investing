@@ -294,6 +294,7 @@ async def create_trade_intent(
 async def decide_trade_intent(
     intent_id: UUID,
     body: DecideTradeIntentV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -314,6 +315,7 @@ async def decide_trade_intent(
 async def cancel_trade_intent(
     intent_id: UUID,
     body: CancelTradeIntentV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -334,6 +336,7 @@ async def cancel_trade_intent(
 async def simulate_trade_intent(
     intent_id: UUID,
     body: SimulateOrderV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -389,6 +392,7 @@ async def get_paper_order(
 async def reconcile_paper_portfolio(
     portfolio_id: UUID,
     as_of: datetime,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -409,6 +413,7 @@ async def reconcile_paper_portfolio(
 async def resolve_reconciliation_break(
     break_id: UUID,
     body: ResolveBreakV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -428,6 +433,7 @@ async def resolve_reconciliation_break(
 @router.post("/alerts/{alert_id}/acknowledgement", response_model=OperationalAlertV1)
 async def acknowledge_operational_alert(
     alert_id: UUID,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -444,6 +450,7 @@ async def acknowledge_operational_alert(
 @router.post("/kill-switches", response_model=KillSwitchV1, status_code=201)
 async def activate_paper_kill_switch(
     body: KillSwitchInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -460,6 +467,7 @@ async def activate_paper_kill_switch(
 @router.post("/kill-switches/{switch_id}/release", response_model=KillSwitchV1)
 async def release_paper_kill_switch(
     switch_id: UUID,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -477,6 +485,7 @@ async def release_paper_kill_switch(
 async def create_paper_post_mortem(
     portfolio_id: UUID,
     body: PostMortemInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -496,6 +505,7 @@ async def create_paper_post_mortem(
 @router.post("/challenger-evaluations", response_model=ChallengerV1, status_code=201)
 async def create_challenger_evaluation(
     body: ChallengerInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -515,6 +525,7 @@ async def create_challenger_evaluation(
 async def decide_challenger_evaluation(
     evaluation_id: UUID,
     body: ChallengerDecisionInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),

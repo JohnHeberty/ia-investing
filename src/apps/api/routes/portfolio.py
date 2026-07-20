@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +41,7 @@ class OptimizationRequest(BaseModel):
 @router.post("", status_code=201)
 async def create_portfolio(
     body: PortfolioCreate,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
     svc = PaperPortfolioService(session)
@@ -76,6 +77,7 @@ async def get_portfolio(
 async def add_position(
     portfolio_id: uuid.UUID,
     body: PositionCreate,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
     try:
@@ -94,6 +96,7 @@ async def add_position(
 @router.post("/optimize")
 async def run_optimization(
     body: OptimizationRequest,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:

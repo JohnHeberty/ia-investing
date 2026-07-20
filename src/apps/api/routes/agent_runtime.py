@@ -134,6 +134,7 @@ async def get_agent_run(
 async def decide_agent_approval(
     approval_id: UUID,
     body: ApprovalDecisionV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     correlation_id: UUID | None = Header(default=None, alias="X-Correlation-ID"),
     session: AsyncSession = Depends(get_async_session),

@@ -368,6 +368,7 @@ def parse_etag(value: str) -> int:
 @router.post("/mandates", response_model=MandateV1, status_code=201)
 async def create_mandate(
     body: CreateMandateV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> MandateV1:
@@ -384,6 +385,7 @@ async def create_mandate(
 async def create_model_portfolio(
     body: CreateModelPortfolioV1,
     response: Response,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> ModelPortfolioV1:
@@ -465,6 +467,7 @@ async def transition_model_portfolio(
 async def create_portfolio_version(
     portfolio_id: UUID,
     body: CreatePortfolioVersionV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> PortfolioVersionV1:
@@ -492,6 +495,7 @@ async def create_portfolio_version(
 async def approve_portfolio_version(
     version_id: UUID,
     body: ApprovalDecisionV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> PortfolioVersionV1:
@@ -544,6 +548,7 @@ async def list_portfolio_positions(
 async def publish_nav(
     version_id: UUID,
     as_of: datetime,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> NavPublicationV1:
@@ -576,6 +581,7 @@ async def list_nav_publications(
 async def assess_portfolio_risk(
     version_id: UUID,
     body: RiskAssessmentInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> RiskAssessmentV1:
@@ -622,6 +628,7 @@ async def list_risk_breaches(
 async def waive_risk_breach(
     breach_id: UUID,
     body: RiskWaiverInputV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> RiskWaiverV1:
@@ -642,6 +649,7 @@ async def waive_risk_breach(
 async def optimize_model_portfolio(
     portfolio_id: UUID,
     as_of: datetime,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> OptimizationRunV1:
@@ -661,6 +669,7 @@ async def optimize_model_portfolio(
 @router.post("/backtests", response_model=BacktestRunV1, status_code=201)
 async def run_institutional_backtest(
     body: RunBacktestV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> BacktestRunV1:
