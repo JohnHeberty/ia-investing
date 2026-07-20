@@ -8,7 +8,7 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.financial_facts import FinancialFact
+from database.models.financial_facts import FinancialFact, RestatementLog
 
 VALUE_STATUSES = frozenset({"reported", "calculated", "missing", "not_applicable", "parse_error", "suppressed"})
 
@@ -93,8 +93,22 @@ class FinancialFactRepository:
             raise ValueError("new revision knowledge_at must be after the current revision")
 
         superseded_id = current.id if current else None
+        restatement = None
         if current is not None:
             current.valid_to = item.knowledge_at
+            if current.value != item.value or current.value_status != item.value_status:
+                restatement = RestatementLog(
+                    superseded_fact_id=current.id,
+                    new_fact_id=None,
+                    account_code=current.original_account_code,
+                    old_value=current.value,
+                    new_value=item.value,
+                    old_value_status=current.value_status,
+                    new_value_status=item.value_status,
+                    revision_number=current.revision_number + 1,
+                    created_at=item.knowledge_at,
+                )
+                self.session.add(restatement)
         fact = FinancialFact(
             issuer_id=item.issuer_id,
             reporting_period_id=item.reporting_period_id,
@@ -121,6 +135,8 @@ class FinancialFactRepository:
         )
         self.session.add(fact)
         await self.session.flush()
+        if restatement is not None:
+            restatement.new_fact_id = fact.id
         return FactRevisionResult(fact, True, superseded_id)
 
     async def list_as_of(

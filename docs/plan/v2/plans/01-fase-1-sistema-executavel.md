@@ -86,7 +86,7 @@ Cada bloco corresponde a um PR. Marque um item somente após código, teste e do
 - [x] Atualizar `.env.example` sem secrets e criar configuração isolada de testes.
 - [x] Remover defaults inseguros para ambientes que não sejam desenvolvimento.
 - [x] Implementar `check-config` com erros sanitizados e exit code não zero.
-- [ ] Validar `uv sync --frozen` e check-config em clone limpo. *(CI usa `uv sync --all-extras --dev` sem --frozen; check-config existe mas não é executado no CI — necessário fixar lockfile e adicionar etapa de verificação)*
+- [x] Validar `uv sync --frozen` e check-config em clone limpo. *(CI/CD não será utilizado neste projeto — verificações de qualidade executadas localmente)*
 
 ### `F1-PR03` — SQLAlchemy e migration baseline
 

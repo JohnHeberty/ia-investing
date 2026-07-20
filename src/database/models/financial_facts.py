@@ -137,6 +137,29 @@ class FinancialFact(Base):
     )
 
 
+class RestatementLog(Base):
+    __tablename__ = "restatement_logs"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    superseded_fact_id: Mapped[UUID] = mapped_column(
+        sa.ForeignKey("financial_facts.id", ondelete="RESTRICT"), index=True
+    )
+    new_fact_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("financial_facts.id", ondelete="RESTRICT"), index=True
+    )
+    account_code: Mapped[str] = mapped_column(sa.String(100))
+    old_value: Mapped[Decimal | None] = mapped_column(sa.Numeric(28, 8))
+    new_value: Mapped[Decimal | None] = mapped_column(sa.Numeric(28, 8))
+    old_value_status: Mapped[str | None] = mapped_column(sa.String(20))
+    new_value_status: Mapped[str | None] = mapped_column(sa.String(20))
+    revision_number: Mapped[int] = mapped_column(sa.Integer)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (
+        sa.CheckConstraint("revision_number > 0", name="positive_revision_number"),
+    )
+
+
 class MetricDefinition(Base):
     __tablename__ = "metric_definitions"
 
