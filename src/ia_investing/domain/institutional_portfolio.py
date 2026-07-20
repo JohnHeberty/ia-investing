@@ -256,3 +256,83 @@ def calculate_portfolio_risk(
         drawdown,
         canonical_hash(payload),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioRankingEntry:
+    portfolio_id: str
+    strategy_type: str
+    risk_level: str
+    horizon: str
+    currency: str
+    stage: str
+    score: Decimal
+    penalties: tuple[str, ...]
+    final_score: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class ComparableCategory:
+    strategy_type: str
+    risk_level: str
+    horizon: str
+    currency: str
+    stage: str
+
+
+def calculate_penalty_score(
+    *,
+    base_score: Decimal,
+    thesis_freshness: Decimal,
+    has_critical_breach: bool,
+    data_staleness_days: int,
+    version_age_days: int,
+) -> tuple[Decimal, tuple[str, ...]]:
+    penalties: list[str] = []
+    total_penalty = Decimal(0)
+
+    if thesis_freshness < Decimal("0.5"):
+        penalties.append("thesis_expired")
+        total_penalty -= Decimal("0.30")
+    elif thesis_freshness < Decimal("0.8"):
+        penalties.append("thesis_freshness_low")
+        total_penalty -= Decimal("0.10")
+
+    if has_critical_breach:
+        penalties.append("critical_breach")
+        total_penalty -= Decimal("0.50")
+
+    if data_staleness_days > 30:
+        penalties.append("data_stale")
+        total_penalty -= Decimal("0.20")
+
+    if version_age_days > 90:
+        penalties.append("version_stale")
+        total_penalty -= Decimal("0.10")
+
+    final_score = base_score + total_penalty
+    final_score = max(Decimal(0), min(Decimal(1), final_score))
+    return final_score, tuple(penalties)
+
+
+def comparable_category_key(entry: PortfolioRankingEntry) -> ComparableCategory:
+    return ComparableCategory(
+        strategy_type=entry.strategy_type,
+        risk_level=entry.risk_level,
+        horizon=entry.horizon,
+        currency=entry.currency,
+        stage=entry.stage,
+    )
+
+
+def rank_portfolios_by_category(
+    entries: tuple[PortfolioRankingEntry, ...],
+) -> dict[ComparableCategory, tuple[PortfolioRankingEntry, ...]]:
+    grouped: dict[ComparableCategory, list[PortfolioRankingEntry]] = {}
+    for entry in entries:
+        category = comparable_category_key(entry)
+        grouped.setdefault(category, []).append(entry)
+
+    return {
+        category: tuple(sorted(group, key=lambda e: e.final_score, reverse=True)) for category, group in grouped.items()
+    }

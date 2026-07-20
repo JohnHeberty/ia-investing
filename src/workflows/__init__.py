@@ -12,6 +12,7 @@ from workflows._paper_reconciliation import (
 from workflows._paper_valuation import PaperValuationInput, PaperValuationResult, PaperValuationWorkflow
 from workflows._policy_event import PolicyEventInput, PolicyEventResult, PolicyEventWorkflow
 from workflows._portfolio_construction import (
+    PipelineConfig,
     PortfolioConstructionInput,
     PortfolioConstructionResult,
     PortfolioConstructionWorkflow,
@@ -47,6 +48,7 @@ __all__ = [
     "PaperValuationInput",
     "PaperValuationResult",
     "PaperValuationWorkflow",
+    "PipelineConfig",
     "PolicyEventInput",
     "PolicyEventResult",
     "PolicyEventWorkflow",

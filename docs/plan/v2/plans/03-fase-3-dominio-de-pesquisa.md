@@ -161,7 +161,7 @@ Adicionar tabelas e eventos sem substituir schemas antigos de imediato. Adaptado
 - [x] Toda recomendação possui responsável, validade, dados `as_of` e evidências. *(verificado: ValuationRun com Assumptions vinculadas a evidence/financial_facts/metric_observations)*
 - [x] Fórmulas e scorecards são determinísticos e versionados.
 - [x] Diffs e contradições são visíveis e auditáveis. *(verificado: ThesisVersionEvidence, ThesisVersionClaim, ResearchEvidence com CheckConstraints)*
-- [ ] A pergunta de aceite sobre PETR4 é respondida por API/teste E2E. *(Nenhum teste E2E existe — PETR4 aparece apenas em fixtures B3, não no domínio de pesquisa)*
+- [x] A pergunta de aceite sobre PETR4 é respondida por API/teste E2E. *(test_petr4_e2e.py: case→transition→evidence→claim→verify→review→approve→thesis→activate→query, contra PostgreSQL real)*
 - [x] Runbooks cobrem revisão, expiração, conflito e correção de evidência.
 
 ## Riscos e passagem para a Fase 4
@@ -183,4 +183,4 @@ Todos os 5 artefatos verificados existem e são implementações reais: `researc
 - ~~Outbox model existe mas nenhum consumer/poller~~ ✅ (OutboxConsumer created with 5 tests)
 - ~~Nenhum teste HTTP-level~~ ✅ (test_research_api_level.py: 16 tests)
 - ~~ThesisReviewWorkflow NÃO EXISTE~~ ✅ (created with 14 tests, registered in worker)
-- Cenário PETR4 de aceite — parcialmente coberto pelo ThesisReviewWorkflow (audit trail completo disponível)
+- ~~Cenário PETR4 de aceite~~ ✅ (test_petr4_e2e.py: full lifecycle — case→transition→evidence→claim→verify→review→approve→thesis→activate→query, PostgreSQL real)

@@ -23,6 +23,7 @@ from .guardrails import (
     validate_untrusted_text,
 )
 from .provider import AgentProvider, ProviderError
+from .tracing import inject_traceparent_into_context
 
 logger = logging.getLogger(__name__)
 tracer = trace.get_tracer("ia_investing.agent_runtime")
@@ -94,14 +95,26 @@ class AgentExecutionService:
             "agent.schema_hash": schema.sha256,
         }
         try:
-            with tracer.start_as_current_span("agent.execute", attributes=span_attributes) as span:
+            parent_ctx = inject_traceparent_into_context(run.trace_id) if run.trace_id else None
+            with tracer.start_as_current_span(
+                "agent.execute",
+                attributes=span_attributes,
+                context=parent_ctx,
+            ) as span:
                 validate_untrusted_text(str(run.input_payload))
-                response = await self.provider.complete(
-                    model=model_name,
-                    instructions=instructions,
-                    input_payload=run.input_payload,
-                    output_schema=schema.content,
-                )
+                with tracer.start_as_current_span("provider.complete") as provider_span:
+                    response = await self.provider.complete(
+                        model=model_name,
+                        instructions=instructions,
+                        input_payload=run.input_payload,
+                        output_schema=schema.content,
+                    )
+                provider_span.set_attributes({
+                    "provider.model": model_name,
+                    "provider.run_id": response.provider_run_id or "",
+                    "provider.prompt_tokens": response.usage.prompt_tokens,
+                    "provider.completion_tokens": response.usage.completion_tokens,
+                })
                 usage = BudgetUsage(
                     prompt_tokens=response.usage.prompt_tokens,
                     completion_tokens=response.usage.completion_tokens,

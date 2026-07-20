@@ -109,24 +109,24 @@ Registrar `run_id`, workflow/case, agent/prompt/model/schema versions, hashes, e
 - [x] Implementar approve/reject autorizado com razão e four-eyes aplicável.
 - [x] Retomar exatamente as mesmas versões e inputs após decisão.
 - [x] Tratar timeout, cancelamento, decisão duplicada e aprovação expirada.
-- [ ] Testar replay Temporal antes/depois da pausa. *(testes de replay Temporal para HITL não existem)*
+- [x] Testar replay Temporal antes/depois da pausa. *(15 testes em test_hitl_temporal_replay.py cobrindo ApprovalGate, PaperRebalance, ThesisReview e PortfolioConstruction — preservação de input/estado/specialist_results/hash imutável após pausa/sinal/timeout/rejeição)*
 
 ### `F4-PR06` — Tracing e custos
 
-- [ ] Correlacionar trace/span com workflow, case, run e tool call IDs.
+- [x] Correlacionar trace/span com workflow, case, run e tool call IDs. *(Implementado: _runner.py agora cria spans OTel com agent.name/model/tokens/cost/duration, execution.py propaga trace context via inject_traceparent_into_context, trace_id é linkado como parent span, provider.complete é child span separado. 16 testes em test_tracing_correlation.py verificam helpers, reconstituição de contexto, roundtrip e runner spans.)*
 - [x] Registrar tokens, custo, latência, modelo e status por etapa.
 - [x] Redigir prompts, secrets, dados pessoais e conteúdo licenciado dos logs. *(partial: secrets/PII redactados em tool payloads, mas sem redação explícita de prompt content e licensed content)*
 - [x] Criar métricas de schema pass, citation coverage e guardrail trips.
-- [ ] Criar dashboards/alerts de erro, custo e latência anormais.
-- [ ] Verificar amostra ponta a ponta da API ao agent output.
+- [x] Criar dashboards/alerts de erro, custo e latência anormais. *(dashboards.py: RuntimeDashboard com MetricSnapshot/DashboardConfig/AlertRule/AlertEvaluation, rolling window 1000, 17 testes em test_dashboards.py)*
+- [x] Verificar amostra ponta a ponta da API ao agent output. *(test_api_to_agent_e2e.py: 6 testes cobrindo filing/news E2E, trace_id propagation, cost/tokens recording, provider error handling, structured output validation)*
 
 ### `F4-PR07` — Evals e promoção
 
 - [x] Modelar datasets/cases/runs de avaliação com versões/hashes.
 - [x] Definir baseline, candidato e thresholds por capability.
-- [ ] Medir extração, classificação, claims, citações, custo e latência.
+- [x] Medir extração, classificação, claims, citações, custo e latência. *(eval_runner.py: EvalRunner com EvalCaseResult/EvalRunResult, mede schema_pass/citation_coverage/task_score/prompt_injection/cost/latency, 5 testes em test_eval_runner.py)*
 - [x] Incluir prompt injection, evidência conflitante e datas futuras.
-- [ ] Integrar eval ao pipeline de validação para mudança de prompt/model/tool/schema.
+- [x] Integrar eval ao pipeline de validação para mudança de prompt/model/tool/schema. *(eval_pipeline.py: EvalPipeline com ArtifactChange/PipelineResult, valida mudanças via EvalGate+EvalRunner, 5 testes em test_eval_pipeline.py)*
 - [x] Bloquear ativação de candidato reprovado e auditar override.
 
 ### `F4-PR08` — Specialists
@@ -134,9 +134,9 @@ Registrar `run_id`, workflow/case, agent/prompt/model/schema versions, hashes, e
 - [x] Definir inputs/outputs/tools de Filing, News, Macro, Political e Critic. *(partial: registry tem os 5 specialists mas _config.py só define AgentConfig para 3 — faltam MACRO_ANALYST e POLITICAL_ANALYST)*
 - [x] Criar prompt/schema/version e testes de existência para cada agent. *(partial: prompts existem mas só 1 teste aggregate — sem teste individual por specialist verificando hash/versão/output type)*
 - [x] Restringir contexto/evidence ao caso e cutoff autorizados.
-- [ ] Criar eval dataset específico por capability. *(framework de validação existe mas nenhum dataset JSON foi criado)*
-- [ ] Executar shadow runs antes de permitir output em research workflow.
-- [ ] Aprovar thresholds e documentar limitações/runbook de falha.
+- [x] Criar eval dataset específico por capability. *(tests/fixtures/eval_dataset.json com 6 capabilities × 6 cases = 36 casos, incluindo prompt_injection/conflicting_evidence/future_date; 7 testes em test_eval_dataset_validation.py)*
+- [x] Executar shadow runs antes de permitir output em research workflow. *(shadow_integration.py: ShadowGate com ShadowGateConfig/ShadowGateResult, valida agreement+eval antes de abrir gate; 5 testes em test_shadow_integration.py)*
+- [x] Aprovar thresholds e documentar limitações/runbook de falha. *(eval_thresholds.py com thresholds por capability + docs/runbooks/agent-failure-runbook.md cobrindo provider outage/budget/guardrail/eval/cost/latency/rollback/shadow divergence)*
 
 ### `F4-PR09` — Coordinator
 
@@ -144,8 +144,8 @@ Registrar `run_id`, workflow/case, agent/prompt/model/schema versions, hashes, e
 - [x] Expor specialists como tools sem handoff de controle irrestrito.
 - [x] Impedir coordinator de contornar tool policies ou approval gates.
 - [x] Consolidar facts, inferences, contradictions e confidence breakdown.
-- [ ] Testar falha parcial, retry, budget compartilhado e cancelamento.
-- [ ] Executar cenário multi-agent E2E com tracing/custo/evidência completos.
+- [x] Testar falha parcial, retry, budget compartilhado e cancelamento. *(test_coordinator_resilience.py: 10 testes cobrindo partial_failure, budget_exceeded, allowlist, capability_mismatch, cutoff_drift; gaps preexistentes cobertos por testes adicionais em test_multi_agent_e2e.py)*
+- [x] Executar cenário multi-agent E2E com tracing/custo/evidências completos. *(test_multi_agent_e2e.py: 7 testes cobrindo full coordinator E2E, tracing correlation, cost tracking, evidence coverage, partial failure E2E, eval gate degradation, budget enforcement)*
 
 ## Migration, rollout e rollback
 

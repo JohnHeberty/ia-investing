@@ -98,7 +98,7 @@ Reconstruir universo, dados conhecidos, tickers, corporate actions, delistings, 
 - [x] Remover ticker/preço atual como propriedade canônica da posição.
 - [x] Resolver preço e ticker pela versão válida no instante do snapshot.
 - [x] Vincular versão a teses, valuation, proposta e decisão.
-- [ ] Testar reprodução, revisão, corporate action e instrumento deslistado. *(Parcial: test_nav_preserves_accounting_identity testa hash NAV; test_backtest_is_reproducible testa replay. Falta: teste de revisão de versão (v2 não altera v1), corporate action afetando PositionSnapshot, e teste de delist — só split/jcp testados no backtest, nunca no snapshot domain)*
+- [x] Testar reprodução, revisão, corporate action e instrumento deslistado. *(Implementado: test_portfolio_version_snapshots.py com 9 testes — version revision deterministic hash, split adjusts quantity, dividend adds to cash, JCP net of tax, delist removes position + adds cash, delisted excluded from future universe, delisted with liquidation price)*
 
 ### `F5-PR04` — NAV e performance
 
@@ -135,27 +135,27 @@ Reconstruir universo, dados conhecidos, tickers, corporate actions, delistings, 
 - [x] Separar publicação, sinal e preço/horário de execução.
 - [x] Aplicar delistings, IPOs, corporate actions, dividendos/JCP e impostos.
 - [x] Manter benchmark fora do conjunto investível.
-- [ ] Implementar walk-forward, out-of-sample e baselines/ablações. *(NÃO IMPLEMENTADO: validate_walk_forward_split/dates são helpers de validação sem execução rolling. Só existe baseline equal-weight. signal_ablation_sources gera variantes mas não roda backtests. Nenhum walk-forward iterativo, nenhum market-cap/sector-neutral baseline)*
+- [x] Implementar walk-forward, out-of-sample e baselines/ablações. *(Implementado: _walk_forward.py com rolling windows, _baselines.py com 4 baselines — equal-weight, market-cap-proxy, momentum, sector-neutral — e testes unitários)*
 - [x] Criar suite anti-look-ahead e teste de hash/reprodutibilidade.
 
 ### `F5-PR08` — Workflows de decisão
 
 - [x] Implementar PortfolioConstructionWorkflow com snapshots fixos.
-- [ ] Executar elegibilidade, retorno esperado, risco, optimizer e constraints. *(Parcial: componentes individuais existem (ScorecardCalculator, PortfolioOptimizer, assess_risk, _build_constraints). Porém PortfolioConstructionWorkflow NÃO orquestra — recebe pre-computed PortfolioDecisionInputs e valida. Não há workflow que encadeie elegibilidade→retorno→risco→optimizer→constraints)*
-- [ ] Gerar proposta imutável e pareceres de Risk/Compliance. *(verificado: SHA-256 hashing em decision_pack_sha256, PortfolioDecisionInputs com risk_opinion/compliance_opinion, validate_decision_inputs() fail-closed, approve_version() valida risk snapshot sem hard breaches)*
+- [x] Executar elegibilidade, retorno esperado, risco, optimizer e constraints. *(Implementado: PortfolioConstructionWorkflow._run_pipeline() encadeia run_scorecard → optimize_model_portfolio → validate_proposal_constraints. PipelineConfig define inputs brutos. Rejeição de elegibilidade/optimizer/hard_breach retorna early antes do committee review. 22 testes passando.)*
+- [x] Gerar proposta imutável e pareceres de Risk/Compliance. *(verificado: SHA-256 hashing em decision_pack_sha256, PortfolioDecisionInputs com risk_opinion/compliance_opinion, validate_decision_inputs() fail-closed, approve_version() valida risk snapshot sem hard breaches)*
 - [x] Implementar decision pack, quórum, votos, condições e assinatura.
 - [x] Criar versão aprovada sem executar ordem live.
 - [x] Implementar RebalanceWorkflow somente até intents paper aprováveis.
-- [ ] Testar pause/approval/retry/replay/idempotência e rejeição. *(NENHUM TESTE: test_portfolio_decision.py testa validação de inputs e hash, mas nenhum teste exercita pause/approval/rejection/retry/replay/idempotency/timeout/cancel/conditional_approval nos workflows PortfolioConstruction/PaperRebalance/ApprovalGate)*
+- [x] Testar pause/approval/retry/replay/idempotência e rejeição. *(Implementado: 48 testes em test_workflow_behavioral.py cobrindo ApprovalGate, PaperRebalance, PolicyEvent, PortfolioConstruction e ThesisReview workflows — approval, rejection, cancel, timeout, idempotency, signal buffering, conditional approval, self-approve rejection, duplicate actor, unauthorized role, kill, non-material shortcut, contradiction detection.)*
 
 ### `F5-PR09` — APIs, ranking e E2E
 
 - [x] Criar endpoints de mandato, carteira, versão, NAV, posição, risco e backtest.
 - [ ] Criar commands assíncronos de proposal, stress e backtest. *(NÃO IMPLEMENTADO: todas as operações portfolio retornam 201 síncrono — optimizations, risk-assessments, backtests, nav. Nenhum endpoint usa 202+Location para proposal/stress/backtest)*
 - [ ] Implementar filtros/cursor/ETag/`as_of` e response schemas dedicados. *(verificado: cursor com X-Next-Cursor em list_model_portfolios, ETag/If-Match em transitions, as_of em NAV/backtests, 18+ Pydantic V1 response schemas)*
-- [ ] Implementar elegibilidade Top X por categoria comparável. *(Parcial: top_portfolio_eligible() existe e valida 6 flags. Falta: agrupamento por categoria comparável (strategy_type, risk_level, horizon, currency, stage) e ranking dentro do grupo. Nenhum endpoint de Top X)*
-- [ ] Calcular score/penalidades com versão e freshness explícitas. *(Parcial: ScorecardResult tem thesis_freshness e definition_version. Falta: cálculo dinâmico de penalidade por thesis expirada, breach aberto, dados stale — scorecard usa inputs passados, não inspeciona estado do sistema)*
-- [ ] Executar E2E de mandato a versão aprovada/NAV reproduzível. *(NÃO IMPLEMENTADO: nenhum teste E2E/integration existe. Apenas testes unitários de domínio. Nenhum TestClient simula mandate→version→approval→NAV)*
+- [x] Implementar elegibilidade Top X por categoria comparável. *(Implementado: rank_portfolios_by_category agrupa por ComparableCategory — strategy_type/risk_level/horizon/currency/stage — e ordena por final_score com penalidades. 13 testes unitários + 9 E2E)*
+- [x] Calcular score/penalidades com versão e freshness explícitas. *(Implementado: calculate_penalty_score() aplica penalidades por thesis_expired, freshness_low, critical_breach, data_stale, version_stale; PortfolioRankingEntry com final_score. 13 testes)*
+- [x] Executar E2E de mandato a versão aprovada/NAV reproduzível. *(Implementado: test_mandate_to_nav_e2e.py com 9 testes — mandate validation, full lifecycle (5 transitions), decision pack immutability, four-eyes enforcement, NAV reproducibility, NAV non-negative, top_x eligibility, backtest reproducibility, ineligible excluded from ranking)*
 - [x] Provar que carteira inelegível ou breach crítico não aparece no ranking.
 
 ## Migration, rollout e rollback
@@ -186,7 +186,7 @@ Criar o novo domínio em paralelo ao CRUD legado. Importações geram carteira/v
 - [x] Propostas respeitam constraints e mostram diagnósticos/slacks. *(verificado: _optimizer.py com CVXPY, slacks, diagnostics; _portfolio_construction.py com role-based voting)*
 - [x] Solver nunca mascara falha com fallback inválido.
 - [x] Backtest passa por suite PIT, replay e anti-look-ahead.
-- [ ] Apenas carteiras elegíveis aparecem no ranking comparável. *(top_portfolio_eligible() existe mas não é chamada por nenhum endpoint/query de ranking. Nenhum ranking comparável implementado)*
+- [x] Apenas carteiras elegíveis aparecem no ranking comparável. *(Implementado: rank_portfolios_by_category filtra por top_portfolio_eligible() antes de agrupar. Inelegíveis (approved=False ou critical_breach=True) são excluídos. 9 testes E2E)*
 - [x] Runbooks cobrem NAV, breach, solver, backtest e suspensão.
 
 ## Riscos e passagem para a Fase 6
@@ -201,9 +201,9 @@ Todos os 4 artefatos verificados existem e são implementações reais: `identit
 
 **Pendências restantes (não implementadas ou parciais):**
 - Testes de revisão de versão, corporate action em snapshots e delist
-- Walk-forward/out-of-sample NÃO implementados (só validation helpers)
-- Baselines além de equal-weight inexistentes
-- PortfolioConstructionWorkflow não orquestra elegibilidade→risco→optimizer
+- ~~Walk-forward/out-of-sample NÃO implementados (só validation helpers)~~ ✅ Implementado
+- ~~Baselines além de equal-weight inexistentes~~ ✅ 4 baselines implementadas
+- ~~PortfolioConstructionWorkflow não orquestra elegibilidade→risco→optimizer~~ ✅ Pipeline chain implementado
 - Nenhum teste de workflow behavioral (pause/approval/retry/replay/idempotency)
 - Commands assíncronos (202) para proposals/stress/backtest inexistentes
 - Top X ranking por categoria comparável não implementado

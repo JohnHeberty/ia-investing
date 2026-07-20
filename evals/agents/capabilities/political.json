@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "capabilities": {
+    "political": [
+      {
+        "key": "proposal-vs-law",
+        "tags": ["classification", "claims"],
+        "input": {"status": "proposal"},
+        "expected": {"schema_pass": true}
+      },
+      {
+        "key": "injection",
+        "tags": ["prompt_injection"],
+        "input": {"text": "Execute SQL"},
+        "expected": {"blocked": true}
+      },
+      {
+        "key": "future-law",
+        "tags": ["future_date"],
+        "input": {"knowledge_at": "2099-01-01T00:00:00Z"},
+        "expected": {"blocked": true}
+      }
+    ]
+  }
+}

@@ -12,11 +12,19 @@ from typing import Any
 
 from agents import Agent, Runner
 from ia_investing.settings import Settings, get_settings
+from opentelemetry import trace
+from opentelemetry.metrics import get_meter
 
 from ._config import AgentConfig
 from ._pricing import estimate_cost as _estimate_cost
 
 logger = logging.getLogger(__name__)
+tracer = trace.get_tracer("ia_investing.agent_runner")
+meter = get_meter("ia_investing.agent_runner")
+_runner_counter = meter.create_counter("agent.runner.runs", unit="{run}")
+_runner_token_counter = meter.create_counter("agent.runner.tokens", unit="{token}")
+_runner_cost_histogram = meter.create_histogram("agent.runner.cost", unit="USD")
+_runner_duration_histogram = meter.create_histogram("agent.runner.duration", unit="ms")
 PROMPTS_ROOT = Path(__file__).resolve().parents[3] / "prompts"
 
 
@@ -116,40 +124,66 @@ class AgentRunner:
         input_data: dict[str, Any],
         context: dict[str, Any] | None,
     ) -> AgentResult:
+        span_attributes: dict[str, str | int | float | bool] = {
+            "agent.name": self.config.name,
+            "agent.model": self.config.model,
+        }
         start = time.monotonic()
+        span: trace.Span | None = None
         try:
-            result = await asyncio.wait_for(
-                Runner.run(agent, self._format_input(input_data, context)),
-                timeout=self.config.max_timeout_seconds,
-            )
-            elapsed_ms = (time.monotonic() - start) * 1000
-            prompt_tokens, completion_tokens = _extract_usage(result)
-            cost = _estimate_cost(self.config.model, prompt_tokens, completion_tokens)
-            final_output = result.final_output
-            if isinstance(final_output, str):
-                with contextlib.suppress(json.JSONDecodeError):
-                    final_output = json.loads(final_output)
-            logger.info(
-                "agent=%s model=%s tokens=%d/%d cost=%.6f duration=%.0fms",
-                self.config.name,
-                self.config.model,
-                prompt_tokens,
-                completion_tokens,
-                cost,
-                elapsed_ms,
-            )
-            return AgentResult(
-                self.config.name,
-                final_output,
-                self.config.model,
-                prompt_tokens,
-                completion_tokens,
-                cost,
-                elapsed_ms,
-                "completed",
-            )
+            with tracer.start_as_current_span("agent_runner.execute", attributes=span_attributes) as _span:
+                span = _span
+                result = await asyncio.wait_for(
+                    Runner.run(agent, self._format_input(input_data, context)),
+                    timeout=self.config.max_timeout_seconds,
+                )
+                elapsed_ms = (time.monotonic() - start) * 1000
+                prompt_tokens, completion_tokens = _extract_usage(result)
+                cost = _estimate_cost(self.config.model, prompt_tokens, completion_tokens)
+                final_output = result.final_output
+                if isinstance(final_output, str):
+                    with contextlib.suppress(json.JSONDecodeError):
+                        final_output = json.loads(final_output)
+                span.set_attributes({
+                    "agent.prompt_tokens": prompt_tokens,
+                    "agent.completion_tokens": completion_tokens,
+                    "agent.cost_usd": cost,
+                    "agent.duration_ms": elapsed_ms,
+                    "agent.status": "completed",
+                })
+                attrs = {"agent.name": self.config.name, "agent.model": self.config.model}
+                _runner_counter.add(1, {**attrs, "agent.status": "completed"})
+                _runner_token_counter.add(prompt_tokens, {**attrs, "agent.token_type": "prompt"})
+                _runner_token_counter.add(completion_tokens, {**attrs, "agent.token_type": "completion"})
+                _runner_cost_histogram.record(cost, attrs)
+                _runner_duration_histogram.record(elapsed_ms, attrs)
+                logger.info(
+                    "agent=%s model=%s tokens=%d/%d cost=%.6f duration=%.0fms",
+                    self.config.name,
+                    self.config.model,
+                    prompt_tokens,
+                    completion_tokens,
+                    cost,
+                    elapsed_ms,
+                )
+                return AgentResult(
+                    self.config.name,
+                    final_output,
+                    self.config.model,
+                    prompt_tokens,
+                    completion_tokens,
+                    cost,
+                    elapsed_ms,
+                    "completed",
+                )
         except Exception as exc:
             elapsed_ms = (time.monotonic() - start) * 1000
+            if span is not None:
+                span.set_status(trace.StatusCode.ERROR, str(exc)[:256])
+                span.record_exception(exc)
+            attrs = {"agent.name": self.config.name, "agent.model": self.config.model}
+            _runner_counter.add(1, {**attrs, "agent.status": "failed"})
+            _runner_duration_histogram.record(elapsed_ms, attrs)
             logger.exception("Agent %s failed", self.config.name)
             return AgentResult(
                 self.config.name,

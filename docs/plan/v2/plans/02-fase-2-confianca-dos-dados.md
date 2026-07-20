@@ -82,7 +82,7 @@ Modelar ticker como identificação temporal de listagem, além de barras, índi
 - [x] Persistir ETag, tamanho, mídia e timestamps de descoberta/publicação/ingestão.
 - [x] Tratar conteúdo igual como no-op e conteúdo alterado como nova versão.
 - [x] Registrar attempts, status, erro sanitizado e lineage inicial. <!-- IngestionAttempt em data_foundation.py:113-130 -->
-- [ ] Testar retry/crash/duplicidade com PostgreSQL e MinIO reais. <!-- PENDENTE: requer Docker compose ativo (tests/integration/ existe mas retry/crash scenarios não exercitados) -->
+- [x] Testar retry/crash/duplicidade com PostgreSQL e MinIO reais. <!-- test_raw_zone_resilience.py: retry, concurrent, S3 dedup, orphan recovery, versioning -->
 
 ### `F2-PR03` — Instrument master
 
@@ -193,4 +193,4 @@ Os maiores riscos são mapeamentos setoriais falsamente genéricos e backfill ir
 
 ## Auditoria de implementação (2026-07-19)
 
-Todos os 5 artefatos verificados existem e são implementações reais: `data_foundation.py` (5 ORM models com CheckConstraints), `market_data.py` (barras, quotes, índices, FX, corporate actions), `data_governance.py` (quarentena, incidentes, waivers), `financial_facts.py` (financial_fact com lineage), `raw_zone.py` (RawZoneService com SHA-256, dedup, ImmutableObjectStore). Pendências restantes: integration tests com PostgreSQL/MinIO reais, golden tests multi-setoriais, dashboards de qualidade.
+Todos os 5 artefatos verificados existem e são implementações reais: `data_foundation.py` (5 ORM models com CheckConstraints), `market_data.py` (barras, quotes, índices, FX, corporate actions), `data_governance.py` (quarentena, incidentes, waivers), `financial_facts.py` (financial_fact com lineage), `raw_zone.py` (RawZoneService com SHA-256, dedup, ImmutableObjectStore). Integration tests com PostgreSQL/MinIO reais: `test_raw_zone_resilience.py` (5 cenários: retry, concurrent, S3 dedup, orphan recovery, versioning). Pendências restantes: golden tests multi-setoriais, dashboards de qualidade.

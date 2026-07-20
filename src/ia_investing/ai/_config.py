@@ -33,6 +33,24 @@ NEWS_ANALYST = AgentConfig(
     "news_analyst/system.md",
     "schemas.NewsAnalysis",
 )
+MACRO_ANALYST = AgentConfig(
+    "macro_analyst",
+    "Analista Macro",
+    "gpt-4o",
+    0.2,
+    4096,
+    "macro/system.md",
+    "schemas.MacroAnalysis",
+)
+POLITICAL_ANALYST = AgentConfig(
+    "political_analyst",
+    "Analista Político",
+    "gpt-4o",
+    0.3,
+    4096,
+    "political/system.md",
+    "schemas.PoliticalAnalysis",
+)
 FUNDAMENTALIST_ANALYST = AgentConfig(
     "fundamentalist_analyst",
     "Analista Fundamentalista",
@@ -83,6 +101,8 @@ ALL_AGENTS: dict[str, AgentConfig] = {
     for config in (
         FILING_ANALYST,
         NEWS_ANALYST,
+        MACRO_ANALYST,
+        POLITICAL_ANALYST,
         FUNDAMENTALIST_ANALYST,
         CRITIC_AGENT,
         RISK_DIRECTOR,
