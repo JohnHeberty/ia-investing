@@ -93,8 +93,8 @@ Adicionar visão macro, legislative tracker, matriz de exposição, timeline e b
 
 ### `F7-PR04` — Domínio político versionado
 
-- [x] Modelar proposal, version, stage, actor, vote e regulatory action.
-- [x] Definir taxonomia de eventos e state machine por tipo jurídico.
+- [ ] Modelar proposal, version, stage, actor, vote e regulatory action. <!-- auditoria: regulatory_action não encontrado no codebase -->
+- [ ] Definir taxonomia de eventos e state machine por tipo jurídico. <!-- auditoria: state machine existe mas é genérica, não diferenciada por tipo jurídico -->
 - [x] Implementar diff de texto/metadata entre versões.
 - [ ] Versionar temas, prazos, setores e relacionamentos do graph.
 - [x] Persistir fontes/corroboration em cada fato/evento.
@@ -175,4 +175,30 @@ Risco político não pode ser apresentado como certeza. Incerteza, corroboration
 
 ## Auditoria de implementação (2026-07-19)
 
-Conectores policy/ e macro/ verificados como implementações reais: `_official.py` (268 lines, Câmara/Senado/DOU com egress allowlist, parallel fetch), `_bcb.py` (146 lines, BCB SGS API com Selic/IPCA/USD), `_sidra.py` (145 lines, SIDRA GDP/IP). 7 fixtures sintéticos para Câmara/Senado/DOU. Policy graph modelado com proposal, version, stage, actor, vote. Pendências: DOU e reguladores completos, BCB/SIDRA com PIT tests, probabilidades calibradas, workflow completo com agents.
+### Auditoria detalhada (2026-07-19) — 28/30 SIM, 2 PARCIAIS desmarcados
+
+| PR | Itens | Resultado |
+|---|---|---|
+| F7-PR01 — Câmara e Senado | 6/6 | ✅ Todos confirmados |
+| F7-PR03 — BCB/SIDRA | 4/4 | ✅ effective_date é `date` (funcional) |
+| F7-PR04 — Domínio político | **2/4** | ⚠️ 2 desmarcados |
+| F7-PR05 — Probabilidade | 3/3 | ✅ base_rate + interval + calibration |
+| F7-PR06 — Policy graph | 5/5 | ✅ grafo, arestas, draft, propagação, cycle detection |
+| F7-PR07 — Workflow/agents | 1/1 | ✅ Pausa material confirmada |
+| F7-PR08 — Dashboard | 4/4 | ✅ Macro, legislativo, matriz, timeline |
+| Critérios de saída | 3/3 | ✅ Revisão humana, dashboard, runbooks |
+
+**Desmarcados:**
+- F7-PR04.1: `regulatory_action` model **NÃO ENCONTRADO** no codebase inteiro
+- F7-PR04.2: State machine existe (`POLICY_STAGE_TRANSITIONS`) mas é **genérica**, não diferenciada por tipo jurídico
+
+**Evidências-chave:**
+- `_official.py` (268 lines): Câmara/Senado/DOU com egress allowlist, parallel fetch via `asyncio.gather`, SHA-256 content hash
+- `_bcb.py` (146 lines): BCB SGS API — Selic/IPCA/USD com `MacroObservation` dataclass
+- `_sidra.py` (145 lines): SIDRA GDP/IP com quarter/month parsing
+- `policy.py`: base_rate() com Jeffreys smoothing + Wilson score, ProbabilityEstimate com interval, propagate_impact() DFS determinístico, material_review_required()
+- `_policy_event.py`: Temporal workflow com wait_condition + human signal
+- `policy_intelligence.py`: PolicyObject, PolicyObjectVersion, PolicyStageEvent, PolicyActor, PolicyVote, PolicyCorroboration, PolicyGraphNode, PolicyGraphEdge, PolicyProbabilityForecast
+- `web/src/app/policy/page.tsx`: Legislative tracker, matriz de exposição, timeline versionada
+- `web/src/app/macro/page.tsx`: SELIC/IPCA/USD/BRL, point-in-time revisions
+- 7 fixtures sintéticos em `tests/fixtures/policy/`
