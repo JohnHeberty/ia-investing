@@ -151,8 +151,8 @@ Reconstruir universo, dados conhecidos, tickers, corporate actions, delistings, 
 ### `F5-PR09` — APIs, ranking e E2E
 
 - [x] Criar endpoints de mandato, carteira, versão, NAV, posição, risco e backtest.
-- [ ] Criar commands assíncronos de proposal, stress e backtest. *(NÃO IMPLEMENTADO: todas as operações portfolio retornam 201 síncrono — optimizations, risk-assessments, backtests, nav. Nenhum endpoint usa 202+Location para proposal/stress/backtest)*
-- [ ] Implementar filtros/cursor/ETag/`as_of` e response schemas dedicados. *(verificado: cursor com X-Next-Cursor em list_model_portfolios, ETag/If-Match em transitions, as_of em NAV/backtests, 18+ Pydantic V1 response schemas)*
+- [x] Criar commands assíncronos de proposal, stress e backtest. *(Implementado: OperationService.submit_portfolio_operation() suporta 202+Location com idempotência e dispatch via Temporal. Endpoints de optimization, risk-assessment e backtests agora retornam 202 com Location header. 16 testes unitários em test_async_commands.py.)*
+- [x] Implementar filtros/cursor/ETag/`as_of` e response schemas dedicados. *(verificado: cursor com X-Next-Cursor em list_model_portfolios, ETag/If-Match em transitions, as_of em NAV/backtests, 18+ Pydantic V1 response schemas)*
 - [x] Implementar elegibilidade Top X por categoria comparável. *(Implementado: rank_portfolios_by_category agrupa por ComparableCategory — strategy_type/risk_level/horizon/currency/stage — e ordena por final_score com penalidades. 13 testes unitários + 9 E2E)*
 - [x] Calcular score/penalidades com versão e freshness explícitas. *(Implementado: calculate_penalty_score() aplica penalidades por thesis_expired, freshness_low, critical_breach, data_stale, version_stale; PortfolioRankingEntry com final_score. 13 testes)*
 - [x] Executar E2E de mandato a versão aprovada/NAV reproduzível. *(Implementado: test_mandate_to_nav_e2e.py com 9 testes — mandate validation, full lifecycle (5 transitions), decision pack immutability, four-eyes enforcement, NAV reproducibility, NAV non-negative, top_x eligibility, backtest reproducibility, ineligible excluded from ranking)*
@@ -200,13 +200,13 @@ Todos os 4 artefatos verificados existem e são implementações reais: `identit
 **Itens marcados como [x] confirmados:** Identity/RBAC/ABAC completo, mandatos com 20+ campos, model portfolio 10 states, position/cash snapshots, NAV com reconciliation, risk policies/limits/stress/breaches/waiver, optimizer com infeasible fail-closed, backtest PIT com anti-look-ahead suite.
 
 **Pendências restantes (não implementadas ou parciais):**
-- Testes de revisão de versão, corporate action em snapshots e delist
+- ~~Testes de revisão de versão, corporate action em snapshots e delist~~ ✅ Implementado
 - ~~Walk-forward/out-of-sample NÃO implementados (só validation helpers)~~ ✅ Implementado
 - ~~Baselines além de equal-weight inexistentes~~ ✅ 4 baselines implementadas
 - ~~PortfolioConstructionWorkflow não orquestra elegibilidade→risco→optimizer~~ ✅ Pipeline chain implementado
-- Nenhum teste de workflow behavioral (pause/approval/retry/replay/idempotency)
-- Commands assíncronos (202) para proposals/stress/backtest inexistentes
-- Top X ranking por categoria comparável não implementado
-- Score/penalidades dinâmicas não calculadas
-- Nenhum teste E2E mandato→versão→approval→NAV
-- Ranking eligibility não wired em nenhum endpoint
+- ~~Nenhum teste de workflow behavioral (pause/approval/retry/replay/idempotency)~~ ✅ 48 testes implementados
+- ~~Commands assíncronos (202) para proposals/stress/backtest inexistentes~~ ✅ 202+Location com OperationService
+- ~~Top X ranking por categoria comparável não implementado~~ ✅ rank_portfolios_by_category
+- ~~Score/penalidades dinâmicas não calculadas~~ ✅ calculate_penalty_score
+- ~~Nenhum teste E2E mandato→versão→approval→NAV~~ ✅ test_mandate_to_nav_e2e.py
+- ~~Ranking eligibility não wired em nenhum endpoint~~ ✅ Filtrado por top_portfolio_eligible

@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.dependencies import get_operation_service
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from database.models.portfolio_domain import ModelPortfolio
@@ -17,15 +18,12 @@ from ia_investing.application.institutional_portfolio import (
     InstitutionalPortfolioService,
     PortfolioConcurrencyError,
 )
-from ia_investing.application.portfolio import BackendPortfolioOptimizationService
-from ia_investing.domain.backtest import (
-    HistoricalUniverseMember,
-    InstitutionalBacktestConfig,
-    MarketSession,
-    PointInTimeCorporateAction,
-    PointInTimePrice,
-    PointInTimeSignal,
+from ia_investing.application.operations import (
+    IdempotencyConflictError,
+    OperationService,
+    PortfolioOperationCommand,
 )
+from ia_investing.contracts.v1 import OperationAcceptedV1
 from ia_investing.domain.identity import InstitutionalAccessContext
 
 router = APIRouter(prefix="/api/v1", tags=["institutional-portfolios"])
@@ -577,35 +575,40 @@ async def list_nav_publications(
     return [NavPublicationV1.model_validate(item) for item in rows]
 
 
-@router.post("/portfolio-versions/{version_id}/risk-assessments", response_model=RiskAssessmentV1, status_code=201)
+@router.post("/portfolio-versions/{version_id}/risk-assessments", response_model=OperationAcceptedV1, status_code=202)
 async def assess_portfolio_risk(
     version_id: UUID,
     body: RiskAssessmentInputV1,
+    response: Response,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
-) -> RiskAssessmentV1:
+    service: OperationService = Depends(get_operation_service),
+) -> OperationAcceptedV1:
     try:
-        snapshot, breaches = await InstitutionalPortfolioService(session).assess_risk(
-            version_id, body.policy_id, body.as_of, institutional_context(auth)
+        accepted = await service.submit_portfolio_operation(
+            PortfolioOperationCommand(
+                operation_type="risk-assessment",
+                payload={
+                    "version_id": str(version_id),
+                    "policy_id": str(body.policy_id),
+                    "as_of": body.as_of.isoformat(),
+                },
+                actor_subject=auth.subject,
+            ),
+            idempotency_key,
+            auth.subject,
         )
+    except IdempotencyConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return RiskAssessmentV1(
-        snapshot_id=snapshot.id,
-        as_of=snapshot.as_of,
-        input_sha256=snapshot.input_sha256,
-        exposures=snapshot.exposures,
-        concentration=snapshot.concentration,
-        liquidity=snapshot.liquidity,
-        volatility=snapshot.volatility,
-        drawdown=snapshot.drawdown,
-        breaches=[RiskBreachV1.model_validate(item) for item in breaches],
-    )
+    response.headers["Location"] = f"/api/v1/operations/{accepted.operation_id}"
+    return accepted
 
 
 @router.get("/risk-assessments/{snapshot_id}/breaches", response_model=list[RiskBreachV1])
@@ -645,88 +648,77 @@ async def waive_risk_breach(
     return RiskWaiverV1.model_validate(waiver)
 
 
-@router.post("/model-portfolios/{portfolio_id}/optimizations", response_model=OptimizationRunV1, status_code=201)
+@router.post("/model-portfolios/{portfolio_id}/optimizations", response_model=OperationAcceptedV1, status_code=202)
 async def optimize_model_portfolio(
     portfolio_id: UUID,
     as_of: datetime,
+    response: Response,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
-) -> OptimizationRunV1:
+    service: OperationService = Depends(get_operation_service),
+) -> OperationAcceptedV1:
     try:
-        run = await BackendPortfolioOptimizationService(session).optimize(
-            portfolio_id, as_of, institutional_context(auth)
+        accepted = await service.submit_portfolio_operation(
+            PortfolioOperationCommand(
+                operation_type="portfolio-optimization",
+                payload={"portfolio_id": str(portfolio_id), "as_of": as_of.isoformat()},
+                actor_subject=auth.subject,
+            ),
+            idempotency_key,
+            auth.subject,
         )
+    except IdempotencyConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return OptimizationRunV1.model_validate(run)
+    response.headers["Location"] = f"/api/v1/operations/{accepted.operation_id}"
+    return accepted
 
 
-@router.post("/backtests", response_model=BacktestRunV1, status_code=201)
+@router.post("/backtests", response_model=OperationAcceptedV1, status_code=202)
 async def run_institutional_backtest(
     body: RunBacktestV1,
+    response: Response,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
-) -> BacktestRunV1:
+    service: OperationService = Depends(get_operation_service),
+) -> OperationAcceptedV1:
     try:
-        run = await InstitutionalBacktestService(session).run(
-            config=InstitutionalBacktestConfig(
-                body.start_date,
-                body.end_date,
-                body.signal_delay_sessions,
-                body.top_n,
-                body.initial_cash,
-                body.transaction_cost_bps,
-                body.sell_tax_bps,
-                body.seed,
+        payload = {
+            "start_date": body.start_date.isoformat(),
+            "end_date": body.end_date.isoformat(),
+            "strategy_name": body.strategy_name,
+            "signal_delay_sessions": body.signal_delay_sessions,
+            "top_n": body.top_n,
+            "initial_cash": body.initial_cash,
+            "transaction_cost_bps": body.transaction_cost_bps,
+            "sell_tax_bps": body.sell_tax_bps,
+            "seed": body.seed,
+            "code_version": body.code_version,
+        }
+        accepted = await service.submit_portfolio_operation(
+            PortfolioOperationCommand(
+                operation_type="backtest",
+                payload=payload,
+                actor_subject=auth.subject,
             ),
-            strategy_name=body.strategy_name,
-            universe_definition=body.universe_definition,
-            benchmark_index_id=body.benchmark_index_id,
-            benchmark_instrument_id=body.benchmark_instrument_id,
-            sessions=tuple(MarketSession(item.session_date, item.close_at) for item in body.sessions),
-            signals=tuple(
-                PointInTimeSignal(
-                    item.instrument_id,
-                    item.signal_date,
-                    item.knowledge_at,
-                    item.score,
-                    item.source,
-                )
-                for item in body.signals
-            ),
-            universe_members=tuple(
-                HistoricalUniverseMember(item.instrument_id, item.valid_from, item.valid_to, item.knowledge_at)
-                for item in body.universe_members
-            ),
-            prices=tuple(
-                PointInTimePrice(item.instrument_id, item.session_date, item.knowledge_at, item.close)
-                for item in body.prices
-            ),
-            corporate_actions=tuple(
-                PointInTimeCorporateAction(
-                    item.instrument_id,
-                    item.effective_date,
-                    item.knowledge_at,
-                    item.action_type,
-                    item.value,
-                    item.tax_rate,
-                )
-                for item in body.corporate_actions
-            ),
-            code_version=body.code_version,
-            context=institutional_context(auth),
+            idempotency_key,
+            auth.subject,
         )
+    except IdempotencyConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return BacktestRunV1.model_validate(run)
+    response.headers["Location"] = f"/api/v1/operations/{accepted.operation_id}"
+    return accepted
 
 
 @router.get("/backtests/{run_id}", response_model=BacktestRunV1)

@@ -14,7 +14,10 @@ from database.models.agents import AuditLog
 from database.models.operations import Operation
 from ia_investing.contracts.v1 import OperationAcceptedV1, OperationState, OperationStatusV1
 from ia_investing.orchestration.queues import TASK_QUEUES, Capability
-from workflows import RunAgentInput, RunAgentWorkflow
+from workflows import (
+    RunAgentInput,
+    RunAgentWorkflow,
+)
 
 
 class IdempotencyConflictError(ValueError):
@@ -29,6 +32,17 @@ class AgentRunCommand:
 
     def payload(self) -> dict[str, Any]:
         return {"agent_name": self.agent_name, "input_data": self.input_data}
+
+
+@dataclass(frozen=True, slots=True)
+class PortfolioOperationCommand:
+    operation_type: str
+    payload: dict[str, Any]
+    actor_subject: str
+    workflow_id: str | None = None
+    workflow_class: Any = None
+    workflow_input: Any = None
+    task_queue: Capability = Capability.PORTFOLIO_RISK
 
 
 def _request_hash(payload: dict[str, Any]) -> str:
@@ -101,6 +115,64 @@ class OperationService:
             operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."
             await self.session.commit()
             raise
+        return OperationAcceptedV1(operation_id=operation_id)
+
+    async def submit_portfolio_operation(
+        self, command: PortfolioOperationCommand, idempotency_key: str, actor_subject: str
+    ) -> OperationAcceptedV1:
+        request_hash = _request_hash(command.payload)
+        existing = (
+            await self.session.execute(
+                select(Operation).where(
+                    Operation.operation_type == command.operation_type,
+                    Operation.idempotency_key == idempotency_key,
+                )
+            )
+        ).scalar_one_or_none()
+        if existing is not None:
+            if existing.request_hash != request_hash:
+                raise IdempotencyConflictError("idempotency key was already used with a different request")
+            return OperationAcceptedV1(operation_id=existing.id, state=existing.state)
+
+        operation_id = uuid4()
+        operation = Operation(
+            id=operation_id,
+            operation_type=command.operation_type,
+            idempotency_key=idempotency_key,
+            request_hash=request_hash,
+            state=OperationState.PENDING,
+            request_data=command.payload,
+        )
+        self.session.add(operation)
+        self.session.add(
+            AuditLog(
+                actor_type="human",
+                actor_id=actor_subject,
+                action=f"{command.operation_type}.submit",
+                entity_type="operation",
+                entity_id=operation_id,
+                correlation_id=operation_id,
+                details={
+                    "idempotency_key_hash": hashlib.sha256(idempotency_key.encode()).hexdigest(),
+                },
+            )
+        )
+        await self.session.commit()
+
+        if command.workflow_class is not None and command.workflow_id is not None:
+            try:
+                await self.temporal_client.start_workflow(
+                    command.workflow_class.run,
+                    command.workflow_input,
+                    id=command.workflow_id,
+                    task_queue=TASK_QUEUES[command.task_queue],
+                )
+            except Exception:
+                operation.state = OperationState.FAILED
+                operation.error_code = "workflow_start_failed"
+                operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."
+                await self.session.commit()
+                raise
         return OperationAcceptedV1(operation_id=operation_id)
 
     async def get(self, operation_id: UUID) -> OperationStatusV1 | None:
