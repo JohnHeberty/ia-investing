@@ -40,6 +40,7 @@ class TelemetrySettings(BaseModel):
 
 
 class SecuritySettings(BaseModel):
+    oidc_enabled: bool = False
     oidc_issuer: str | None = None
     oidc_audience: str | None = None
     oidc_client_id: str | None = None

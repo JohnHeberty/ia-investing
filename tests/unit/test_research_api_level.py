@@ -3,12 +3,14 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
+import jwt
 from fastapi.testclient import TestClient
 
 from apps.api.main import app
 
 
-def _auth_header(token: str = "test-token") -> dict[str, str]:
+def _auth_header(permissions: str = "") -> dict[str, str]:
+    token = jwt.encode({"sub": "test-user", "permissions": permissions}, "key", algorithm="HS256")
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -62,7 +64,7 @@ class TestResearchAuth:
         response = client.post(
             f"/api/v1/research/cases/{case_id}/transitions",
             json={"target": "triage", "reason": "test"},
-            headers={**_auth_header(), **_idempotency_header()},
+            headers={**_auth_header("research:read"), **_idempotency_header()},
         )
         assert response.status_code in (422, 400)
 

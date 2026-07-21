@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.catalog import Embedding
 
-from ._models import Chunk, SearchResult
+from .models import Chunk, SearchResult
 
 
 class VectorStore:

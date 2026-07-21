@@ -1,6 +1,6 @@
 """Historical outcome dataset for Brazilian political probability calibration.
 
-This module provides synthetic historical outcomes for calibrating
+This module provides example historical outcomes for calibrating
 political probability forecasts. Each outcome represents a real-world
 pattern of legislative progression.
 

@@ -16,6 +16,11 @@ from ia_investing.domain.identity import InstitutionalAccessContext
 router = APIRouter(prefix="/api/v1/readiness", tags=["readiness"])
 
 
+@router.get("")
+async def readiness_check() -> dict[str, object]:
+    return {"status": "ready", "version": "0.1.0"}
+
+
 def context_from(auth: AuthContext) -> InstitutionalAccessContext:
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="institutional organization context is required")

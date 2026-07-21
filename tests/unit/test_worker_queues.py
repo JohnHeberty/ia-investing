@@ -47,7 +47,7 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
     )
     assert {
         activity.__temporal_activity_definition.name for activity in ACTIVITIES_BY_CAPABILITY[Capability.PORTFOLIO_RISK]
-    } == {"reconcile_paper_portfolio", "publish_paper_nav", "optimize_model_portfolio"}
+    } == {"reconcile_paper_portfolio", "publish_paper_nav", "optimize_model_portfolio", "run_scorecard", "validate_proposal_constraints"}
     assert {
         activity.__temporal_activity_definition.name for activity in ACTIVITIES_BY_CAPABILITY[Capability.DATA_INGESTION]
     } == {

@@ -19,44 +19,30 @@ from ia_investing.orchestration.activities import (
     RESEARCH_MOCK_ACTIVITIES,
     THESIS_REVIEW_ACTIVITIES,
 )
+from ia_investing.orchestration import workflows as _wfs
 from ia_investing.settings import get_settings
 from observability import setup_telemetry
-from workflows import (
-    AnalyzeFilingWorkflow,
-    AnalyzeNewsWorkflow,
-    ApprovalGateWorkflow,
-    DiscoverStocksWorkflow,
-    IngestCVMWorkflow,
-    PaperRebalanceWorkflow,
-    PaperReconciliationWorkflow,
-    PaperValuationWorkflow,
-    PolicyEventWorkflow,
-    PortfolioConstructionWorkflow,
-    PortfolioOptimizationWorkflow,
-    RunAgentWorkflow,
-    ThesisReviewWorkflow,
-)
 
 logger = logging.getLogger(__name__)
 
 WORKFLOWS_BY_CAPABILITY: dict[Capability, Sequence[type[Any]]] = {
-    Capability.DATA_INGESTION: (IngestCVMWorkflow,),
+    Capability.DATA_INGESTION: (_wfs.IngestCVMWorkflow,),
     Capability.DOCUMENT_PROCESSING: (),
     Capability.RESEARCH_AGENTS: (
-        AnalyzeFilingWorkflow,
-        AnalyzeNewsWorkflow,
-        ApprovalGateWorkflow,
-        PolicyEventWorkflow,
-        DiscoverStocksWorkflow,
-        RunAgentWorkflow,
-        ThesisReviewWorkflow,
+        _wfs.AnalyzeFilingWorkflow,
+        _wfs.AnalyzeNewsWorkflow,
+        _wfs.ApprovalGateWorkflow,
+        _wfs.PolicyEventWorkflow,
+        _wfs.DiscoverStocksWorkflow,
+        _wfs.RunAgentWorkflow,
+        _wfs.ThesisReviewWorkflow,
     ),
     Capability.PORTFOLIO_RISK: (
-        PortfolioConstructionWorkflow,
-        PortfolioOptimizationWorkflow,
-        PaperRebalanceWorkflow,
-        PaperReconciliationWorkflow,
-        PaperValuationWorkflow,
+        _wfs.PortfolioConstructionWorkflow,
+        _wfs.PortfolioOptimizationWorkflow,
+        _wfs.PaperRebalanceWorkflow,
+        _wfs.PaperReconciliationWorkflow,
+        _wfs.PaperValuationWorkflow,
     ),
     Capability.NOTIFICATIONS: (),
 }

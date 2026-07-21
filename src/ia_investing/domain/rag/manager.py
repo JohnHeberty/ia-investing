@@ -4,10 +4,10 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ._chunker import TextChunker
-from ._embedder import EmbeddingBackend, EmbeddingProvider
-from ._models import Chunk, SearchResult
-from ._vector_store import VectorStore
+from .chunker import TextChunker
+from .embedder import EmbeddingBackend, EmbeddingProvider
+from .models import Chunk, SearchResult
+from .vector_store import VectorStore
 
 
 class RAGManager:

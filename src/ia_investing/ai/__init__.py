@@ -12,17 +12,20 @@ from ._config import (
     AgentConfig,
 )
 from ._runner import AgentResult, AgentRunner
+from .errors import AiProviderError, GuardrailViolation
 
 __all__ = [
     "ALL_AGENTS",
+    "AiProviderError",
+    "AgentConfig",
+    "AgentResult",
+    "AgentRunner",
     "CRITIC_AGENT",
     "FILING_ANALYST",
     "FUNDAMENTALIST_ANALYST",
+    "GuardrailViolation",
     "INVESTMENT_COMMITTEE",
     "NEWS_ANALYST",
     "RESEARCH_COORDINATOR",
     "RISK_DIRECTOR",
-    "AgentConfig",
-    "AgentResult",
-    "AgentRunner",
 ]

@@ -152,7 +152,7 @@ def _empty_result() -> BacktestResult:
 
 StrategyFactory = Callable[
     [pl.DataFrame, list[str]],
-    Callable[[pl.DataFrame, list[str], dict[str, float]], Awaitable[dict[str, float]]],
+    Awaitable[Callable[[pl.DataFrame, list[str], dict[str, float]], Awaitable[dict[str, float]]]],
 ]
 
 
@@ -188,7 +188,7 @@ async def run_walk_forward(
         training_data = universe_data.filter(
             (pl.col("date") >= pl.lit(window.training_start)) & (pl.col("date") <= pl.lit(window.training_end))
         )
-        strategy_fn = strategy_factory(training_data, price_cols)
+        strategy_fn = await strategy_factory(training_data, price_cols)
 
         training_result = await engine.run(
             strategy_fn=strategy_fn,

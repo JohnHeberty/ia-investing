@@ -18,9 +18,7 @@ from temporalio.client import (
 )
 from temporalio.contrib.opentelemetry import TracingInterceptor
 
-from ia_investing.settings import get_settings
-from observability import setup_telemetry
-from workflows import (
+from ia_investing.orchestration.workflows import (
     IngestCVMInput,
     IngestCVMWorkflow,
     PaperRebalanceInput,
@@ -30,6 +28,8 @@ from workflows import (
     PaperValuationInput,
     PaperValuationWorkflow,
 )
+from ia_investing.settings import get_settings
+from observability import setup_telemetry
 
 logger = logging.getLogger(__name__)
 

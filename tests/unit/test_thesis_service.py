@@ -270,6 +270,7 @@ async def test_two_revisions_increment_version_number() -> None:
     session.get = AsyncMock(return_value=thesis)
     session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=v1)))
     session.flush = AsyncMock()
+    session.add = MagicMock()
     service = ThesisService(session)
 
     result = await service.revise(

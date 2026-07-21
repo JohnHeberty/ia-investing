@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from sqlalchemy import text
 
 from connectors.base import HttpClient
-from database.config import get_settings
+from ia_investing.settings import get_settings
 from database.core import get_async_session
 
 router = APIRouter(prefix="/api/v1/health", tags=["health"])
