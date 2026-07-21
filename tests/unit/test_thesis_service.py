@@ -9,21 +9,22 @@ from uuid import uuid4
 
 import pytest
 
-from ia_investing.application.theses import ThesisService, ThesisSnapshot
 from ia_investing.application.research import ResearchConcurrencyError
-
+from ia_investing.application.theses import ThesisService, ThesisSnapshot
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-ALL_PERMS = frozenset({
-    "research_theses:create",
-    "research_theses:revise",
-    "research_theses:approve",
-    "research_claims:verify",
-    "research_evidence:read",
-})
+ALL_PERMS = frozenset(
+    {
+        "research_theses:create",
+        "research_theses:revise",
+        "research_theses:approve",
+        "research_claims:verify",
+        "research_evidence:read",
+    }
+)
 
 
 def _snapshot(

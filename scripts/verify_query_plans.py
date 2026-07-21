@@ -26,9 +26,7 @@ CNPJ_LOOKUP_PLAN = sa.select(Issuer).where(Issuer.cnpj == "00000000000191")
 _DUMMY_ID = "00000000-0000-0000-0000-000000000000"
 ID_LOOKUP_PLAN = sa.select(Issuer).where(Issuer.id == sa.cast(_DUMMY_ID, sa.dialects.postgresql.UUID))
 
-ACTIVE_ONLY_PLAN = (
-    sa.select(Issuer).where(Issuer.is_active.is_(True)).order_by(Issuer.name_pt).limit(50)
-)
+ACTIVE_ONLY_PLAN = sa.select(Issuer).where(Issuer.is_active.is_(True)).order_by(Issuer.name_pt).limit(50)
 
 
 async def _explain_analyze(session: sa.ext.asyncio.AsyncSession, statement: sa.Select) -> str:

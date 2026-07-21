@@ -130,7 +130,7 @@ export function LoadingSkeleton({
             height: 12,
             background: "var(--surface-2)",
             borderRadius: 6,
-            width: `${70 + Math.random() * 30}%`,
+            width: `${70 + (i % 3) * 10}%`,
             animation: "pulse 1.5s ease-in-out infinite",
           }}
         />

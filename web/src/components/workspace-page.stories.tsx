@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { WorkspacePage } from "./workspace-page";
 
 const meta: Meta<typeof WorkspacePage> = {

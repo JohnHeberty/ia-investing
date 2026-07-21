@@ -5,18 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { institutionalApi, queryKeys } from "@/lib/api-client";
 
 import type { DataState } from "@/components/domain";
-
-/** Calculate data state from query status. */
-function computeDataState(
-  isLoading: boolean,
-  isError: boolean,
-  hasData?: boolean,
-): DataState {
-  if (isLoading) return "empty";
-  if (isError) return "error";
-  if (!hasData) return "missing";
-  return "empty";
-}
+import { computeDataState } from "@/lib/data-state";
 
 export interface BacktestRun {
   id: string;

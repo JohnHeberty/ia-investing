@@ -576,3 +576,136 @@ def assess_challenger(
         "failures": failures,
     }
     return ChallengerAssessment(not failures, tuple(failures), metrics, immutable_report_hash(evidence))
+
+
+@dataclass(frozen=True, slots=True)
+class LedgerPositionEntry:
+    instrument_id: str
+    quantity: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class LedgerCashEntry:
+    currency: str
+    amount: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class SnapshotPosition:
+    instrument_id: str
+    quantity: Decimal
+    cost_basis: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class SnapshotCash:
+    currency: str
+    amount: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class NavInput:
+    cash_value: Decimal
+    positions_value: Decimal
+    fees_value: Decimal
+    taxes_value: Decimal
+
+
+@dataclass(frozen=True, slots=True)
+class ReconciledPositionBreak:
+    rule: str
+    instrument_id: str
+    expected: dict[str, str]
+    actual: dict[str, str]
+    severity: str
+    blocking: bool
+
+
+def reconcile_positions(
+    ledger_positions: tuple[LedgerPositionEntry, ...],
+    snapshot_positions: tuple[SnapshotPosition, ...],
+    *,
+    tolerance: Decimal = Decimal("0.00000001"),
+) -> tuple[ReconciledPositionBreak, ...]:
+    if tolerance < 0:
+        raise ValueError("tolerance must be nonnegative")
+    ledger_by_instrument: dict[str, Decimal] = {}
+    for entry in ledger_positions:
+        current = ledger_by_instrument.get(entry.instrument_id, Decimal(0))
+        ledger_by_instrument[entry.instrument_id] = current + entry.quantity
+    snapshot_by_instrument = {pos.instrument_id: pos for pos in snapshot_positions}
+    all_ids = set(ledger_by_instrument) | set(snapshot_by_instrument)
+    breaks: list[ReconciledPositionBreak] = []
+    for instrument_id in sorted(all_ids):
+        ledger_qty = ledger_by_instrument.get(instrument_id, Decimal(0))
+        default_pos = SnapshotPosition(instrument_id, Decimal(0), Decimal(0))
+        snapshot_qty = snapshot_by_instrument.get(instrument_id, default_pos).quantity
+        if abs(ledger_qty - snapshot_qty) > tolerance:
+            breaks.append(
+                ReconciledPositionBreak(
+                    rule="position_quantity_mismatch",
+                    instrument_id=instrument_id,
+                    expected={"ledger_quantity": str(ledger_qty)},
+                    actual={"snapshot_quantity": str(snapshot_qty)},
+                    severity="critical",
+                    blocking=True,
+                )
+            )
+    return tuple(breaks)
+
+
+def reconcile_cash(
+    ledger_cash: tuple[LedgerCashEntry, ...],
+    snapshot_cash: tuple[SnapshotCash, ...],
+    *,
+    tolerance: Decimal = Decimal("0.00000001"),
+) -> tuple[ReconciledPositionBreak, ...]:
+    if tolerance < 0:
+        raise ValueError("tolerance must be nonnegative")
+    ledger_by_currency: dict[str, Decimal] = {}
+    for entry in ledger_cash:
+        ledger_by_currency[entry.currency] = ledger_by_currency.get(entry.currency, Decimal(0)) + entry.amount
+    snapshot_by_currency = {c.currency: c for c in (snapshot_cash or ())}
+    all_currencies = set(ledger_by_currency) | set(snapshot_by_currency)
+    breaks: list[ReconciledPositionBreak] = []
+    for currency in sorted(all_currencies):
+        ledger_amount = ledger_by_currency.get(currency, Decimal(0))
+        snapshot_amount = snapshot_by_currency.get(currency, SnapshotCash(currency, Decimal(0))).amount
+        if abs(ledger_amount - snapshot_amount) > tolerance:
+            breaks.append(
+                ReconciledPositionBreak(
+                    rule="cash_balance_mismatch",
+                    instrument_id=currency,
+                    expected={"ledger_amount": str(ledger_amount)},
+                    actual={"snapshot_amount": str(snapshot_amount)},
+                    severity="critical",
+                    blocking=True,
+                )
+            )
+    return tuple(breaks)
+
+
+def reconcile_nav(
+    nav_input: NavInput,
+    computed_nav: Decimal,
+    *,
+    tolerance: Decimal = Decimal("0.01"),
+) -> ReconciledPositionBreak | None:
+    expected_nav = nav_input.cash_value + nav_input.positions_value - nav_input.fees_value - nav_input.taxes_value
+    if abs(expected_nav - computed_nav) > tolerance:
+        expected_details = {
+            "nav": str(expected_nav),
+            "cash": str(nav_input.cash_value),
+            "positions": str(nav_input.positions_value),
+            "fees": str(nav_input.fees_value),
+            "taxes": str(nav_input.taxes_value),
+        }
+        return ReconciledPositionBreak(
+            rule="nav_identity_mismatch",
+            instrument_id="NAV",
+            expected=expected_details,
+            actual={"nav": str(computed_nav)},
+            severity="critical",
+            blocking=True,
+        )
+    return None

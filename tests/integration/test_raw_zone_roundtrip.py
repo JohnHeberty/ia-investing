@@ -49,9 +49,9 @@ async def test_raw_zone_register_creates_version(session: AsyncSession, minio_cl
     assert result.version_number == 1
     assert len(result.content_hash) == 64
 
-    db_version = (await session.execute(
-        sa.select(SourceObjectVersion).where(SourceObjectVersion.id == result.version_id)
-    )).scalar_one()
+    db_version = (
+        await session.execute(sa.select(SourceObjectVersion).where(SourceObjectVersion.id == result.version_id))
+    ).scalar_one()
     assert db_version.storage_key.startswith("raw/data-steward-cvm/")
     assert db_version.size_bytes == len(item.content)
     await session.commit()

@@ -10,16 +10,17 @@ import pytest
 
 from ia_investing.application.reviews import ResearchReviewService
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-ALL_PERMS = frozenset({
-    "research_assessments:create",
-    "research_reviews:request",
-    "research_reviews:decide",
-})
+ALL_PERMS = frozenset(
+    {
+        "research_assessments:create",
+        "research_reviews:request",
+        "research_reviews:decide",
+    }
+)
 
 
 def _make_assessment(

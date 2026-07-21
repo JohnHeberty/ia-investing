@@ -43,7 +43,7 @@ export function useUrlState<T extends Record<string, string | string[] | undefin
         }
       }
       const qs = params.toString();
-      router.push((qs ? `${pathname}?${qs}` : pathname) as any, { scroll: false });
+      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
     [router, pathname, searchParams, defaults],
   );

@@ -6,12 +6,12 @@ Verifies that:
 - tracing.py helper functions produce valid W3C traceparent headers
 - OpenTelemetry context is properly propagated from stored trace_id
 """
+
 from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from opentelemetry import trace
 from opentelemetry.sdk.trace import TracerProvider
 
 
@@ -20,8 +20,11 @@ class TestTracingHelpers:
         from ia_investing.ai.tracing import span_context
 
         attrs = span_context(
-            run_id="r-1", case_id="c-1", workflow_id="w-1",
-            capability="filing", version="1.0",
+            run_id="r-1",
+            case_id="c-1",
+            workflow_id="w-1",
+            capability="filing",
+            version="1.0",
         )
         assert attrs["agent.run_id"] == "r-1"
         assert attrs["agent.case_id"] == "c-1"
@@ -141,8 +144,8 @@ class TestTraceContextReconstitution:
 class TestRunnerTracing:
     @pytest.mark.asyncio
     async def test_runner_creates_span_on_success(self) -> None:
-        from ia_investing.ai._runner import AgentRunner
         from ia_investing.ai._config import AgentConfig
+        from ia_investing.ai._runner import AgentRunner
 
         config = AgentConfig(
             name="test_agent",
@@ -179,8 +182,8 @@ class TestRunnerTracing:
 
     @pytest.mark.asyncio
     async def test_runner_records_error_on_failure(self) -> None:
-        from ia_investing.ai._runner import AgentRunner
         from ia_investing.ai._config import AgentConfig
+        from ia_investing.ai._runner import AgentRunner
 
         config = AgentConfig(
             name="fail_agent",
@@ -213,8 +216,11 @@ class TestExecutionTraceLinking:
         from ia_investing.ai.tracing import span_context
 
         attrs = span_context(
-            run_id="run-abc", capability="filing", version="1.0",
-            case_id="case-123", workflow_id="wf-456",
+            run_id="run-abc",
+            capability="filing",
+            version="1.0",
+            case_id="case-123",
+            workflow_id="wf-456",
         )
         assert attrs["agent.run_id"] == "run-abc"
         assert attrs["agent.case_id"] == "case-123"

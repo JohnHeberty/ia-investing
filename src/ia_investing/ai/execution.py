@@ -109,12 +109,14 @@ class AgentExecutionService:
                         input_payload=run.input_payload,
                         output_schema=schema.content,
                     )
-                provider_span.set_attributes({
-                    "provider.model": model_name,
-                    "provider.run_id": response.provider_run_id or "",
-                    "provider.prompt_tokens": response.usage.prompt_tokens,
-                    "provider.completion_tokens": response.usage.completion_tokens,
-                })
+                provider_span.set_attributes(
+                    {
+                        "provider.model": model_name,
+                        "provider.run_id": response.provider_run_id or "",
+                        "provider.prompt_tokens": response.usage.prompt_tokens,
+                        "provider.completion_tokens": response.usage.completion_tokens,
+                    }
+                )
                 usage = BudgetUsage(
                     prompt_tokens=response.usage.prompt_tokens,
                     completion_tokens=response.usage.completion_tokens,

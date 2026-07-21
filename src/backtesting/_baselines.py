@@ -13,7 +13,7 @@ async def equal_weight_strategy(
     if not price_cols:
         return {}
     weight = 1.0 / len(price_cols)
-    return {col: weight for col in price_cols}
+    return dict.fromkeys(price_cols, weight)
 
 
 async def market_cap_proxy_strategy(

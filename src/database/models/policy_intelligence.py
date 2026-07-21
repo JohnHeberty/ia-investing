@@ -210,6 +210,42 @@ class PolicyProbabilityForecast(Base):
     )
 
 
+class RegulatoryAction(Base):
+    __tablename__ = "regulatory_actions"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    policy_object_id: Mapped[UUID] = mapped_column(sa.ForeignKey("policy_objects.id", ondelete="CASCADE"), index=True)
+    authority: Mapped[str] = mapped_column(sa.String(100))
+    action_type: Mapped[str] = mapped_column(sa.String(50))
+    external_id: Mapped[str] = mapped_column(sa.String(150))
+    title: Mapped[str] = mapped_column(sa.Text)
+    description: Mapped[str] = mapped_column(sa.Text, default="")
+    issued_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
+    effective_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    parent_action_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("regulatory_actions.id", ondelete="SET NULL")
+    )
+    rectifies: Mapped[bool] = mapped_column(sa.Boolean, default=False)
+    content_sha256: Mapped[str] = mapped_column(sa.String(64))
+    metadata_payload: Mapped[dict[str, object]] = mapped_column(JSONB)
+    knowledge_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), index=True)
+    source_object_version_id: Mapped[UUID] = mapped_column(
+        sa.ForeignKey("source_object_versions.id", ondelete="RESTRICT")
+    )
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (
+        sa.UniqueConstraint("authority", "external_id", name="uq_regulatory_actions_authority_external"),
+        sa.CheckConstraint("content_sha256 ~ '^[0-9a-f]{64}$'", name="sha256_format"),
+        sa.CheckConstraint(
+            "action_type IN ('normative', 'circular', 'resolution', 'instruction', 'edict', 'decree', 'law', 'other')",
+            name="action_type_values",
+        ),
+        sa.CheckConstraint("parent_action_id IS NULL OR parent_action_id <> id", name="no_self_reference"),
+    )
+
+
 class PolicyGraphNode(Base):
     __tablename__ = "policy_graph_nodes"
 

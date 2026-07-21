@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 /**
  * Fact / Inference / Recommendation tag.
@@ -72,7 +72,12 @@ export function FreshnessPill({
   retrievedAt: string;
   maxAgeHours?: number;
 }) {
-  const age = Date.now() - new Date(retrievedAt).getTime();
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+  const age = now - new Date(retrievedAt).getTime();
   const hours = age / (1000 * 60 * 60);
   const label =
     hours < 1

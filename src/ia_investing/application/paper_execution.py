@@ -27,20 +27,27 @@ from database.models.portfolio_domain import (
     PortfolioLedgerEntry,
     StrategyMandate,
 )
+from database.models.portfolio_versions import CashSnapshot, PositionSnapshot
 from database.models.research import DomainOutboxEvent
 from ia_investing.domain.identity import InstitutionalAccessContext, ResourceAttributes, authorize, ensure_four_eyes
 from ia_investing.domain.paper_execution import (
     INTENT_TRANSITIONS,
     ORDER_TRANSITIONS,
     ExecutionConfiguration,
+    LedgerCashEntry,
+    LedgerPositionEntry,
     MarketSnapshot,
     ReconciliationFill,
     ReconciliationLedgerEntry,
     ReconciliationOrder,
+    SnapshotCash,
+    SnapshotPosition,
     TradingWindow,
     fill_to_ledger,
     immutable_report_hash,
+    reconcile_cash,
     reconcile_execution,
+    reconcile_positions,
     simulate_order,
     validate_challenger_comparison,
     validate_paper_order_request,
@@ -194,6 +201,15 @@ class PaperExecutionService:
             correlation_id,
             {"reason": reason},
         )
+        if order is not None:
+            self._record_order(
+                order,
+                "PaperOrderCancelled",
+                "paper_order.cancel",
+                context.subject,
+                context.organization_id,
+                correlation_id,
+            )
         return intent
 
     async def simulate(
@@ -350,9 +366,79 @@ class PaperExecutionService:
                     source_reference=f"paper-fill:{fill.event_key}",
                 )
             )
+        if fills:
+            deltas = [fill_to_ledger(intent.side, s) for s in result.fills]
+            total_qty = sum(d.instrument_quantity for d in deltas)
+            total_cash = sum(d.cash_delta for d in deltas)
+            latest_version = await self.session.scalar(
+                sa.select(InstitutionalPortfolioVersion)
+                .where(
+                    InstitutionalPortfolioVersion.portfolio_id == intent.portfolio_id,
+                    InstitutionalPortfolioVersion.status.in_(["approved", "draft"]),
+                )
+                .order_by(InstitutionalPortfolioVersion.version.desc())
+                .limit(1)
+            )
+            version_id = latest_version.id if latest_version else intent.portfolio_version_id
+            existing_pos = await self.session.scalar(
+                sa.select(PositionSnapshot).where(
+                    PositionSnapshot.portfolio_version_id == version_id,
+                    PositionSnapshot.instrument_id == intent.instrument_id,
+                )
+            )
+            if existing_pos is not None:
+                new_qty = existing_pos.quantity + total_qty
+                if new_qty < 0:
+                    raise ValueError("sell would result in negative position")
+                existing_pos.quantity = new_qty
+                existing_pos.as_of = datetime.now(UTC)
+            elif total_qty > 0:
+                self.session.add(
+                    PositionSnapshot(
+                        portfolio_version_id=version_id,
+                        instrument_id=intent.instrument_id,
+                        quantity=total_qty,
+                        cost_basis=Decimal(0),
+                        as_of=datetime.now(UTC),
+                    )
+                )
+            existing_cash = await self.session.scalar(
+                sa.select(CashSnapshot).where(
+                    CashSnapshot.portfolio_version_id == version_id,
+                    CashSnapshot.currency == portfolio.base_currency,
+                )
+            )
+            if existing_cash is not None:
+                existing_cash.amount = existing_cash.amount + total_cash
+                existing_cash.as_of = datetime.now(UTC)
+            else:
+                self.session.add(
+                    CashSnapshot(
+                        portfolio_version_id=version_id,
+                        currency=portfolio.base_currency,
+                        amount=total_cash,
+                        as_of=datetime.now(UTC),
+                    )
+                )
         intent.status = "completed" if result.status == "filled" else "submitted" if fills else "expired"
         intent.updated_at = datetime.now(UTC)
         self._record(intent, "PaperOrderSimulated", "paper_order.simulate", context.subject, correlation_id)
+        order_event_type = {
+            "accepted": "PaperOrderAccepted",
+            "partially_filled": "PaperOrderPartiallyFilled",
+            "filled": "PaperOrderFilled",
+            "cancelled": "PaperOrderCancelled",
+            "rejected": "PaperOrderRejected",
+            "expired": "PaperOrderExpired",
+        }.get(order.status, "PaperOrderAccepted")
+        self._record_order(
+            order,
+            order_event_type,
+            f"paper_order.{order.status}",
+            context.subject,
+            context.organization_id,
+            correlation_id,
+        )
         return order, tuple(fills)
 
     async def reconcile_portfolio(
@@ -473,6 +559,151 @@ class PaperExecutionService:
                 correlation_id,
                 {"rule": item.rule, "severity": item.severity, "blocking": item.blocking},
             )
+        latest_version = await self.session.scalar(
+            sa.select(InstitutionalPortfolioVersion)
+            .where(
+                InstitutionalPortfolioVersion.portfolio_id == portfolio.id,
+                InstitutionalPortfolioVersion.status.in_(["approved", "draft"]),
+            )
+            .order_by(InstitutionalPortfolioVersion.version.desc())
+            .limit(1)
+        )
+        if latest_version is not None:
+            position_rows = list(
+                (
+                    await self.session.scalars(
+                        sa.select(PositionSnapshot).where(
+                            PositionSnapshot.portfolio_version_id == latest_version.id,
+                        )
+                    )
+                ).all()
+            )
+            ledger_position_entries = list(
+                (
+                    await self.session.scalars(
+                        sa.select(PortfolioLedgerEntry).where(
+                            PortfolioLedgerEntry.portfolio_id == portfolio.id,
+                            PortfolioLedgerEntry.occurred_at <= as_of,
+                            PortfolioLedgerEntry.instrument_id.isnot(None),
+                        )
+                    )
+                ).all()
+            )
+            ledger_positions = tuple(
+                LedgerPositionEntry(str(item.instrument_id), item.quantity or Decimal(0))
+                for item in ledger_position_entries
+            )
+            snapshot_positions = tuple(
+                SnapshotPosition(str(item.instrument_id), item.quantity, item.cost_basis) for item in position_rows
+            )
+            position_breaks = reconcile_positions(ledger_positions, snapshot_positions)
+            for pb in position_breaks:
+                existing = await self.session.scalar(
+                    sa.select(ReconciliationBreak).where(
+                        ReconciliationBreak.portfolio_id == portfolio.id,
+                        ReconciliationBreak.as_of == as_of,
+                        ReconciliationBreak.rule == pb.rule,
+                        ReconciliationBreak.resource_key == pb.instrument_id,
+                    )
+                )
+                if existing is not None:
+                    persisted.append(existing)
+                    continue
+                row = ReconciliationBreak(
+                    organization_id=context.organization_id,
+                    portfolio_id=portfolio.id,
+                    as_of=as_of,
+                    rule=pb.rule,
+                    resource_key=pb.instrument_id,
+                    expected=pb.expected,
+                    actual=pb.actual,
+                    severity=pb.severity,
+                    owner_role="operations",
+                    status="open",
+                    blocking=pb.blocking,
+                )
+                self.session.add(row)
+                await self.session.flush()
+                persisted.append(row)
+                deduplication_key = f"reconciliation:{portfolio.id}:{as_of.date()}:{pb.rule}:{pb.instrument_id}"
+                self.session.add(
+                    OperationalAlert(
+                        organization_id=context.organization_id,
+                        portfolio_id=portfolio.id,
+                        deduplication_key=deduplication_key,
+                        alert_type="reconciliation_break",
+                        severity=pb.severity,
+                        rule_version="reconciliation-v1",
+                        route="operations",
+                        status="open",
+                        payload={"break_id": str(row.id), "rule": pb.rule, "blocking": pb.blocking},
+                    )
+                )
+            cash_entries = list(
+                (
+                    await self.session.scalars(
+                        sa.select(PortfolioLedgerEntry).where(
+                            PortfolioLedgerEntry.portfolio_id == portfolio.id,
+                            PortfolioLedgerEntry.occurred_at <= as_of,
+                            PortfolioLedgerEntry.instrument_id.is_(None),
+                        )
+                    )
+                ).all()
+            )
+            ledger_cash = tuple(LedgerCashEntry(item.currency, item.amount) for item in cash_entries)
+            cash_rows = list(
+                (
+                    await self.session.scalars(
+                        sa.select(CashSnapshot).where(
+                            CashSnapshot.portfolio_version_id == latest_version.id,
+                        )
+                    )
+                ).all()
+            )
+            snapshot_cash = tuple(SnapshotCash(item.currency, item.amount) for item in cash_rows)
+            cash_breaks = reconcile_cash(ledger_cash, snapshot_cash)
+            for cb in cash_breaks:
+                existing = await self.session.scalar(
+                    sa.select(ReconciliationBreak).where(
+                        ReconciliationBreak.portfolio_id == portfolio.id,
+                        ReconciliationBreak.as_of == as_of,
+                        ReconciliationBreak.rule == cb.rule,
+                        ReconciliationBreak.resource_key == cb.instrument_id,
+                    )
+                )
+                if existing is not None:
+                    persisted.append(existing)
+                    continue
+                row = ReconciliationBreak(
+                    organization_id=context.organization_id,
+                    portfolio_id=portfolio.id,
+                    as_of=as_of,
+                    rule=cb.rule,
+                    resource_key=cb.instrument_id,
+                    expected=cb.expected,
+                    actual=cb.actual,
+                    severity=cb.severity,
+                    owner_role="operations",
+                    status="open",
+                    blocking=cb.blocking,
+                )
+                self.session.add(row)
+                await self.session.flush()
+                persisted.append(row)
+                deduplication_key = f"reconciliation:{portfolio.id}:{as_of.date()}:{cb.rule}:{cb.instrument_id}"
+                self.session.add(
+                    OperationalAlert(
+                        organization_id=context.organization_id,
+                        portfolio_id=portfolio.id,
+                        deduplication_key=deduplication_key,
+                        alert_type="reconciliation_break",
+                        severity=cb.severity,
+                        rule_version="reconciliation-v1",
+                        route="operations",
+                        status="open",
+                        payload={"break_id": str(row.id), "rule": cb.rule, "blocking": cb.blocking},
+                    )
+                )
         return tuple(persisted)
 
     async def resolve_break(
@@ -495,6 +726,36 @@ class PaperExecutionService:
         row.status = "resolved"
         row.resolution = {**resolution, "resolved_by": context.subject}
         row.resolved_at = datetime.now(UTC)
+        if resolution.get("method") == "compensating_entry" and resolution.get("compensating_reference"):
+            portfolio = await self.session.get(ModelPortfolio, row.portfolio_id)
+            if portfolio is not None:
+                instrument_id = None
+                if row.rule in ("fill_missing_ledger", "fill_ledger_identity"):
+                    event_key = row.resource_key
+                    fill = await self.session.scalar(sa.select(PaperFill).where(PaperFill.event_key == event_key))
+                    if fill is not None:
+                        order = await self.session.get(PaperOrder, fill.order_id)
+                        if order is not None:
+                            intent = await self.session.get(TradeIntent, order.trade_intent_id)
+                            if intent is not None:
+                                instrument_id = intent.instrument_id
+                expected = row.expected or {}
+                actual = row.actual or {}
+                quantity_delta = Decimal(str(actual.get("quantity", "0"))) - Decimal(str(expected.get("quantity", "0")))
+                amount_delta = Decimal(str(actual.get("amount", "0"))) - Decimal(str(expected.get("amount", "0")))
+                if quantity_delta != 0 or amount_delta != 0:
+                    self.session.add(
+                        PortfolioLedgerEntry(
+                            portfolio_id=row.portfolio_id,
+                            instrument_id=instrument_id,
+                            entry_type="trade",
+                            currency=portfolio.base_currency,
+                            amount=-amount_delta,
+                            quantity=-quantity_delta if quantity_delta != 0 else None,
+                            occurred_at=datetime.now(UTC),
+                            source_reference=str(resolution["compensating_reference"]),
+                        )
+                    )
         self._audit_entity(
             "reconciliation_break.resolve",
             "reconciliation_break",
@@ -751,6 +1012,54 @@ class PaperExecutionService:
         row.decision = decision
         row.decided_by = context.subject
         row.decided_at = datetime.now(UTC)
+        if decision == "promoted":
+            challenger_latest = await self.session.scalar(
+                sa.select(InstitutionalPortfolioVersion)
+                .where(
+                    InstitutionalPortfolioVersion.portfolio_id == row.challenger_portfolio_id,
+                    InstitutionalPortfolioVersion.status.in_(["approved", "draft"]),
+                )
+                .order_by(InstitutionalPortfolioVersion.version.desc())
+                .limit(1)
+            )
+            if challenger_latest is not None:
+                next_version = challenger_latest.version + 1
+                new_version = InstitutionalPortfolioVersion(
+                    portfolio_id=row.challenger_portfolio_id,
+                    mandate_id=row.mandate_id,
+                    version=next_version,
+                    as_of=datetime.now(UTC),
+                    input_snapshot_sha256=challenger_latest.input_snapshot_sha256,
+                    weights_sha256=challenger_latest.weights_sha256,
+                    approved_weights=challenger_latest.approved_weights,
+                    proposal={
+                        "source": "challenger_promotion",
+                        "evaluation_id": str(row.id),
+                        "promoted_from_version": challenger_latest.version,
+                    },
+                    decision={
+                        "decided_by": context.subject,
+                        "decided_at": datetime.now(UTC).isoformat(),
+                        "reason": "challenger_promotion",
+                    },
+                    status="approved",
+                    created_by=context.subject,
+                    approved_by=context.subject,
+                )
+                self.session.add(new_version)
+                await self.session.flush()
+                self._audit_entity(
+                    "portfolio_version.create",
+                    "institutional_portfolio_version",
+                    new_version.id,
+                    context.subject,
+                    context.organization_id,
+                    correlation_id,
+                    {
+                        "version": next_version,
+                        "portfolio_id": str(row.challenger_portfolio_id),
+                    },
+                )
         self._audit_entity(
             "challenger_evaluation.decide",
             "challenger_evaluation",
@@ -792,6 +1101,149 @@ class PaperExecutionService:
                 )
             ).all()
         )
+
+    async def resolve_alert(
+        self,
+        alert_id: UUID,
+        *,
+        resolution: dict[str, object],
+        context: InstitutionalAccessContext,
+        correlation_id: UUID,
+    ) -> OperationalAlert:
+        if "alerts:acknowledge" not in context.permissions:
+            raise PermissionError("permission required: alerts:acknowledge")
+        alert = await self.session.get(OperationalAlert, alert_id, with_for_update=True)
+        if alert is None or alert.organization_id != context.organization_id:
+            raise LookupError("operational alert not found")
+        if alert.status in ("resolved",):
+            return alert
+        if alert.status == "open":
+            alert.status = "acknowledged"
+            alert.acknowledged_by = context.subject
+            alert.acknowledged_at = datetime.now(UTC)
+        alert.status = "resolved"
+        alert.payload = {**alert.payload, "resolution": resolution, "resolved_by": context.subject}
+        self._audit_entity(
+            "operational_alert.resolve",
+            "operational_alert",
+            alert.id,
+            context.subject,
+            context.organization_id,
+            correlation_id,
+            {"deduplication_key": alert.deduplication_key, "resolution": resolution},
+        )
+        return alert
+
+    async def list_alerts(
+        self,
+        context: InstitutionalAccessContext,
+        *,
+        status: str | None = None,
+        severity: str | None = None,
+        alert_type: str | None = None,
+        portfolio_id: UUID | None = None,
+        limit: int = 50,
+    ) -> list[OperationalAlert]:
+        if "alerts:read" not in context.permissions:
+            raise PermissionError("permission required: alerts:read")
+        stmt = sa.select(OperationalAlert).where(OperationalAlert.organization_id == context.organization_id)
+        if status is not None:
+            stmt = stmt.where(OperationalAlert.status == status)
+        if severity is not None:
+            stmt = stmt.where(OperationalAlert.severity == severity)
+        if alert_type is not None:
+            stmt = stmt.where(OperationalAlert.alert_type == alert_type)
+        if portfolio_id is not None:
+            stmt = stmt.where(OperationalAlert.portfolio_id == portfolio_id)
+        stmt = stmt.order_by(OperationalAlert.created_at.desc()).limit(limit)
+        return list((await self.session.scalars(stmt)).all())
+
+    async def list_post_mortems(
+        self,
+        portfolio_id: UUID,
+        *,
+        limit: int = 50,
+    ) -> list[PaperPostMortem]:
+        stmt = sa.select(PaperPostMortem).where(PaperPostMortem.portfolio_id == portfolio_id)
+        stmt = stmt.order_by(PaperPostMortem.created_at.desc()).limit(limit)
+        return list((await self.session.scalars(stmt)).all())
+
+    async def list_challenger_evaluations(
+        self,
+        *,
+        organization_id: UUID | None = None,
+        portfolio_id: UUID | None = None,
+        limit: int = 50,
+    ) -> list[ChallengerEvaluation]:
+        stmt = sa.select(ChallengerEvaluation)
+        if organization_id is not None:
+            stmt = stmt.join(ModelPortfolio, ModelPortfolio.id == ChallengerEvaluation.champion_portfolio_id)
+            stmt = stmt.where(ModelPortfolio.organization_id == organization_id)
+        if portfolio_id is not None:
+            stmt = stmt.where(ChallengerEvaluation.champion_portfolio_id == portfolio_id)
+        stmt = stmt.order_by(ChallengerEvaluation.window_end.desc()).limit(limit)
+        return list((await self.session.scalars(stmt)).all())
+
+    async def get_operational_dashboard(
+        self,
+        organization_id: UUID,
+    ) -> dict[str, object]:
+        now = datetime.now(UTC)
+
+        order_count = await self.session.scalar(
+            sa.select(sa.func.count(PaperOrder.id)).where(
+                PaperOrder.environment == "paper",
+            )
+        )
+        fill_count = await self.session.scalar(
+            sa.select(sa.func.count(PaperFill.id)).where(
+                PaperFill.environment == "paper",
+            )
+        )
+        active_breaks = await self.session.scalar(
+            sa.select(sa.func.count(ReconciliationBreak.id)).where(
+                ReconciliationBreak.status.in_(("open", "acknowledged")),
+            )
+        )
+        blocking_breaks = await self.session.scalar(
+            sa.select(sa.func.count(ReconciliationBreak.id)).where(
+                ReconciliationBreak.status.in_(("open", "acknowledged")),
+                ReconciliationBreak.blocking.is_(True),
+            )
+        )
+        open_alerts = await self.session.scalar(
+            sa.select(sa.func.count(OperationalAlert.id)).where(
+                OperationalAlert.status == "open",
+            )
+        )
+        critical_alerts = await self.session.scalar(
+            sa.select(sa.func.count(OperationalAlert.id)).where(
+                OperationalAlert.status == "open",
+                OperationalAlert.severity == "critical",
+            )
+        )
+        kill_switches = await self.session.scalar(
+            sa.select(sa.func.count(PaperKillSwitch.id)).where(
+                PaperKillSwitch.active.is_(True),
+            )
+        )
+
+        return {
+            "as_of": now.isoformat(),
+            "orders_total": int(order_count or 0),
+            "fills_total": int(fill_count or 0),
+            "reconciliation_breaks_open": int(active_breaks or 0),
+            "reconciliation_breaks_blocking": int(blocking_breaks or 0),
+            "alerts_open": int(open_alerts or 0),
+            "alerts_critical": int(critical_alerts or 0),
+            "kill_switches_active": int(kill_switches or 0),
+            "slo": {
+                "execution_success_rate": "N/A (paper environment)",
+                "reconciliation_freshness": "daily",
+                "alert_acknowledgement_sla": "4h",
+                "nav_publication_sla": "T+1",
+            },
+        }
 
     async def _require_operations_enabled(self, portfolio: ModelPortfolio) -> None:
         kill_switch = await self.session.scalar(
@@ -855,6 +1307,42 @@ class PaperExecutionService:
             intent.organization_id,
             correlation_id,
             {"event_type": event_type, "status": intent.status, "environment": "paper"},
+        )
+
+    def _record_order(
+        self,
+        order: PaperOrder,
+        event_type: str,
+        action: str,
+        actor: str,
+        organization_id: UUID,
+        correlation_id: UUID,
+    ) -> None:
+        event_id = uuid4()
+        self.session.add(
+            DomainOutboxEvent(
+                aggregate_type="paper_order",
+                aggregate_id=order.id,
+                aggregate_version=1,
+                event_type=event_type,
+                payload={
+                    "status": order.status,
+                    "environment": "paper",
+                    "filled_quantity": str(order.filled_quantity),
+                    "requested_quantity": str(order.requested_quantity),
+                },
+                correlation_id=correlation_id,
+                idempotency_key=f"paper-order:{order.id}:{event_type}:{event_id}",
+            )
+        )
+        self._audit_entity(
+            action,
+            "paper_order",
+            order.id,
+            actor,
+            organization_id,
+            correlation_id,
+            {"event_type": event_type, "status": order.status, "environment": "paper"},
         )
 
     def _audit_entity(

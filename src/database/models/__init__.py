@@ -134,6 +134,7 @@ from .policy_intelligence import (  # noqa: F401
     PolicyProbabilityForecast,
     PolicyStageEvent,
     PolicyVote,
+    RegulatoryAction,
 )
 from .portfolio import (  # noqa: F401
     BacktestResult,
@@ -151,26 +152,29 @@ from .portfolio import (  # noqa: F401
     UniverseMembership,
     WorkflowRun,
 )
-from .portfolio_domain import (  # noqa: F401
+from .portfolio_mandates import ModelPortfolio, StrategyMandate  # noqa: F401
+from .portfolio_optimization import (  # noqa: F401
     BacktestConfig,
-    CashSnapshot,
     InstitutionalBacktestRun,
-    InstitutionalPortfolioVersion,
-    InstitutionalRiskPolicy,
-    InstitutionalRiskSnapshot,
-    ModelPortfolio,
-    NavPublication,
     OptimizationRun,
     PortfolioApprovalEvidence,
+)
+from .portfolio_risk import (  # noqa: F401
+    InstitutionalRiskPolicy,
+    InstitutionalRiskSnapshot,
+    RiskBreach,
+    RiskWaiver,
+    StressResult,
+    StressScenario,
+)
+from .portfolio_versions import (  # noqa: F401
+    CashSnapshot,
+    InstitutionalPortfolioVersion,
+    NavPublication,
     PortfolioLedgerEntry,
     PortfolioVersionThesis,
     PortfolioVersionValuation,
     PositionSnapshot,
-    RiskBreach,
-    RiskWaiver,
-    StrategyMandate,
-    StressResult,
-    StressScenario,
 )
 from .readiness import (  # noqa: F401
     ReadinessControl,

@@ -119,6 +119,7 @@ def test_thesis_review_result_fields():
 def test_thesis_review_workflow_approve_signal():
     wf = ThesisReviewWorkflow()
     import asyncio
+
     asyncio.get_event_loop().run_until_complete(wf.approve("reviewer1"))
     assert wf._decision == "approved"
     assert wf._reviewer == "reviewer1"
@@ -127,6 +128,7 @@ def test_thesis_review_workflow_approve_signal():
 def test_thesis_review_workflow_reject_signal():
     wf = ThesisReviewWorkflow()
     import asyncio
+
     asyncio.get_event_loop().run_until_complete(wf.reject("reviewer1", "bad thesis"))
     assert wf._decision == "rejected"
     assert wf._reviewer == "reviewer1"
@@ -135,6 +137,7 @@ def test_thesis_review_workflow_reject_signal():
 def test_thesis_review_workflow_cancel_signal():
     wf = ThesisReviewWorkflow()
     import asyncio
+
     asyncio.get_event_loop().run_until_complete(wf.cancel())
     assert wf._decision == "cancelled"
 
@@ -142,6 +145,7 @@ def test_thesis_review_workflow_cancel_signal():
 def test_thesis_review_workflow_signal_ignores_second_decision():
     wf = ThesisReviewWorkflow()
     import asyncio
+
     asyncio.get_event_loop().run_until_complete(wf.approve("reviewer1"))
     asyncio.get_event_loop().run_until_complete(wf.reject("reviewer2"))
     assert wf._decision == "approved"

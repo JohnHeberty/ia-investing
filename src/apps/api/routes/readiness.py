@@ -125,6 +125,57 @@ class DecisionV1(BaseModel):
     expires_at: datetime
 
 
+class FindingV1(BaseModel):
+    model_config = ConfigDict(extra="forbid", from_attributes=True)
+
+    id: UUID
+    organization_id: UUID
+    domain: str
+    finding_key: str
+    severity: str
+    description: str
+    status: str
+    owner_role: str
+    remediation: str | None
+    exception_expires_at: datetime | None
+    opened_at: datetime
+    closed_at: datetime | None
+
+
+class CreateFindingV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    domain: str = Field(min_length=1, max_length=30)
+    finding_key: str = Field(min_length=1, max_length=120)
+    severity: str = Field(pattern=r"^(low|medium|high|critical)$")
+    description: str = Field(min_length=1)
+    owner_role: str = Field(min_length=1, max_length=100)
+
+
+class UpdateFindingV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    status: str | None = Field(default=None, pattern=r"^(open|remediating|closed|risk_accepted)$")
+    remediation: str | None = None
+    exception_expires_at: datetime | None = None
+    retest_evidence_id: UUID | None = None
+
+
+class ControlV1(BaseModel):
+    model_config = ConfigDict(extra="forbid", from_attributes=True)
+
+    id: UUID
+    organization_id: UUID
+    control_key: str
+    version: int
+    domain: str
+    description: str
+    control_type: str
+    owner_role: str
+    frequency: str
+    status: str
+
+
 @router.post("/evidence", response_model=EvidenceV1, status_code=201)
 async def register_evidence(
     body: RegisterEvidenceV1,
@@ -218,3 +269,87 @@ async def record_readiness_decision(
     except (LookupError, PermissionError, ValueError) as exc:
         raise map_error(exc) from exc
     return DecisionV1.model_validate(row)
+
+
+@router.get("/evidence", response_model=list[EvidenceV1])
+async def list_evidence(
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[EvidenceV1]:
+    rows = await ReadinessService(session).list_evidence(context_from(auth))
+    return [EvidenceV1.model_validate(r) for r in rows]
+
+
+@router.get("/findings", response_model=list[FindingV1])
+async def list_findings(
+    status: str | None = None,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[FindingV1]:
+    rows = await ReadinessService(session).list_findings(context_from(auth), status=status)
+    return [FindingV1.model_validate(r) for r in rows]
+
+
+@router.post("/findings", response_model=FindingV1, status_code=201)
+async def create_finding(
+    body: CreateFindingV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
+    correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> FindingV1:
+    try:
+        row = await ReadinessService(session).create_finding(
+            body.model_dump(mode="python"), context_from(auth), correlation_id or uuid4()
+        )
+    except (PermissionError, ValueError) as exc:
+        raise map_error(exc) from exc
+    return FindingV1.model_validate(row)
+
+
+@router.patch("/findings/{finding_id}", response_model=FindingV1)
+async def update_finding(
+    finding_id: UUID,
+    body: UpdateFindingV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
+    correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> FindingV1:
+    try:
+        row = await ReadinessService(session).update_finding(
+            finding_id,
+            **body.model_dump(exclude_unset=True),
+            context=context_from(auth),
+            correlation_id=correlation_id or uuid4(),
+        )
+    except (LookupError, PermissionError, ValueError) as exc:
+        raise map_error(exc) from exc
+    return FindingV1.model_validate(row)
+
+
+@router.get("/decision-packs", response_model=list[DecisionPackV1])
+async def list_decision_packs(
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[DecisionPackV1]:
+    rows = await ReadinessService(session).list_decision_packs(context_from(auth))
+    return [DecisionPackV1.model_validate(r) for r in rows]
+
+
+@router.get("/decisions", response_model=list[DecisionV1])
+async def list_decisions(
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[DecisionV1]:
+    rows = await ReadinessService(session).list_decisions(context_from(auth))
+    return [DecisionV1.model_validate(r) for r in rows]
+
+
+@router.get("/controls", response_model=list[ControlV1])
+async def list_controls(
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[ControlV1]:
+    rows = await ReadinessService(session).list_controls(context_from(auth))
+    return [ControlV1.model_validate(r) for r in rows]

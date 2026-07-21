@@ -37,6 +37,7 @@ TZ = UTC
 # Port-reachability helpers
 # ---------------------------------------------------------------------------
 
+
 def _host_port_reachable(host: str, port: int, timeout: float = 2.0) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -96,6 +97,7 @@ async def session(engine) -> AsyncGenerator[AsyncSession, None]:
 # MinIO
 # ---------------------------------------------------------------------------
 
+
 @pytest_asyncio.fixture(scope="session")
 async def minio_client():
     if not _minio_reachable():
@@ -115,6 +117,7 @@ async def minio_client():
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _dt(year: int, month: int, day: int, hour: int = 0, minute: int = 0) -> datetime:
     return datetime(year, month, day, hour, minute, tzinfo=TZ)

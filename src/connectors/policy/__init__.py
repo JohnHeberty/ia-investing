@@ -12,6 +12,7 @@ from ._official import (
     parse_camara_stage,
     parse_camara_vote,
     parse_dou_act,
+    parse_dou_xml,
     parse_senado_proposal,
     require_official_egress,
 )
@@ -30,6 +31,7 @@ __all__ = [
     "parse_camara_stage",
     "parse_camara_vote",
     "parse_dou_act",
+    "parse_dou_xml",
     "parse_senado_proposal",
     "require_official_egress",
 ]

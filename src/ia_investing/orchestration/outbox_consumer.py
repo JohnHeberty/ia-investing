@@ -50,9 +50,7 @@ class OutboxConsumer:
 
     async def _poll_once(self) -> int:
         async with self._session_factory() as session:
-            result = await session.execute(
-                select_domain_outbox_unpublished(self._batch_size)
-            )
+            result = await session.execute(select_domain_outbox_unpublished(self._batch_size))
             events = list(result.scalars().all())
             if not events:
                 return 0
@@ -100,5 +98,7 @@ class LogPublisher:
     async def publish(self, event_type: str, payload: dict[str, Any], correlation_id: str) -> None:
         logger.info(
             "outbox event type=%s correlation_id=%s payload_keys=%s",
-            event_type, correlation_id, list(payload.keys()),
+            event_type,
+            correlation_id,
+            list(payload.keys()),
         )

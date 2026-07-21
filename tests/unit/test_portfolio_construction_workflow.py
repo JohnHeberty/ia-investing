@@ -10,7 +10,6 @@ import pytest
 from ia_investing.domain.portfolio_decision import (
     CommitteeVote,
     PortfolioDecisionInputs,
-    validate_decision_inputs,
 )
 
 # Load _scorecard directly from file to avoid cvxpy via portfolio/__init__.py
@@ -24,7 +23,6 @@ ScorecardCalculator = _scorecard.ScorecardCalculator
 from workflows._portfolio_construction import (
     PipelineConfig,
     PortfolioConstructionInput,
-    PortfolioConstructionResult,
     PortfolioConstructionWorkflow,
 )
 
@@ -171,7 +169,7 @@ class TestPortfolioConstructionWorkflow:
     async def test_vote_signal_collected_during_validating(self) -> None:
         wf = self._make_workflow()
         inputs = _make_decision_inputs()
-        cmd = PortfolioConstructionInput(decision_inputs=inputs, approval_timeout_seconds=60)
+        _cmd = PortfolioConstructionInput(decision_inputs=inputs, approval_timeout_seconds=60)
         vote = _make_vote()
         await wf.vote(vote)
         assert len(wf._pending_votes) == 1
@@ -202,18 +200,20 @@ class TestPortfolioConstructionWorkflow:
         )
         cmd = PortfolioConstructionInput(pipeline=pipeline, approval_timeout_seconds=60)
 
-        mock_scorecard = AsyncMock(return_value={
-            "eligibility": "blocked",
-            "overall_score": 0.0,
-            "veto_triggered": ["debt_ebitda_exceeds_5"],
-            "pillar_scores": {},
-            "coverage": 0.0,
-            "data_quality": 1.0,
-            "thesis_freshness": 1.0,
-            "scorecard_type": "industrial",
-            "definition_version": "scorecard-v1",
-            "eligibility_reasons": ["debt_ebitda_exceeds_5"],
-        })
+        mock_scorecard = AsyncMock(
+            return_value={
+                "eligibility": "blocked",
+                "overall_score": 0.0,
+                "veto_triggered": ["debt_ebitda_exceeds_5"],
+                "pillar_scores": {},
+                "coverage": 0.0,
+                "data_quality": 1.0,
+                "thesis_freshness": 1.0,
+                "scorecard_type": "industrial",
+                "definition_version": "scorecard-v1",
+                "eligibility_reasons": ["debt_ebitda_exceeds_5"],
+            }
+        )
 
         with patch("workflows._portfolio_construction.workflow.execute_activity", side_effect=mock_scorecard):
             result = await wf.run(cmd)
@@ -235,9 +235,27 @@ class TestPortfolioConstructionWorkflow:
 
         async def mock_activity(name: str, **kwargs: object) -> dict[str, object]:
             if name == "run_scorecard":
-                return {"eligibility": "eligible", "overall_score": 0.7, "veto_triggered": [], "pillar_scores": {}, "coverage": 1.0, "data_quality": 1.0, "thesis_freshness": 1.0, "scorecard_type": "industrial", "definition_version": "scorecard-v1", "eligibility_reasons": []}
+                return {
+                    "eligibility": "eligible",
+                    "overall_score": 0.7,
+                    "veto_triggered": [],
+                    "pillar_scores": {},
+                    "coverage": 1.0,
+                    "data_quality": 1.0,
+                    "thesis_freshness": 1.0,
+                    "scorecard_type": "industrial",
+                    "definition_version": "scorecard-v1",
+                    "eligibility_reasons": [],
+                }
             if name == "optimize_model_portfolio":
-                return {"status": "infeasible", "weights": {}, "input_sha256": "a" * 64, "solver": "SCS", "diagnostics": {}, "environment": "paper"}
+                return {
+                    "status": "infeasible",
+                    "weights": {},
+                    "input_sha256": "a" * 64,
+                    "solver": "SCS",
+                    "diagnostics": {},
+                    "environment": "paper",
+                }
             return {}
 
         with patch("workflows._portfolio_construction.workflow.execute_activity", side_effect=mock_activity):
@@ -261,9 +279,27 @@ class TestPortfolioConstructionWorkflow:
 
         async def mock_activity(name: str, **kwargs: object) -> dict[str, object]:
             if name == "run_scorecard":
-                return {"eligibility": "eligible", "overall_score": 0.7, "veto_triggered": [], "pillar_scores": {}, "coverage": 1.0, "data_quality": 1.0, "thesis_freshness": 1.0, "scorecard_type": "industrial", "definition_version": "scorecard-v1", "eligibility_reasons": []}
+                return {
+                    "eligibility": "eligible",
+                    "overall_score": 0.7,
+                    "veto_triggered": [],
+                    "pillar_scores": {},
+                    "coverage": 1.0,
+                    "data_quality": 1.0,
+                    "thesis_freshness": 1.0,
+                    "scorecard_type": "industrial",
+                    "definition_version": "scorecard-v1",
+                    "eligibility_reasons": [],
+                }
             if name == "optimize_model_portfolio":
-                return {"status": "optimal", "weights": {"PETR4": 0.30, "VALE5": 0.30, "ITUB4": 0.30, "CASH": 0.10}, "input_sha256": "a" * 64, "solver": "SCS", "diagnostics": {}, "environment": "paper"}
+                return {
+                    "status": "optimal",
+                    "weights": {"PETR4": 0.30, "VALE5": 0.30, "ITUB4": 0.30, "CASH": 0.10},
+                    "input_sha256": "a" * 64,
+                    "solver": "SCS",
+                    "diagnostics": {},
+                    "environment": "paper",
+                }
             if name == "validate_proposal_constraints":
                 return {"passed": True, "issues": [], "weights_sum": 1.0, "sector_totals": {}}
             return {}
@@ -292,11 +328,34 @@ class TestPortfolioConstructionWorkflow:
 
         async def mock_activity(name: str, **kwargs: object) -> dict[str, object]:
             if name == "run_scorecard":
-                return {"eligibility": "eligible", "overall_score": 0.7, "veto_triggered": [], "pillar_scores": {}, "coverage": 1.0, "data_quality": 1.0, "thesis_freshness": 1.0, "scorecard_type": "industrial", "definition_version": "scorecard-v1", "eligibility_reasons": []}
+                return {
+                    "eligibility": "eligible",
+                    "overall_score": 0.7,
+                    "veto_triggered": [],
+                    "pillar_scores": {},
+                    "coverage": 1.0,
+                    "data_quality": 1.0,
+                    "thesis_freshness": 1.0,
+                    "scorecard_type": "industrial",
+                    "definition_version": "scorecard-v1",
+                    "eligibility_reasons": [],
+                }
             if name == "optimize_model_portfolio":
-                return {"status": "optimal", "weights": {"PETR4": 0.50, "VALE5": 0.50}, "input_sha256": "a" * 64, "solver": "SCS", "diagnostics": {}, "environment": "paper"}
+                return {
+                    "status": "optimal",
+                    "weights": {"PETR4": 0.50, "VALE5": 0.50},
+                    "input_sha256": "a" * 64,
+                    "solver": "SCS",
+                    "diagnostics": {},
+                    "environment": "paper",
+                }
             if name == "validate_proposal_constraints":
-                return {"passed": False, "issues": ["above_max_weight: PETR4=0.500000 > 0.20"], "weights_sum": 1.0, "sector_totals": {}}
+                return {
+                    "passed": False,
+                    "issues": ["above_max_weight: PETR4=0.500000 > 0.20"],
+                    "weights_sum": 1.0,
+                    "sector_totals": {},
+                }
             return {}
 
         with patch("workflows._portfolio_construction.workflow.execute_activity", side_effect=mock_activity):

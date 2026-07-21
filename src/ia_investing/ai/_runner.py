@@ -10,10 +10,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from agents import Agent, Runner
-from ia_investing.settings import Settings, get_settings
 from opentelemetry import trace
 from opentelemetry.metrics import get_meter
+
+from agents import Agent, Runner
+from ia_investing.settings import Settings, get_settings
 
 from ._config import AgentConfig
 from ._pricing import estimate_cost as _estimate_cost
@@ -144,13 +145,15 @@ class AgentRunner:
                 if isinstance(final_output, str):
                     with contextlib.suppress(json.JSONDecodeError):
                         final_output = json.loads(final_output)
-                span.set_attributes({
-                    "agent.prompt_tokens": prompt_tokens,
-                    "agent.completion_tokens": completion_tokens,
-                    "agent.cost_usd": cost,
-                    "agent.duration_ms": elapsed_ms,
-                    "agent.status": "completed",
-                })
+                span.set_attributes(
+                    {
+                        "agent.prompt_tokens": prompt_tokens,
+                        "agent.completion_tokens": completion_tokens,
+                        "agent.cost_usd": cost,
+                        "agent.duration_ms": elapsed_ms,
+                        "agent.status": "completed",
+                    }
+                )
                 attrs = {"agent.name": self.config.name, "agent.model": self.config.model}
                 _runner_counter.add(1, {**attrs, "agent.status": "completed"})
                 _runner_token_counter.add(prompt_tokens, {**attrs, "agent.token_type": "prompt"})

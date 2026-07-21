@@ -96,12 +96,14 @@ async def test_partial_failure_records_all_failed_capabilities() -> None:
             raise RuntimeError(f"{capability} unavailable")
         return _output(capability)
 
-    plan = _plan([
-        {"capability": "filing", "question": "q1", "required": True},
-        {"capability": "news", "question": "q2", "required": False},
-        {"capability": "macro", "question": "q3", "required": False},
-        {"capability": "political", "question": "q4", "required": False},
-    ])
+    plan = _plan(
+        [
+            {"capability": "filing", "question": "q1", "required": True},
+            {"capability": "news", "question": "q2", "required": False},
+            {"capability": "macro", "question": "q3", "required": False},
+            {"capability": "political", "question": "q4", "required": False},
+        ]
+    )
     result = await ResearchCoordinator(executor, _budget()).execute(plan)
 
     assert sorted(result.partial_failure_capabilities) == ["macro", "news"]
@@ -120,10 +122,12 @@ async def test_required_step_failure_does_not_block_optional_steps() -> None:
             raise RuntimeError("filing service down")
         return _output(capability)
 
-    plan = _plan([
-        {"capability": "filing", "question": "q1", "required": True},
-        {"capability": "news", "question": "q2", "required": False},
-    ])
+    plan = _plan(
+        [
+            {"capability": "filing", "question": "q1", "required": True},
+            {"capability": "news", "question": "q2", "required": False},
+        ]
+    )
     result = await ResearchCoordinator(executor, _budget()).execute(plan)
 
     assert result.partial_failure_capabilities == ["filing"]
@@ -139,11 +143,13 @@ async def test_optional_step_failure_is_benign() -> None:
         del capability, question
         raise RuntimeError("transient failure")
 
-    plan = _plan([
-        {"capability": "news", "question": "q1", "required": False},
-        {"capability": "macro", "question": "q2", "required": False},
-        {"capability": "political", "question": "q3", "required": False},
-    ])
+    plan = _plan(
+        [
+            {"capability": "news", "question": "q1", "required": False},
+            {"capability": "macro", "question": "q2", "required": False},
+            {"capability": "political", "question": "q3", "required": False},
+        ]
+    )
     result = await ResearchCoordinator(executor, _budget()).execute(plan)
 
     assert result.specialist_outputs == []
@@ -160,11 +166,13 @@ async def test_budget_exceeded_stops_delegation() -> None:
         del question
         return _output(capability)
 
-    plan = _plan([
-        {"capability": "filing", "question": "q1", "required": True},
-        {"capability": "news", "question": "q2", "required": True},
-        {"capability": "macro", "question": "q3", "required": True},
-    ])
+    plan = _plan(
+        [
+            {"capability": "filing", "question": "q1", "required": True},
+            {"capability": "news", "question": "q2", "required": True},
+            {"capability": "macro", "question": "q3", "required": True},
+        ]
+    )
 
     with pytest.raises(GuardrailViolationError, match="budget_exceeded"):
         await ResearchCoordinator(executor, _budget(max_tool_calls=2)).execute(plan)
@@ -194,9 +202,11 @@ async def test_capability_not_in_allowlist_raises() -> None:
         del question
         return _output(capability)
 
-    plan = _plan([
-        {"capability": "filing", "question": "q1", "required": True},
-    ])
+    plan = _plan(
+        [
+            {"capability": "filing", "question": "q1", "required": True},
+        ]
+    )
     plan.steps[0].capability = "shell"  # type: ignore[assignment]
 
     with pytest.raises(PermissionError, match="shell"):
@@ -211,9 +221,11 @@ async def test_specialist_capability_mismatch_detected() -> None:
         del question
         return _output("news")
 
-    plan = _plan([
-        {"capability": "filing", "question": "q1", "required": True},
-    ])
+    plan = _plan(
+        [
+            {"capability": "filing", "question": "q1", "required": True},
+        ]
+    )
 
     with pytest.raises(ValueError, match="specialist changed"):
         await ResearchCoordinator(executor, _budget()).execute(plan)
@@ -233,9 +245,11 @@ async def test_knowledge_cutoff_drift_detected() -> None:
             knowledge_cutoff=datetime(2025, 6, 1, tzinfo=UTC),
         )
 
-    plan = _plan([
-        {"capability": "filing", "question": "q1", "required": True},
-    ])
+    plan = _plan(
+        [
+            {"capability": "filing", "question": "q1", "required": True},
+        ]
+    )
 
     with pytest.raises(ValueError, match="specialist changed"):
         await ResearchCoordinator(executor, _budget()).execute(plan)
@@ -252,10 +266,12 @@ async def test_single_required_failure_still_aggregates() -> None:
         finding = _fact("revenue grew 12%")
         return _output(capability, findings=[finding])
 
-    plan = _plan([
-        {"capability": "filing", "question": "q1", "required": True},
-        {"capability": "news", "question": "q2", "required": True},
-    ])
+    plan = _plan(
+        [
+            {"capability": "filing", "question": "q1", "required": True},
+            {"capability": "news", "question": "q2", "required": True},
+        ]
+    )
     result = await ResearchCoordinator(executor, _budget()).execute(plan)
 
     assert result.partial_failure_capabilities == ["filing"]
@@ -274,10 +290,12 @@ async def test_budget_turns_exceeded() -> None:
         del question
         return _output(capability)
 
-    plan = _plan([
-        {"capability": "filing", "question": "q1", "required": True},
-        {"capability": "news", "question": "q2", "required": True},
-    ])
+    plan = _plan(
+        [
+            {"capability": "filing", "question": "q1", "required": True},
+            {"capability": "news", "question": "q2", "required": True},
+        ]
+    )
 
     with pytest.raises(GuardrailViolationError, match="budget_exceeded"):
         await ResearchCoordinator(executor, _budget(max_turns=1)).execute(plan)

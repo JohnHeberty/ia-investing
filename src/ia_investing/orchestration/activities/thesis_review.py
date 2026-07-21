@@ -3,9 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 
-def load_thesis_context(
-    thesis_id: str, data_as_of: str, knowledge_cutoff: str
-) -> dict[str, Any]:
+def load_thesis_context(thesis_id: str, data_as_of: str, knowledge_cutoff: str) -> dict[str, Any]:
     """Load thesis context for review — mock implementation."""
     return {
         "thesis_id": thesis_id,

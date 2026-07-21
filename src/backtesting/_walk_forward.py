@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
-from datetime import date, timedelta
-from typing import Any
+from dataclasses import dataclass
+from datetime import date
 
 import polars as pl
 
@@ -84,10 +83,18 @@ def _generate_windows(
 def _aggregate_oos_results(folds: tuple[WalkForwardFold, ...]) -> BacktestResult:
     if not folds:
         return BacktestResult(
-            cagr=0.0, sharpe=0.0, sortino=0.0, calmar=0.0,
-            max_drawdown=0.0, win_rate=0.0, total_return=0.0,
-            annual_volatility=0.0, benchmark_return=0.0, alpha=0.0,
-            information_ratio=0.0, trades=[],
+            cagr=0.0,
+            sharpe=0.0,
+            sortino=0.0,
+            calmar=0.0,
+            max_drawdown=0.0,
+            win_rate=0.0,
+            total_return=0.0,
+            annual_volatility=0.0,
+            benchmark_return=0.0,
+            alpha=0.0,
+            information_ratio=0.0,
+            trades=[],
         )
 
     all_trades: list[dict] = []
@@ -128,10 +135,18 @@ def _aggregate_oos_results(folds: tuple[WalkForwardFold, ...]) -> BacktestResult
 
 def _empty_result() -> BacktestResult:
     return BacktestResult(
-        cagr=0.0, sharpe=0.0, sortino=0.0, calmar=0.0,
-        max_drawdown=0.0, win_rate=0.0, total_return=0.0,
-        annual_volatility=0.0, benchmark_return=0.0, alpha=0.0,
-        information_ratio=0.0, trades=[],
+        cagr=0.0,
+        sharpe=0.0,
+        sortino=0.0,
+        calmar=0.0,
+        max_drawdown=0.0,
+        win_rate=0.0,
+        total_return=0.0,
+        annual_volatility=0.0,
+        benchmark_return=0.0,
+        alpha=0.0,
+        information_ratio=0.0,
+        trades=[],
     )
 
 
@@ -145,7 +160,8 @@ async def run_walk_forward(
     config: WalkForwardConfig,
     universe_data: pl.DataFrame,
     strategy_factory: StrategyFactory,
-    baselines: dict[str, Callable[[pl.DataFrame, list[str], dict[str, float]], Awaitable[dict[str, float]]]] | None = None,
+    baselines: dict[str, Callable[[pl.DataFrame, list[str], dict[str, float]], Awaitable[dict[str, float]]]]
+    | None = None,
 ) -> WalkForwardResult:
     engine = BacktestEngine(
         initial_capital=config.initial_capital,
@@ -170,14 +186,8 @@ async def run_walk_forward(
     folds: list[WalkForwardFold] = []
     for window in windows:
         training_data = universe_data.filter(
-            (pl.col("date") >= pl.lit(window.training_start))
-            & (pl.col("date") <= pl.lit(window.training_end))
+            (pl.col("date") >= pl.lit(window.training_start)) & (pl.col("date") <= pl.lit(window.training_end))
         )
-        oos_data = universe_data.filter(
-            (pl.col("date") >= pl.lit(window.oos_start))
-            & (pl.col("date") <= pl.lit(window.oos_end))
-        )
-
         strategy_fn = strategy_factory(training_data, price_cols)
 
         training_result = await engine.run(
@@ -224,8 +234,7 @@ async def run_walk_forward(
     total_oos_bars = sum(
         len(
             universe_data.filter(
-                (pl.col("date") >= pl.lit(fold.window.oos_start))
-                & (pl.col("date") <= pl.lit(fold.window.oos_end))
+                (pl.col("date") >= pl.lit(fold.window.oos_start)) & (pl.col("date") <= pl.lit(fold.window.oos_end))
             )
         )
         for fold in folds

@@ -99,17 +99,11 @@ class SourceRegistryService:
         last_error_code: str | None = None,
         correlation_id: UUID | None = None,
     ) -> None:
-        source = (
-            await self.session.execute(
-                sa.select(DataSource).where(DataSource.code == code)
-            )
-        ).scalar_one_or_none()
+        source = (await self.session.execute(sa.select(DataSource).where(DataSource.code == code))).scalar_one_or_none()
         if source is None:
             raise LookupError(f"data source not found: {code}")
         sla = (
-            await self.session.execute(
-                sa.select(SourceSLA).where(SourceSLA.source_id == source.id)
-            )
+            await self.session.execute(sa.select(SourceSLA).where(SourceSLA.source_id == source.id))
         ).scalar_one_or_none()
         if sla is None:
             raise LookupError(f"SLA not found for source: {code}")

@@ -6,6 +6,15 @@ import numpy as np
 import polars as pl
 import pytest
 
+# Skip this entire module if cvxpy is unavailable or broken (numpy incompatibility).
+try:
+    import cvxpy as _cvxpy_check
+
+    if getattr(_cvxpy_check, "__version__", "").startswith("0.0.0"):
+        pytest.skip("cvxpy unavailable due to numpy incompatibility", allow_module_level=True)
+except (ImportError, ModuleNotFoundError):
+    pytest.skip("cvxpy unavailable", allow_module_level=True)
+
 from portfolio._optimizer import OptimizationResult, OptimizerConfig, PortfolioOptimizer
 
 

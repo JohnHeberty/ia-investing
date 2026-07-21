@@ -40,9 +40,7 @@ async def _seed_issuer(
 ):
     from database.models.catalog import Industry
 
-    ind = (await session.execute(
-        __import__("sqlalchemy").select(Industry).limit(1)
-    )).scalar_one_or_none()
+    ind = (await session.execute(__import__("sqlalchemy").select(Industry).limit(1))).scalar_one_or_none()
     if ind is None:
         ind = Industry(id=uuid4(), name_pt="Petróleo e Gás", sector="Energia", isic_code="06")
         session.add(ind)

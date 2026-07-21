@@ -114,9 +114,7 @@ class PortfolioConstructionWorkflow:
             pipeline_summary=pipeline_summary,
         )
 
-    async def _run_pipeline(
-        self, config: PipelineConfig, summary: dict[str, object]
-    ) -> PortfolioDecisionInputs:
+    async def _run_pipeline(self, config: PipelineConfig, summary: dict[str, object]) -> PortfolioDecisionInputs:
         """Execute eligibility→optimizer→constraints and build PortfolioDecisionInputs."""
         self._state = "eligibility_check"
 
@@ -183,12 +181,18 @@ class PortfolioConstructionWorkflow:
         hard_breach = not constraint_result["passed"]
 
         snapshot_hash = hashlib.sha256(
-            json.dumps({"portfolio_id": config.portfolio_id, "as_of": config.as_of, "weights": weights},
-                       sort_keys=True, separators=(",", ":")).encode()
+            json.dumps(
+                {"portfolio_id": config.portfolio_id, "as_of": config.as_of, "weights": weights},
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
         ).hexdigest()
         proposal_hash = hashlib.sha256(
-            json.dumps({"snapshot": snapshot_hash, "optimizer": opt_result.get("input_sha256", "")},
-                       sort_keys=True, separators=(",", ":")).encode()
+            json.dumps(
+                {"snapshot": snapshot_hash, "optimizer": opt_result.get("input_sha256", "")},
+                sort_keys=True,
+                separators=(",", ":"),
+            ).encode()
         ).hexdigest()
 
         if hard_breach:

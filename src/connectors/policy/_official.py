@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
@@ -266,3 +267,54 @@ def _object_data(document: dict[str, Any], name: str) -> dict[str, object]:
 def _parse_timestamp(value: str) -> datetime:
     parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
     return parsed.replace(tzinfo=UTC) if parsed.tzinfo is None else parsed
+
+
+def parse_dou_xml(payload: FetchedOfficialPayload) -> tuple[OfficialPolicyRecord, ...]:
+    """Parse DOU XML payload into structured policy records."""
+    try:
+        root = ET.fromstring(payload.body)
+    except ET.ParseError as exc:
+        raise ValueError(f"DOU XML parse error: {exc}") from exc
+
+    records: list[OfficialPolicyRecord] = []
+
+    for item in root.iter():
+        if item.tag.endswith("item") or item.tag == "doc":
+            title = ""
+            orgao = ""
+            tipo = ""
+            data_pub = ""
+            external_id = ""
+
+            for child in item:
+                tag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
+                text = (child.text or "").strip()
+                if tag in ("titulo", "title"):
+                    title = text
+                elif tag in ("orgao", "organ"):
+                    orgao = text
+                elif tag in ("tipo", "type"):
+                    tipo = text
+                elif tag in ("dataPublicacao", "pubDate", "data"):
+                    data_pub = text
+                elif tag in ("id", "num"):
+                    external_id = text
+
+            if not external_id:
+                external_id = hashlib.sha256(
+                    f"{orgao}:{tipo}:{title}:{data_pub}".encode()
+                ).hexdigest()[:16]
+
+            if title and orgao and data_pub:
+                records.append(
+                    OfficialPolicyRecord(
+                        authority=orgao,
+                        object_type=tipo or "ato_oficial",
+                        external_id=external_id,
+                        title=title,
+                        published_at=_parse_timestamp(data_pub),
+                        metadata={"raw_xml_tag": item.tag, "source_sha256": payload.content_sha256},
+                    )
+                )
+
+    return tuple(records)

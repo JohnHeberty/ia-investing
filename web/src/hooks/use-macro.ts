@@ -5,23 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { institutionalApi, queryKeys } from "@/lib/api-client";
 
 import type { DataState } from "@/components/domain";
-
-/** Calculate data state from query status and data freshness. */
-function computeDataState(
-  isLoading: boolean,
-  isError: boolean,
-  asOf?: string | null,
-  hasData?: boolean,
-): DataState {
-  if (isLoading) return "empty";
-  if (isError) return "error";
-  if (!hasData) return "missing";
-  if (asOf) {
-    const ageMs = Date.now() - new Date(asOf).getTime();
-    if (ageMs > 60 * 60 * 1000) return "stale";
-  }
-  return "empty";
-}
+import { computeDataState } from "@/lib/data-state";
 
 export interface MacroSeries {
   id: string;

@@ -1,4 +1,5 @@
 """Contract tests for CVM fixture CSVs — validate against official format."""
+
 import csv
 from pathlib import Path
 

@@ -171,9 +171,7 @@ def _build_canonical_analysis() -> CanonicalAnalysisV1:
                 evidence_id=evidence_id,
             )
         ],
-        inferences=[
-            Inference(text="Bullish outlook.", based_on_claim_ids=[claim_id])
-        ],
+        inferences=[Inference(text="Bullish outlook.", based_on_claim_ids=[claim_id])],
         risks=[
             Risk(
                 description="Oil price volatility",

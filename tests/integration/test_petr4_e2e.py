@@ -39,22 +39,24 @@ from ia_investing.application.theses import ThesisService, ThesisSnapshot
 
 _TZ = UTC
 _ACTOR = "analyst-petr4"
-_ALL_PERMS = frozenset({
-    "research_cases:create",
-    "research_cases:submit",
-    "research_cases:assign",
-    "research_cases:review",
-    "research_cases:close",
-    "research_cases:reopen",
-    "research_cases:read",
-    "research_assessments:create",
-    "research_reviews:request",
-    "research_reviews:decide",
-    "research_claims:verify",
-    "research_theses:create",
-    "research_theses:revise",
-    "research_theses:approve",
-})
+_ALL_PERMS = frozenset(
+    {
+        "research_cases:create",
+        "research_cases:submit",
+        "research_cases:assign",
+        "research_cases:review",
+        "research_cases:close",
+        "research_cases:reopen",
+        "research_cases:read",
+        "research_assessments:create",
+        "research_reviews:request",
+        "research_reviews:decide",
+        "research_claims:verify",
+        "research_theses:create",
+        "research_theses:revise",
+        "research_theses:approve",
+    }
+)
 
 
 def _dt(y: int, m: int, d: int, h: int = 0, mi: int = 0) -> datetime:
@@ -63,9 +65,7 @@ def _dt(y: int, m: int, d: int, h: int = 0, mi: int = 0) -> datetime:
 
 async def _find_issuer_id(session: AsyncSession):
     """Return an existing issuer_id from the catalog, or skip."""
-    result = await session.execute(
-        sa.text("SELECT id FROM issuers LIMIT 1")
-    )
+    result = await session.execute(sa.text("SELECT id FROM issuers LIMIT 1"))
     row = result.first()
     if row is None:
         pytest.skip("No issuers in database — run seed/migrations")
@@ -99,27 +99,19 @@ async def test_petr4_full_research_lifecycle(session: AsyncSession) -> None:
             "A dívida líquida está em trajetória sustentável?",
         ),
     )
-    case, created = await case_svc.create(
-        case_cmd, _ACTOR, _ALL_PERMS, f"petr4-e2e-{uuid4()}", correlation
-    )
+    case, created = await case_svc.create(case_cmd, _ACTOR, _ALL_PERMS, f"petr4-e2e-{uuid4()}", correlation)
     assert created is True
     assert case.state == "draft"
     case_id = case.id
 
     # ── 2. Transition: draft → triage → in_research → review ─────────────
-    case = await case_svc.transition(
-        case_id, "triage", 1, _ACTOR, _ALL_PERMS, correlation, "Entered triage"
-    )
+    case = await case_svc.transition(case_id, "triage", 1, _ACTOR, _ALL_PERMS, correlation, "Entered triage")
     assert case.state == "triage"
 
-    case = await case_svc.transition(
-        case_id, "in_research", 2, _ACTOR, _ALL_PERMS, correlation, "Research started"
-    )
+    case = await case_svc.transition(case_id, "in_research", 2, _ACTOR, _ALL_PERMS, correlation, "Research started")
     assert case.state == "in_research"
 
-    case = await case_svc.transition(
-        case_id, "review", 3, _ACTOR, _ALL_PERMS, correlation, "Ready for review"
-    )
+    case = await case_svc.transition(case_id, "review", 3, _ACTOR, _ALL_PERMS, correlation, "Ready for review")
     assert case.state == "review"
 
     # ── 3. Create evidence ───────────────────────────────────────────────
@@ -166,9 +158,7 @@ async def test_petr4_full_research_lifecycle(session: AsyncSession) -> None:
 
     # ── 6. Verify claim ──────────────────────────────────────────────────
     claim_svc = ClaimService(session)
-    verified = await claim_svc.verify(
-        claim.id, now, _ACTOR, _ALL_PERMS, correlation
-    )
+    verified = await claim_svc.verify(claim.id, now, _ACTOR, _ALL_PERMS, correlation)
     assert verified.status == "verified"
 
     # ── 7. Create assessment → request review → approve review ────────────
@@ -207,9 +197,7 @@ async def test_petr4_full_research_lifecycle(session: AsyncSession) -> None:
     assert decision.decision == "approved"
 
     # ── 8. Transition: review → approved ──────────────────────────────────
-    case = await case_svc.transition(
-        case_id, "approved", 4, _ACTOR, _ALL_PERMS, correlation, "Review approved"
-    )
+    case = await case_svc.transition(case_id, "approved", 4, _ACTOR, _ALL_PERMS, correlation, "Review approved")
     assert case.state == "approved"
 
     # ── 9. Create thesis for PETR4 ───────────────────────────────────────
@@ -282,16 +270,12 @@ async def test_petr4_full_research_lifecycle(session: AsyncSession) -> None:
     assert db_case.lock_version == 4
 
     evidence_count = await session.scalar(
-        sa.select(sa.func.count(ResearchEvidence.id)).where(
-            ResearchEvidence.research_case_id == case_id
-        )
+        sa.select(sa.func.count(ResearchEvidence.id)).where(ResearchEvidence.research_case_id == case_id)
     )
     assert evidence_count == 1
 
     claim_count = await session.scalar(
-        sa.select(sa.func.count(ResearchClaim.id)).where(
-            ResearchClaim.research_case_id == case_id
-        )
+        sa.select(sa.func.count(ResearchClaim.id)).where(ResearchClaim.research_case_id == case_id)
     )
     assert claim_count == 1
 
@@ -304,17 +288,13 @@ async def test_petr4_full_research_lifecycle(session: AsyncSession) -> None:
     assert db_thesis.status == "active"
 
     version_count = await session.scalar(
-        sa.select(sa.func.count(ResearchThesisVersion.id)).where(
-            ResearchThesisVersion.thesis_id == thesis_id
-        )
+        sa.select(sa.func.count(ResearchThesisVersion.id)).where(ResearchThesisVersion.thesis_id == thesis_id)
     )
     assert version_count == 1
 
     # ThesisVersionClaim link exists
     thesis_claim_link = await session.scalar(
-        sa.select(sa.func.count(ThesisVersionClaim.claim_id)).where(
-            ThesisVersionClaim.thesis_version_id == version_id
-        )
+        sa.select(sa.func.count(ThesisVersionClaim.claim_id)).where(ThesisVersionClaim.thesis_version_id == version_id)
     )
     assert thesis_claim_link == 1
 
@@ -365,21 +345,15 @@ async def test_petr4_case_rejection_and_reopen(session: AsyncSession) -> None:
     await case_svc.transition(case.id, "review", 3, _ACTOR, _ALL_PERMS, correlation, "")
 
     # review → rejected
-    case = await case_svc.transition(
-        case.id, "rejected", 4, _ACTOR, _ALL_PERMS, correlation, "Insufficient data"
-    )
+    case = await case_svc.transition(case.id, "rejected", 4, _ACTOR, _ALL_PERMS, correlation, "Insufficient data")
     assert case.state == "rejected"
 
     # rejected → closed
-    case = await case_svc.transition(
-        case.id, "closed", 5, _ACTOR, _ALL_PERMS, correlation, "Closing rejected case"
-    )
+    case = await case_svc.transition(case.id, "closed", 5, _ACTOR, _ALL_PERMS, correlation, "Closing rejected case")
     assert case.state == "closed"
 
     # closed → triage (reopen)
-    case = await case_svc.transition(
-        case.id, "triage", 6, _ACTOR, _ALL_PERMS, correlation, "New data available"
-    )
+    case = await case_svc.transition(case.id, "triage", 6, _ACTOR, _ALL_PERMS, correlation, "New data available")
     assert case.state == "triage"
 
     await session.commit()

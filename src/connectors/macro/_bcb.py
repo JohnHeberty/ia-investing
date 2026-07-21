@@ -15,6 +15,21 @@ SERIES_SELIC = 432
 SERIES_IPCA = 433
 SERIES_IPCA_MONTHLY = 7062
 SERIES_USD_BRL = 1
+SERIES_FOCUS_SELIC = 4513
+SERIES_FOCUS_IPCA = 4512
+SERIES_FOCUS_USD = 4514
+SERIES_FOCUS_GDP = 4518
+
+MACRO_SERIES_INVENTORY: dict[str, dict[str, object]] = {
+    "SELIC": {"code": SERIES_SELIC, "unit": "% a.a.", "frequency": "daily", "source": "BCB_SGS"},
+    "IPCA": {"code": SERIES_IPCA, "unit": "% a.m.", "frequency": "monthly", "source": "BCB_SGS"},
+    "IPCA_Mensal": {"code": SERIES_IPCA_MONTHLY, "unit": "% a.m.", "frequency": "monthly", "source": "BCB_SGS"},
+    "USD_BRL": {"code": SERIES_USD_BRL, "unit": "BRL", "frequency": "daily", "source": "BCB_SGS"},
+    "FOCUS_SELIC": {"code": SERIES_FOCUS_SELIC, "unit": "% a.a.", "frequency": "daily", "source": "BCB_Focus"},
+    "FOCUS_IPCA": {"code": SERIES_FOCUS_IPCA, "unit": "% a.a.", "frequency": "daily", "source": "BCB_Focus"},
+    "FOCUS_USD": {"code": SERIES_FOCUS_USD, "unit": "BRL", "frequency": "daily", "source": "BCB_Focus"},
+    "FOCUS_GDP": {"code": SERIES_FOCUS_GDP, "unit": "%", "frequency": "daily", "source": "BCB_Focus"},
+}
 
 
 @dataclass(slots=True)
@@ -142,5 +157,50 @@ async def get_usd_brl(
         end_date,
         client,
         indicator_name="USD/BRL",
+        unit="BRL",
+    )
+
+
+async def get_focus_selic(
+    start_date: date,
+    end_date: date,
+    client: HttpClient | None = None,
+) -> list[MacroObservation]:
+    return await get_bcb_series(
+        SERIES_FOCUS_SELIC,
+        start_date,
+        end_date,
+        client,
+        indicator_name="FOCUS_SELIC",
+        unit="% a.a.",
+    )
+
+
+async def get_focus_ipca(
+    start_date: date,
+    end_date: date,
+    client: HttpClient | None = None,
+) -> list[MacroObservation]:
+    return await get_bcb_series(
+        SERIES_FOCUS_IPCA,
+        start_date,
+        end_date,
+        client,
+        indicator_name="FOCUS_IPCA",
+        unit="% a.a.",
+    )
+
+
+async def get_focus_usd(
+    start_date: date,
+    end_date: date,
+    client: HttpClient | None = None,
+) -> list[MacroObservation]:
+    return await get_bcb_series(
+        SERIES_FOCUS_USD,
+        start_date,
+        end_date,
+        client,
+        indicator_name="FOCUS_USD",
         unit="BRL",
     )

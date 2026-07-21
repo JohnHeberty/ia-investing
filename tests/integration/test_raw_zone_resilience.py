@@ -100,9 +100,9 @@ async def test_retry_after_s3_failure_succeeds(
     assert len(failing_store._attempts) == 2
 
     # Verify persisted in DB
-    version = (await session.execute(
-        sa.select(SourceObjectVersion).where(SourceObjectVersion.id == result.version_id)
-    )).scalar_one()
+    version = (
+        await session.execute(sa.select(SourceObjectVersion).where(SourceObjectVersion.id == result.version_id))
+    ).scalar_one()
     assert version.content_sha256 == _sha256(item.content)
     assert version.size_bytes == len(item.content)
 
@@ -159,9 +159,7 @@ async def test_concurrent_duplicate_registration(
     # Verify exactly one version exists for this content
     digest = _sha256(content)
     count = await session.scalar(
-        sa.select(sa.func.count(SourceObjectVersion.id)).where(
-            SourceObjectVersion.content_sha256 == digest
-        )
+        sa.select(sa.func.count(SourceObjectVersion.id)).where(SourceObjectVersion.content_sha256 == digest)
     )
     assert count == 1
     await session.commit()
@@ -226,16 +224,16 @@ async def test_orphaned_s3_object_handled_on_retry(
 
     # Delete from DB but keep in S3 (simulates crash after put_once, before commit)
     await session.delete(
-        (await session.execute(
-            sa.select(SourceObjectVersion).where(SourceObjectVersion.id == r1.version_id)
-        )).scalar_one()
+        (
+            await session.execute(sa.select(SourceObjectVersion).where(SourceObjectVersion.id == r1.version_id))
+        ).scalar_one()
     )
     await session.flush()
 
     # Also delete the SourceObject so we get a fresh one
-    source_obj = (await session.execute(
-        sa.select(SourceObject).where(SourceObject.id == r1.source_object_id)
-    )).scalar_one()
+    source_obj = (
+        await session.execute(sa.select(SourceObject).where(SourceObject.id == r1.source_object_id))
+    ).scalar_one()
     await session.delete(source_obj)
     await session.flush()
 
@@ -245,9 +243,9 @@ async def test_orphaned_s3_object_handled_on_retry(
     assert r2.source_object_id != r1.source_object_id
 
     # Verify version points to same S3 content
-    version = (await session.execute(
-        sa.select(SourceObjectVersion).where(SourceObjectVersion.id == r2.version_id)
-    )).scalar_one()
+    version = (
+        await session.execute(sa.select(SourceObjectVersion).where(SourceObjectVersion.id == r2.version_id))
+    ).scalar_one()
     assert version.content_sha256 == _sha256(content)
 
     # Verify content readable from S3
@@ -293,12 +291,12 @@ async def test_different_content_creates_new_version(
     assert count == 2
 
     # Both objects readable from S3
-    v1 = (await session.execute(
-        sa.select(SourceObjectVersion).where(SourceObjectVersion.id == r1.version_id)
-    )).scalar_one()
-    v2 = (await session.execute(
-        sa.select(SourceObjectVersion).where(SourceObjectVersion.id == r2.version_id)
-    )).scalar_one()
+    v1 = (
+        await session.execute(sa.select(SourceObjectVersion).where(SourceObjectVersion.id == r1.version_id))
+    ).scalar_one()
+    v2 = (
+        await session.execute(sa.select(SourceObjectVersion).where(SourceObjectVersion.id == r2.version_id))
+    ).scalar_one()
 
     obj1 = minio_client.get_object(Bucket="raw-documents", Key=v1.storage_key)
     assert obj1["Body"].read() == item_v1.content

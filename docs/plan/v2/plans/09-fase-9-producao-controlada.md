@@ -186,11 +186,14 @@ O gate deve falhar fechado diante de parecer ausente, licença incerta, finding 
 
 5 arquivos de readiness/ verificados: `README.md`, `product-perimeter.md`, `control-matrix.md` (REAL — 3 arquivos mapeiam obrigações/controles/owners/evidências). **2 STUBS identificados**: `threat-model.md` (19 linhas, esqueleto sem STRIDE/mitigations) e `bcp-dr.md` (21 linhas, skeleton sem RTO/RPO/runbook concreto). 2 baseline docs: `quality-baseline.md` (REAL — dados empíricos: 98 testes, 24% coverage, ruff/mypy) e `security-baseline.md` (REAL — detect-secrets + pip-audit findings). Pendências críticas: ambos os stubs devem ser expandidos para documentação completa antes do gate Fase 9.
 
-### Auditoria de código (2026-07-19)
+### Auditoria de código (2026-07-21)
 
 **Encontrado no código:**
 - Readiness gate completo: ReadinessDecisionPack, ReadinessDecision, ReadinessVote, ReadinessEvidence, ReadinessFinding, ReadinessControl (6 tabelas em database/models/readiness.py, migration 6904a13eb7a7)
-- API lifecycle completo: POST endpoints para evidence register/verify, pack freeze, vote sign, decide (routes/readiness.py:128-215)
+- API lifecycle completo: POST endpoints para evidence register/verify, pack freeze, vote sign, decide (routes/readiness.py:128-220)
+- **GET/list endpoints adicionados**: GET /evidence, GET /findings, GET /decision-packs, GET /decisions, GET /controls (routes/readiness.py:220-300)
+- **Finding management adicionado**: POST /findings (create), PATCH /findings/{id} (update/status/remediation) (routes/readiness.py:253-280)
+- **Bug corrigido**: `conflicts_disclosed` agora lê valor real do DB em vez de hardcoded `True` (application/readiness.py:190)
 - AuditLog com correlation_id em toda mutação readiness (readiness.py:222-240)
 - Dissent registrado explicitamente em ReadinessDecision.dissent (readiness.py:174)
 - Persona permissions com 6 roles (identity.py:6-32) e 7 REQUIRED_VOTER_ROLES (readiness.py:8)
@@ -199,13 +202,12 @@ O gate deve falhar fechado diante de parecer ausente, licença incerta, finding 
 - Append-only patterns: financial facts (revision_number), metric observations (idempotent inserts), raw zone (immutable)
 - Kill switch com 4-eyes (paper_execution.py:536-605) e endpoints (paper_execution.py:456-485)
 
-**Gaps críticos:**
+**Gaps críticos (requerem processos humanos):**
 - `threat-model.md` e `bcp-dr.md` permanecem como STUBS (19 e 21 linhas)
-- Sem GET endpoints para listar decision packs, votes, dissent, ou findings
-- Sem ControlMatrixVersion model (manifest é JSONB livre)
 - Sem end-to-end lineage query (segments existem individualmente)
 - Sem SLO definitions ou breach tracking
 - Sem drift detection
 - Sem model risk inventory formal
 - PERSONA_PERMISSIONS não mapeia readiness:verify/freeze
 - Proteção contra SQL direto é apenas app-layer (sem triggers/RLS)
+- **Pendências de processo**: parecer jurídico, pentest, DR exercise, data license verification, model risk validation

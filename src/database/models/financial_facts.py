@@ -155,9 +155,7 @@ class RestatementLog(Base):
     revision_number: Mapped[int] = mapped_column(sa.Integer)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
-    __table_args__ = (
-        sa.CheckConstraint("revision_number > 0", name="positive_revision_number"),
-    )
+    __table_args__ = (sa.CheckConstraint("revision_number > 0", name="positive_revision_number"),)
 
 
 class MetricDefinition(Base):

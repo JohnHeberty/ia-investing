@@ -74,21 +74,21 @@ async def test_register_source_creates_entities_and_audit() -> None:
 async def test_update_health_records_success() -> None:
     """update_health with last_success_at updates SLA and emits audit."""
     mock_session = AsyncMock()
-    sla_obj = SimpleNamespace(
-        last_success_at=None, last_failure_at=None, last_error_code=None
-    )
+    sla_obj = SimpleNamespace(last_success_at=None, last_failure_at=None, last_error_code=None)
     source_obj = SimpleNamespace(id=uuid4(), code="test-source")
 
     async def fake_execute(stmt):
         class FakeResult:
             def scalar_one_or_none(self):
                 return source_obj
+
         return FakeResult()
 
     async def fake_execute_sla(stmt):
         class FakeResult:
             def scalar_one_or_none(self):
                 return sla_obj
+
         return FakeResult()
 
     call_count = 0

@@ -1,4 +1,5 @@
 """Contract tests for B3 COTAHIST parser and market data models."""
+
 from datetime import date
 
 import pytest
@@ -32,16 +33,16 @@ def _build_valid_line() -> str:
         (0, "01"),
         (2, "20241230"),
         (10, "02"),
-        (12, "PETR4      "),       # 12 chars
-        (24, "PETROLEO BRASIL"),   # 14 chars
-        (38, "ON NM "),            # 6 chars
-        (58, "0000000000724"),     # 13 chars - PREABE
-        (71, "0000000000735"),     # PREMAX
-        (84, "0000000000710"),     # PREMIN
-        (97, "0000000000722"),     # PREMED
-        (110, "0000000000730"),    # PREULT
-        (156, "00005000"),         # 8 chars - TOTNEG
-        (164, "0000000001000000"), # 16 chars - QUATOT
+        (12, "PETR4      "),  # 12 chars
+        (24, "PETROLEO BRASIL"),  # 14 chars
+        (38, "ON NM "),  # 6 chars
+        (58, "0000000000724"),  # 13 chars - PREABE
+        (71, "0000000000735"),  # PREMAX
+        (84, "0000000000710"),  # PREMIN
+        (97, "0000000000722"),  # PREMED
+        (110, "0000000000730"),  # PREULT
+        (156, "00005000"),  # 8 chars - TOTNEG
+        (164, "0000000001000000"),  # 16 chars - QUATOT
         (180, "000000000072200000"),  # 18 chars (padded in loop below)
     ]
 
@@ -265,10 +266,21 @@ def test_cotahist_trade_to_dict_completeness() -> None:
     trade = CotahistTrade(trade_date=date(2024, 1, 1), ticker="TEST")
     d = trade.to_dict()
     expected_keys = {
-        "trade_date", "ticker", "cod_bdi", "nome_resumido", "especificacao",
-        "moeda", "preco_abertura", "preco_maximo", "preco_minimo", "preco_medio",
-        "preco_ultimo", "num_negocios", "qtd_titulos_negociados",
-        "volume_financeiro", "isin",
+        "trade_date",
+        "ticker",
+        "cod_bdi",
+        "nome_resumido",
+        "especificacao",
+        "moeda",
+        "preco_abertura",
+        "preco_maximo",
+        "preco_minimo",
+        "preco_medio",
+        "preco_ultimo",
+        "num_negocios",
+        "qtd_titulos_negociados",
+        "volume_financeiro",
+        "isin",
     }
     assert expected_keys == set(d.keys())
 

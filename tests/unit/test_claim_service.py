@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
 
 from ia_investing.application.research import ClaimService
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -126,7 +125,9 @@ async def test_verify_rejects_naive_cutoff() -> None:
 @pytest.mark.asyncio
 async def test_material_claim_fails_without_evidence() -> None:
     claim = _make_claim(is_material=True)
-    session = _make_session(claim=claim, execute_result=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))))
+    session = _make_session(
+        claim=claim, execute_result=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[]))))
+    )
     service = ClaimService(session)
 
     with pytest.raises(ValueError, match="material claim cannot be verified"):
@@ -148,7 +149,7 @@ async def test_material_claim_fails_without_evidence() -> None:
 async def test_verify_filters_revoked_evidence() -> None:
     claim = _make_claim(is_material=True)
     ev = _make_evidence(revoked_at=datetime(2026, 6, 1, tzinfo=UTC))
-    link = _make_link(ev.id, stance="supporting")
+    _make_link(ev.id, stance="supporting")
     result = MagicMock()
     result.scalars.return_value.all.return_value = [ev]
     result.__iter__ = lambda self: iter([(_make_evidence(revoked_at=datetime(2026, 6, 1, tzinfo=UTC)), 0.8)])

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.agents import AuditLog
 from database.models.readiness import (
+    ReadinessControl,
     ReadinessDecision,
     ReadinessDecisionPack,
     ReadinessEvidence,
@@ -187,7 +188,7 @@ class ReadinessService:
                 FindingStatus(item.finding_key, item.severity, item.status, item.exception_expires_at)
                 for item in findings
             ),
-            votes=tuple(VoteStatus(item.voter_role, item.vote, True) for item in votes),
+            votes=tuple(VoteStatus(item.voter_role, item.vote, bool(item.conflicts)) for item in votes),
         )
         decision = ReadinessDecision(
             decision_pack_id=pack.id,
@@ -238,3 +239,117 @@ class ReadinessService:
                 details={"organization_id": str(context.organization_id)},
             )
         )
+
+    async def list_evidence(
+        self,
+        context: InstitutionalAccessContext,
+        *,
+        limit: int = 50,
+    ) -> list[ReadinessEvidence]:
+        result = await self.session.scalars(
+            sa.select(ReadinessEvidence)
+            .where(ReadinessEvidence.organization_id == context.organization_id)
+            .order_by(ReadinessEvidence.issued_at.desc())
+            .limit(limit)
+        )
+        return list(result.all())
+
+    async def list_findings(
+        self,
+        context: InstitutionalAccessContext,
+        *,
+        status: str | None = None,
+        limit: int = 50,
+    ) -> list[ReadinessFinding]:
+        stmt = sa.select(ReadinessFinding).where(ReadinessFinding.organization_id == context.organization_id)
+        if status is not None:
+            stmt = stmt.where(ReadinessFinding.status == status)
+        result = await self.session.scalars(stmt.order_by(ReadinessFinding.opened_at.desc()).limit(limit))
+        return list(result.all())
+
+    async def create_finding(
+        self,
+        payload: dict[str, object],
+        context: InstitutionalAccessContext,
+        correlation_id: UUID,
+    ) -> ReadinessFinding:
+        self._require(context, "readiness:verify")
+        finding = ReadinessFinding(organization_id=context.organization_id, status="open", **payload)
+        self.session.add(finding)
+        await self.session.flush()
+        self._audit("readiness_finding.create", "readiness_finding", finding.id, context, correlation_id)
+        return finding
+
+    async def update_finding(
+        self,
+        finding_id: UUID,
+        *,
+        status: str | None = None,
+        remediation: str | None = None,
+        exception_expires_at: datetime | None = None,
+        retest_evidence_id: UUID | None = None,
+        context: InstitutionalAccessContext,
+        correlation_id: UUID,
+    ) -> ReadinessFinding:
+        self._require(context, "readiness:verify")
+        finding = await self.session.get(ReadinessFinding, finding_id, with_for_update=True)
+        if finding is None or finding.organization_id != context.organization_id:
+            raise LookupError("readiness finding not found")
+        if status is not None:
+            finding.status = status
+            if status == "closed":
+                finding.closed_at = datetime.now(UTC)
+                if retest_evidence_id is not None:
+                    finding.retest_evidence_id = retest_evidence_id
+        if remediation is not None:
+            finding.remediation = remediation
+        if exception_expires_at is not None:
+            finding.exception_expires_at = exception_expires_at
+        self._audit("readiness_finding.update", "readiness_finding", finding.id, context, correlation_id)
+        return finding
+
+    async def list_decision_packs(
+        self,
+        context: InstitutionalAccessContext,
+        *,
+        limit: int = 20,
+    ) -> list[ReadinessDecisionPack]:
+        result = await self.session.scalars(
+            sa.select(ReadinessDecisionPack)
+            .where(ReadinessDecisionPack.organization_id == context.organization_id)
+            .order_by(ReadinessDecisionPack.version.desc())
+            .limit(limit)
+        )
+        return list(result.all())
+
+    async def list_decisions(
+        self,
+        context: InstitutionalAccessContext,
+        *,
+        limit: int = 20,
+    ) -> list[ReadinessDecision]:
+        packs = await self.list_decision_packs(context, limit=limit)
+        pack_ids = [p.id for p in packs]
+        if not pack_ids:
+            return []
+        result = await self.session.scalars(
+            sa.select(ReadinessDecision)
+            .where(ReadinessDecision.decision_pack_id.in_(pack_ids))
+            .order_by(ReadinessDecision.decided_at.desc())
+            .limit(limit)
+        )
+        return list(result.all())
+
+    async def list_controls(
+        self,
+        context: InstitutionalAccessContext,
+        *,
+        limit: int = 50,
+    ) -> list[ReadinessControl]:
+        result = await self.session.scalars(
+            sa.select(ReadinessControl)
+            .where(ReadinessControl.organization_id == context.organization_id)
+            .order_by(ReadinessControl.domain)
+            .limit(limit)
+        )
+        return list(result.all())

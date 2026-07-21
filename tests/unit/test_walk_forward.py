@@ -10,9 +10,9 @@ from backtesting._baselines import (
     equal_weight_strategy,
     make_baseline_strategies,
     market_cap_proxy_strategy,
-    momentum_strategy,
     sector_neutral_strategy,
 )
+from backtesting._engine import BacktestResult
 from backtesting._walk_forward import (
     WalkForwardConfig,
     WalkForwardWindow,
@@ -20,11 +20,11 @@ from backtesting._walk_forward import (
     _generate_windows,
     run_walk_forward,
 )
-from backtesting._engine import BacktestResult
 
 
 def _make_price_data(start: date, days: int, tickers: list[str]) -> pl.DataFrame:
     import random
+
     random.seed(42)
     dates = [start + __import__("datetime").timedelta(days=i) for i in range(days)]
     data: dict[str, list] = {"date": dates}
@@ -46,7 +46,8 @@ def _constant_strategy(value: float) -> Callable[..., Awaitable[dict[str, float]
         if not price_cols:
             return {}
         weight = value / len(price_cols)
-        return {col: weight for col in price_cols}
+        return dict.fromkeys(price_cols, weight)
+
     return strategy
 
 
@@ -109,24 +110,48 @@ class TestWalkForwardWindows:
 
 class TestAggregateOOS:
     def test_aggregate_averages_metrics(self) -> None:
-        fold1 = type("Fold", (), {
-            "oos_result": BacktestResult(
-                cagr=0.10, sharpe=1.0, sortino=1.5, calmar=2.0,
-                max_drawdown=0.05, win_rate=0.55, total_return=0.10,
-                annual_volatility=0.12, benchmark_return=0.08, alpha=0.02,
-                information_ratio=0.5, trades=[],
-            ),
-            "window": WalkForwardWindow(date(2025, 1, 1), date(2025, 3, 31), date(2025, 4, 1), date(2025, 6, 30)),
-        })()
-        fold2 = type("Fold", (), {
-            "oos_result": BacktestResult(
-                cagr=0.20, sharpe=2.0, sortino=3.0, calmar=4.0,
-                max_drawdown=0.10, win_rate=0.60, total_return=0.20,
-                annual_volatility=0.15, benchmark_return=0.06, alpha=0.14,
-                information_ratio=1.0, trades=[],
-            ),
-            "window": WalkForwardWindow(date(2025, 4, 1), date(2025, 6, 30), date(2025, 7, 1), date(2025, 9, 30)),
-        })()
+        fold1 = type(
+            "Fold",
+            (),
+            {
+                "oos_result": BacktestResult(
+                    cagr=0.10,
+                    sharpe=1.0,
+                    sortino=1.5,
+                    calmar=2.0,
+                    max_drawdown=0.05,
+                    win_rate=0.55,
+                    total_return=0.10,
+                    annual_volatility=0.12,
+                    benchmark_return=0.08,
+                    alpha=0.02,
+                    information_ratio=0.5,
+                    trades=[],
+                ),
+                "window": WalkForwardWindow(date(2025, 1, 1), date(2025, 3, 31), date(2025, 4, 1), date(2025, 6, 30)),
+            },
+        )()
+        fold2 = type(
+            "Fold",
+            (),
+            {
+                "oos_result": BacktestResult(
+                    cagr=0.20,
+                    sharpe=2.0,
+                    sortino=3.0,
+                    calmar=4.0,
+                    max_drawdown=0.10,
+                    win_rate=0.60,
+                    total_return=0.20,
+                    annual_volatility=0.15,
+                    benchmark_return=0.06,
+                    alpha=0.14,
+                    information_ratio=1.0,
+                    trades=[],
+                ),
+                "window": WalkForwardWindow(date(2025, 4, 1), date(2025, 6, 30), date(2025, 7, 1), date(2025, 9, 30)),
+            },
+        )()
         result = _aggregate_oos_results((fold1, fold2))
         assert result.cagr == pytest.approx(0.15)
         assert result.sharpe == pytest.approx(1.5)
@@ -215,11 +240,13 @@ class TestBaselineStrategies:
 
     @pytest.mark.asyncio
     async def test_market_cap_proxy_weights_by_price(self) -> None:
-        df = pl.DataFrame({
-            "date": [date(2025, 1, 1)],
-            "A": [200.0],
-            "B": [100.0],
-        })
+        df = pl.DataFrame(
+            {
+                "date": [date(2025, 1, 1)],
+                "A": [200.0],
+                "B": [100.0],
+            }
+        )
         weights = await market_cap_proxy_strategy(df, ["A", "B"], {})
         assert weights["A"] == pytest.approx(2 / 3)
         assert weights["B"] == pytest.approx(1 / 3)

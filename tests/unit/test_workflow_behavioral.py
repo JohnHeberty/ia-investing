@@ -3,6 +3,7 @@
 Covers: approval, rejection, timeout, cancel, idempotency, signal buffering,
 conditional approval, and full run-to-completion with mocked Temporal primitives.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -31,11 +32,11 @@ def _risk_vote(*, decision: str = "approved") -> CommitteeVote:
     return CommitteeVote("risk-carol", "risk_officer", decision, "ok", _FAKE)
 
 
-async def _async_run(coro):  # noqa: ANN001, ANN202
+async def _async_run(coro):
     return await coro
 
 
-def _run(coro):  # noqa: ANN001
+def _run(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
 
@@ -45,7 +46,6 @@ def _run(coro):  # noqa: ANN001
 
 
 class TestApprovalGateBehavioral:
-
     @pytest.mark.asyncio
     async def test_approval_full_run(self) -> None:
         wf = ApprovalGateWorkflow()
@@ -132,7 +132,6 @@ class TestApprovalGateBehavioral:
 
 
 class TestPaperRebalanceBehavioral:
-
     @pytest.mark.asyncio
     async def test_approval_full_run(self) -> None:
         wf = PaperRebalanceWorkflow()
@@ -238,7 +237,6 @@ class TestPaperRebalanceBehavioral:
 
 
 class TestPolicyEventBehavioral:
-
     @pytest.mark.asyncio
     async def test_material_approval_full_run(self) -> None:
         wf = PolicyEventWorkflow()
@@ -307,14 +305,19 @@ class TestPolicyEventBehavioral:
 
 
 class TestPortfolioConstructionBehavioral:
-
     def _precomputed_cmd(self) -> PortfolioConstructionInput:
         from ia_investing.domain.portfolio_decision import PortfolioDecisionInputs
+
         inputs = PortfolioDecisionInputs(
-            portfolio_id="p-1", proposed_by="pm-alice",
-            input_snapshot_sha256=_FAKE, proposal_sha256=_FAKE,
-            risk_opinion="approved", compliance_opinion="approved",
-            optimizer_status="optimal", eligible=True, hard_breach=False,
+            portfolio_id="p-1",
+            proposed_by="pm-alice",
+            input_snapshot_sha256=_FAKE,
+            proposal_sha256=_FAKE,
+            risk_opinion="approved",
+            compliance_opinion="approved",
+            optimizer_status="optimal",
+            eligible=True,
+            hard_breach=False,
         )
         return PortfolioConstructionInput(decision_inputs=inputs, approval_timeout_seconds=300)
 
@@ -380,10 +383,16 @@ class TestPortfolioConstructionBehavioral:
         cmd = self._precomputed_cmd()
 
         async def inject(*a: object, **kw: object) -> None:
-            wf._votes.append(CommitteeVote(
-                "pm-bob", "portfolio_manager", "approved_with_conditions",
-                "ok", _FAKE, conditions=("monitor leverage",),
-            ))
+            wf._votes.append(
+                CommitteeVote(
+                    "pm-bob",
+                    "portfolio_manager",
+                    "approved_with_conditions",
+                    "ok",
+                    _FAKE,
+                    conditions=("monitor leverage",),
+                )
+            )
             wf._votes.append(_risk_vote())
 
         with patch("workflows._portfolio_construction.workflow.wait_condition", side_effect=inject):
@@ -406,7 +415,6 @@ class TestPortfolioConstructionBehavioral:
 
 
 class TestThesisReviewBehavioral:
-
     def _make_cmd(self, **overrides: object) -> ThesisReviewInput:
         return ThesisReviewInput(
             thesis_id=str(overrides.get("tid", "t-1")),
@@ -425,9 +433,12 @@ class TestThesisReviewBehavioral:
             if name.startswith("run_specialist_"):
                 cap = name.replace("run_specialist_", "")
                 return {
-                    "verdict": "positive", "confidence": 0.7,
+                    "verdict": "positive",
+                    "confidence": 0.7,
                     "thesis_effect": "strengthen" if cap in ("filing", "news") else "no_change",
-                    "key_claims": [], "risks": [], "contradictions": [],
+                    "key_claims": [],
+                    "risks": [],
+                    "contradictions": [],
                 }
             return {}
 
@@ -500,9 +511,23 @@ class TestThesisReviewBehavioral:
             if name == "load_thesis_context":
                 return {"content_sha256": "c" * 64}
             if name == "run_specialist_filing":
-                return {"verdict": "positive", "confidence": 0.8, "thesis_effect": "strengthen", "key_claims": [], "risks": [], "contradictions": []}
+                return {
+                    "verdict": "positive",
+                    "confidence": 0.8,
+                    "thesis_effect": "strengthen",
+                    "key_claims": [],
+                    "risks": [],
+                    "contradictions": [],
+                }
             if name == "run_specialist_news":
-                return {"verdict": "negative", "confidence": 0.6, "thesis_effect": "weaken", "key_claims": [], "risks": [], "contradictions": []}
+                return {
+                    "verdict": "negative",
+                    "confidence": 0.6,
+                    "thesis_effect": "weaken",
+                    "key_claims": [],
+                    "risks": [],
+                    "contradictions": [],
+                }
             return {}
 
         async def inject(*a: object, **kw: object) -> None:

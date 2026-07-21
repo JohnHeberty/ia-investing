@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
@@ -14,23 +14,23 @@ from ia_investing.application.research import (
     CreateResearchCase,
     ResearchCaseService,
     ResearchConcurrencyError,
-    ResearchIdempotencyConflictError,
     required_permission,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-ALL_PERMS = frozenset({
-    "research_cases:create",
-    "research_cases:submit",
-    "research_cases:assign",
-    "research_cases:review",
-    "research_cases:close",
-    "research_cases:reopen",
-})
+ALL_PERMS = frozenset(
+    {
+        "research_cases:create",
+        "research_cases:submit",
+        "research_cases:assign",
+        "research_cases:review",
+        "research_cases:close",
+        "research_cases:reopen",
+    }
+)
 
 
 def _make_case(state: str = "draft", lock_version: int = 1, **extra: Any) -> MagicMock:

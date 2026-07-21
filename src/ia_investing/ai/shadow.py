@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .provider import AgentProvider, ProviderError
 
@@ -43,9 +42,7 @@ class ShadowRunner:
         candidate_task = self._run_variant(
             "candidate", candidate_instructions, candidate_model, candidate_schema, input_payload
         )
-        baseline_result, candidate_result = await asyncio.gather(
-            baseline_task, candidate_task, return_exceptions=False
-        )
+        baseline_result, candidate_result = await asyncio.gather(baseline_task, candidate_task, return_exceptions=False)
         baseline_output = baseline_result.get("output", {}) if isinstance(baseline_result, dict) else {}
         candidate_output = candidate_result.get("output", {}) if isinstance(candidate_result, dict) else {}
         baseline_error = baseline_result.get("error") if isinstance(baseline_result, dict) else None
@@ -82,18 +79,14 @@ class ShadowRunner:
             logger.warning("shadow run %s failed: %s", label, exc.code)
             return {"output": {}, "error": exc.code}
 
-    def _diff_outputs(
-        self, baseline: dict[str, object], candidate: dict[str, object]
-    ) -> str:
+    def _diff_outputs(self, baseline: dict[str, object], candidate: dict[str, object]) -> str:
         if baseline == candidate:
             return "identical"
         baseline_keys = set(baseline.keys())
         candidate_keys = set(candidate.keys())
         added = candidate_keys - baseline_keys
         removed = baseline_keys - candidate_keys
-        changed = [
-            k for k in baseline_keys & candidate_keys if baseline[k] != candidate[k]
-        ]
+        changed = [k for k in baseline_keys & candidate_keys if baseline[k] != candidate[k]]
         parts: list[str] = []
         if added:
             parts.append(f"added={sorted(added)}")

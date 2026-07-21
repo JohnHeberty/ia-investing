@@ -430,6 +430,58 @@ async def resolve_reconciliation_break(
     return ReconciliationBreakV1.model_validate(row)
 
 
+class ResolveAlertV1(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    method: str = Field(min_length=1, max_length=200)
+    evidence: str = Field(min_length=1, max_length=2_000)
+
+
+@router.get("/alerts", response_model=list[OperationalAlertV1])
+async def list_operational_alerts(
+    status: str | None = None,
+    severity: str | None = None,
+    alert_type: str | None = None,
+    portfolio_id: UUID | None = None,
+    limit: int = 50,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[OperationalAlertV1]:
+    try:
+        rows = await PaperExecutionService(session).list_alerts(
+            context_from(auth),
+            status=status,
+            severity=severity,
+            alert_type=alert_type,
+            portfolio_id=portfolio_id,
+            limit=limit,
+        )
+    except PermissionError as exc:
+        raise map_error(exc) from exc
+    return [OperationalAlertV1.model_validate(r) for r in rows]
+
+
+@router.post("/alerts/{alert_id}/resolve", response_model=OperationalAlertV1)
+async def resolve_operational_alert(
+    alert_id: UUID,
+    body: ResolveAlertV1,
+    idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
+    correlation_id: Annotated[UUID | None, Header(alias="X-Correlation-ID")] = None,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> OperationalAlertV1:
+    try:
+        row = await PaperExecutionService(session).resolve_alert(
+            alert_id,
+            resolution=body.model_dump(),
+            context=context_from(auth),
+            correlation_id=correlation_id or uuid4(),
+        )
+    except (LookupError, PermissionError, ValueError) as exc:
+        raise map_error(exc) from exc
+    return OperationalAlertV1.model_validate(row)
+
+
 @router.post("/alerts/{alert_id}/acknowledgement", response_model=OperationalAlertV1)
 async def acknowledge_operational_alert(
     alert_id: UUID,
@@ -540,3 +592,36 @@ async def decide_challenger_evaluation(
     except (LookupError, PermissionError, ValueError) as exc:
         raise map_error(exc) from exc
     return ChallengerV1.model_validate(row)
+
+
+@router.get("/portfolios/{portfolio_id}/post-mortems", response_model=list[PostMortemV1])
+async def list_paper_post_mortems(
+    portfolio_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[PostMortemV1]:
+    rows = await PaperExecutionService(session).list_post_mortems(portfolio_id)
+    return [PostMortemV1.model_validate(r) for r in rows]
+
+
+@router.get("/challenger-evaluations", response_model=list[ChallengerV1])
+async def list_challenger_evaluations(
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[ChallengerV1]:
+    ctx = context_from(auth)
+    rows = await PaperExecutionService(session).list_challenger_evaluations(
+        organization_id=ctx.organization_id,
+    )
+    return [ChallengerV1.model_validate(r) for r in rows]
+
+
+@router.get("/dashboard")
+async def get_operational_dashboard(
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, object]:
+    ctx = context_from(auth)
+    return await PaperExecutionService(session).get_operational_dashboard(
+        organization_id=ctx.organization_id,
+    )

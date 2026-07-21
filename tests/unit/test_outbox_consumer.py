@@ -56,6 +56,7 @@ async def test_outbox_consumer_publishes_unpublished_events():
 
     def session_factory():
         return session
+
     consumer = OutboxConsumer(session_factory, publisher, poll_interval_seconds=0.01, batch_size=10)
 
     published = await consumer._poll_once()

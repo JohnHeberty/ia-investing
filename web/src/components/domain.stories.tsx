@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/react";
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import { AsOfIndicator, Badge, Metric, StatePanel, DomainTabs } from "./domain";
 
 const meta: Meta = {

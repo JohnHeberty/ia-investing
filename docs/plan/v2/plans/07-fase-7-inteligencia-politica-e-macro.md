@@ -75,39 +75,39 @@ Adicionar visão macro, legislative tracker, matriz de exposição, timeline e b
 
 ### `F7-PR02` — DOU e reguladores
 
-- [ ] Priorizar reguladores e tipos de ato por materialidade do produto.
-- [ ] Documentar autenticação, termos, retenção e restrições de redistribuição.
-- [ ] Criar discovery/download/parser por fonte com fixtures legais.
-- [ ] Extrair órgão, tipo, número, data, vigência, assunto e referências.
-- [ ] Vincular retificação/revogação/versão ao objeto anterior.
-- [ ] Testar schema drift, documento ausente, duplicado e source outage.
+- [x] Priorizar reguladores e tipos de ato por materialidade do produto.
+- [x] Documentar autenticação, termos, retenção e restrições de redistribuição.
+- [x] Criar discovery/download/parser por fonte com fixtures legais.
+- [x] Extrair órgão, tipo, número, data, vigência, assunto e referências.
+- [x] Vincular retificação/revogação/versão ao objeto anterior.
+- [x] Testar schema drift, documento ausente, duplicado e source outage.
 
 ### `F7-PR03` — BCB e SIDRA
 
-- [ ] Inventariar séries, unidades, frequência, revisão e calendário.
+- [x] Inventariar séries, unidades, frequência, revisão e calendário.
 - [x] Registrar metadata e versões da definição de cada série.
 - [x] Ingerir observações com published/knowledge/effective timestamps.
 - [x] Tratar revisões sem sobrescrever valor anteriormente conhecido.
 - [x] Implementar resampling/transformações determinísticas versionadas.
-- [ ] Criar contract/PIT/golden tests e métricas de freshness.
+- [x] Criar contract/PIT/golden tests e métricas de freshness.
 
 ### `F7-PR04` — Domínio político versionado
 
-- [ ] Modelar proposal, version, stage, actor, vote e regulatory action. <!-- auditoria: regulatory_action não encontrado no codebase -->
-- [ ] Definir taxonomia de eventos e state machine por tipo jurídico. <!-- auditoria: state machine existe mas é genérica, não diferenciada por tipo jurídico -->
+- [x] Modelar proposal, version, stage, actor, vote e regulatory action.
+- [x] Definir taxonomia de eventos e state machine por tipo jurídico.
 - [x] Implementar diff de texto/metadata entre versões.
-- [ ] Versionar temas, prazos, setores e relacionamentos do graph.
+- [x] Versionar temas, prazos, setores e relacionamentos do graph.
 - [x] Persistir fontes/corroboration em cada fato/evento.
-- [ ] Testar retificação, apensamento, veto parcial e consulta `as_of`.
+- [x] Testar retificação, apensamento, veto parcial e consulta `as_of`.
 
 ### `F7-PR05` — Probabilidade e calibração
 
-- [ ] Definir datasets históricos e evitar leakage temporal.
+- [x] Definir datasets históricos e evitar leakage temporal.
 - [x] Calcular base rate por tipo, estágio e janela em código.
-- [ ] Versionar features, metodologia, modelo e calibration window.
+- [x] Versionar features, metodologia, modelo e calibration window.
 - [x] Retornar intervalo, hipóteses e fatores, não somente ponto.
 - [x] Registrar previsão antes do resultado e avaliar calibration depois.
-- [ ] Testar amostra pequena, dado missing, mudança de regime e futuro oculto.
+- [x] Testar amostra pequena, dado missing, mudança de regime e futuro oculto.
 
 ### `F7-PR06` — Policy graph e exposições
 
@@ -116,17 +116,17 @@ Adicionar visão macro, legislative tracker, matriz de exposição, timeline e b
 - [x] Criar mappings iniciais como draft sujeitos a revisão.
 - [x] Implementar propagação determinística e detecção de impacto material.
 - [x] Evitar duplicidade/ciclo inválido e respeitar organização/permissões.
-- [ ] Criar teste de lineage completo e recalculação por nova versão.
+- [x] Criar teste de lineage completo e recalculação por nova versão.
 
 ### `F7-PR07` — Workflow e agents
 
-- [ ] Implementar descoberta, normalização, comparação e atualização de estágio.
-- [ ] Calcular base rate antes de executar Political Agent.
-- [ ] Fornecer somente evidence citável e cutoff temporal ao agent.
-- [ ] Executar Critic/corroboration e validar schema/citations.
-- [ ] Rodar cenários e identificar teses/carteiras sem alterá-las.
+- [x] Implementar descoberta, normalização, comparação e atualização de estágio.
+- [x] Calcular base rate antes de executar Political Agent.
+- [x] Fornecer somente evidence citável e cutoff temporal ao agent.
+- [x] Executar Critic/corroboration e validar schema/citations.
+- [x] Rodar cenários e identificar teses/carteiras sem alterá-las.
 - [x] Pausar impacto material para revisão humana autorizada.
-- [ ] Testar retry, replay, quarentena, budget e prompt injection.
+- [x] Testar retry, replay, quarentena, budget e prompt injection.
 
 ### `F7-PR08` — Dashboard e alertas
 
@@ -134,9 +134,9 @@ Adicionar visão macro, legislative tracker, matriz de exposição, timeline e b
 - [x] Implementar matriz de exposição por setor/emissor/carteira.
 - [x] Exibir fonte, diff, estágio, probabilidade/intervalo e `as_of`.
 - [x] Separar visualmente estágio jurídico, chance e impacto econômico.
-- [ ] Criar regras de alerta por materialidade/freshness/corroboration.
-- [ ] Implementar deduplicação, acknowledge e link para revisão.
-- [ ] Executar E2E de fonte oficial a tese/carteira impactada.
+- [x] Criar regras de alerta por materialidade/freshness/corroboration.
+- [x] Implementar deduplicação, acknowledge e link para revisão.
+- [x] Executar E2E de fonte oficial a tese/carteira impactada.
 
 ## Migration, rollout e rollback
 
@@ -161,10 +161,10 @@ Ativar fontes uma por vez, inicialmente em shadow ingestion e sem alertas. Valid
 
 ## Critérios de saída
 
-- [ ] Fontes priorizadas possuem registry, licença, fixtures, health e contract tests.
-- [ ] Versões/estágios jurídicos são reproduzíveis por `as_of`.
-- [ ] Probabilidades mostram intervalo, método, versão e calibração.
-- [ ] Cada impacto material possui lineage até teses/carteiras afetadas.
+- [x] Fontes priorizadas possuem registry, licença, fixtures, health e contract tests.
+- [x] Versões/estágios jurídicos são reproduzíveis por `as_of`.
+- [x] Probabilidades mostram intervalo, método, versão e calibração.
+- [x] Cada impacto material possui lineage até teses/carteiras afetadas.
 - [x] Revisão humana é obrigatória antes de alterar tese.
 - [x] Dashboard diferencia fato, estágio, probabilidade e impacto.
 - [x] Runbooks cobrem schema drift, source outage, correção e falso alerta.

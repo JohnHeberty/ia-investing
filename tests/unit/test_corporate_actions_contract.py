@@ -1,4 +1,5 @@
 """Contract tests for CorporateAction model."""
+
 from datetime import UTC, date, datetime
 from uuid import uuid4
 

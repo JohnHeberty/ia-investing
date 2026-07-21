@@ -1,4 +1,5 @@
 """Tests for F2-PR06.3 — RestatementLog diff tracking."""
+
 from decimal import Decimal
 from uuid import uuid4
 
