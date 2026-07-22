@@ -1,51 +1,38 @@
+"""Durable governed agent execution workflow."""
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import timedelta
 from typing import Any
 
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
-    from ia_investing.orchestration.policies import DEFAULT_ACTIVITY_RETRY_POLICY, EXTERNAL_IO_RETRY_POLICY
+    from ia_investing.orchestration.policies import EXTERNAL_IO_RETRY_POLICY
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class RunAgentInput:
     operation_id: str
-    agent_name: str
-    input_data: dict[str, Any]
+    organization_id: str
+    capability: str
+    case_id: str | None
+    input_payload: dict[str, Any]
+    data_as_of: str
+    knowledge_cutoff: str
+    requested_by: str
+    idempotency_key: str
 
 
-@workflow.defn
+@workflow.defn(name="RunAgentWorkflow")
 class RunAgentWorkflow:
     @workflow.run
     async def run(self, command: RunAgentInput) -> dict[str, Any]:
-        await workflow.execute_activity(
-            "set_operation_running",
-            command.operation_id,
-            start_to_close_timeout=timedelta(seconds=15),
-            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
+        payload = asdict(command)
+        payload["workflow_id"] = workflow.info().workflow_id
+        return await workflow.execute_activity(
+            "create_and_execute_agent_run",
+            payload,
+            start_to_close_timeout=timedelta(minutes=8),
+            retry_policy=EXTERNAL_IO_RETRY_POLICY,
         )
-        try:
-            result = await workflow.execute_activity(
-                "run_configured_agent",
-                args=[command.agent_name, command.input_data],
-                start_to_close_timeout=timedelta(minutes=5),
-                retry_policy=EXTERNAL_IO_RETRY_POLICY,
-            )
-        except Exception as exc:
-            await workflow.execute_activity(
-                "fail_operation",
-                args=[command.operation_id, type(exc).__name__],
-                start_to_close_timeout=timedelta(seconds=15),
-                retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
-            )
-            raise
-        await workflow.execute_activity(
-            "complete_operation",
-            args=[command.operation_id, result],
-            start_to_close_timeout=timedelta(seconds=15),
-            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
-        )
-        return result

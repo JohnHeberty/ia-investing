@@ -2,6 +2,7 @@ from workflows._analyze_filing import AnalyzeFilingWorkflow
 from workflows._analyze_news import AnalyzeNewsWorkflow
 from workflows._approval_gate import ApprovalGateInput, ApprovalGateResult, ApprovalGateWorkflow
 from workflows._discover import DiscoverStocksWorkflow
+from workflows._dispatch_operations import DispatchOperationsWorkflow
 from workflows._ingest_cvm import IngestCVMInput, IngestCVMOutput, IngestCVMWorkflow
 from workflows._paper_rebalance import PaperRebalanceInput, PaperRebalanceResult, PaperRebalanceWorkflow
 from workflows._paper_reconciliation import (
@@ -22,6 +23,7 @@ from workflows._portfolio_optimization import (
     PortfolioOptimizationResult,
     PortfolioOptimizationWorkflow,
 )
+from workflows._portfolio_ranking import PortfolioRankingWorkflow
 from workflows._run_agent import RunAgentInput, RunAgentWorkflow
 from workflows._thesis_review import (
     ThesisReviewInput,
@@ -36,6 +38,7 @@ __all__ = [
     "ApprovalGateResult",
     "ApprovalGateWorkflow",
     "DiscoverStocksWorkflow",
+    "DispatchOperationsWorkflow",
     "IngestCVMInput",
     "IngestCVMOutput",
     "IngestCVMWorkflow",
@@ -58,6 +61,7 @@ __all__ = [
     "PortfolioOptimizationInput",
     "PortfolioOptimizationResult",
     "PortfolioOptimizationWorkflow",
+    "PortfolioRankingWorkflow",
     "RunAgentInput",
     "RunAgentWorkflow",
     "ThesisReviewInput",
