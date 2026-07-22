@@ -12,9 +12,8 @@ from .enums import (
     AnalysisTrigger,
     CandidateDecision,
     CandidateStatus,
-    GapStatus,
-    SuggestionStatus,
     ExplorationRunStatus,
+    SuggestionStatus,
 )
 from .models import (
     AnalysisRun,
@@ -210,15 +209,11 @@ class CandidateService:
             sources=candidate.sources,
             open_gaps=candidate.open_gaps,
             identity_resolved=bool(
-                candidate.identity.cvm_code
-                or candidate.identity.cnpj
-                or candidate.identity.issuer_id
+                candidate.identity.cvm_code or candidate.identity.cnpj or candidate.identity.issuer_id
             ),
         )
         if readiness.blocker_codes and not request.allow_incomplete:
-            raise ValueError(
-                "candidate still has blocking gaps: " + ", ".join(readiness.blocker_codes)
-            )
+            raise ValueError("candidate still has blocking gaps: " + ", ".join(readiness.blocker_codes))
         run = AnalysisRun(
             id=uuid4(),
             candidate_id=candidate.id,
@@ -372,9 +367,7 @@ class ExplorationService:
             suggestion.identity.exchange,
         )
         if duplicate is not None:
-            await self.exploration_repository.save_suggestion(
-                replace(suggestion, status=SuggestionStatus.DUPLICATE)
-            )
+            await self.exploration_repository.save_suggestion(replace(suggestion, status=SuggestionStatus.DUPLICATE))
             return duplicate
         candidate = InvestmentCandidate.create_from_explorer(
             organization_id=suggestion.organization_id,

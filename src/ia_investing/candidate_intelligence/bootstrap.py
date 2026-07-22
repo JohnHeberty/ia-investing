@@ -22,9 +22,7 @@ def candidate_intelligence_enabled() -> bool:
 def _load_factory(path: str) -> Callable[[], object]:
     module_name, separator, attribute = path.partition(":")
     if not separator or not module_name or not attribute:
-        raise RuntimeError(
-            "CANDIDATE_RUNTIME_FACTORY must use the format 'python.module:factory_name'"
-        )
+        raise RuntimeError("CANDIDATE_RUNTIME_FACTORY must use the format 'python.module:factory_name'")
     module = importlib.import_module(module_name)
     factory = getattr(module, attribute, None)
     if factory is None or not callable(factory):
@@ -46,9 +44,7 @@ async def configure_candidate_runtime_from_environment() -> bool:
         return True
     factory_path = os.getenv("CANDIDATE_RUNTIME_FACTORY", "").strip()
     if not factory_path:
-        raise RuntimeError(
-            "candidate intelligence is enabled but CANDIDATE_RUNTIME_FACTORY is not configured"
-        )
+        raise RuntimeError("candidate intelligence is enabled but CANDIDATE_RUNTIME_FACTORY is not configured")
     result = _load_factory(factory_path)()
     if inspect.isawaitable(result):
         result = await result
@@ -71,9 +67,6 @@ async def configure_candidate_runtime_from_environment() -> bool:
     )
     missing = [name for name in required_methods if not callable(getattr(result, name, None))]
     if missing:
-        raise RuntimeError(
-            "candidate runtime factory returned an incompatible object; missing: "
-            + ", ".join(missing)
-        )
+        raise RuntimeError("candidate runtime factory returned an incompatible object; missing: " + ", ".join(missing))
     configure_candidate_activity_runtime(cast(CandidateActivityRuntime, result))
     return True

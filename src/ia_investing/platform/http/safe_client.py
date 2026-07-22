@@ -3,9 +3,9 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import socket
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import Mapping
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
@@ -202,9 +202,7 @@ async def resolve_public_ips(host: str, port: int) -> tuple[ipaddress.IPv4Addres
     for record in records:
         address = ipaddress.ip_address(record[4][0])
         if not address.is_global:
-            raise UnsafeUrlError(
-                f"host {normalized} resolves to non-public address {address}"
-            )
+            raise UnsafeUrlError(f"host {normalized} resolves to non-public address {address}")
         addresses.add(address)
     if not addresses:
         raise UnsafeUrlError(f"DNS resolution returned no addresses for {normalized}")

@@ -162,7 +162,7 @@ class PortfolioConstructionWorkflow:
                 hard_breach=False,
             )
 
-        weights = dict(opt_result.get("weights", {}))  # type: ignore[arg-type]
+        weights = dict(opt_result.get("weights", {}))  # type: ignore[call-overload]
         constraint_result: dict[str, object] = await workflow.execute_activity(
             "validate_proposal_constraints",
             args=[

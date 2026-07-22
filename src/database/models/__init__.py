@@ -95,6 +95,15 @@ from .instrument_master import (  # noqa: F401
     Listing,
     PeerRelationship,
 )
+from .investment_candidates import (  # noqa: F401
+    CandidateAnalysisRunRecord,
+    CandidateEventRecord,
+    CandidateGapRecord,
+    CandidateSourceRecord,
+    ExplorationRunRecord,
+    ExplorationSuggestionRecord,
+    InvestmentCandidateRecord,
+)
 from .market_data import (  # noqa: F401
     CorporateAction,
     FxRate,
@@ -207,15 +216,6 @@ from .thesis_domain import (  # noqa: F401
 )
 from .valuation import ValuationAssumption, ValuationResult, ValuationRun  # noqa: F401
 
-from .investment_candidates import (  # noqa: F401
-    CandidateAnalysisRunRecord,
-    CandidateEventRecord,
-    CandidateGapRecord,
-    CandidateSourceRecord,
-    ExplorationRunRecord,
-    ExplorationSuggestionRecord,
-    InvestmentCandidateRecord,
-)
 __all__ = [
     "Base",
 ]

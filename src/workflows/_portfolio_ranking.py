@@ -3,6 +3,7 @@
 The workflow only accepts a bundle already produced by deterministic analytics.
 It does not ask an LLM to score a portfolio.
 """
+
 from __future__ import annotations
 
 from datetime import timedelta

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -10,10 +9,10 @@ from temporalio.common import RetryPolicy
 with workflow.unsafe.imports_passed_through():
     from ia_investing.orchestration.activities.candidate_intelligence import (
         CandidateCheckpoint,
-        CandidateWorkflowInput,
-        CandidateWorkflowResult,
         CandidateSourceValidationInput,
         CandidateSourceValidationResult,
+        CandidateWorkflowInput,
+        CandidateWorkflowResult,
         ExplorationWorkflowInput,
         ExplorationWorkflowResult,
         collect_candidate_documents,

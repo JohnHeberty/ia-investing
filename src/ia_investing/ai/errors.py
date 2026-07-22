@@ -1,17 +1,17 @@
-from ia_investing.application.errors import BusinessRejection, RetryableInfrastructureError
+from ia_investing.application.errors import BusinessRejectionError, RetryableInfrastructureError
 
 
 class AiProviderError(RetryableInfrastructureError):
     code: str = "ai_provider"
 
 
-class GuardrailViolation(BusinessRejection):
+class GuardrailViolationError(BusinessRejectionError):
     code: str = "guardrail_violation"
 
 
 __all__ = [
     "AiProviderError",
-    "BusinessRejection",
-    "GuardrailViolation",
+    "BusinessRejectionError",
+    "GuardrailViolationError",
     "RetryableInfrastructureError",
 ]

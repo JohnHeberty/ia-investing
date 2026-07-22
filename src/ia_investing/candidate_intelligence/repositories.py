@@ -85,9 +85,7 @@ class InMemoryCandidateRepository:
     async def save(self, candidate: InvestmentCandidate, *, expected_version: int) -> None:
         current = await self.get(candidate.id)
         if current.lock_version != expected_version:
-            raise ConcurrencyConflictError(
-                f"expected version {expected_version}, found {current.lock_version}"
-            )
+            raise ConcurrencyConflictError(f"expected version {expected_version}, found {current.lock_version}")
         self._items[candidate.id] = candidate
 
     async def find_active_by_ticker(
@@ -115,9 +113,7 @@ class InMemoryCandidateRepository:
         statuses: frozenset[CandidateStatus] | None = None,
     ) -> tuple[InvestmentCandidate, ...]:
         values: Iterable[InvestmentCandidate] = (
-            candidate
-            for candidate in self._items.values()
-            if candidate.organization_id == organization_id
+            candidate for candidate in self._items.values() if candidate.organization_id == organization_id
         )
         if statuses is not None:
             values = (candidate for candidate in values if candidate.status in statuses)
@@ -155,10 +151,7 @@ class InMemoryExplorationRepository:
         self._suggestions[suggestion.id] = suggestion
         run = self._runs.get(suggestion.exploration_run_id)
         if run is not None:
-            suggestions = tuple(
-                suggestion if item.id == suggestion.id else item
-                for item in run.suggestions
-            )
+            suggestions = tuple(suggestion if item.id == suggestion.id else item for item in run.suggestions)
             self._runs[run.id] = replace(run, suggestions=suggestions)
 
     async def mark_promoted(self, suggestion_id: UUID, candidate_id: UUID) -> None:

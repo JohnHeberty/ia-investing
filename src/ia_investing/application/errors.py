@@ -1,3 +1,6 @@
+from typing import Any
+
+
 class IaInvestingError(Exception):
     code: str = "internal_error"
     detail: str = ""
@@ -7,11 +10,11 @@ class IaInvestingError(Exception):
         self.detail = detail
 
 
-class BusinessRejection(IaInvestingError):
+class BusinessRejectionError(IaInvestingError):
     code: str = "business_rejection"
 
 
-class ValidationFailure(IaInvestingError):
+class ValidationError(IaInvestingError):
     code: str = "validation_failure"
 
 
@@ -23,7 +26,7 @@ class NonRetryableConfigurationError(IaInvestingError):
     code: str = "non_retryable_configuration"
 
 
-def temporal_retry_policy_from_error(error: Exception) -> dict:
+def temporal_retry_policy_from_error(error: Exception) -> dict[str, Any]:
     if isinstance(error, RetryableInfrastructureError):
         return {
             "maximum_attempts": 5,
@@ -31,7 +34,7 @@ def temporal_retry_policy_from_error(error: Exception) -> dict:
             "backoff_coefficient": 2.0,
             "non_retryable_error_types": [],
         }
-    if isinstance(error, (BusinessRejection, ValidationFailure, NonRetryableConfigurationError)):
+    if isinstance(error, (BusinessRejectionError, ValidationError, NonRetryableConfigurationError)):
         return {
             "maximum_attempts": 1,
             "non_retryable_error_types": ["*"],

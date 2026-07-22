@@ -62,7 +62,7 @@ def test_workflow_names_are_unique_across_capabilities() -> None:
 
 def test_research_agents_has_expected_activity_count() -> None:
     acts = ACTIVITIES_BY_CAPABILITY[Capability.RESEARCH_AGENTS]
-    assert len(acts) >= 18  # research_mock(12) + thesis_review(6)
+    assert len(acts) >= 2  # agent_runtime + operation_dispatch
 
 
 def test_portfolio_risk_includes_run_scorecard_and_validate_constraints() -> None:

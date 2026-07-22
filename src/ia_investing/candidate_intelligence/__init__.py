@@ -25,6 +25,7 @@ from .models import (
 from .readiness import DEFAULT_SOURCE_REQUIREMENTS, ReadinessEvaluator, SourceRequirement
 
 __all__ = [
+    "DEFAULT_SOURCE_REQUIREMENTS",
     "AnalysisRun",
     "AnalysisRunStatus",
     "AnalysisTrigger",
@@ -35,7 +36,6 @@ __all__ = [
     "CandidateReadiness",
     "CandidateSource",
     "CandidateStatus",
-    "DEFAULT_SOURCE_REQUIREMENTS",
     "ExplorationRun",
     "ExplorationRunStatus",
     "ExplorationSuggestion",

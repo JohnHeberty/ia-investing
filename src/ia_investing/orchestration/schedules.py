@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
-from ia_investing.candidate_intelligence.bootstrap import candidate_intelligence_enabled
 from temporalio.client import (
     Schedule,
     ScheduleActionStartWorkflow,
@@ -14,6 +13,8 @@ from temporalio.client import (
     ScheduleSpec,
     ScheduleState,
 )
+
+from ia_investing.candidate_intelligence.bootstrap import candidate_intelligence_enabled
 
 
 @dataclass(frozen=True, slots=True)

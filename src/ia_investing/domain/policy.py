@@ -235,9 +235,7 @@ class PolicyDeadline:
     extension_date: datetime | None = None
 
 
-def detect_rectification(
-    original_text: str, amended_text: str, *, rectification_type: str
-) -> dict[str, object] | None:
+def detect_rectification(original_text: str, amended_text: str, *, rectification_type: str) -> dict[str, object] | None:
     diff = text_diff(original_text, amended_text)
     if not diff["changed"]:
         return None

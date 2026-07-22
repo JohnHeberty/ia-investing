@@ -74,16 +74,13 @@ class CalibrationEngine:
                 if isinstance(predicted, (int, float)):
                     diffs.append(abs(float(predicted) - float(actual)))
         drift = mean(diffs) if diffs else 0.0
-        self._records[record_id] = record.model_copy(
-            update={"drift_score": drift}
-        )
+        self._records[record_id] = record.model_copy(update={"drift_score": drift})
 
     def _component_calibrated_records(self, component: ComponentName) -> list[CalibrationRecord]:
         return [
             self._records[rid]
             for rid in self._component_records.get(component, [])
-            if rid in self._records
-            and self._records[rid].ground_truth is not None
+            if rid in self._records and self._records[rid].ground_truth is not None
         ]
 
     def calculate_calibration_score(self, component: ComponentName | str) -> dict[str, Any]:
@@ -166,11 +163,13 @@ class CalibrationEngine:
         for component in ComponentName:
             records = self._component_calibrated_records(component)
             if len(records) < 100:
-                result.append({
-                    "component": component,
-                    "n_records": len(records),
-                    "needs_calibration": True,
-                })
+                result.append(
+                    {
+                        "component": component,
+                        "n_records": len(records),
+                        "needs_calibration": True,
+                    }
+                )
         return result
 
     def generate_reliability_data(self, component: ComponentName | str) -> list[dict[str, Any]]:
@@ -187,11 +186,13 @@ class CalibrationEngine:
         reliability: list[dict[str, Any]] = []
         for bin_key in sorted(bins.keys(), key=float):
             outcomes = bins[bin_key]
-            reliability.append({
-                "confidence_bin": float(bin_key),
-                "n_samples": len(outcomes),
-                "actual_frequency": round(mean(outcomes), 4),
-            })
+            reliability.append(
+                {
+                    "confidence_bin": float(bin_key),
+                    "n_samples": len(outcomes),
+                    "actual_frequency": round(mean(outcomes), 4),
+                }
+            )
         return reliability
 
     def get_calibration_summary(self) -> dict[str, Any]:

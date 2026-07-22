@@ -89,7 +89,7 @@ def validate_balance_sheet(line_items: dict) -> list[ValidationResult]:
             equity >= 0,
             entity_type,
             entity_id,
-            severity="error" if equity < 0 else "info",
+            severity="warning" if equity < 0 else "info",
             equity=equity,
         )
     )

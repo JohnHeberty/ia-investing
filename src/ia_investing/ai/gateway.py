@@ -386,11 +386,15 @@ class GatewayProvider:
             output = json.loads(raw_output) if isinstance(raw_output, str) else raw_output
         except json.JSONDecodeError as exc:
             raise ProviderError(
-                "provider_invalid_json", retryable=False, safe_detail="Provider returned invalid JSON",
+                "provider_invalid_json",
+                retryable=False,
+                safe_detail="Provider returned invalid JSON",
             ) from exc
         if not isinstance(output, dict):
             raise ProviderError(
-                "provider_invalid_output", retryable=False, safe_detail="Provider output must be a JSON object",
+                "provider_invalid_output",
+                retryable=False,
+                safe_detail="Provider output must be a JSON object",
             )
 
         duration = int((time.monotonic() - started) * 1_000)

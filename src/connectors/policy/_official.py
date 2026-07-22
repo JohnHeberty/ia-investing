@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 from typing import Any
 from urllib.parse import urlparse
 
-from connectors.base import HttpClient, HttpClientProtocol
+from ..base import HttpClient, HttpClientProtocol
 
 OFFICIAL_POLICY_HOSTS = frozenset(
     {
@@ -187,9 +187,11 @@ def _next_link(document: dict[str, Any]) -> str | None:
     if not isinstance(links, list):
         return None
     for item in links:
-        if isinstance(item, dict) and item.get("rel") == "next" and isinstance(item.get("href"), str):
-            require_official_egress(item["href"])
-            return item["href"]
+        if isinstance(item, dict) and item.get("rel") == "next":
+            href = item.get("href")
+            if isinstance(href, str):
+                require_official_egress(href)
+                return href
     return None
 
 
@@ -301,9 +303,7 @@ def parse_dou_xml(payload: FetchedOfficialPayload) -> tuple[OfficialPolicyRecord
                     external_id = text
 
             if not external_id:
-                external_id = hashlib.sha256(
-                    f"{orgao}:{tipo}:{title}:{data_pub}".encode()
-                ).hexdigest()[:16]
+                external_id = hashlib.sha256(f"{orgao}:{tipo}:{title}:{data_pub}".encode()).hexdigest()[:16]
 
             if title and orgao and data_pub:
                 records.append(

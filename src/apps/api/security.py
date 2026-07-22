@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import hmac
 import secrets
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
@@ -39,6 +40,9 @@ class AuthContext:
             team_ids=self.team_ids,
             authentication_method=self.authentication_method,
         )
+
+
+Principal = AuthContext
 
 
 def _build_oidc_verifier(settings: Settings) -> PyJWKClient | None:
@@ -90,7 +94,7 @@ async def get_auth_context(
     dev_permissions: str = Header(default="", alias="X-Dev-Permissions"),
     dev_organization: UUID | None = Header(default=None, alias="X-Dev-Organization"),
     dev_teams: str = Header(default="", alias="X-Dev-Teams"),
-    request: Request | None = None,
+    request: Request = None,
 ) -> AuthContext:
     session_context: AuthContext | None = None
     if request is not None:
@@ -160,7 +164,7 @@ async def get_auth_context(
     raise HTTPException(status_code=401, detail="Authentication required")
 
 
-def require_permission(permission: str):
+def require_permission(permission: str) -> Callable[[AuthContext], Awaitable[AuthContext]]:
     async def dependency(context: AuthContext = Depends(get_auth_context)) -> AuthContext:
         resource, action = permission.split(":", 1) if ":" in permission else (permission, "*")
         if not enforce(resource, action, context.to_actor_context()):

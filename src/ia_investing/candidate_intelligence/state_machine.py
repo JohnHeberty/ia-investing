@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .enums import CandidateStatus
 
-
 _ALLOWED_TRANSITIONS: dict[CandidateStatus, frozenset[CandidateStatus]] = {
     CandidateStatus.SUGGESTED: frozenset(
         {

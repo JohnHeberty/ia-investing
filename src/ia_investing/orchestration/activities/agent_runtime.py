@@ -5,6 +5,7 @@ pinned run, persists tenant and point-in-time context, executes the configured
 provider, validates the structured output, and returns only a safe public
 summary.
 """
+
 from __future__ import annotations
 
 import os
@@ -162,9 +163,7 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
                 "cost_usd": str(executed.cost_usd),
                 "duration_ms": executed.duration_ms,
                 "evidence_coverage": (
-                    str(executed.evidence_coverage)
-                    if executed.evidence_coverage is not None
-                    else None
+                    str(executed.evidence_coverage) if executed.evidence_coverage is not None else None
                 ),
             }
             operation = await session.get(Operation, operation_id)

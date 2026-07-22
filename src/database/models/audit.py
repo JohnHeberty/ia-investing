@@ -43,7 +43,7 @@ class AuditLogEntry(Base):
     resource_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     resource_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
     changes: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    meta_data: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     hash_prev: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     hash: Mapped[str] = mapped_column(sa.String(64), nullable=False, unique=True)
     timestamp: Mapped[datetime] = mapped_column(
@@ -73,7 +73,7 @@ class AuditLogEntry(Base):
             + self.resource_type
             + str(self.resource_id or "")
             + json.dumps(self.changes or {}, sort_keys=True)
-            + json.dumps(self.metadata or {}, sort_keys=True)
+            + json.dumps(self.meta_data or {}, sort_keys=True)
         )
         return sha256(raw.encode("utf-8")).hexdigest()
 

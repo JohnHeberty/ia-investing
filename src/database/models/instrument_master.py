@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
+from ._utils import utcnow
 from .base import Base
-
-
-def utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 class LegalEntity(Base):

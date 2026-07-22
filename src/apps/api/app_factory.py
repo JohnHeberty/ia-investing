@@ -121,19 +121,23 @@ async def _session_middleware(request: Request, call_next):
                 team_ids = frozenset(UUID(str(t)) for t in team_ids_raw if t)
             else:
                 team_ids = frozenset()
-        roles_raw = session.get("roles", [])
-        roles = frozenset(str(r) for r in roles_raw) if isinstance(roles_raw, list) else frozenset()
-        permissions_raw = session.get("permissions", [])
-        permissions = frozenset(str(p) for p in permissions_raw) if isinstance(permissions_raw, list) else frozenset()
-        request.state.auth_context = AuthContext(
-            subject=str(session.get("sub", "")),
-            permissions=permissions,
-            authentication_method="session",
-            organization_id=organization_id,
-            roles=roles,
-            team_ids=team_ids,
-            session_id=str(session.get("sid", "")),
-        )
+            roles_raw = session.get("roles", [])
+            roles = frozenset(str(r) for r in roles_raw) if isinstance(roles_raw, list) else frozenset()
+            permissions_raw = session.get("permissions", [])
+            permissions = (
+                frozenset(str(p) for p in permissions_raw) if isinstance(permissions_raw, list) else frozenset()
+            )
+            request.state.auth_context = AuthContext(
+                subject=str(session.get("sub", "")),
+                permissions=permissions,
+                authentication_method="session",
+                organization_id=organization_id,
+                roles=roles,
+                team_ids=team_ids,
+                session_id=str(session.get("sid", "")),
+            )
+        else:
+            request.state.auth_context = None
     return await call_next(request)
 
 

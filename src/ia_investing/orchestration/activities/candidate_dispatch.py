@@ -1,4 +1,5 @@
 """Relay candidate-intelligence outbox events to idempotent Temporal workflows."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -7,8 +8,8 @@ from uuid import UUID
 
 from sqlalchemy import select
 from temporalio import activity
-from temporalio.client import Client, WorkflowAlreadyStartedError
-from temporalio.exceptions import ApplicationError
+from temporalio.client import Client
+from temporalio.exceptions import ApplicationError, WorkflowAlreadyStartedError
 
 from database.models.research import DomainOutboxEvent
 from ia_investing.orchestration.activities.candidate_intelligence import (
@@ -18,11 +19,6 @@ from ia_investing.orchestration.activities.candidate_intelligence import (
 )
 from ia_investing.platform.database import DatabaseRuntime
 from ia_investing.settings import get_settings
-from workflows.candidate_intelligence import (
-    AutonomousEquityExplorationWorkflow,
-    CandidateAnalysisWorkflow,
-    CandidateSourceValidationWorkflow,
-)
 
 _SUPPORTED_EVENTS = frozenset(
     {
@@ -53,6 +49,12 @@ def _datetime(payload: dict[str, Any], key: str) -> datetime:
 
 
 async def _dispatch_event(client: Client, event: DomainOutboxEvent) -> None:
+    from workflows.candidate_intelligence import (
+        AutonomousEquityExplorationWorkflow,
+        CandidateAnalysisWorkflow,
+        CandidateSourceValidationWorkflow,
+    )
+
     payload = dict(event.payload or {})
     correlation_id = event.correlation_id
     if event.event_type == "candidate.analysis.requested":
@@ -129,17 +131,21 @@ async def dispatch_candidate_intelligence_events(
     try:
         async with runtime.session() as session:
             events = (
-                await session.execute(
-                    select(DomainOutboxEvent)
-                    .where(
-                        DomainOutboxEvent.published_at.is_(None),
-                        DomainOutboxEvent.event_type.in_(_SUPPORTED_EVENTS),
+                (
+                    await session.execute(
+                        select(DomainOutboxEvent)
+                        .where(
+                            DomainOutboxEvent.published_at.is_(None),
+                            DomainOutboxEvent.event_type.in_(_SUPPORTED_EVENTS),
+                        )
+                        .order_by(DomainOutboxEvent.occurred_at, DomainOutboxEvent.id)
+                        .with_for_update(skip_locked=True)
+                        .limit(batch_size)
                     )
-                    .order_by(DomainOutboxEvent.occurred_at, DomainOutboxEvent.id)
-                    .with_for_update(skip_locked=True)
-                    .limit(batch_size)
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             for event in events:
                 try:
                     await _dispatch_event(client, event)

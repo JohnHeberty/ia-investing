@@ -124,9 +124,7 @@ class InvestmentCandidateApplicationService:
             )
         )
         if duplicate is not None:
-            raise CandidateDuplicateError(
-                f"active candidate already exists for {request.exchange.upper()}:{ticker}"
-            )
+            raise CandidateDuplicateError(f"active candidate already exists for {request.exchange.upper()}:{ticker}")
 
         now = utcnow()
         candidate = InvestmentCandidateRecord(
@@ -214,9 +212,7 @@ class InvestmentCandidateApplicationService:
         limit: int,
     ) -> list[InvestmentCandidateRecord]:
         self._require(permissions, "candidates:read", "research:read", "research_cases:read")
-        stmt = sa.select(InvestmentCandidateRecord).where(
-            InvestmentCandidateRecord.organization_id == organization_id
-        )
+        stmt = sa.select(InvestmentCandidateRecord).where(InvestmentCandidateRecord.organization_id == organization_id)
         if status:
             stmt = stmt.where(InvestmentCandidateRecord.status == status)
         if after:
@@ -400,9 +396,7 @@ class InvestmentCandidateApplicationService:
                 )
             )
             if not verified:
-                raise ValueError(
-                    "blocking source gap can only be resolved after the supplied URL is verified"
-                )
+                raise ValueError("blocking source gap can only be resolved after the supplied URL is verified")
         now = utcnow()
         gap.status = "resolved"
         gap.resolved_at = now
@@ -557,9 +551,7 @@ class InvestmentCandidateApplicationService:
         limit: int,
     ) -> list[ExplorationRunRecord]:
         self._require(permissions, "exploration:read", "candidates:read", "research:read")
-        stmt = sa.select(ExplorationRunRecord).where(
-            ExplorationRunRecord.organization_id == organization_id
-        )
+        stmt = sa.select(ExplorationRunRecord).where(ExplorationRunRecord.organization_id == organization_id)
         if status:
             stmt = stmt.where(ExplorationRunRecord.status == status)
         return list(

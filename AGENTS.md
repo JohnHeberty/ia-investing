@@ -32,3 +32,40 @@ History follows Conventional Commit-style subjects such as `feat:`, `test:`, and
 ## Security & Configuration
 
 Store credentials only in `.env` or a secret manager. Treat financial documents and downloaded datasets as potentially sensitive; avoid committing generated data, tokens, or production identifiers.
+
+## Histórico de Sessão — Integração Candidate Intelligence (Jul/2026)
+
+### O que foi feito
+Integramos um overlay externo de ~9k linhas (47 arquivos) chamado **Candidate Intelligence** ao IA Investing. O overlay adiciona 7 tabelas no banco, 5 workflows Temporal, 13 arquivos de domínio, e um runtime factory de agentes.
+
+### Correções aplicadas
+- **P0-01**: `AgentRuntimeService.create_run()` passou a aceitar `organization_id: UUID` — armazenado no modelo com FK + índice
+- **P0-02**: Factory em `src/ia_investing/integrations/candidate_runtime.py` com 15 callbacks; 3 conectados (persist, readiness, complete), 12 retornam checkpoint `blocked`
+- **P0-04**: `SourceRegistryService.register_source()` faz upsert por `code`; reusa objetos de licença existentes
+- **P0 residual**: `SSRFProtectionMiddleware` renomeado para `RequestHostValidator` (escopo só inbound); `app_factory.py` atualizado
+- **Migration chain**: `f7a100000007` → `b4c000000001..005` → `20260722_01` aplicada com sucesso
+- **`f7a100000008` deletada**: `b4c000000002` já adicionava `organization_id` em `agent_runtime_runs`; migration era redundante
+- **`metadata` → `meta_data`**: colisão com palavra reservada do SQLAlchemy em `AuditLogEntry`
+- **`.candidate-upgrade-backup/` limpo**: removido do staging, deletado do disco, adicionado ao `.gitignore`
+
+### 18 erros de coleção corrigidos
+- `WorkflowAlreadyStartedError` importado de `temporalio.exceptions` (não mais de `temporalio.client`)
+- `Request | None = None` → `Request = None` em `security.py` e `auth.py` (FastAPI 0.139.2 não reconhece `Union[Request, None]` como tipo especial)
+- `Response | None = None` → `Response = None` em `auth.py`
+- Import circular em `candidate_dispatch.py` resolvido com import lazy dentro de `_dispatch_event`
+- `SessionDep = Annotated[AsyncSession, Depends(get_async_session)]` adicionado em `dependencies.py`
+- `Principal = AuthContext` adicionado em `security.py`
+- `tests/__init__.py` criado (permitiu import de `tests.fixtures.golden_ai_vectors`)
+- Re-exports em `worker/main.py` (`ACTIVITIES_BY_CAPABILITY` e `WORKFLOWS_BY_CAPABILITY` do registry)
+- Import quebrado em `scheduler/main.py` consertado (re-export de `temporal_schedules.py`)
+
+### 24 falhas de teste corrigidas (1025 passed, 0 failed)
+- **21 falhas**: `_session_middleware` em `app_factory.py` — `session.get("roles", [])` estava fora do bloco `if session is not None:`, causando 500 em vez de 401/403. Corrigido indentando o bloco para dentro do guard e definindo `request.state.auth_context = None` para requisições anônimas
+- **2 falhas**: testes de worker desatualizados porque o overlay substituiu `worker/main.py` por arquitetura baseada em registry. Atualizadas expectativas de tuples de workflows e contagem de activities
+- **1 falha**: nome de constraint desatualizado em `test_operation_model.py` (`uq_operations_type_idempotency_key` → `uq_operations_org_type_idempotency_key`)
+
+### Feature desabilitada por padrão
+`CANDIDATE_INTELLIGENCE_ENABLED=false` — ativar via env vars + `CANDIDATE_RUNTIME_FACTORY=ia_investing.integrations.candidate_runtime:create_runtime`
+
+### Limitação conhecida
+Testes de integração asyncpg falham no Windows com `ConnectionResetError: [WinError 64]` — pré-existente.

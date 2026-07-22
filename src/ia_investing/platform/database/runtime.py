@@ -3,6 +3,7 @@
 Migrations are never executed by the application process. Startup only verifies
 that the schema exists and is at the expected consolidated head.
 """
+
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
@@ -50,9 +51,7 @@ class DatabaseRuntime:
 
     async def assert_schema_ready(self) -> None:
         async with self.engine.connect() as connection:
-            heads = set(
-                (await connection.execute(text("SELECT version_num FROM alembic_version"))).scalars().all()
-            )
+            heads = set((await connection.execute(text("SELECT version_num FROM alembic_version"))).scalars().all())
             if heads != {EXPECTED_ALEMBIC_HEAD}:
                 raise RuntimeError(
                     "database schema is not at the consolidated head; "

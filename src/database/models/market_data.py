@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime, time
+from datetime import date, datetime, time
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -8,10 +8,6 @@ import sqlalchemy as sa
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base
-
-
-def utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 class TradingSession(Base):

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 from temporalio.client import Client
 from temporalio.contrib.opentelemetry import TracingInterceptor
@@ -10,9 +11,21 @@ from temporalio.worker import Worker
 from ia_investing.candidate_intelligence.bootstrap import (
     configure_candidate_runtime_from_environment,
 )
-from ia_investing.orchestration.registry import definitions_for
+from ia_investing.orchestration.queues import Capability
+from ia_investing.orchestration.registry import CAPABILITIES, definitions_for
 from ia_investing.settings import get_settings
 from observability import setup_telemetry
+
+ACTIVITIES_BY_CAPABILITY: dict[Capability, tuple[Any, ...]] = {}
+WORKFLOWS_BY_CAPABILITY: dict[Capability, tuple[Any, ...]] = {}
+for cap in Capability:
+    defn = CAPABILITIES.get(cap.value)
+    if defn is not None:
+        ACTIVITIES_BY_CAPABILITY[cap] = defn.activities
+        WORKFLOWS_BY_CAPABILITY[cap] = defn.workflows
+    else:
+        ACTIVITIES_BY_CAPABILITY[cap] = ()
+        WORKFLOWS_BY_CAPABILITY[cap] = ()
 
 logger = logging.getLogger(__name__)
 

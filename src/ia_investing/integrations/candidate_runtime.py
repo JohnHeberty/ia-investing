@@ -53,13 +53,15 @@ def create_runtime(database_url: str | None = None) -> CallbackCandidateActivity
     async def resolve_identity(command: CandidateWorkflowInput) -> CandidateCheckpoint:
         if db is None:
             return _stage_blocked(
-                command, "identity_resolution",
+                command,
+                "identity_resolution",
                 "Identity resolution requires a database connection; not yet configured.",
                 blocker_codes=("identity_resolution",),
             )
         logger.info("resolve_candidate_identity candidate=%s", command.candidate_id)
         return _stage_blocked(
-            command, "identity_resolution",
+            command,
+            "identity_resolution",
             "Identity resolution connector not yet implemented. Requires issuer catalog query.",
             blocker_codes=("identity_resolution",),
         )
@@ -97,42 +99,48 @@ def create_runtime(database_url: str | None = None) -> CallbackCandidateActivity
 
     async def validate_sources(command: CandidateWorkflowInput) -> CandidateCheckpoint:
         return _stage_blocked(
-            command, "source_validation",
+            command,
+            "source_validation",
             "Source validation requires connector verification; not yet implemented.",
             blocker_codes=("source_validation",),
         )
 
     async def collect_documents(command: CandidateWorkflowInput) -> CandidateCheckpoint:
         return _stage_blocked(
-            command, "document_collection",
+            command,
+            "document_collection",
             "Document collection requires CVM/B3/RI connectors; not yet implemented.",
             blocker_codes=("document_collection",),
         )
 
     async def validate_financials(command: CandidateWorkflowInput) -> CandidateCheckpoint:
         return _stage_blocked(
-            command, "data_quality",
+            command,
+            "data_quality",
             "Financial data validation requires financial facts service; not yet wired.",
             blocker_codes=("data_quality",),
         )
 
     async def analyze_fundamentals(command: CandidateWorkflowInput) -> CandidateCheckpoint:
         return _stage_blocked(
-            command, "fundamental_analysis",
+            command,
+            "fundamental_analysis",
             "Fundamental analysis requires AI provider integration; not yet wired.",
             blocker_codes=("fundamental_analysis",),
         )
 
     async def analyze_risk(command: CandidateWorkflowInput) -> CandidateCheckpoint:
         return _stage_blocked(
-            command, "risk_analysis",
+            command,
+            "risk_analysis",
             "Risk analysis requires risk service integration; not yet wired.",
             blocker_codes=("risk_analysis",),
         )
 
     async def build_committee_pack(command: CandidateWorkflowInput) -> CandidateCheckpoint:
         return _stage_blocked(
-            command, "committee_review",
+            command,
+            "committee_review",
             "Committee review requires committee service integration; not yet wired.",
             blocker_codes=("committee_review",),
         )

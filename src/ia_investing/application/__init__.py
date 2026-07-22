@@ -1,21 +1,21 @@
 """Application services coordinating domain, persistence, and workflows."""
 
 from ia_investing.application.errors import (
-    BusinessRejection,
+    BusinessRejectionError,
     IaInvestingError,
     NonRetryableConfigurationError,
     RetryableInfrastructureError,
-    ValidationFailure,
+    ValidationError,
     is_retryable,
     temporal_retry_policy_from_error,
 )
 
 __all__ = [
-    "BusinessRejection",
+    "BusinessRejectionError",
     "IaInvestingError",
     "NonRetryableConfigurationError",
     "RetryableInfrastructureError",
-    "ValidationFailure",
+    "ValidationError",
     "is_retryable",
     "temporal_retry_policy_from_error",
 ]

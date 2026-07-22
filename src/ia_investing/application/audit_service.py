@@ -163,6 +163,6 @@ class AuditService:
             + entry.resource_type
             + str(entry.resource_id or "")
             + json.dumps(entry.changes or {}, sort_keys=True)
-            + json.dumps(entry.metadata or {}, sort_keys=True)
+            + json.dumps(entry.meta_data or {}, sort_keys=True)
         )
         return sha256(raw.encode("utf-8")).hexdigest()

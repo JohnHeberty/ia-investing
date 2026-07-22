@@ -54,6 +54,14 @@ async def test_source_health_is_sanitized_and_marks_stale() -> None:
 async def test_register_source_creates_entities_and_audit() -> None:
     """register_source creates license + source + SLA + audit log."""
     mock_session = AsyncMock()
+
+    async def fake_execute(stmt):
+        class FakeResult:
+            def scalar_one_or_none(self):
+                return None
+        return FakeResult()
+
+    mock_session.execute.side_effect = fake_execute
     svc = SourceRegistryService(mock_session)
     await svc.register_source(
         code="test-source",

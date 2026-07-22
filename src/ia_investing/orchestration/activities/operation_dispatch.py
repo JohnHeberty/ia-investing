@@ -1,4 +1,5 @@
 """Dispatch transactional command outbox rows to Temporal workflows."""
+
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
@@ -6,8 +7,8 @@ from typing import Any
 
 from sqlalchemy import select
 from temporalio import activity
-from temporalio.client import Client, WorkflowAlreadyStartedError
-from temporalio.exceptions import ApplicationError
+from temporalio.client import Client
+from temporalio.exceptions import ApplicationError, WorkflowAlreadyStartedError
 
 from database.models.operations import Operation, OperationDispatchOutbox
 from ia_investing.platform.database import DatabaseRuntime
@@ -46,17 +47,21 @@ async def dispatch_pending_operations(raw_input: dict[str, Any] | None = None) -
     try:
         async with runtime.session() as session:
             rows = (
-                await session.execute(
-                    select(OperationDispatchOutbox)
-                    .where(
-                        OperationDispatchOutbox.state == "pending",
-                        OperationDispatchOutbox.next_attempt_at <= now,
+                (
+                    await session.execute(
+                        select(OperationDispatchOutbox)
+                        .where(
+                            OperationDispatchOutbox.state == "pending",
+                            OperationDispatchOutbox.next_attempt_at <= now,
+                        )
+                        .order_by(OperationDispatchOutbox.created_at, OperationDispatchOutbox.id)
+                        .with_for_update(skip_locked=True)
+                        .limit(batch_size)
                     )
-                    .order_by(OperationDispatchOutbox.created_at, OperationDispatchOutbox.id)
-                    .with_for_update(skip_locked=True)
-                    .limit(batch_size)
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
 
             for outbox in rows:
                 operation = await session.get(Operation, outbox.operation_id)

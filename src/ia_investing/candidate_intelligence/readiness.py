@@ -173,9 +173,9 @@ class ReadinessEvaluator:
         requirement_by_code = {requirement.code: requirement for requirement in self.requirements}
         for dimension in dimensions:
             requirement = requirement_by_code.get(dimension.code)
-            if dimension.code == "identity":
-                weight = Decimal("2")
-            elif requirement is not None and requirement.level is RequirementLevel.BLOCKING:
+            if dimension.code == "identity" or (
+                requirement is not None and requirement.level is RequirementLevel.BLOCKING
+            ):
                 weight = Decimal("2")
             elif requirement is not None and requirement.level is RequirementLevel.REQUIRED:
                 weight = Decimal("1.5")
@@ -256,4 +256,4 @@ class ReadinessEvaluator:
                 )
             )
         unrelated = [gap for gap in existing_gaps if gap.code not in {r.code for r in self.requirements}]
-        return tuple((*output, *unrelated))
+        return (*output, *unrelated)

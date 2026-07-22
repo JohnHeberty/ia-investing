@@ -1,4 +1,5 @@
 """Periodic recovery workflow for candidate-intelligence outbox events."""
+
 from __future__ import annotations
 
 from datetime import timedelta

@@ -162,14 +162,18 @@ def paper_rebalance_schedule_definition(
 
 async def reconcile_schedules(client: Client, definitions: list[ScheduleDefinition]) -> dict[str, str]:
     results: dict[str, str] = {}
+
     for definition in definitions:
         try:
             await client.create_schedule(definition.schedule_id, definition.schedule)
             results[definition.schedule_id] = "created"
         except ScheduleAlreadyRunningError:
             handle = client.get_schedule_handle(definition.schedule_id)
-            schedule = definition.schedule
-            await handle.update(lambda _, schedule=schedule: ScheduleUpdate(schedule))
+
+            async def _updater(_input: object, _schedule: Schedule = definition.schedule) -> ScheduleUpdate:
+                return ScheduleUpdate(_schedule)
+
+            await handle.update(_updater)
             results[definition.schedule_id] = "updated"
     return results
 

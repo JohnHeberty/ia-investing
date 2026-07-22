@@ -10,10 +10,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from agents import Agent, Runner
 from opentelemetry import trace
 from opentelemetry.metrics import get_meter
 
-from agents import Agent, Runner
 from ia_investing.settings import Settings, get_settings
 
 from ._config import AgentConfig

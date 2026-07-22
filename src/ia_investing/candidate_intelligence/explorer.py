@@ -11,7 +11,6 @@ from .enums import ExplorationRunStatus, SourceStatus, SuggestionStatus, Verific
 from .models import (
     CandidateIdentity,
     CandidateSource,
-    ExplorationRun,
     ExplorationSuggestion,
     utcnow,
 )
@@ -142,10 +141,7 @@ class AutonomousExplorationOrchestrator:
             maximum_suggestions=run.maximum_suggestions,
         )
 
-        screened_by_ticker = {
-            (item.security.exchange.upper(), item.security.ticker.upper()): item
-            for item in bounded
-        }
+        screened_by_ticker = {(item.security.exchange.upper(), item.security.ticker.upper()): item for item in bounded}
         suggestions: list[ExplorationSuggestion] = []
         for finding in agent_output.candidates[: run.maximum_suggestions]:
             key = (finding.exchange.upper(), finding.ticker.upper())
@@ -170,10 +166,7 @@ class AutonomousExplorationOrchestrator:
                     status=source.status,
                     verification_method=source.verification_method,
                     confidence=source.confidence,
-                    official=(
-                        source.official
-                        and source.verification_method is not VerificationMethod.AGENT_INFERENCE
-                    ),
+                    official=(source.official and source.verification_method is not VerificationMethod.AGENT_INFERENCE),
                     discovered_by="agent:autonomous-equity-explorer",
                     created_at=utcnow(),
                     verified_at=(utcnow() if source.status is SourceStatus.VERIFIED else None),

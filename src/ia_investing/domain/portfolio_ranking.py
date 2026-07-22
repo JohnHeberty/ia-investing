@@ -3,6 +3,7 @@
 The ranking is intentionally deterministic. AI agents may explain the result, but
 must not change the arithmetic or eligibility rules.
 """
+
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping, Sequence
@@ -275,8 +276,4 @@ def top_x(
 ) -> list[RankingResult]:
     if limit < 1:
         raise ValueError("limit must be positive")
-    return [
-        result
-        for result in results
-        if result.cohort_key == cohort and result.eligible
-    ][:limit]
+    return [result for result in results if result.cohort_key == cohort and result.eligible][:limit]

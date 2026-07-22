@@ -1,4 +1,5 @@
 """Persist deterministic portfolio-ranking inputs with reproducible provenance."""
+
 from __future__ import annotations
 
 import hashlib

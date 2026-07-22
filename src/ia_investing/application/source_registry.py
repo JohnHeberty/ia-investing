@@ -48,9 +48,7 @@ class SourceRegistryService:
         credential_reference: str | None = None,
     ) -> DataSource:
         existing_source = (
-            await self.session.execute(
-                sa.select(DataSource).where(DataSource.code == code)
-            )
+            await self.session.execute(sa.select(DataSource).where(DataSource.code == code))
         ).scalar_one_or_none()
         if existing_source is not None:
             existing_source.name = name
@@ -60,9 +58,7 @@ class SourceRegistryService:
             existing_source.is_active = True
             existing_source.credential_reference = credential_reference
             existing_sla = (
-                await self.session.execute(
-                    sa.select(SourceSLA).where(SourceSLA.source_id == existing_source.id)
-                )
+                await self.session.execute(sa.select(SourceSLA).where(SourceSLA.source_id == existing_source.id))
             ).scalar_one_or_none()
             if existing_sla is not None:
                 existing_sla.expected_frequency_minutes = expected_frequency_minutes
@@ -82,9 +78,7 @@ class SourceRegistryService:
             return existing_source
 
         license_obj = (
-            await self.session.execute(
-                sa.select(SourceLicense).where(SourceLicense.code == license_code)
-            )
+            await self.session.execute(sa.select(SourceLicense).where(SourceLicense.code == license_code))
         ).scalar_one_or_none()
         if license_obj is None:
             license_obj = SourceLicense(

@@ -258,9 +258,7 @@ class MissionControlService:
                     PortfolioRankItem(
                         portfolio_id=UUID(portfolio_id),
                         name=item["name"],
-                        cohort_key=(
-                            f"unclassified|unknown|{item['currency']}|unknown|{item['environment']}"
-                        ),
+                        cohort_key=(f"unclassified|unknown|{item['currency']}|unknown|{item['environment']}"),
                         category="unclassified",
                         benchmark="unknown",
                         currency=item["currency"],
@@ -343,9 +341,7 @@ class MissionControlService:
         agent_ops = await self._agent_operations(generated_at, organization_id)
         sources = await self._source_health(generated_at)
         risk = await self._risk_summary(generated_at, organization_id)
-        pending = int(
-            await self._session.scalar(PENDING_APPROVALS_SQL, {"organization_id": organization_id}) or 0
-        )
+        pending = int(await self._session.scalar(PENDING_APPROVALS_SQL, {"organization_id": organization_id}) or 0)
         critical_alerts = risk.open_hard_breaches + sum(
             source.status in {"failed", "stale", "never_succeeded"} for source in sources
         )
@@ -407,14 +403,18 @@ class MissionControlService:
 
     async def _agent_operations(self, now: datetime, organization_id: UUID) -> AgentOperationsSummary:
         row = (
-            await self._session.execute(
-                AGENT_OPS_SQL,
-                {
-                    "since": now.replace(microsecond=0) - timedelta(hours=24),
-                    "organization_id": organization_id,
-                },
+            (
+                await self._session.execute(
+                    AGENT_OPS_SQL,
+                    {
+                        "since": now.replace(microsecond=0) - timedelta(hours=24),
+                        "organization_id": organization_id,
+                    },
+                )
             )
-        ).mappings().one()
+            .mappings()
+            .one()
+        )
         durations = list(row["durations"] or [])
         return AgentOperationsSummary(
             running=int(row["running"] or 0),
@@ -461,11 +461,15 @@ class MissionControlService:
 
     async def _risk_summary(self, now: datetime, organization_id: UUID) -> RiskSummary:
         row = (
-            await self._session.execute(
-                RISK_SUMMARY_SQL,
-                {"organization_id": organization_id},
+            (
+                await self._session.execute(
+                    RISK_SUMMARY_SQL,
+                    {"organization_id": organization_id},
+                )
             )
-        ).mappings().one()
+            .mappings()
+            .one()
+        )
         stale = int(
             await self._session.scalar(
                 text(

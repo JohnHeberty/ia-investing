@@ -335,7 +335,7 @@ class PaperExecutionService:
         )
         self.session.add(order)
         await self.session.flush()
-        fills: list[PaperFill] = []
+        simulated_fills: list[PaperFill] = []
         for simulated in result.fills:
             fill = PaperFill(
                 order_id=order.id,
@@ -352,7 +352,7 @@ class PaperExecutionService:
                 environment="paper",
             )
             self.session.add(fill)
-            fills.append(fill)
+            simulated_fills.append(fill)
             delta = fill_to_ledger(intent.side, simulated)
             self.session.add(
                 PortfolioLedgerEntry(
@@ -366,7 +366,7 @@ class PaperExecutionService:
                     source_reference=f"paper-fill:{fill.event_key}",
                 )
             )
-        if fills:
+        if simulated_fills:
             deltas = [fill_to_ledger(intent.side, s) for s in result.fills]
             total_qty = sum(d.instrument_quantity for d in deltas)
             total_cash = sum(d.cash_delta for d in deltas)
@@ -420,7 +420,7 @@ class PaperExecutionService:
                         as_of=datetime.now(UTC),
                     )
                 )
-        intent.status = "completed" if result.status == "filled" else "submitted" if fills else "expired"
+        intent.status = "completed" if result.status == "filled" else "submitted" if simulated_fills else "expired"
         intent.updated_at = datetime.now(UTC)
         self._record(intent, "PaperOrderSimulated", "paper_order.simulate", context.subject, correlation_id)
         order_event_type = {
@@ -439,7 +439,7 @@ class PaperExecutionService:
             context.organization_id,
             correlation_id,
         )
-        return order, tuple(fills)
+        return order, tuple(simulated_fills)
 
     async def reconcile_portfolio(
         self,

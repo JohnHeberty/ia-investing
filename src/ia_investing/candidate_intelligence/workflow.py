@@ -8,7 +8,6 @@ from uuid import UUID, uuid4
 
 from .contracts import CompanySourceDiscoveryOutput
 from .enums import (
-    AnalysisRunStatus,
     CandidateDecision,
     CandidateStatus,
     GapStatus,
@@ -200,8 +199,7 @@ class CandidateAnalysisOrchestrator:
                 code="identity_resolution",
                 title="Identidade do ativo não confirmada",
                 description=(
-                    "Não foi possível reconciliar ticker, emissor, CNPJ e cadastro CVM "
-                    "com confiança suficiente."
+                    "Não foi possível reconciliar ticker, emissor, CNPJ e cadastro CVM com confiança suficiente."
                 ),
                 source_kind=None,
                 level=RequirementLevel.BLOCKING,

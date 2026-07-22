@@ -1,1 +1,3 @@
-from database.base import Base  # noqa: F401
+from database.base import Base
+
+__all__ = ["Base"]

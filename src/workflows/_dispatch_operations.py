@@ -1,4 +1,5 @@
 """Periodic recovery workflow for the transactional operation outbox."""
+
 from __future__ import annotations
 
 from datetime import timedelta

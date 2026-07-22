@@ -259,8 +259,7 @@ def candidate_activity_runtime_configured() -> bool:
 def _runtime() -> CandidateActivityRuntime:
     if _RUNTIME is None:
         raise RuntimeError(
-            "candidate activity runtime is not configured; wire CallbackCandidateActivityRuntime "
-            "during worker startup"
+            "candidate activity runtime is not configured; wire CallbackCandidateActivityRuntime during worker startup"
         )
     return _RUNTIME
 

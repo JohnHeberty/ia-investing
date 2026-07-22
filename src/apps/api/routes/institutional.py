@@ -11,7 +11,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, R
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from temporalio.client import Client, WorkflowAlreadyStartedError
+from temporalio.client import Client
+from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from apps.api.dependencies import SessionDep
 from apps.api.security import Principal, require_permission
@@ -143,9 +144,7 @@ async def start_agent_run(
         "data_as_of": payload.data_as_of.isoformat(),
         "knowledge_cutoff": payload.knowledge_cutoff.isoformat(),
     }
-    request_hash = hashlib.sha256(
-        json.dumps(request_data, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
+    request_hash = hashlib.sha256(json.dumps(request_data, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
     existing = (
         await session.execute(

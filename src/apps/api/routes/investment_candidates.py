@@ -21,15 +21,6 @@ from temporalio.client import (
 
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
-from database.models.investment_candidates import (
-    CandidateAnalysisRunRecord,
-    CandidateEventRecord,
-    CandidateGapRecord,
-    CandidateSourceRecord,
-    ExplorationRunRecord,
-    ExplorationSuggestionRecord,
-    InvestmentCandidateRecord,
-)
 from ia_investing.application.investment_candidates import (
     CandidateConcurrencyError,
     CandidateDetail,
@@ -38,6 +29,7 @@ from ia_investing.application.investment_candidates import (
     ExplorationDetail,
     InvestmentCandidateApplicationService,
 )
+from ia_investing.candidate_intelligence.bootstrap import candidate_intelligence_enabled
 from ia_investing.candidate_intelligence.contracts import (
     CandidateCreateRequest,
     CandidateGapResolveRequest,
@@ -45,10 +37,10 @@ from ia_investing.candidate_intelligence.contracts import (
     CandidateSourceCreateRequest,
     ExplorationCreateRequest,
 )
-from ia_investing.candidate_intelligence.bootstrap import candidate_intelligence_enabled
 from ia_investing.candidate_intelligence.enums import CandidateStatus, RequirementLevel
 from ia_investing.candidate_intelligence.readiness import DEFAULT_SOURCE_REQUIREMENTS
 from ia_investing.settings import get_settings
+
 
 def require_candidate_intelligence() -> None:
     if not candidate_intelligence_enabled():
@@ -301,15 +293,9 @@ def detail_response(detail: CandidateDetail, response: Response) -> CandidateDet
     response.headers["ETag"] = f'"{candidate.lock_version}"'
 
     verified_sources = {
-        source.kind: source
-        for source in detail.sources
-        if source.status == "verified" and source.official
+        source.kind: source for source in detail.sources if source.status == "verified" and source.official
     }
-    blocking = sorted(
-        gap.code
-        for gap in detail.gaps
-        if gap.status == "open" and gap.level == "blocking"
-    )
+    blocking = sorted(gap.code for gap in detail.gaps if gap.status == "open" and gap.level == "blocking")
 
     weighted_total = Decimal("0")
     weight_sum = Decimal("0")
@@ -357,11 +343,7 @@ def detail_response(detail: CandidateDetail, response: Response) -> CandidateDet
         if stage_rank >= threshold:
             weighted_total += Decimal("1")
 
-    readiness = (
-        (weighted_total / weight_sum).quantize(Decimal("0.0001"))
-        if weight_sum
-        else Decimal("0")
-    )
+    readiness = (weighted_total / weight_sum).quantize(Decimal("0.0001")) if weight_sum else Decimal("0")
     return CandidateDetailV1(
         candidate=CandidateV1.model_validate(candidate),
         sources=[CandidateSourceV1.model_validate(item) for item in detail.sources],
@@ -593,9 +575,7 @@ async def create_exploration_schedule(
             id=f"{schedule_id}-workflow",
             task_queue="research-agents",
         ),
-        spec=ScheduleSpec(
-            intervals=[ScheduleIntervalSpec(every=timedelta(hours=body.interval_hours))]
-        ),
+        spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=timedelta(hours=body.interval_hours))]),
         policy=SchedulePolicy(
             overlap=ScheduleOverlapPolicy.SKIP,
             catchup_window=timedelta(hours=2),

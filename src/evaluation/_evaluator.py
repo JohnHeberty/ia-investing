@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,8 +31,6 @@ class AgentEvaluator:
             self._load_golden_docs()
 
     def _load_golden_docs(self) -> None:
-        import json
-
         try:
             self._golden_docs = json.loads(self._golden_docs_path.read_text(encoding="utf-8"))  # type: ignore[union-attr]
         except Exception:

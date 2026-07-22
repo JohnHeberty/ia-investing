@@ -1,4 +1,5 @@
 """Durable governed agent execution workflow."""
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass

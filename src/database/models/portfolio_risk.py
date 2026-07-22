@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -8,11 +8,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from ._utils import utcnow
 from .base import Base
-
-
-def utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 class InstitutionalRiskPolicy(Base):

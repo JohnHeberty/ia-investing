@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -8,11 +8,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
+from ._utils import utcnow
 from .base import Base
-
-
-def utcnow() -> datetime:
-    return datetime.now(UTC)
 
 
 class MacroSeriesDefinition(Base):
@@ -223,9 +220,7 @@ class RegulatoryAction(Base):
     issued_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
     effective_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
-    parent_action_id: Mapped[UUID | None] = mapped_column(
-        sa.ForeignKey("regulatory_actions.id", ondelete="SET NULL")
-    )
+    parent_action_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("regulatory_actions.id", ondelete="SET NULL"))
     rectifies: Mapped[bool] = mapped_column(sa.Boolean, default=False)
     content_sha256: Mapped[str] = mapped_column(sa.String(64))
     metadata_payload: Mapped[dict[str, object]] = mapped_column(JSONB)

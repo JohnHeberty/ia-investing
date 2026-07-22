@@ -205,8 +205,7 @@ class CommitteeService:
             raise MajorityNotReachedError("No votes cast")
         if db_session.votes_in_favor <= total_votes / 2:
             raise MajorityNotReachedError(
-                f"Majority not reached: {db_session.votes_in_favor} in favor, "
-                f"{db_session.votes_against} against"
+                f"Majority not reached: {db_session.votes_in_favor} in favor, {db_session.votes_against} against"
             )
 
         result = await self._transition(session_id, "deliberate", reason="Voting finalized", actor_id=actor_id)

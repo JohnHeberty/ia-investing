@@ -3,13 +3,14 @@
 Only workflows and activities listed here are executable. Phase-one mock
 activities are intentionally excluded from all production-capable workers.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
 
-from ia_investing.orchestration.activities.agent_runtime import AGENT_RUNTIME_ACTIVITIES
 from ia_investing.candidate_intelligence.bootstrap import candidate_intelligence_enabled
+from ia_investing.orchestration.activities.agent_runtime import AGENT_RUNTIME_ACTIVITIES
 from ia_investing.orchestration.activities.candidate_dispatch import CANDIDATE_DISPATCH_ACTIVITIES
 from ia_investing.orchestration.activities.candidate_intelligence import CANDIDATE_INTELLIGENCE_ACTIVITIES
 from ia_investing.orchestration.activities.data_ingestion import DATA_INGESTION_ACTIVITIES
@@ -20,13 +21,6 @@ from ia_investing.orchestration.activities.portfolio_construction import (
     PORTFOLIO_CONSTRUCTION_ACTIVITIES,
 )
 from ia_investing.orchestration.activities.portfolio_ranking import PORTFOLIO_RANKING_ACTIVITIES
-from workflows.candidate_dispatch import CandidateOutboxDispatchWorkflow
-from workflows.candidate_intelligence import (
-    AutonomousEquityExplorationWorkflow,
-    CandidateAnalysisWorkflow,
-    CandidateSourceValidationWorkflow,
-    ScheduledEquityExplorationWorkflow,
-)
 from workflows._dispatch_operations import DispatchOperationsWorkflow
 from workflows._ingest_cvm import IngestCVMWorkflow
 from workflows._paper_rebalance import PaperRebalanceWorkflow
@@ -36,6 +30,13 @@ from workflows._portfolio_construction import PortfolioConstructionWorkflow
 from workflows._portfolio_optimization import PortfolioOptimizationWorkflow
 from workflows._portfolio_ranking import PortfolioRankingWorkflow
 from workflows._run_agent import RunAgentWorkflow
+from workflows.candidate_dispatch import CandidateOutboxDispatchWorkflow
+from workflows.candidate_intelligence import (
+    AutonomousEquityExplorationWorkflow,
+    CandidateAnalysisWorkflow,
+    CandidateSourceValidationWorkflow,
+    ScheduledEquityExplorationWorkflow,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,18 +46,21 @@ class CapabilityDefinition:
     activities: tuple[Any, ...]
 
 
-
 _CANDIDATE_WORKFLOWS = (
-    CandidateOutboxDispatchWorkflow,
-    CandidateAnalysisWorkflow,
-    CandidateSourceValidationWorkflow,
-    AutonomousEquityExplorationWorkflow,
-    ScheduledEquityExplorationWorkflow,
-) if candidate_intelligence_enabled() else ()
+    (
+        CandidateOutboxDispatchWorkflow,
+        CandidateAnalysisWorkflow,
+        CandidateSourceValidationWorkflow,
+        AutonomousEquityExplorationWorkflow,
+        ScheduledEquityExplorationWorkflow,
+    )
+    if candidate_intelligence_enabled()
+    else ()
+)
 
 _CANDIDATE_ACTIVITIES = (
-    CANDIDATE_DISPATCH_ACTIVITIES + CANDIDATE_INTELLIGENCE_ACTIVITIES
-) if candidate_intelligence_enabled() else ()
+    (CANDIDATE_DISPATCH_ACTIVITIES + CANDIDATE_INTELLIGENCE_ACTIVITIES) if candidate_intelligence_enabled() else ()
+)
 
 CAPABILITIES: dict[str, CapabilityDefinition] = {
     "data-ingestion": CapabilityDefinition(
@@ -68,7 +72,7 @@ CAPABILITIES: dict[str, CapabilityDefinition] = {
     ),
     "research-agents": CapabilityDefinition(
         task_queue="research-agents",
-        workflows=(RunAgentWorkflow, DispatchOperationsWorkflow) + _CANDIDATE_WORKFLOWS,
+        workflows=(RunAgentWorkflow, DispatchOperationsWorkflow, *_CANDIDATE_WORKFLOWS),
         activities=AGENT_RUNTIME_ACTIVITIES + OPERATION_DISPATCH_ACTIVITIES + _CANDIDATE_ACTIVITIES,
     ),
     "portfolio-risk": CapabilityDefinition(
@@ -81,11 +85,7 @@ CAPABILITIES: dict[str, CapabilityDefinition] = {
             PaperReconciliationWorkflow,
             PortfolioRankingWorkflow,
         ),
-        activities=(
-            PORTFOLIO_CONSTRUCTION_ACTIVITIES
-            + PAPER_OPERATION_ACTIVITIES
-            + PORTFOLIO_RANKING_ACTIVITIES
-        ),
+        activities=(PORTFOLIO_CONSTRUCTION_ACTIVITIES + PAPER_OPERATION_ACTIVITIES + PORTFOLIO_RANKING_ACTIVITIES),
     ),
     "notifications": CapabilityDefinition(
         task_queue="notifications",

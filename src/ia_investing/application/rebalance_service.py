@@ -58,16 +58,18 @@ class RebalanceService:
             fees = estimated_value * TRANSACTION_COST_BPS if delta > 0 else Decimal("0")
             taxes = estimated_value * TAX_RATE if delta > 0 else Decimal("0")
 
-            trades.append({
-                "ticker": ticker,
-                "current_weight": float(cur_weight),
-                "target_weight": float(tgt_pct),
-                "delta": float(delta),
-                "estimated_value": float(estimated_value),
-                "estimated_fees": float(fees),
-                "estimated_taxes": float(taxes),
-                "side": "buy" if delta > 0 else "sell",
-            })
+            trades.append(
+                {
+                    "ticker": ticker,
+                    "current_weight": float(cur_weight),
+                    "target_weight": float(tgt_pct),
+                    "delta": float(delta),
+                    "estimated_value": float(estimated_value),
+                    "estimated_fees": float(fees),
+                    "estimated_taxes": float(taxes),
+                    "side": "buy" if delta > 0 else "sell",
+                }
+            )
 
         trades.sort(key=lambda t: abs(t["delta"]), reverse=True)
         return trades
@@ -110,19 +112,21 @@ class RebalanceService:
         await self._session.flush()
 
         for i, trade in enumerate(trades):
-            self._session.add(RebalanceTrade(
-                proposal_id=proposal.id,
-                ticker=trade["ticker"],
-                side=trade["side"],
-                current_weight=Decimal(str(trade["current_weight"])),
-                target_weight=Decimal(str(trade["target_weight"])),
-                delta=Decimal(str(trade["delta"])),
-                estimated_value=Decimal(str(trade["estimated_value"])),
-                estimated_fees=Decimal(str(trade.get("estimated_fees", 0))),
-                estimated_taxes=Decimal(str(trade.get("estimated_taxes", 0))),
-                status="pending",
-                execution_order=i + 1,
-            ))
+            self._session.add(
+                RebalanceTrade(
+                    proposal_id=proposal.id,
+                    ticker=trade["ticker"],
+                    side=trade["side"],
+                    current_weight=Decimal(str(trade["current_weight"])),
+                    target_weight=Decimal(str(trade["target_weight"])),
+                    delta=Decimal(str(trade["delta"])),
+                    estimated_value=Decimal(str(trade["estimated_value"])),
+                    estimated_fees=Decimal(str(trade.get("estimated_fees", 0))),
+                    estimated_taxes=Decimal(str(trade.get("estimated_taxes", 0))),
+                    status="pending",
+                    execution_order=i + 1,
+                )
+            )
 
         await self._session.flush()
         return await self._proposal_to_dict(proposal.id)
@@ -210,9 +214,7 @@ class RebalanceService:
 
     async def get_rebalance_status(self, proposal_id: uuid.UUID) -> dict[str, Any]:
         await self._get_proposal(proposal_id)
-        result = await self._session.execute(
-            sa.select(RebalanceTrade).where(RebalanceTrade.proposal_id == proposal_id)
-        )
+        result = await self._session.execute(sa.select(RebalanceTrade).where(RebalanceTrade.proposal_id == proposal_id))
         trades = list(result.scalars().all())
         total = len(trades)
         executed = sum(1 for t in trades if t.status == "executed")
@@ -321,7 +323,8 @@ class RebalanceService:
     async def _proposal_to_dict(self, proposal_id: uuid.UUID) -> dict[str, Any]:
         proposal = await self._get_proposal(proposal_id)
         result = await self._session.execute(
-            sa.select(RebalanceTrade).where(RebalanceTrade.proposal_id == proposal_id)
+            sa.select(RebalanceTrade)
+            .where(RebalanceTrade.proposal_id == proposal_id)
             .order_by(RebalanceTrade.execution_order)
         )
         trades = list(result.scalars().all())
@@ -382,13 +385,15 @@ class RebalanceService:
             total_drift += drift_val
             severity = "green" if drift_val < Decimal("0.01") else "yellow" if drift_val < Decimal("0.03") else "red"
 
-            items.append({
-                "ticker": ticker,
-                "current_weight": float(cur),
-                "target_weight": float(tgt),
-                "drift": float(drift_val),
-                "severity": severity,
-            })
+            items.append(
+                {
+                    "ticker": ticker,
+                    "current_weight": float(cur),
+                    "target_weight": float(tgt),
+                    "drift": float(drift_val),
+                    "severity": severity,
+                }
+            )
 
         items.sort(key=lambda i: i["drift"], reverse=True)
         return {

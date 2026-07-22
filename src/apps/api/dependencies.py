@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 from uuid import UUID
 
 from fastapi import Depends
@@ -14,6 +14,8 @@ from ia_investing.application.audit_service import AuditService
 from ia_investing.application.operations import OperationService
 from ia_investing.database.core import get_async_session
 from ia_investing.settings import get_settings
+
+SessionDep = Annotated[AsyncSession, Depends(get_async_session)]
 
 if TYPE_CHECKING:
     from ia_investing.application.committee_service import CommitteeService

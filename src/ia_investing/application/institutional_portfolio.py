@@ -92,7 +92,7 @@ class InstitutionalPortfolioService:
             version=next_version,
             objective=str(payload["objective"]),
             strategy_type=str(payload["strategy_type"]),
-            universe_definition=dict(payload["universe_definition"]),  # type: ignore[arg-type]
+            universe_definition=dict(payload["universe_definition"]),  # type: ignore[call-overload]
             benchmark_index_id=UUID(str(payload["benchmark_index_id"])),
             base_currency=str(payload.get("base_currency", "BRL")),
             investment_horizon_days=int(str(payload["investment_horizon_days"])),

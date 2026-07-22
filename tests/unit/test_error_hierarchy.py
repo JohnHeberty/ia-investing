@@ -1,15 +1,15 @@
 import pytest
 
 from ia_investing.application.errors import (
-    BusinessRejection,
+    BusinessRejectionError,
     IaInvestingError,
     NonRetryableConfigurationError,
     RetryableInfrastructureError,
-    ValidationFailure,
+    ValidationError,
     is_retryable,
     temporal_retry_policy_from_error,
 )
-from ia_investing.ai.errors import AiProviderError, GuardrailViolation
+from ia_investing.ai.errors import AiProviderError, GuardrailViolationError
 
 
 class TestInstantiation:
@@ -20,13 +20,13 @@ class TestInstantiation:
         assert err.code == "internal_error"
 
     def test_business_rejection(self) -> None:
-        err = BusinessRejection("order exceeds limit", detail="limit=10000")
+        err = BusinessRejectionError("order exceeds limit", detail="limit=10000")
         assert str(err) == "order exceeds limit"
         assert err.detail == "limit=10000"
         assert err.code == "business_rejection"
 
     def test_validation_failure(self) -> None:
-        err = ValidationFailure("invalid cnpj", detail="cnpj=00.000.000/0001-00")
+        err = ValidationError("invalid cnpj", detail="cnpj=00.000.000/0001-00")
         assert str(err) == "invalid cnpj"
         assert err.detail == "cnpj=00.000.000/0001-00"
         assert err.code == "validation_failure"
@@ -49,10 +49,10 @@ class TestIsRetryable:
         assert is_retryable(RetryableInfrastructureError("timeout")) is True
 
     def test_business_rejection_is_not_retryable(self) -> None:
-        assert is_retryable(BusinessRejection("rejected")) is False
+        assert is_retryable(BusinessRejectionError("rejected")) is False
 
     def test_validation_failure_is_not_retryable(self) -> None:
-        assert is_retryable(ValidationFailure("invalid")) is False
+        assert is_retryable(ValidationError("invalid")) is False
 
     def test_non_retryable_configuration_is_not_retryable(self) -> None:
         assert is_retryable(NonRetryableConfigurationError("bad config")) is False
@@ -73,12 +73,12 @@ class TestTemporalRetryPolicy:
         assert policy["non_retryable_error_types"] == []
 
     def test_business_rejection_policy(self) -> None:
-        policy = temporal_retry_policy_from_error(BusinessRejection("rejected"))
+        policy = temporal_retry_policy_from_error(BusinessRejectionError("rejected"))
         assert policy["maximum_attempts"] == 1
         assert policy["non_retryable_error_types"] == ["*"]
 
     def test_validation_failure_policy(self) -> None:
-        policy = temporal_retry_policy_from_error(ValidationFailure("invalid"))
+        policy = temporal_retry_policy_from_error(ValidationError("invalid"))
         assert policy["maximum_attempts"] == 1
         assert policy["non_retryable_error_types"] == ["*"]
 
@@ -107,8 +107,8 @@ class TestAiErrors:
         assert err.detail == "model=gpt-4"
 
     def test_guardrail_violation_is_business_rejection(self) -> None:
-        err = GuardrailViolation("harmful content detected", detail="category=toxic")
-        assert isinstance(err, BusinessRejection)
+        err = GuardrailViolationError("harmful content detected", detail="category=toxic")
+        assert isinstance(err, BusinessRejectionError)
         assert err.code == "guardrail_violation"
         assert str(err) == "harmful content detected"
         assert err.detail == "category=toxic"
@@ -117,7 +117,7 @@ class TestAiErrors:
         assert is_retryable(AiProviderError("timeout")) is True
 
     def test_guardrail_violation_not_retryable(self) -> None:
-        assert is_retryable(GuardrailViolation("blocked")) is False
+        assert is_retryable(GuardrailViolationError("blocked")) is False
 
 
 class TestHierarchyDepth:
@@ -127,6 +127,6 @@ class TestHierarchyDepth:
         assert issubclass(IaInvestingError, Exception)
 
     def test_guardrail_violation_deep_hierarchy(self) -> None:
-        assert issubclass(GuardrailViolation, BusinessRejection)
-        assert issubclass(BusinessRejection, IaInvestingError)
+        assert issubclass(GuardrailViolationError, BusinessRejectionError)
+        assert issubclass(BusinessRejectionError, IaInvestingError)
         assert issubclass(IaInvestingError, Exception)

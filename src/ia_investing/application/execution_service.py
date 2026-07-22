@@ -136,8 +136,7 @@ class ExecutionService:
 
         if execution.available_balance < execution.required_amount:
             raise InsufficientBalanceError(
-                f"Insufficient balance: {execution.available_balance} available, "
-                f"{execution.required_amount} required"
+                f"Insufficient balance: {execution.available_balance} available, {execution.required_amount} required"
             )
 
         result = await self._transition(execution_id, "dispatch", actor_id=actor_id)

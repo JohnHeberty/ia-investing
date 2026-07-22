@@ -12,7 +12,7 @@ from ._config import (
     AgentConfig,
 )
 from ._runner import AgentResult, AgentRunner
-from .errors import AiProviderError, GuardrailViolation
+from .errors import AiProviderError, GuardrailViolationError
 from .gateway import AIGateway, AnthropicGateway, GatewayProvider, OpenAIGateway, create_gateway_provider
 from .gateway_errors import (
     ProviderAuthError,
@@ -39,7 +39,7 @@ __all__ = [
     "AiProviderError",
     "AnthropicGateway",
     "GatewayProvider",
-    "GuardrailViolation",
+    "GuardrailViolationError",
     "OpenAIGateway",
     "ProviderAuthError",
     "ProviderBadRequestError",
