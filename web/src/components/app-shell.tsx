@@ -29,6 +29,8 @@ const primary = [
   ["/", "Missão", CircleGauge],
   ["/portfolios/demo", "Carteiras", BriefcaseBusiness],
   ["/opportunities", "Oportunidades", Radar],
+  ["/opportunities/candidates", "Candidatos", Search],
+  ["/opportunities/exploration", "Exploração", Radar],
   ["/risk", "Risco", ShieldCheck],
   ["/committee", "Comitê", Landmark],
 ] as const satisfies readonly NavItem[];

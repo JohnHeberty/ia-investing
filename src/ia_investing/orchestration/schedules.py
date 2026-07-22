@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from typing import Any
 
+from ia_investing.candidate_intelligence.bootstrap import candidate_intelligence_enabled
 from temporalio.client import (
     Schedule,
     ScheduleActionStartWorkflow,
@@ -93,5 +94,15 @@ def default_schedules(settings: Any) -> list[ScheduleDefinition]:
                     },
                 ),
             ]
+        )
+    if candidate_intelligence_enabled():
+        schedules.append(
+            ScheduleDefinition(
+                schedule_id="candidate-intelligence-outbox-dispatch",
+                workflow="CandidateOutboxDispatchWorkflow",
+                task_queue="research-agents",
+                interval=timedelta(minutes=1),
+                input_payload={"batch_size": 50},
+            )
         )
     return schedules

@@ -9,6 +9,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from ia_investing.orchestration.activities.agent_runtime import AGENT_RUNTIME_ACTIVITIES
+from ia_investing.candidate_intelligence.bootstrap import candidate_intelligence_enabled
+from ia_investing.orchestration.activities.candidate_dispatch import CANDIDATE_DISPATCH_ACTIVITIES
+from ia_investing.orchestration.activities.candidate_intelligence import CANDIDATE_INTELLIGENCE_ACTIVITIES
 from ia_investing.orchestration.activities.data_ingestion import DATA_INGESTION_ACTIVITIES
 from ia_investing.orchestration.activities.notifications import NOTIFICATION_ACTIVITIES
 from ia_investing.orchestration.activities.operation_dispatch import OPERATION_DISPATCH_ACTIVITIES
@@ -17,6 +20,13 @@ from ia_investing.orchestration.activities.portfolio_construction import (
     PORTFOLIO_CONSTRUCTION_ACTIVITIES,
 )
 from ia_investing.orchestration.activities.portfolio_ranking import PORTFOLIO_RANKING_ACTIVITIES
+from workflows.candidate_dispatch import CandidateOutboxDispatchWorkflow
+from workflows.candidate_intelligence import (
+    AutonomousEquityExplorationWorkflow,
+    CandidateAnalysisWorkflow,
+    CandidateSourceValidationWorkflow,
+    ScheduledEquityExplorationWorkflow,
+)
 from workflows._dispatch_operations import DispatchOperationsWorkflow
 from workflows._ingest_cvm import IngestCVMWorkflow
 from workflows._paper_rebalance import PaperRebalanceWorkflow
@@ -35,6 +45,19 @@ class CapabilityDefinition:
     activities: tuple[Any, ...]
 
 
+
+_CANDIDATE_WORKFLOWS = (
+    CandidateOutboxDispatchWorkflow,
+    CandidateAnalysisWorkflow,
+    CandidateSourceValidationWorkflow,
+    AutonomousEquityExplorationWorkflow,
+    ScheduledEquityExplorationWorkflow,
+) if candidate_intelligence_enabled() else ()
+
+_CANDIDATE_ACTIVITIES = (
+    CANDIDATE_DISPATCH_ACTIVITIES + CANDIDATE_INTELLIGENCE_ACTIVITIES
+) if candidate_intelligence_enabled() else ()
+
 CAPABILITIES: dict[str, CapabilityDefinition] = {
     "data-ingestion": CapabilityDefinition(
         task_queue="data-ingestion",
@@ -45,8 +68,8 @@ CAPABILITIES: dict[str, CapabilityDefinition] = {
     ),
     "research-agents": CapabilityDefinition(
         task_queue="research-agents",
-        workflows=(RunAgentWorkflow, DispatchOperationsWorkflow),
-        activities=AGENT_RUNTIME_ACTIVITIES + OPERATION_DISPATCH_ACTIVITIES,
+        workflows=(RunAgentWorkflow, DispatchOperationsWorkflow) + _CANDIDATE_WORKFLOWS,
+        activities=AGENT_RUNTIME_ACTIVITIES + OPERATION_DISPATCH_ACTIVITIES + _CANDIDATE_ACTIVITIES,
     ),
     "portfolio-risk": CapabilityDefinition(
         task_queue="portfolio-risk",

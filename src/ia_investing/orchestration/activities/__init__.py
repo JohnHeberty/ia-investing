@@ -1,4 +1,6 @@
 from .agent_runtime import AGENT_RUNTIME_ACTIVITIES
+from .candidate_dispatch import CANDIDATE_DISPATCH_ACTIVITIES
+from .candidate_intelligence import CANDIDATE_INTELLIGENCE_ACTIVITIES
 from .data_ingestion import DATA_INGESTION_ACTIVITIES
 from .notifications import NOTIFICATION_ACTIVITIES
 from .operation_dispatch import OPERATION_DISPATCH_ACTIVITIES
@@ -11,6 +13,8 @@ from .state_machine import STATE_MACHINE_ACTIVITIES
 from .thesis_review import THESIS_REVIEW_ACTIVITIES
 
 __all__ = [
+    "CANDIDATE_DISPATCH_ACTIVITIES",
+    "CANDIDATE_INTELLIGENCE_ACTIVITIES",
     "AGENT_RUNTIME_ACTIVITIES",
     "DATA_INGESTION_ACTIVITIES",
     "NOTIFICATION_ACTIVITIES",

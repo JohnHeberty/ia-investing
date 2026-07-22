@@ -42,7 +42,7 @@ def _is_host_allowed(host: str, allowed_hosts: set[str]) -> bool:
     return host in allowed_hosts
 
 
-class SSRFProtectionMiddleware(BaseHTTPMiddleware):
+class RequestHostValidator(BaseHTTPMiddleware):
     async def dispatch(
         self,
         request: Request,
@@ -56,10 +56,10 @@ class SSRFProtectionMiddleware(BaseHTTPMiddleware):
         request_host = request.url.hostname
         if request_host and _is_private_ip(request_host) and not _is_host_allowed(request_host, allowed_hosts):
             emit_security_event(
-                "ssrf_blocked",
-                detail=f"Blocked request to private IP: {request_host}",
+                "private_request_host_detected",
+                detail=f"Request to private IP: {request_host}",
                 source_ip=request.client.host if request.client else "unknown",
             )
-            logger.warning("SSRF blocked request to %s", request_host)
+            logger.warning("Request to private IP detected (post-hoc): %s", request_host)
 
         return response

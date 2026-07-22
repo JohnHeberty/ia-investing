@@ -1,0 +1,27 @@
+.layout { display: grid; gap: 14px; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.formGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.field { display: grid; gap: 6px; }
+.field label { color: var(--muted); font-size: 11px; }
+.field input, .field select, .field textarea { border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 9px; padding: 10px; }
+.field textarea { min-height: 90px; resize: vertical; }
+.full { grid-column: 1 / -1; }
+.statusGrid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.statusItem { border: 1px solid var(--line-soft); background: var(--surface-2); border-radius: 10px; padding: 11px; }
+.statusItem strong { display: block; font-size: 11px; }
+.statusItem span { display: block; margin-top: 5px; color: var(--muted-2); font: 9px var(--font-mono); }
+.blocker { border-color: var(--red); }
+.complete { border-color: var(--accent); }
+.sourceList, .gapList, .timeline { display: grid; gap: 8px; }
+.source, .gap, .timelineItem { border: 1px solid var(--line-soft); border-radius: 10px; padding: 12px; background: var(--surface-2); }
+.sourceHeader, .gapHeader { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+.source a { color: var(--blue); overflow-wrap: anywhere; font-size: 11px; }
+.meta { color: var(--muted-2); font: 9px var(--font-mono); margin-top: 6px; }
+.error { border: 1px solid var(--red); color: var(--red); padding: 10px; border-radius: 9px; }
+.success { border: 1px solid var(--accent); color: var(--accent); padding: 10px; border-radius: 9px; }
+.tabs { display: flex; gap: 5px; border-bottom: 1px solid var(--line); overflow-x: auto; }
+.tab { border: 0; background: transparent; color: var(--muted); padding: 10px 12px; cursor: pointer; border-bottom: 2px solid transparent; }
+.tabActive { color: var(--text); border-bottom-color: var(--accent); }
+@media (max-width: 900px) { .statusGrid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 680px) { .formGrid, .statusGrid { grid-template-columns: 1fr; } }

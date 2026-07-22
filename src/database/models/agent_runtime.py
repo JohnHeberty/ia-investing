@@ -75,6 +75,7 @@ class AgentRuntimeRun(Base):
     __tablename__ = "agent_runtime_runs"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID] = mapped_column(sa.ForeignKey("organizations.id", ondelete="RESTRICT"), index=True)
     capability_id: Mapped[UUID] = mapped_column(sa.ForeignKey("agent_capabilities.id", ondelete="RESTRICT"))
     agent_version_id: Mapped[UUID] = mapped_column(sa.ForeignKey("agent_versions.id", ondelete="RESTRICT"))
     case_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("research_cases.id", ondelete="RESTRICT"), index=True)

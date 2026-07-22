@@ -207,6 +207,15 @@ from .thesis_domain import (  # noqa: F401
 )
 from .valuation import ValuationAssumption, ValuationResult, ValuationRun  # noqa: F401
 
+from .investment_candidates import (  # noqa: F401
+    CandidateAnalysisRunRecord,
+    CandidateEventRecord,
+    CandidateGapRecord,
+    CandidateSourceRecord,
+    ExplorationRunRecord,
+    ExplorationSuggestionRecord,
+    InvestmentCandidateRecord,
+)
 __all__ = [
     "Base",
 ]

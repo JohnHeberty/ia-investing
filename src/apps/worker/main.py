@@ -1,99 +1,57 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any
 
 from temporalio.client import Client
 from temporalio.contrib.opentelemetry import TracingInterceptor
 from temporalio.worker import Worker
 
-from ia_investing.orchestration import TASK_QUEUES, Capability
-from ia_investing.orchestration.activities import (
-    DATA_INGESTION_ACTIVITIES,
-    NOTIFICATION_ACTIVITIES,
-    OPERATION_ACTIVITIES,
-    PAPER_OPERATION_ACTIVITIES,
-    PORTFOLIO_CONSTRUCTION_ACTIVITIES,
-    RESEARCH_MOCK_ACTIVITIES,
-    THESIS_REVIEW_ACTIVITIES,
+from ia_investing.candidate_intelligence.bootstrap import (
+    configure_candidate_runtime_from_environment,
 )
-from ia_investing.orchestration import workflows as _wfs
+from ia_investing.orchestration.registry import definitions_for
 from ia_investing.settings import get_settings
 from observability import setup_telemetry
 
 logger = logging.getLogger(__name__)
 
-WORKFLOWS_BY_CAPABILITY: dict[Capability, Sequence[type[Any]]] = {
-    Capability.DATA_INGESTION: (_wfs.IngestCVMWorkflow,),
-    Capability.DOCUMENT_PROCESSING: (),
-    Capability.RESEARCH_AGENTS: (
-        _wfs.AnalyzeFilingWorkflow,
-        _wfs.AnalyzeNewsWorkflow,
-        _wfs.ApprovalGateWorkflow,
-        _wfs.PolicyEventWorkflow,
-        _wfs.DiscoverStocksWorkflow,
-        _wfs.RunAgentWorkflow,
-        _wfs.ThesisReviewWorkflow,
-    ),
-    Capability.PORTFOLIO_RISK: (
-        _wfs.PortfolioConstructionWorkflow,
-        _wfs.PortfolioOptimizationWorkflow,
-        _wfs.PaperRebalanceWorkflow,
-        _wfs.PaperReconciliationWorkflow,
-        _wfs.PaperValuationWorkflow,
-    ),
-    Capability.NOTIFICATIONS: (),
-}
-
-ACTIVITIES_BY_CAPABILITY: dict[Capability, Sequence[Any]] = {
-    Capability.DATA_INGESTION: (*DATA_INGESTION_ACTIVITIES, *NOTIFICATION_ACTIVITIES),
-    Capability.DOCUMENT_PROCESSING: (),
-    Capability.RESEARCH_AGENTS: (
-        *RESEARCH_MOCK_ACTIVITIES,
-        *THESIS_REVIEW_ACTIVITIES,
-        *OPERATION_ACTIVITIES,
-        *NOTIFICATION_ACTIVITIES,
-    ),
-    Capability.PORTFOLIO_RISK: (*PAPER_OPERATION_ACTIVITIES, *PORTFOLIO_CONSTRUCTION_ACTIVITIES),
-    Capability.NOTIFICATIONS: NOTIFICATION_ACTIVITIES,
-}
-
 
 async def start_worker() -> None:
     settings = get_settings()
+    capability = settings.worker.capability
     if settings.telemetry.enabled:
-        setup_telemetry(f"ia-investing-worker-{settings.worker.capability}", settings.telemetry.otlp_endpoint)
-    capability = Capability(settings.worker.capability)
+        setup_telemetry(
+            f"ia-investing-worker-{capability}",
+            settings.telemetry.otlp_endpoint,
+        )
+
+    task_queue, workflows, activities = definitions_for(capability)
+    if capability == "research-agents":
+        await configure_candidate_runtime_from_environment()
+    if not workflows and not activities:
+        raise RuntimeError(f"capability {capability!r} has no registered workflows or activities")
+
     client = await Client.connect(
         settings.temporal.address,
         namespace=settings.temporal.namespace,
         interceptors=[TracingInterceptor()] if settings.telemetry.enabled else [],
     )
-
-    workflows = WORKFLOWS_BY_CAPABILITY[capability]
-    activities = ACTIVITIES_BY_CAPABILITY[capability]
-    if capability is Capability.RESEARCH_AGENTS and settings.ai.provider != "mock":
-        raise RuntimeError("only AI__PROVIDER=mock is implemented for the phase-1 research worker")
-    if not workflows and not activities:
-        raise RuntimeError(f"capability {capability} has no registered workflows or activities")
     with ThreadPoolExecutor(
         max_workers=settings.worker.activity_threads,
-        thread_name_prefix=f"temporal-{capability.value}",
+        thread_name_prefix=f"temporal-{capability}",
     ) as activity_executor:
         worker = Worker(
             client,
-            task_queue=TASK_QUEUES[capability],
+            task_queue=task_queue,
             workflows=workflows,
             activities=activities,
             activity_executor=activity_executor,
         )
-
         logger.info(
             "Starting Temporal worker capability=%s queue=%s workflows=%s activities=%s",
             capability,
-            TASK_QUEUES[capability],
+            task_queue,
             [workflow.__name__ for workflow in workflows],
             [activity.__name__ for activity in activities],
         )

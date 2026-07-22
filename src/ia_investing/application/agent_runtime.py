@@ -230,6 +230,7 @@ class AgentRuntimeService:
     async def create_run(
         self,
         *,
+        organization_id: UUID,
         capability: str,
         case_id: UUID | None,
         input_payload: dict[str, object],
@@ -258,6 +259,7 @@ class AgentRuntimeService:
             existing = (
                 await self.session.execute(
                     select(AgentRuntimeRun).where(
+                        AgentRuntimeRun.organization_id == organization_id,
                         AgentRuntimeRun.capability_id == definition.id,
                         AgentRuntimeRun.idempotency_key == idempotency_key,
                     )
@@ -281,6 +283,7 @@ class AgentRuntimeService:
         if version_pin is None and version.status != "active":
             raise ValueError("active version pointer is inconsistent")
         run = AgentRuntimeRun(
+            organization_id=organization_id,
             capability_id=definition.id,
             agent_version_id=version.id,
             case_id=case_id,

@@ -10,8 +10,8 @@ from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from apps.api.auth import get_current_user
 from apps.api.errors import install_problem_handlers
 from apps.api.middleware.rate_limit import RateLimitMiddleware
+from apps.api.middleware.request_host_validator import RequestHostValidator
 from apps.api.middleware.security_headers import SecurityHeadersMiddleware
-from apps.api.middleware.ssrf import SSRFProtectionMiddleware
 from apps.api.routes.agent_runtime import router as agent_runtime_router
 from apps.api.routes.agents import router as agents_router
 from apps.api.routes.audit import router as audit_router
@@ -23,6 +23,8 @@ from apps.api.routes.health import router as health_router
 from apps.api.routes.institutional import router as institutional_router
 from apps.api.routes.institutional_portfolios import router as institutional_portfolios_router
 from apps.api.routes.instruments import router as instruments_router
+from apps.api.routes.investment_candidates import exploration_router
+from apps.api.routes.investment_candidates import router as investment_candidates_router
 from apps.api.routes.issuers import router as issuers_router
 from apps.api.routes.metrics import router as metrics_router
 from apps.api.routes.operations import router as operations_router
@@ -86,6 +88,8 @@ _AUTH_ROUTERS = [
     operations_router,
     sources_router,
     instruments_router,
+    investment_candidates_router,
+    exploration_router,
     quality_router,
     metrics_router,
     research_router,
@@ -180,7 +184,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     install_problem_handlers(app)
 
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(SSRFProtectionMiddleware)
+    app.add_middleware(RequestHostValidator)
     app.add_middleware(RateLimitMiddleware)
 
     app.middleware("http")(_session_middleware)
