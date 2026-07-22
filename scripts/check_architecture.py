@@ -18,8 +18,31 @@ import argparse
 import json
 import re
 import sys
+from collections import defaultdict
 from dataclasses import asdict, dataclass
 from pathlib import Path
+
+_LEGACY_MODULES = frozenset(
+    {
+        "database",
+        "workflows",
+        "agents",
+        "connectors",
+        "domain",
+        "portfolio",
+        "backtesting",
+        "evaluation",
+        "metrics",
+        "normalization",
+        "data_quality",
+        "observability",
+        "parsers",
+        "schemas",
+    }
+)
+
+_LEGACY_MODS = "|".join(sorted(_LEGACY_MODULES, key=lambda m: -len(m)))
+_RE_LEGACY_IMPORT = re.compile(rf"^\s*(?:from|import)\s+({_LEGACY_MODS})")
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +80,25 @@ def add(
     )
 
 
+def scan_legacy_imports(root: Path) -> dict[str, list[tuple[Path, int, str]]]:
+    """Scan all Python files under src/ for legacy imports.
+
+    Returns a dict mapping module name -> list of (file, line, import_text).
+    """
+    imports: dict[str, list[tuple[Path, int, str]]] = defaultdict(list)
+    src = root / "src"
+    for path in sorted(src.rglob("*.py")):
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except Exception:
+            continue
+        for lineno, line in enumerate(lines):
+            m = _RE_LEGACY_IMPORT.match(line)
+            if m:
+                imports[m.group(1)].append((path, lineno + 1, line.strip()))
+    return dict(imports)
+
+
 def check(root: Path) -> list[Finding]:
     findings: list[Finding] = []
     src = root / "src"
@@ -72,6 +114,7 @@ def check(root: Path) -> list[Finding]:
             "Move all local agent code to ia_investing.ai, update imports, then delete src/agents.",
         )
 
+    # ARCH-002: granular tracking of duplicate legacy/canonical namespaces
     for legacy_name in ("database", "workflows", "connectors", "domain", "portfolio", "backtesting"):
         legacy = src / legacy_name
         canonical = src / "ia_investing" / legacy_name
@@ -82,7 +125,33 @@ def check(root: Path) -> list[Finding]:
                 "ARCH-002",
                 legacy,
                 f"Duplicate legacy and canonical namespaces exist for '{legacy_name}'.",
-                "Choose ia_investing as the only production namespace and remove the compatibility copy after rewiring entrypoints.",
+                "Choose ia_investing as the only production namespace and remove the compatibility copy after rewiring entrypoints.",  # noqa: E501
+            )
+
+    # ARCH-002 legacy import count per module
+    legacy_imports = scan_legacy_imports(root)
+    total_legacy_count = sum(len(v) for v in legacy_imports.values())
+    if total_legacy_count > 0:
+        mods_detail = "; ".join(f"{mod}: {len(paths)}" for mod, paths in sorted(legacy_imports.items()))
+        add(
+            findings,
+            "WARNING",
+            "ARCH-002",
+            src,
+            f"{total_legacy_count} legacy imports remain across {len(legacy_imports)} modules: {mods_detail}",
+            "Migrate all imports to ia_investing.* equivalents and remove legacy top-level packages.",
+        )
+
+    # ARCH-003: files still using legacy imports after migration deadline
+    for mod, entries in sorted(legacy_imports.items()):
+        for filepath, line, import_text in entries:
+            add(
+                findings,
+                "WARNING",
+                "ARCH-003",
+                filepath,
+                f"Line {line}: '{import_text}' imports legacy module '{mod}'.",
+                f"Replace with 'from ia_investing.{mod}' import or the canonical equivalent.",
             )
 
     pyproject = root / "pyproject.toml"
@@ -108,7 +177,7 @@ def check(root: Path) -> list[Finding]:
                 "API-001",
                 api_main,
                 "API entrypoint imports legacy namespaces instead of canonical ia_investing modules.",
-                "Create a canonical application factory and route registry backed by ia_investing.application/domain/platform.",
+                "Create a canonical application factory and route registry backed by ia_investing.application/domain/platform.",  # noqa: E501
             )
         if "oidc" not in api_text.lower() and "current_user" not in api_text.lower() and "auth" not in api_text.lower():
             add(
@@ -153,7 +222,7 @@ def check(root: Path) -> list[Finding]:
                 "TMP-001",
                 worker_main,
                 "Temporal Worker registers workflows without registering activities.",
-                "Build capability-specific worker registries containing exact workflows and activities for each task queue.",
+                "Build capability-specific worker registries containing exact workflows and activities for each task queue.",  # noqa: E501
             )
         if "from database." in worker_text or "from workflows" in worker_text:
             add(
@@ -241,7 +310,7 @@ def check(root: Path) -> list[Finding]:
                 "SET-001",
                 path,
                 f"{name} does not import settings from canonical ia_investing.settings.",
-                "Replace legacy imports (e.g. from database.config) with 'from ia_investing.settings import Settings, get_settings'.",
+                "Replace legacy imports (e.g. from database.config) with 'from ia_investing.settings import Settings, get_settings'.",  # noqa: E501
             )
         if "from database.config import" in text or "from database import" in text:
             add(
@@ -264,10 +333,12 @@ def check(root: Path) -> list[Finding]:
                     "DATA-001",
                     path,
                     "Production package contains synthetic-data references.",
-                    "Tag data origin explicitly and make production readiness fail when synthetic-only calibration is active.",
+                    "Tag data origin explicitly and make production readiness fail when synthetic-only calibration is active.",  # noqa: E501
                 )
 
-    return sorted(findings, key=lambda item: ({"ERROR": 0, "WARNING": 1, "INFO": 2}[item.severity], item.code, item.path))
+    return sorted(
+        findings, key=lambda item: ({"ERROR": 0, "WARNING": 1, "INFO": 2}[item.severity], item.code, item.path)
+    )
 
 
 def main() -> int:

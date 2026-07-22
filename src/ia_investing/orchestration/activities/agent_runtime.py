@@ -18,8 +18,10 @@ from temporalio.exceptions import ApplicationError
 
 from database.models.operations import Operation
 from ia_investing.ai.execution import AgentExecutionService
+from ia_investing.ai.gateway import GatewayProvider, create_gateway_provider
 from ia_investing.ai.provider import MockProvider, OpenAIAgentsProvider
 from ia_investing.application.agent_runtime import AgentRuntimeService
+from ia_investing.application.calibration_engine import CalibrationEngine
 from ia_investing.platform.database import DatabaseRuntime
 from ia_investing.settings import get_settings
 
@@ -46,7 +48,7 @@ class ExecuteAgentCommand(BaseModel):
         return value
 
 
-def _provider() -> MockProvider | OpenAIAgentsProvider:
+def _provider() -> MockProvider | OpenAIAgentsProvider | GatewayProvider:
     settings = get_settings()
     if settings.ai.provider == "mock":
         return MockProvider()
@@ -54,6 +56,18 @@ def _provider() -> MockProvider | OpenAIAgentsProvider:
         os.environ["OPENAI_API_KEY"] = settings.ai.openai_api_key.get_secret_value()
         os.environ["OPENAI_BASE_URL"] = settings.ai.openai_base_url
         return OpenAIAgentsProvider()
+    if settings.ai.provider == "gateway":
+        gw = settings.ai.gateway
+        return create_gateway_provider(
+            provider=gw.provider,
+            api_key=gw.api_key.get_secret_value(),
+            default_model=gw.model,
+            base_url=gw.base_url,
+            timeout=gw.timeout,
+            max_retries=gw.max_retries,
+            rpm=gw.rpm,
+            tpm=gw.tpm,
+        )
     raise ApplicationError(
         "AI gateway provider is not implemented by the current provider adapter",
         type="ConfigurationError",
@@ -63,6 +77,10 @@ def _provider() -> MockProvider | OpenAIAgentsProvider:
 
 def _runtime() -> DatabaseRuntime:
     return DatabaseRuntime.create(get_settings().database.url)
+
+
+def _calibration_engine() -> CalibrationEngine:
+    return CalibrationEngine()
 
 
 @activity.defn(name="create_and_execute_agent_run")
@@ -122,6 +140,15 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
                 await session.flush()
 
             executed = await AgentExecutionService(session, _provider()).execute(run_id)
+
+            _calibration_engine().record_prediction(
+                component=command.capability,
+                inputs=command.input_payload,
+                output=executed.output_payload or {},
+                confidence=0.5 if executed.status == "succeeded" else 0.0,
+                tags=[command.capability],
+            )
+
             result = {
                 "operation_id": str(command.operation_id),
                 "run_id": str(executed.id),

@@ -6,6 +6,18 @@ from typing import Literal
 from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+_DEFAULT_CSP = (
+    "default-src 'self'; "
+    "script-src 'self'; "
+    "style-src 'self' 'unsafe-inline'; "
+    "img-src 'self' data:; "
+    "font-src 'self'; "
+    "connect-src 'self'; "
+    "frame-ancestors 'none'; "
+    "base-uri 'self'; "
+    "form-action 'self'"
+)
+
 
 class DatabaseSettings(BaseModel):
     url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/stock_intelligence"
@@ -26,11 +38,32 @@ class TemporalSettings(BaseModel):
     task_queue: str = "stock-intelligence"
 
 
+class AIGatewaySettings(BaseModel):
+    provider: Literal["openai", "anthropic"] = "openai"
+    api_key: SecretStr = SecretStr("")
+    model: str = "gpt-4o"
+    timeout: float = Field(default=120.0, ge=1.0)
+    max_retries: int = Field(default=3, ge=0, le=10)
+    base_url: str | None = None
+    rpm: int = Field(default=60, ge=1)
+    tpm: int = Field(default=100_000, ge=1)
+
+    @model_validator(mode="after")
+    def validate_config(self) -> AIGatewaySettings:
+        raw = self.api_key.get_secret_value()
+        if raw and len(raw) < 8:
+            raise ValueError("AI gateway API key is too short")
+        if self.provider == "anthropic" and self.model and "claude" not in self.model:
+            raise ValueError("Anthropic models should contain 'claude'")
+        return self
+
+
 class AISettings(BaseModel):
     provider: Literal["mock", "openai", "gateway"] = "mock"
     openai_api_key: SecretStr = SecretStr("")
     openai_base_url: str = "https://api.openai.com/v1"
     litellm_gateway_url: str | None = None
+    gateway: AIGatewaySettings = Field(default_factory=AIGatewaySettings)
 
 
 class TelemetrySettings(BaseModel):
@@ -44,7 +77,23 @@ class SecuritySettings(BaseModel):
     oidc_issuer: str | None = None
     oidc_audience: str | None = None
     oidc_client_id: str | None = None
+    oidc_client_secret: str | None = None
     oidc_jwks_url: str | None = None
+    ssrf_allowed_internal_hosts: list[str] = Field(
+        default_factory=lambda: ["postgres", "minio", "temporal", "localhost", "127.0.0.1"],
+        description="Hostnames allowed for internal SSRF requests",
+    )
+    content_security_policy: str = Field(
+        default=_DEFAULT_CSP,
+        description="Content-Security-Policy header value",
+    )
+    oidc_authorization_url: str | None = None
+    oidc_token_url: str | None = None
+    oidc_end_session_url: str | None = None
+    oidc_redirect_uri: str = "http://localhost:3000/api/auth/callback"
+    oidc_scope: str = "openid profile email offline_access"
+    session_secret_key: str = ""
+    csrf_secret_key: str = ""
 
 
 class SchedulerSettings(BaseModel):

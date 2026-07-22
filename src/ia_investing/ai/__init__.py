@@ -13,19 +13,39 @@ from ._config import (
 )
 from ._runner import AgentResult, AgentRunner
 from .errors import AiProviderError, GuardrailViolation
+from .gateway import AIGateway, AnthropicGateway, GatewayProvider, OpenAIGateway, create_gateway_provider
+from .gateway_errors import (
+    ProviderAuthError,
+    ProviderBadRequestError,
+    ProviderError,
+    ProviderRateLimitError,
+    ProviderTimeoutError,
+)
+from .rate_limiter import TokenBucketRateLimiter
 
 __all__ = [
     "ALL_AGENTS",
-    "AiProviderError",
-    "AgentConfig",
-    "AgentResult",
-    "AgentRunner",
     "CRITIC_AGENT",
     "FILING_ANALYST",
     "FUNDAMENTALIST_ANALYST",
-    "GuardrailViolation",
     "INVESTMENT_COMMITTEE",
     "NEWS_ANALYST",
     "RESEARCH_COORDINATOR",
     "RISK_DIRECTOR",
+    "AIGateway",
+    "AgentConfig",
+    "AgentResult",
+    "AgentRunner",
+    "AiProviderError",
+    "AnthropicGateway",
+    "GatewayProvider",
+    "GuardrailViolation",
+    "OpenAIGateway",
+    "ProviderAuthError",
+    "ProviderBadRequestError",
+    "ProviderError",
+    "ProviderRateLimitError",
+    "ProviderTimeoutError",
+    "TokenBucketRateLimiter",
+    "create_gateway_provider",
 ]

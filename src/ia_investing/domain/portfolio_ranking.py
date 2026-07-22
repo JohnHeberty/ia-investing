@@ -11,6 +11,10 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 from math import isfinite
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ia_investing.application.calibration_engine import CalibrationEngine
 
 
 class PortfolioStage(StrEnum):
@@ -201,6 +205,26 @@ def evaluate_portfolio(
         penalty=penalty.quantize(Decimal("0.0001")),
         reasons=(),
     )
+
+
+def record_ranking_calibration(
+    results: Sequence[RankingResult],
+    engine: CalibrationEngine | None = None,
+) -> None:
+    if engine is None:
+        return
+    for result in results:
+        engine.record_prediction(
+            component="portfolio_ranking",
+            inputs={"portfolio_id": result.portfolio_id, "cohort_key": result.cohort_key},
+            output={
+                "eligible": result.eligible,
+                "score": str(result.score) if result.score is not None else None,
+                "rank": result.rank,
+            },
+            confidence=float(result.score) if result.score is not None else 0.0,
+            tags=["portfolio_ranking"],
+        )
 
 
 def rank_portfolios(

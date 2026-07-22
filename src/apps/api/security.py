@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import hmac
+import secrets
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 import jwt
@@ -88,6 +92,11 @@ async def get_auth_context(
     dev_teams: str = Header(default="", alias="X-Dev-Teams"),
     request: Request | None = None,
 ) -> AuthContext:
+    session_context: AuthContext | None = None
+    if request is not None:
+        session_context = getattr(request.state, "auth_context", None)
+        if session_context is not None:
+            return session_context
     settings = get_settings()
     if credentials is not None:
         try:
@@ -166,3 +175,104 @@ def require_permission(permission: str):
         return context
 
     return dependency
+
+
+SESSION_COOKIE_NAME = "ia_session"
+CSRF_COOKIE_NAME = "ia_csrf_token"
+SESSION_DURATION = timedelta(hours=8)
+COOKIE_SECURE_DEFAULT = False
+
+
+def _session_key(settings: Settings) -> str:
+    key = settings.security.session_secret_key
+    if not key:
+        raise RuntimeError("SECURITY__SESSION_SECRET_KEY is not configured")
+    return key
+
+
+def _csrf_key(settings: Settings) -> str:
+    key = settings.security.csrf_secret_key
+    if not key:
+        key = _session_key(settings)
+    return key
+
+
+def create_session_token(
+    subject: str,
+    organization_id: UUID | None = None,
+    roles: frozenset[str] = frozenset(),
+    team_ids: frozenset[UUID] = frozenset(),
+    permissions: frozenset[str] = frozenset(),
+    name: str | None = None,
+    email: str | None = None,
+    extra: dict[str, object] | None = None,
+) -> str:
+    now = datetime.now(UTC)
+    payload: dict[str, object] = {
+        "sub": subject,
+        "iat": now,
+        "exp": now + SESSION_DURATION,
+        "sid": secrets.token_hex(16),
+    }
+    if organization_id:
+        payload["organization_id"] = str(organization_id)
+    if roles:
+        payload["roles"] = list(roles)
+    if team_ids:
+        payload["team_ids"] = [str(t) for t in team_ids]
+    if permissions:
+        payload["permissions"] = list(permissions)
+    if name:
+        payload["name"] = name
+    if email:
+        payload["email"] = email
+    if extra:
+        payload.update(extra)
+    settings = get_settings()
+    return jwt.encode(payload, _session_key(settings), algorithm="HS256")
+
+
+def decode_session_token(token: str) -> dict[str, object] | None:
+    settings = get_settings()
+    try:
+        return jwt.decode(
+            token,
+            _session_key(settings),
+            algorithms=["HS256"],
+            options={"require": ["sub", "exp", "iat"]},
+        )
+    except jwt.PyJWTError:
+        return None
+
+
+def _session_from_request(request: Request) -> dict[str, object] | None:
+    raw = request.cookies.get(SESSION_COOKIE_NAME)
+    if not raw:
+        return None
+    return decode_session_token(raw)
+
+
+def generate_csrf_token(session_id: str) -> str:
+    settings = get_settings()
+    digest = hmac.new(
+        _csrf_key(settings).encode(),
+        session_id.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return f"{session_id}:{digest}"
+
+
+def validate_csrf_token(token: str, expected_session_id: str) -> bool:
+    settings = get_settings()
+    parts = token.split(":", 1)
+    if len(parts) != 2:
+        return False
+    session_id, digest = parts
+    if session_id != expected_session_id:
+        return False
+    expected = hmac.new(
+        _csrf_key(settings).encode(),
+        session_id.encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    return hmac.compare_digest(digest, expected)

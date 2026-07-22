@@ -31,6 +31,7 @@ from .agents import (  # noqa: F401
     Recommendation,
     ThesisVersion,
 )
+from .audit import AuditLogEntry  # noqa: F401
 from .base import Base
 
 # Import all models so SQLAlchemy can discover them via Base.metadata
@@ -42,6 +43,7 @@ from .catalog import (  # noqa: F401
     Sector,
     Ticker,
 )
+from .committee import CommitteeDecision, CommitteeSession, CommitteeVote  # noqa: F401
 from .data_foundation import (  # noqa: F401
     DataSource,
     IngestionAttempt,
@@ -57,6 +59,7 @@ from .documents import (  # noqa: F401
     RawDocument,
 )
 from .evidence import DocumentChunk  # noqa: F401
+from .execution import Execution  # noqa: F401
 from .financial_facts import (  # noqa: F401
     AccountMappingRule,
     FinancialFact,
