@@ -12,6 +12,7 @@ from apps.api.routes.agent_runtime import router as agent_runtime_router
 from apps.api.routes.agents import router as agents_router
 from apps.api.routes.financials import router as financials_router
 from apps.api.routes.health import router as health_router
+from apps.api.routes.institutional import router as institutional_router
 from apps.api.routes.institutional_portfolios import router as institutional_portfolios_router
 from apps.api.routes.instruments import router as instruments_router
 from apps.api.routes.issuers import router as issuers_router
@@ -61,6 +62,7 @@ _AUTH_ROUTERS = [
     metrics_router,
     research_router,
     agent_runtime_router,
+    institutional_router,
     institutional_portfolios_router,
     policy_router,
     macro_router,
