@@ -5,6 +5,10 @@ import logging
 
 from temporal_schedules import reconcile_configured_schedules
 
+from ia_investing.settings import get_settings
+
+settings = get_settings()
+
 logger = logging.getLogger(__name__)
 
 
