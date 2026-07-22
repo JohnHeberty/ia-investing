@@ -7,8 +7,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
 from temporalio.contrib.opentelemetry import TracingInterceptor
 
-from database.core import get_async_session
 from ia_investing.application.operations import OperationService
+from ia_investing.database.core import get_async_session
 from ia_investing.settings import get_settings
 
 _temporal_client: Client | None = None

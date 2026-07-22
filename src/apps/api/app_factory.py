@@ -34,10 +34,12 @@ from observability import setup_telemetry
 def _build_lifespan(settings: Settings):
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+        from apps.api.security import _build_oidc_verifier
         from ia_investing.ai.artifacts import ArtifactLoader
 
         prompts_root = Path(__file__).resolve().parents[3] / "prompts"
         app.state.agent_registry = ArtifactLoader(prompts_root).load_registry()
+        app.state.oidc_verifier = _build_oidc_verifier(settings)
         yield
         from ia_investing.database.core import close_db
         await close_db()

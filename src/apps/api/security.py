@@ -5,13 +5,13 @@ from dataclasses import dataclass, field
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import PyJWKClient
 
 from ia_investing.application.audit import emit_security_event
 from ia_investing.application.security import ActorContext, enforce
-from ia_investing.settings import get_settings
+from ia_investing.settings import Settings, get_settings
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -37,12 +37,22 @@ class AuthContext:
         )
 
 
-async def _decode_oidc_token(token: str) -> dict[str, object]:
+def _build_oidc_verifier(settings: Settings) -> PyJWKClient | None:
+    url = settings.security.oidc_jwks_url
+    return PyJWKClient(url) if url else None
+
+
+async def _decode_oidc_token(
+    token: str,
+    verifier: PyJWKClient | None = None,
+) -> dict[str, object]:
     settings = get_settings().security
     if not settings.oidc_issuer or not settings.oidc_audience or not settings.oidc_jwks_url:
         raise HTTPException(status_code=503, detail="OIDC is not configured")
-    jwks_client = PyJWKClient(settings.oidc_jwks_url)
-    signing_key = await asyncio.to_thread(jwks_client.get_signing_key_from_jwt, token)
+    if verifier is None:
+        verifier = _build_oidc_verifier(get_settings())
+    assert verifier is not None
+    signing_key = await asyncio.to_thread(verifier.get_signing_key_from_jwt, token)
     return jwt.decode(
         token,
         signing_key.key,
@@ -76,12 +86,16 @@ async def get_auth_context(
     dev_permissions: str = Header(default="", alias="X-Dev-Permissions"),
     dev_organization: UUID | None = Header(default=None, alias="X-Dev-Organization"),
     dev_teams: str = Header(default="", alias="X-Dev-Teams"),
+    request: Request | None = None,
 ) -> AuthContext:
     settings = get_settings()
     if credentials is not None:
         try:
+            verifier: PyJWKClient | None = None
+            if request is not None and hasattr(request.app.state, "oidc_verifier"):
+                verifier = request.app.state.oidc_verifier
             if settings.security.oidc_enabled:
-                claims = await _decode_oidc_token(credentials.credentials)
+                claims = await _decode_oidc_token(credentials.credentials, verifier)
             elif settings.application.environment != "production":
                 claims = jwt.decode(
                     credentials.credentials,
