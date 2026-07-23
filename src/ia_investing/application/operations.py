@@ -116,9 +116,9 @@ class OperationService:
                 task_queue=TASK_QUEUES[Capability.RESEARCH_AGENTS],
             )
         except Exception:
-            operation.state = OperationState.FAILED  # type: ignore[assignment]
-            operation.error_code = "workflow_start_failed"  # type: ignore[assignment]
-            operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."  # type: ignore[assignment]
+            operation.state = OperationState.FAILED
+            operation.error_code = "workflow_start_failed"
+            operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."
             await self.session.commit()
             raise
         return OperationAcceptedV1(operation_id=operation_id)
@@ -174,9 +174,9 @@ class OperationService:
                     task_queue=TASK_QUEUES[command.task_queue],
                 )
             except Exception:
-                operation.state = OperationState.FAILED  # type: ignore[assignment]
-                operation.error_code = "workflow_start_failed"  # type: ignore[assignment]
-                operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."  # type: ignore[assignment]
+                operation.state = OperationState.FAILED
+                operation.error_code = "workflow_start_failed"
+                operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."
                 await self.session.commit()
                 raise
         return OperationAcceptedV1(operation_id=operation_id)
@@ -186,12 +186,12 @@ class OperationService:
         if operation is None:
             return None
         return OperationStatusV1(
-            operation_id=operation.id,  # type: ignore[arg-type]
+            operation_id=operation.id,
             state=operation.state,  # type: ignore[arg-type]
-            created_at=operation.created_at,  # type: ignore[arg-type]
-            updated_at=operation.updated_at,  # type: ignore[arg-type]
-            result_url=operation.result_url,  # type: ignore[arg-type]
-            error_code=operation.error_code,  # type: ignore[arg-type]
-            error_detail=operation.error_detail,  # type: ignore[arg-type]
+            created_at=operation.created_at,
+            updated_at=operation.updated_at,
+            result_url=operation.result_url,
+            error_code=operation.error_code,
+            error_detail=operation.error_detail,
             metadata={},
         )

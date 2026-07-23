@@ -1,5 +1,9 @@
+from datetime import datetime
+from uuid import UUID, uuid4
+
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ._utils import utcnow
 from .base import Base
@@ -8,24 +12,24 @@ from .base import Base
 class CommitteeSession(Base):
     __tablename__ = "committee_sessions"
 
-    id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    thesis_ids = sa.Column(JSONB, nullable=False, default=list)
-    members = sa.Column(JSONB, nullable=False, default=list)
-    scheduled_at = sa.Column(sa.DateTime(timezone=True), nullable=False)
-    convened_at = sa.Column(sa.DateTime(timezone=True))
-    state = sa.Column(sa.String(20), nullable=False, default="scheduled")
-    agenda = sa.Column(JSONB, nullable=False, default=dict)
-    total_members = sa.Column(sa.Integer, nullable=False, default=0)
-    present_members = sa.Column(sa.Integer, nullable=False, default=0)
-    votes_in_favor = sa.Column(sa.Integer, nullable=False, default=0)
-    votes_against = sa.Column(sa.Integer, nullable=False, default=0)
-    members_notified = sa.Column(sa.Boolean, nullable=False, default=False)
-    decision = sa.Column(sa.Text)
-    rationale = sa.Column(sa.Text)
-    published_at = sa.Column(sa.DateTime(timezone=True))
-    archived_at = sa.Column(sa.DateTime(timezone=True))
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at = sa.Column(
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    thesis_ids: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=list)
+    members: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=list)
+    scheduled_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    convened_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    state: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="scheduled")
+    agenda: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict)
+    total_members: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
+    present_members: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
+    votes_in_favor: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
+    votes_against: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
+    members_notified: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    decision: Mapped[str | None] = mapped_column(sa.Text)
+    rationale: Mapped[str | None] = mapped_column(sa.Text)
+    published_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    archived_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
         default=utcnow,
@@ -47,18 +51,17 @@ class CommitteeSession(Base):
 class CommitteeVote(Base):
     __tablename__ = "committee_votes"
 
-    id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    session_id = sa.Column(
-        UUID(as_uuid=True),
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("committee_sessions.id", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    member_id = sa.Column(sa.String(100), nullable=False)
-    proposal_id = sa.Column(sa.String(100), nullable=False)
-    vote = sa.Column(sa.String(20), nullable=False)
-    justification = sa.Column(sa.Text)
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    member_id: Mapped[str] = mapped_column(sa.String(100), nullable=False)
+    proposal_id: Mapped[str] = mapped_column(sa.String(100), nullable=False)
+    vote: Mapped[str] = mapped_column(sa.String(20), nullable=False)
+    justification: Mapped[str | None] = mapped_column(sa.Text)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
 
     __table_args__ = (
         sa.CheckConstraint(
@@ -77,16 +80,15 @@ class CommitteeVote(Base):
 class CommitteeDecision(Base):
     __tablename__ = "committee_decisions"
 
-    id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    session_id = sa.Column(
-        UUID(as_uuid=True),
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    session_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("committee_sessions.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
         index=True,
     )
-    decision = sa.Column(sa.Text, nullable=False)
-    rationale = sa.Column(sa.Text)
-    votes_summary = sa.Column(JSONB, nullable=False, default=dict)
-    published_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    decision: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    rationale: Mapped[str | None] = mapped_column(sa.Text)
+    votes_summary: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=dict)
+    published_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)

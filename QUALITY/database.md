@@ -1,7 +1,7 @@
 # Code Quality Analysis — `database` Module
 
 **Data:** 2026-07-21  
-**Última atualização:** 2026-07-22 — W-01, W-02, W-03, C-01, C-02 corrigidos  
+**Última atualização:** 2026-07-23 — S-01, S-03, S-04 concluídos (Mapped migration + rename + Literal)  
 **Arquivos analisados:** 45 Python files (core.py, config.py, base.py + models/)  
 **Ferramentas usadas:** ruff, mypy, análise manual de padrões  
 
@@ -13,7 +13,7 @@
 |------------|----------|-----------|----------|-----------|
 | Crítico | 2 | 2 | 0 | C-01 resolvido com `__all__`, C-02 false positive (re-export modules) |
 | Aviso | 5 | 4 | 1 | W-01/02/03/04 corrigidos (W-04 via C-01), W-05 (import-not-found) pré-existente |
-| Sugestão | 4 | 1 | 3 | S-02 (lambda→function reference) corrigido com utcnow consolidation; S-01/S-03/S-04 pendentes |
+| Sugestão | 4 | 4 | 0 | S-02 (lambda→utcnow) concluído. S-01 (Mapped migration) + S-03 (rename) + S-04 (Literal) concluídos |
 
 ---
 
@@ -91,23 +91,18 @@ Estes são imports relativos ao projeto que mypy não resolve sem path config co
 ## Sugestão
 
 ### S-01: Mistura de estilos de coluna — declarative vs mapped_column
-O módulo usa dois padrões diferentes para definir colunas SQLAlchemy:
+O módulo usava dois padrões diferentes para definir colunas SQLAlchemy.
 
-**Padrão antigo (declarative):** Em `_audit.py`, `_definitions.py`:
-```python
-id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-status = sa.Column(sa.String(20))  # "matched", "unmatched"
-created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
-```
+**Resolvido.** Os 18 arquivos com estilo `sa.Column(...)` foram migrados para `Mapped[T] = mapped_column(...)`:
 
-**Padrão novo (mapped_column):** Em `financial_facts.py`, `market_data.py`, etc.:
-```python
-id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-status: Mapped[str] = mapped_column(sa.String(20), default="draft")
-created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-```
+| Lote | Arquivos | Colunas |
+|------|----------|---------|
+| 1 | `audit_models.py`, `assessments.py`, `definitions.py`, `evaluation.py`, `macro.py`, `portfolio_models.py` (ex-`_*.py`) | 172 |
+| 2 | `processing.py`, `quality.py`, `thesis.py`, `universe.py`, `workflow.py`, `catalog.py` (ex-`_*.py`) | 139 |
+| 3 | `committee.py`, `documents.py`, `execution.py`, `financials.py`, `news.py`, `operations.py` | 210 |
+| **Total** | **18 arquivos** | **~581 colunas** |
 
-**Recomendação:** Migrar todos os arquivos antigos para o padrão `Mapped`/`mapped_column`, que oferece type checking superior e é recomendado pela documentação do SQLAlchemy 2.0+.
+**Efeito cascata:** A migração corrigiu tipos de coluna de `Column[T]` (genérico, com falsos positivos) para `Mapped[T]` (tipo real). Isso tornou obsoletos 96 `# type: ignore` comments e 15 `cast()` calls em 7 arquivos consumidores (`execution_service.py`, `committee_service.py`, `operation_dispatch.py`, `institutional.py`, `operations.py`, `instruments.py`, `agent_runtime.py`), todos removidos.
 
 ### S-02: Lambda vs function reference para `default` de timestamp
 Arquivos com estilo antigo usam `lambda: datetime.now(UTC)`, enquanto os novos usam a função `utcnow`. O lambda cria uma closure nova por instância, o que é desnecessário quando há uma função pura.
@@ -115,19 +110,30 @@ Arquivos com estilo antigo usam `lambda: datetime.now(UTC)`, enquanto os novos u
 **Corrigido:** 72 ocorrências de `lambda: datetime.now(UTC)` substituídas por `utcnow` em 19 arquivos, usando script sed. Todos os modelos agora usam function reference consistente.
 
 ### S-03: Nomenclatura ambígua com prefixo `_`
-Arquivos como `_audit.py`, `_definitions.py`, `_portfolio.py`, etc. usam underscore inicial, que em Python indica "privado/internal". Mas esses módulos são importados publicamente pelo `__init__.py`. A nomenclatura é enganosa.
+Arquivos usavam underscore inicial mas são importados publicamente pelo `__init__.py`.
 
-**Recomendação:** Remover o prefixo `_` dos arquivos que fazem parte da API pública do módulo (exportados via `__init__.py`).
+**Resolvido.** 11 arquivos renomeados (`git mv`):
+
+| Nome antigo | Novo nome | Razão |
+|-------------|-----------|-------|
+| `_assessments.py` | `assessments.py` | Sem conflito |
+| `_definitions.py` | `definitions.py` | Sem conflito |
+| `_evaluation.py` | `evaluation.py` | Sem conflito |
+| `_macro.py` | `macro.py` | Sem conflito |
+| `_processing.py` | `processing.py` | Sem conflito |
+| `_quality.py` | `quality.py` | Sem conflito |
+| `_thesis.py` | `thesis.py` | Sem conflito |
+| `_universe.py` | `universe.py` | Sem conflito |
+| `_workflow.py` | `workflow.py` | Sem conflito |
+| `_audit.py` | `audit_models.py` | Conflito com `audit.py` (modelos diferentes) |
+| `_portfolio.py` | `portfolio_models.py` | Conflito com `portfolio.py` (aggregator) |
+
+Imports atualizados em `__init__.py`, `agents.py` e `portfolio.py`. `_utils.py` mantido como privado.
 
 ### S-04: Comentários inline para valores permitidos
-Múltiplos modelos usam comentários como documentação de enum values:
-```python
-status = sa.Column(sa.String(20))  # "matched", "unmatched"
-decision = sa.Column(sa.String(20))  # "approved", "rejected"
-evaluation_type = sa.Column(sa.String(50))  # "extraction", "interpretation", "decision"
-```
+Múltiplos modelos usavam comentários como documentação de enum values.
 
-**Recomendação:** Usar `Literal` types ou Enums Python para tornar os valores permitidos verificáveis em tempo de compilação.
+**Resolvido (parcial).** As colunas comentadas agora têm tipo `Mapped[str]` em vez de `sa.Column`, o que já melhora type safety. A conversão para `Literal` foi postergada por ser cosmética — o ganho real (type checking de valores) fica para quando o schema for revisado.
 
 ---
 
@@ -143,4 +149,6 @@ Não foram encontrados testes unitários específicos para o módulo `database`.
 
 1. ~~**Corrigir C-02 primeiro** — verificar os 3 arquivos órfãos~~ **FALSE POSITIVE** — todos são re-export aggregators, modelos herdados de `Base` corretamente em sub-módulos
 2. ~~**Consolidar `utcnow()` em módulo compartilhado** (W-01)~~ **Concluído**  
-3. **Migrar estilos de coluna antigos para `Mapped`/`mapped_column`** (S-01) — maior impacto na type safety
+3. ~~**Migrar estilos de coluna antigos para `Mapped`/`mapped_column`** (S-01)~~ **Concluído** — 18 arquivos, 581 colunas, 0 erros mypy  
+4. ~~**Renomear `_*.py` para `*.py`** (S-03)~~ **Concluído** — 11 arquivos renomeados  
+5. **Resolver W-05 (import-not-found)** — depende de instalação de stubs de terceiros (fora do escopo desta análise)

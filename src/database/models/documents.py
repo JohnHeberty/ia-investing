@@ -1,5 +1,9 @@
+from datetime import date, datetime
+from uuid import UUID, uuid4
+
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ._utils import utcnow
 from .base import Base
@@ -10,35 +14,34 @@ class RawDocument(Base):
 
     __tablename__ = "raw_documents"
 
-    id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    issuer_id = sa.Column(
-        UUID(as_uuid=True),
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    issuer_id: Mapped[UUID | None] = mapped_column(
         sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
-    source_url = sa.Column(sa.Text)
-    document_type = sa.Column(
+    source_url: Mapped[str | None] = mapped_column(sa.Text)
+    document_type: Mapped[str] = mapped_column(
         sa.String(50),  # "DFP", "ITR", "FRE", "FCA", "IPE", "PRESS_RELEASE"
         nullable=False,
     )
 
-    storage_path = sa.Column(sa.Text)  # S3/MinIO path do arquivo original
-    content_type = sa.Column(sa.String(100))  # MIME type: application/pdf, text/html...
-    file_size_bytes = sa.Column(sa.BigInteger)
+    storage_path: Mapped[str | None] = mapped_column(sa.Text)  # S3/MinIO path do arquivo original
+    content_type: Mapped[str | None] = mapped_column(sa.String(100))  # MIME type: application/pdf, text/html...
+    file_size_bytes: Mapped[int | None] = mapped_column(sa.BigInteger)
 
-    sha256_hash = sa.Column(sa.String(64), index=True)
-    http_etag = sa.Column(sa.Text)
-    http_last_modified = sa.Column(sa.DateTime(timezone=True))
+    sha256_hash: Mapped[str | None] = mapped_column(sa.String(64), index=True)
+    http_etag: Mapped[str | None] = mapped_column(sa.Text)
+    http_last_modified: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
 
-    retrieved_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
-    published_at = sa.Column(sa.DateTime(timezone=True))  # Data de publicação do documento
+    retrieved_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    published_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))  # Data de publicação do documento
 
-    reporting_period_start = sa.Column(sa.Date, index=True)
-    reporting_period_end = sa.Column(sa.Date, index=True)
+    reporting_period_start: Mapped[date | None] = mapped_column(sa.Date, index=True)
+    reporting_period_end: Mapped[date | None] = mapped_column(sa.Date, index=True)
 
-    parser_version = sa.Column(sa.String(50))
-    license_policy = sa.Column(sa.Text)
+    parser_version: Mapped[str | None] = mapped_column(sa.String(50))
+    license_policy: Mapped[str | None] = mapped_column(sa.Text)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"RawDocument(document_type={self.document_type!r}, sha256_hash={self.sha256_hash!r})"
@@ -49,29 +52,27 @@ class DocumentMetadata(Base):
 
     __tablename__ = "document_metadata"
 
-    id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    raw_document_id = sa.Column(
-        UUID(as_uuid=True),
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    raw_document_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("raw_documents.id", ondelete="CASCADE"),
         nullable=False,
     )
-    issuer_id = sa.Column(
-        UUID(as_uuid=True),
+    issuer_id: Mapped[UUID | None] = mapped_column(
         sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
-    title = sa.Column(sa.Text)
-    summary = sa.Column(sa.Text)
-    page_count = sa.Column(sa.Integer)
-    language = sa.Column(sa.String(10))  # "pt", "en"
+    title: Mapped[str | None] = mapped_column(sa.Text)
+    summary: Mapped[str | None] = mapped_column(sa.Text)
+    page_count: Mapped[int | None] = mapped_column(sa.Integer)
+    language: Mapped[str | None] = mapped_column(sa.String(10))  # "pt", "en"
 
-    parsed_data = sa.Column(JSONB)  # Dados estruturados extraídos pelo parser
-    extraction_errors = sa.Column(JSONB)  # Erros encontrados durante parsing
+    parsed_data: Mapped[dict[str, object] | None] = mapped_column(JSONB)  # Dados estruturados extraídos pelo parser
+    extraction_errors: Mapped[dict[str, object] | None] = mapped_column(JSONB)  # Erros encontrados durante parsing
 
-    is_validated = sa.Column(sa.Boolean, default=False)
-    validation_notes = sa.Column(sa.Text)
+    is_validated: Mapped[bool | None] = mapped_column(sa.Boolean, default=False)
+    validation_notes: Mapped[str | None] = mapped_column(sa.Text)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"DocumentMetadata(title={self.title!r}, is_validated={self.is_validated})"
@@ -82,25 +83,23 @@ class Document(Base):
 
     __tablename__ = "documents"
 
-    id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    raw_document_id = sa.Column(
-        UUID(as_uuid=True),
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    raw_document_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("raw_documents.id", ondelete="CASCADE"),
         nullable=False,
     )
-    issuer_id = sa.Column(
-        UUID(as_uuid=True),
+    issuer_id: Mapped[UUID | None] = mapped_column(
         sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
-    document_type = sa.Column(sa.String(50))
-    reporting_period_start = sa.Column(sa.Date)
-    reporting_period_end = sa.Column(sa.Date)
-    published_at = sa.Column(sa.DateTime(timezone=True))  # Data de publicação oficial
+    document_type: Mapped[str | None] = mapped_column(sa.String(50))
+    reporting_period_start: Mapped[date | None] = mapped_column(sa.Date)
+    reporting_period_end: Mapped[date | None] = mapped_column(sa.Date)
+    published_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))  # Data de publicação oficial
 
-    canonical_data = sa.Column(JSONB)  # Dados canônicos validados e normalizados
+    canonical_data: Mapped[dict[str, object] | None] = mapped_column(JSONB)  # Dados canônicos validados e normalizados
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Document(document_type={self.document_type!r}, reporting_period_end={self.reporting_period_end!r})"

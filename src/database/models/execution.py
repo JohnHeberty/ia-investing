@@ -1,5 +1,9 @@
+from datetime import datetime
+from decimal import Decimal
+from uuid import UUID, uuid4
+
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ._utils import utcnow
 from .base import Base
@@ -8,26 +12,26 @@ from .base import Base
 class Execution(Base):
     __tablename__ = "executions"
 
-    id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    order_id = sa.Column(sa.String(100), nullable=False, index=True)
-    portfolio_id = sa.Column(
-        UUID(as_uuid=True), sa.ForeignKey("portfolios.id", ondelete="RESTRICT"), nullable=False, index=True
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    order_id: Mapped[str] = mapped_column(sa.String(100), nullable=False, index=True)
+    portfolio_id: Mapped[UUID] = mapped_column(
+        sa.ForeignKey("portfolios.id", ondelete="RESTRICT"), nullable=False, index=True
     )
-    action = sa.Column(sa.String(10), nullable=False)
-    quantity = sa.Column(sa.Numeric(20, 4), nullable=False)
-    price_limit = sa.Column(sa.Numeric(14, 6))
-    state = sa.Column(sa.String(20), nullable=False, default="pending")
-    available_balance = sa.Column(sa.Numeric(20, 4), nullable=False, default=0)
-    required_amount = sa.Column(sa.Numeric(20, 4), nullable=False, default=0)
-    alert_triggered = sa.Column(sa.Boolean, nullable=False, default=False)
-    filled_quantity = sa.Column(sa.Numeric(20, 4))
-    avg_price = sa.Column(sa.Numeric(14, 6))
-    reason = sa.Column(sa.Text)
-    dispatched_at = sa.Column(sa.DateTime(timezone=True))
-    confirmed_at = sa.Column(sa.DateTime(timezone=True))
-    settled_at = sa.Column(sa.DateTime(timezone=True))
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at = sa.Column(
+    action: Mapped[str] = mapped_column(sa.String(10), nullable=False)
+    quantity: Mapped[Decimal] = mapped_column(sa.Numeric(20, 4), nullable=False)
+    price_limit: Mapped[Decimal | None] = mapped_column(sa.Numeric(14, 6))
+    state: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="pending")
+    available_balance: Mapped[Decimal] = mapped_column(sa.Numeric(20, 4), nullable=False, default=0)
+    required_amount: Mapped[Decimal] = mapped_column(sa.Numeric(20, 4), nullable=False, default=0)
+    alert_triggered: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    filled_quantity: Mapped[Decimal | None] = mapped_column(sa.Numeric(20, 4))
+    avg_price: Mapped[Decimal | None] = mapped_column(sa.Numeric(14, 6))
+    reason: Mapped[str | None] = mapped_column(sa.Text)
+    dispatched_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    confirmed_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    settled_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
         default=utcnow,

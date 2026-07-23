@@ -127,7 +127,7 @@ class InstrumentMasterService:
         issuer = issuer_rows[0]
         return InstrumentResolutionV1(
             resolution_type="issuer",
-            issuer_id=issuer.id,  # type: ignore[arg-type]
-            issuer_name=issuer.name_pt,  # type: ignore[arg-type]
+            issuer_id=issuer.id,
+            issuer_name=issuer.name_pt,
             as_of=as_of,
         )

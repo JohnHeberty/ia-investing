@@ -1,5 +1,9 @@
+from datetime import datetime
+from uuid import UUID, uuid4
+
 import sqlalchemy as sa
-from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column
 
 from ._utils import utcnow
 from .base import Base
@@ -14,24 +18,22 @@ class Operation(Base):
 
     __tablename__ = "operations"
 
-    id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    organization_id = sa.Column(
-        UUID(as_uuid=True),
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
         sa.ForeignKey("organizations.id", ondelete="RESTRICT"),
-        nullable=True,
         index=True,
     )
-    operation_type = sa.Column(sa.String(100), nullable=False)
-    idempotency_key = sa.Column(sa.String(200), nullable=False)
-    request_hash = sa.Column(sa.String(64), nullable=False)
-    state = sa.Column(sa.String(20), nullable=False, default="pending")
-    request_data = sa.Column(JSONB, nullable=False)
-    result_data = sa.Column(JSONB)
-    result_url = sa.Column(sa.Text)
-    error_code = sa.Column(sa.String(100))
-    error_detail = sa.Column(sa.Text)
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at = sa.Column(
+    operation_type: Mapped[str] = mapped_column(sa.String(100), nullable=False)
+    idempotency_key: Mapped[str] = mapped_column(sa.String(200), nullable=False)
+    request_hash: Mapped[str] = mapped_column(sa.String(64), nullable=False)
+    state: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="pending")
+    request_data: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False)
+    result_data: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    result_url: Mapped[str | None] = mapped_column(sa.Text)
+    error_code: Mapped[str | None] = mapped_column(sa.String(100))
+    error_detail: Mapped[str | None] = mapped_column(sa.Text)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
         default=utcnow,
@@ -58,31 +60,29 @@ class OperationDispatchOutbox(Base):
 
     __tablename__ = "operation_dispatch_outbox"
 
-    id = sa.Column(UUID(as_uuid=True), primary_key=True, default=sa.func.gen_random_uuid())
-    organization_id = sa.Column(
-        UUID(as_uuid=True),
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("organizations.id", ondelete="RESTRICT"),
         nullable=False,
         index=True,
     )
-    operation_id = sa.Column(
-        UUID(as_uuid=True),
+    operation_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("operations.id", ondelete="CASCADE"),
         nullable=False,
         unique=True,
     )
-    topic = sa.Column(sa.String(100), nullable=False)
-    state = sa.Column(sa.String(20), nullable=False, default="pending")
-    attempts = sa.Column(sa.Integer, nullable=False, default=0)
-    next_attempt_at = sa.Column(
+    topic: Mapped[str] = mapped_column(sa.String(100), nullable=False)
+    state: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="pending")
+    attempts: Mapped[int] = mapped_column(sa.Integer, nullable=False, default=0)
+    next_attempt_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
         default=utcnow,
     )
-    dispatched_at = sa.Column(sa.DateTime(timezone=True))
-    last_error = sa.Column(sa.String(200))
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at = sa.Column(
+    dispatched_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(sa.String(200))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True),
         nullable=False,
         default=utcnow,
