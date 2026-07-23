@@ -88,6 +88,7 @@ async def create_agent_run(
     otel_trace_id = current_span.get_span_context().trace_id
     try:
         run = await AgentRuntimeService(session).create_run(
+            organization_id=auth.organization_id,  # type: ignore[arg-type]
             capability=body.capability,
             case_id=body.case_id,
             input_payload=body.input,

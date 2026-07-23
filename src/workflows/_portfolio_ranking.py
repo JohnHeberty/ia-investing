@@ -19,7 +19,7 @@ with workflow.unsafe.imports_passed_through():
 class PortfolioRankingWorkflow:
     @workflow.run
     async def run(self, evidence_bundle: dict[str, Any]) -> str:
-        return await workflow.execute_activity(
+        return await workflow.execute_activity(  # type: ignore[no-any-return]
             "persist_portfolio_ranking_snapshot",
             evidence_bundle,
             start_to_close_timeout=timedelta(seconds=30),

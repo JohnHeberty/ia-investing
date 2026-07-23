@@ -21,16 +21,18 @@ from ia_investing.ai.guardrails import (
     GuardrailViolation,
     GuardrailViolationError,
     RunBudget,
-    _check_multi_lang_injection,
-    _check_obfuscated_content,
-    _has_heavy_base64,
-    _has_hex_encoded_instructions,
-    _shannon_entropy,
     classify_content_source,
     enforce_budget,
     validate_input_with_source,
     validate_specialist_output,
     validate_untrusted_text,
+)
+from ia_investing.ai.guardrails._checks import (
+    _check_multi_lang_injection,
+    _check_obfuscated_content,
+    _has_heavy_base64,
+    _has_hex_encoded_instructions,
+    _shannon_entropy,
 )
 
 # ===========================================================================

@@ -116,7 +116,7 @@ class InstitutionalBacktestService:
             raise LookupError("backtest run not found")
         run, config = pair
         authorize(context, "portfolio:read", ResourceAttributes(config.organization_id))
-        return run
+        return run  # type: ignore[no-any-return]
 
 
 def validate_walk_forward_dates(

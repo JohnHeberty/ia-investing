@@ -172,7 +172,7 @@ class ReadinessEvaluator:
         weight_sum = Decimal("0")
         requirement_by_code = {requirement.code: requirement for requirement in self.requirements}
         for dimension in dimensions:
-            requirement = requirement_by_code.get(dimension.code)
+            requirement = requirement_by_code.get(dimension.code)  # type: ignore[assignment]
             if dimension.code == "identity" or (
                 requirement is not None and requirement.level is RequirementLevel.BLOCKING
             ):

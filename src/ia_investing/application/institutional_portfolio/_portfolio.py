@@ -84,13 +84,13 @@ class PortfolioLifecycleService:
             {"from": before, "to": target, "reason": reason},
         )
         await self.session.flush()
-        return portfolio  # type: ignore[no-any-return]
+        return portfolio
 
     async def get_portfolio(self, portfolio_id: UUID, organization_id: UUID) -> ModelPortfolio | None:
         portfolio = await self.session.get(ModelPortfolio, portfolio_id)
         if portfolio is None or portfolio.organization_id != organization_id:
             return None
-        return portfolio  # type: ignore[no-any-return]
+        return portfolio
 
     async def list_model_portfolios(
         self,

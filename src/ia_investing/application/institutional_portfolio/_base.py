@@ -23,7 +23,7 @@ async def latest_instrument_bar(
     price_cutoff: datetime,
     knowledge_cutoff: datetime,
 ) -> MarketBar | None:
-    return (  # type: ignore[no-any-return]
+    return (
         await session.execute(
             sa.select(MarketBar)
             .join(Listing, Listing.id == MarketBar.listing_id)

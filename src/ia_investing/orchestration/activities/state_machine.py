@@ -26,11 +26,11 @@ _MACHINES: dict[str, tuple[type[BaseMachineModel], Any]] = {
 @activity.defn(name="apply_state_transition")
 async def apply_state_transition(
     entity_type: str,
-    model_data: dict,
+    model_data: dict[str, Any],
     trigger: str,
     reason: str | None = None,
-    **kwargs,
-) -> dict:
+    **kwargs: Any,
+) -> dict[str, Any]:
     with activity_span("apply_state_transition"):
         entry = _MACHINES.get(entity_type)
         if entry is None:
@@ -62,7 +62,7 @@ async def apply_state_transition(
             detail=f"{entity_type} transitioned to {new_state}",
         )
 
-        return machine.to_dict()
+        return machine.to_dict()  # type: ignore[no-any-return]
 
 
 STATE_MACHINE_ACTIVITIES = (apply_state_transition,)

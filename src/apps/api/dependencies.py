@@ -12,7 +12,7 @@ from temporalio.contrib.opentelemetry import TracingInterceptor
 from apps.api.security import AuthContext, get_auth_context
 from ia_investing.application.audit_service import AuditService
 from ia_investing.application.operations import OperationService
-from ia_investing.database.core import get_async_session
+from ia_investing.database.core import get_async_session  # type: ignore[attr-defined]
 from ia_investing.settings import get_settings
 
 SessionDep = Annotated[AsyncSession, Depends(get_async_session)]

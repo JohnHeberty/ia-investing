@@ -250,7 +250,7 @@ class RebalanceService:
         snapshot = latest_snapshot.scalar_one_or_none()
         target_allocations = snapshot.allocations if snapshot else {}
 
-        drift = self._compute_drift(current_allocations, target_allocations)
+        drift = self._compute_drift(current_allocations, target_allocations)  # type: ignore[arg-type]
         return {
             "portfolio_id": str(portfolio_id),
             "portfolio_name": portfolio.get("name", ""),

@@ -96,7 +96,7 @@ def _resolve_resource_type(model_type: type) -> str:
     return registry.get(model_type.__name__, model_type.__name__.lower())
 
 
-def _compute_diff(target: Any) -> dict | None:
+def _compute_diff(target: Any) -> dict[str, Any] | None:
     session = Session.object_session(target)
     if session is None:
         return None
@@ -117,7 +117,7 @@ def _compute_diff(target: Any) -> dict | None:
 
 def _get_auditable_columns(model_type: type) -> list[str]:
     skip = {"hash_prev", "hash", "timestamp", "created_at", "updated_at"}
-    return [c.name for c in model_type.__table__.columns if c.name not in skip]
+    return [c.name for c in model_type.__table__.columns if c.name not in skip]  # type: ignore[attr-defined]
 
 
 def _serialize_value(value: Any) -> object:
@@ -138,4 +138,4 @@ def _get_latest_hash(connection: Any, tenant_id: Any) -> str | None:
         .limit(1)
     )
     row = result.scalar_one_or_none()
-    return row
+    return row  # type: ignore[no-any-return]

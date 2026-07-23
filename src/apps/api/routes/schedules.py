@@ -122,7 +122,7 @@ async def list_schedules(
 ) -> list[ScheduleSummaryV1]:
     client = await _get_temporal_client()
     schedules: list[ScheduleSummaryV1] = []
-    async for description in client.list_schedules():
+    async for description in client.list_schedules():  # type: ignore[attr-defined]
         data = _parse_schedule_description(description)
         schedules.append(
             ScheduleSummaryV1(
@@ -144,7 +144,7 @@ async def get_schedule(
 ) -> ScheduleDetailV1:
     client = await _get_temporal_client()
     try:
-        description = await client.describe_schedule(schedule_id)
+        description = await client.describe_schedule(schedule_id)  # type: ignore[attr-defined]
     except Exception as exc:
         raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}") from exc
     data = _parse_schedule_description(description)

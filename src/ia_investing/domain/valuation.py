@@ -48,9 +48,9 @@ def weighted_scenarios(scenarios: dict[str, DCFResult], probabilities: dict[str,
     if sum(probabilities.values()) != Decimal(1):
         raise ValueError("scenario probabilities must sum to one")
     return DCFResult(
-        enterprise_value=sum(scenarios[name].enterprise_value * probabilities[name] for name in scenarios),
-        equity_value=sum(scenarios[name].equity_value * probabilities[name] for name in scenarios),
-        value_per_share=sum(scenarios[name].value_per_share * probabilities[name] for name in scenarios),
+        enterprise_value=sum(scenarios[name].enterprise_value * probabilities[name] for name in scenarios),  # type: ignore[arg-type]
+        equity_value=sum(scenarios[name].equity_value * probabilities[name] for name in scenarios),  # type: ignore[arg-type]
+        value_per_share=sum(scenarios[name].value_per_share * probabilities[name] for name in scenarios),  # type: ignore[arg-type]
     )
 
 

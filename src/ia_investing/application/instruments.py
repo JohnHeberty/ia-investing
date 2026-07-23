@@ -99,7 +99,7 @@ class InstrumentMasterService:
         digits = re.sub(r"\D", "", query)
         issuer_conditions = [Issuer.name_pt.ilike(query.strip())]
         if len(digits) == 14:
-            issuer_conditions.append(Issuer.cnpj == digits)
+            issuer_conditions.append(Issuer.cnpj == digits)  # type: ignore[arg-type]
         issuer_rows = (
             (
                 await self.session.execute(
@@ -127,7 +127,7 @@ class InstrumentMasterService:
         issuer = issuer_rows[0]
         return InstrumentResolutionV1(
             resolution_type="issuer",
-            issuer_id=issuer.id,
-            issuer_name=issuer.name_pt,
+            issuer_id=issuer.id,  # type: ignore[arg-type]
+            issuer_name=issuer.name_pt,  # type: ignore[arg-type]
             as_of=as_of,
         )

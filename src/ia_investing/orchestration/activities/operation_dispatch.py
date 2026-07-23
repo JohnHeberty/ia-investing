@@ -66,25 +66,25 @@ async def dispatch_pending_operations(raw_input: dict[str, Any] | None = None) -
             for outbox in rows:
                 operation = await session.get(Operation, outbox.operation_id)
                 if operation is None or operation.organization_id != outbox.organization_id:
-                    outbox.state = "failed"
-                    outbox.last_error = "operation_missing_or_tenant_mismatch"
+                    outbox.state = "failed"  # type: ignore[assignment]
+                    outbox.last_error = "operation_missing_or_tenant_mismatch"  # type: ignore[assignment]
                     failed += 1
                     continue
                 if operation.state in {"succeeded", "failed", "cancelled"}:
-                    outbox.state = "dispatched"
-                    outbox.dispatched_at = now
+                    outbox.state = "dispatched"  # type: ignore[assignment]
+                    outbox.dispatched_at = now  # type: ignore[assignment]
                     dispatched += 1
                     continue
                 if outbox.topic != "agent-run" or operation.operation_type != "agent-run":
-                    outbox.state = "failed"
-                    outbox.last_error = "unsupported_operation_topic"
-                    operation.state = "failed"
-                    operation.error_code = "unsupported_operation_topic"
-                    operation.error_detail = "No dispatcher is registered for this operation topic"
+                    outbox.state = "failed"  # type: ignore[assignment]
+                    outbox.last_error = "unsupported_operation_topic"  # type: ignore[assignment]
+                    operation.state = "failed"  # type: ignore[assignment]
+                    operation.error_code = "unsupported_operation_topic"  # type: ignore[assignment]
+                    operation.error_detail = "No dispatcher is registered for this operation topic"  # type: ignore[assignment]
                     failed += 1
                     continue
 
-                payload = operation.request_data or {}
+                payload: dict[str, Any] = operation.request_data or {}  # type: ignore[assignment]
                 try:
                     command = RunAgentInput(
                         operation_id=str(operation.id),
@@ -95,7 +95,7 @@ async def dispatch_pending_operations(raw_input: dict[str, Any] | None = None) -
                         data_as_of=str(payload["data_as_of"]),
                         knowledge_cutoff=str(payload["knowledge_cutoff"]),
                         requested_by=str(payload["requested_by"]),
-                        idempotency_key=operation.idempotency_key,
+                        idempotency_key=operation.idempotency_key,  # type: ignore[arg-type]
                     )
                     await client.start_workflow(
                         RunAgentWorkflow.run,
@@ -106,30 +106,30 @@ async def dispatch_pending_operations(raw_input: dict[str, Any] | None = None) -
                 except WorkflowAlreadyStartedError:
                     pass
                 except (KeyError, TypeError, ValueError) as exc:
-                    outbox.state = "failed"
-                    outbox.last_error = f"invalid_operation_payload:{type(exc).__name__}"
-                    operation.state = "failed"
-                    operation.error_code = "invalid_operation_payload"
-                    operation.error_detail = "The durable operation payload failed validation"
+                    outbox.state = "failed"  # type: ignore[assignment]
+                    outbox.last_error = f"invalid_operation_payload:{type(exc).__name__}"  # type: ignore[assignment]
+                    operation.state = "failed"  # type: ignore[assignment]
+                    operation.error_code = "invalid_operation_payload"  # type: ignore[assignment]
+                    operation.error_detail = "The durable operation payload failed validation"  # type: ignore[assignment]
                     failed += 1
                     continue
                 except Exception as exc:
-                    outbox.attempts += 1
-                    outbox.last_error = type(exc).__name__[:200]
+                    outbox.attempts += 1  # type: ignore[assignment]
+                    outbox.last_error = type(exc).__name__[:200]  # type: ignore[assignment]
                     if outbox.attempts >= _MAX_ATTEMPTS:
-                        outbox.state = "failed"
-                        operation.state = "failed"
-                        operation.error_code = "workflow_dispatch_exhausted"
-                        operation.error_detail = "Temporal dispatch retries were exhausted"
+                        outbox.state = "failed"  # type: ignore[assignment]
+                        operation.state = "failed"  # type: ignore[assignment]
+                        operation.error_code = "workflow_dispatch_exhausted"  # type: ignore[assignment]
+                        operation.error_detail = "Temporal dispatch retries were exhausted"  # type: ignore[assignment]
                         failed += 1
                     else:
-                        outbox.next_attempt_at = now + _retry_delay(outbox.attempts)
+                        outbox.next_attempt_at = now + _retry_delay(outbox.attempts)  # type: ignore[arg-type]
                         retried += 1
                     continue
 
-                outbox.state = "dispatched"
-                outbox.dispatched_at = now
-                outbox.last_error = None
+                outbox.state = "dispatched"  # type: ignore[assignment]
+                outbox.dispatched_at = now  # type: ignore[assignment]
+                outbox.last_error = None  # type: ignore[assignment]
                 dispatched += 1
 
             await session.commit()

@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from apps.api.dependencies import get_committee_service
 from apps.api.security import AuthContext, require_permission
-from ia_investing.application.committee_service import (
+from ia_investing.application.committee_service import (  # type: ignore[attr-defined]
     CommitteeService,
     DuplicateVoteError,
     InvalidTransitionError,
@@ -23,7 +23,7 @@ class CreateSessionRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     thesis_ids: list[str] = Field(min_length=1)
-    members: list[dict] = Field(min_length=1)
+    members: list[dict[str, Any]] = Field(min_length=1)
     scheduled_at: datetime
     agenda: dict[str, Any] | None = None
 

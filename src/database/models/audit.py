@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime
 from hashlib import sha256
+from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -43,8 +44,8 @@ class AuditLogEntry(Base):
     action: Mapped[str] = mapped_column(sa.String(30), nullable=False)
     resource_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     resource_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
-    changes: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
-    meta_data: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
+    changes: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+    meta_data: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     hash_prev: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     hash: Mapped[str] = mapped_column(sa.String(64), nullable=False, unique=True)
     timestamp: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)

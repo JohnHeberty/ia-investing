@@ -15,7 +15,7 @@ with workflow.unsafe.imports_passed_through():
 class DispatchOperationsWorkflow:
     @workflow.run
     async def run(self, command: dict[str, Any] | None = None) -> dict[str, int]:
-        return await workflow.execute_activity(
+        return await workflow.execute_activity(  # type: ignore[no-any-return]
             "dispatch_pending_operations",
             command or {"batch_size": 50},
             start_to_close_timeout=timedelta(minutes=2),

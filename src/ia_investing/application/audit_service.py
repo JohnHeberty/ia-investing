@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import UTC, datetime
 from hashlib import sha256
+from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -22,8 +23,8 @@ class AuditService:
         action: str,
         resource_type: str,
         resource_id: UUID | None = None,
-        changes: dict | None = None,
-        metadata: dict | None = None,
+        changes: dict[str, Any] | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> AuditLogEntry:
         prev_hash = await self._get_latest_hash()
         now = datetime.now(UTC)
@@ -113,7 +114,7 @@ class AuditService:
         self,
         from_id: UUID | None = None,
         to_id: UUID | None = None,
-    ) -> list[dict]:
+    ) -> list[dict[str, Any]]:
         stmt = (
             sa.select(AuditLogEntry)
             .where(AuditLogEntry.tenant_id == self._tenant_id)
@@ -127,7 +128,7 @@ class AuditService:
         result = await self._session.execute(stmt)
         entries = list(result.scalars().all())
 
-        tampered: list[dict] = []
+        tampered: list[dict[str, Any]] = []
         for i, entry in enumerate(entries):
             expected_hash = self._compute_entry_hash(entry, entries[i - 1] if i > 0 else None)
             if entry.hash != expected_hash:
@@ -151,7 +152,7 @@ class AuditService:
 
         return tampered
 
-    async def get_tamper_evidence(self) -> list[dict]:
+    async def get_tamper_evidence(self) -> list[dict[str, Any]]:
         return await self.verify_chain()
 
     def _compute_entry_hash(self, entry: AuditLogEntry, prev: AuditLogEntry | None) -> str:

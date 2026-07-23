@@ -47,14 +47,14 @@ class ShadowRunner:
         candidate_output = candidate_result.get("output", {}) if isinstance(candidate_result, dict) else {}
         baseline_error = baseline_result.get("error") if isinstance(baseline_result, dict) else None
         candidate_error = candidate_result.get("error") if isinstance(candidate_result, dict) else None
-        diff_summary = self._diff_outputs(baseline_output, candidate_output)
+        diff_summary = self._diff_outputs(baseline_output, candidate_output)  # type: ignore[arg-type]
         agree = baseline_output == candidate_output and baseline_error == candidate_error
         return ShadowResult(
             case_id=case_id,
-            baseline_output=baseline_output,
-            candidate_output=candidate_output,
-            baseline_error=baseline_error,
-            candidate_error=candidate_error,
+            baseline_output=baseline_output,  # type: ignore[arg-type]
+            candidate_output=candidate_output,  # type: ignore[arg-type]
+            baseline_error=baseline_error,  # type: ignore[arg-type]
+            candidate_error=candidate_error,  # type: ignore[arg-type]
             diff_summary=diff_summary,
             outputs_agree=agree,
         )

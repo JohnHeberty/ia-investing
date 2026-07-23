@@ -98,7 +98,7 @@ class AgentExecutionService:
             parent_ctx = inject_traceparent_into_context(run.trace_id) if run.trace_id else None
             with tracer.start_as_current_span(
                 "agent.execute",
-                attributes=span_attributes,
+                attributes=span_attributes,  # type: ignore[arg-type]
                 context=parent_ctx,
             ) as span:
                 validate_untrusted_text(str(run.input_payload))

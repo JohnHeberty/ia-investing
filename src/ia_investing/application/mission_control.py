@@ -321,9 +321,9 @@ class MissionControlService:
         rank_items = [self._to_contract(result, by_id[result.portfolio_id]) for result in ranking_results]
 
         eligible_by_cohort: dict[str, list[PortfolioRankItem]] = {}
-        for item in rank_items:
-            if item.eligible:
-                eligible_by_cohort.setdefault(item.cohort_key, []).append(item)
+        for pi in rank_items:
+            if pi.eligible:
+                eligible_by_cohort.setdefault(pi.cohort_key, []).append(pi)
         eligible: list[PortfolioRankItem] = []
         for key in sorted(eligible_by_cohort):
             eligible.extend(
@@ -448,7 +448,7 @@ class MissionControlService:
                     source_id=row["source_id"],
                     code=row["code"],
                     name=row["name"],
-                    status=status,
+                    status=status,  # type: ignore[arg-type]
                     last_success_at=last_success,
                     last_failure_at=row["last_failure_at"],
                     expected_frequency_minutes=int(row["expected_frequency_minutes"]),

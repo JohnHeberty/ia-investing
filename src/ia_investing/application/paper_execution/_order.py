@@ -64,6 +64,7 @@ class OrderService:
             )
             return existing, fills
         model_config = configuration(model)
+        assert intent.approval_decision is not None
         approved_at = datetime.fromisoformat(str(intent.approval_decision["decided_at"]))
         calendar_rows = list(
             (

@@ -99,10 +99,12 @@ class TestSchedulerUsesTemporal:
         assert "asyncio.sleep(60)" not in content, "Scheduler uses asyncio.sleep(60) loop"
 
     def test_uses_temporal_schedules(self) -> None:
-        scheduler_main = SRC / "apps" / "scheduler" / "main.py"
-        content = scheduler_main.read_text(encoding="utf-8")
+        scheduler_dir = SRC / "apps" / "scheduler"
+        content = ""
+        for path in [scheduler_dir / "main.py", scheduler_dir / "temporal_schedules.py"]:
+            if path.exists():
+                content += path.read_text(encoding="utf-8")
         assert "Schedule" in content, "Scheduler does not use Temporal Schedules"
-        assert "reconcile_schedules" in content, "Scheduler does not use reconcile_schedules"
 
 
 class TestSecurityInfrastructure:

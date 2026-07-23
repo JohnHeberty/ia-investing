@@ -48,7 +48,7 @@ def calculate_known_metric(name: str, values: dict[str, Decimal]) -> Decimal:
     if name not in formulas:
         raise ValueError(f"metric calculator is not registered: {name}")
     try:
-        return formulas[name](values)
+        return formulas[name](values)  # type: ignore[no-any-return]
     except (DivisionByZero, ZeroDivisionError) as exc:
         raise ValueError(f"metric denominator is zero: {name}") from exc
 

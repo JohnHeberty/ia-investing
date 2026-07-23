@@ -257,20 +257,20 @@ class CandidateAnalysisOrchestrator:
             sources=candidate.sources,
             existing_gaps=candidate.gaps,
         )
-        for finding in discovery.gaps:
-            if not any(gap.code == finding.code and gap.status is GapStatus.OPEN for gap in gaps):
+        for gap_finding in discovery.gaps:
+            if not any(gap.code == gap_finding.code and gap.status is GapStatus.OPEN for gap in gaps):
                 gaps = (
                     *gaps,
                     CandidateGap(
                         id=uuid4(),
                         candidate_id=candidate.id,
-                        code=finding.code,
-                        title=finding.title,
-                        description=finding.description,
-                        source_kind=finding.source_kind,
-                        level=finding.level,
+                        code=gap_finding.code,
+                        title=gap_finding.title,
+                        description=gap_finding.description,
+                        source_kind=gap_finding.source_kind,
+                        level=gap_finding.level,
                         status=GapStatus.OPEN,
-                        requested_user_action=finding.requested_user_action,
+                        requested_user_action=gap_finding.requested_user_action,
                         created_at=utcnow(),
                     ),
                 )

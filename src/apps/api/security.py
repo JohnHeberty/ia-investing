@@ -94,11 +94,10 @@ async def get_auth_context(
     dev_permissions: str = Header(default="", alias="X-Dev-Permissions"),
     dev_organization: UUID | None = Header(default=None, alias="X-Dev-Organization"),
     dev_teams: str = Header(default="", alias="X-Dev-Teams"),
-    request: Request = None,
+    request: Request = None,  # type: ignore[assignment]
 ) -> AuthContext:
-    session_context: AuthContext | None = None
     if request is not None:
-        session_context = getattr(request.state, "auth_context", None)
+        session_context: AuthContext | None = getattr(request.state, "auth_context", None)
         if session_context is not None:
             return session_context
     settings = get_settings()

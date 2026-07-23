@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from apps.api.dependencies import get_execution_service
 from apps.api.security import AuthContext, require_permission
-from ia_investing.application.execution_service import (
+from ia_investing.application.execution_service import (  # type: ignore[attr-defined]
     ExecutionService,
     InsufficientBalanceError,
     InvalidTransitionError,

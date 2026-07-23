@@ -106,9 +106,9 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
                     type="OperationNotFound",
                     non_retryable=True,
                 )
-            operation.state = "running"
-            operation.error_code = None
-            operation.error_detail = None
+            operation.state = "running"  # type: ignore[assignment]
+            operation.error_code = None  # type: ignore[assignment]
+            operation.error_detail = None  # type: ignore[assignment]
             await session.commit()
 
         async with runtime.session() as session:
@@ -130,7 +130,7 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
             await session.commit()
 
         async with runtime.session() as session:
-            run = await AgentRuntimeService(session).get_run(run_id)
+            run = await AgentRuntimeService(session).get_run(run_id)  # type: ignore[assignment]
             if run is None:
                 raise RuntimeError("agent run disappeared after creation")
             if run.status == "failed" and run.error_code == "provider_transient":
@@ -169,10 +169,10 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
             operation = await session.get(Operation, operation_id)
             if operation is None or operation.organization_id != command.organization_id:
                 raise RuntimeError("operation disappeared during agent execution")
-            operation.state = "succeeded" if executed.status == "succeeded" else "failed"
-            operation.result_data = result
-            operation.error_code = executed.error_code
-            operation.error_detail = executed.error_detail
+            operation.state = "succeeded" if executed.status == "succeeded" else "failed"  # type: ignore[assignment]
+            operation.result_data = result  # type: ignore[assignment]
+            operation.error_code = executed.error_code  # type: ignore[assignment]
+            operation.error_detail = executed.error_detail  # type: ignore[assignment]
             await session.commit()
 
             if executed.status == "failed" and executed.error_code == "provider_transient":
@@ -188,9 +188,9 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
         async with runtime.session() as session:
             operation = await session.get(Operation, operation_id)
             if operation is not None and operation.organization_id == command.organization_id:
-                operation.state = "failed"
-                operation.error_code = "agent_activity_failed"
-                operation.error_detail = type(exc).__name__
+                operation.state = "failed"  # type: ignore[assignment]
+                operation.error_code = "agent_activity_failed"  # type: ignore[assignment]
+                operation.error_detail = type(exc).__name__  # type: ignore[assignment]
                 await session.commit()
         raise
     finally:

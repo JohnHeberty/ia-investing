@@ -80,7 +80,7 @@ class OutboxConsumer:
         self._running = False
 
 
-def select_domain_outbox_unpublished(batch_size: int):
+def select_domain_outbox_unpublished(batch_size: int) -> Any:
     from sqlalchemy import select
 
     return (

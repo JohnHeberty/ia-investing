@@ -131,7 +131,7 @@ class RiskService:
         raw_factor_loadings = policy.limits.get("factor_loadings", {})
         factor_loadings = {
             str(instrument): {str(factor): Decimal(str(value)) for factor, value in values.items()}
-            for instrument, values in raw_factor_loadings.items()
+            for instrument, values in raw_factor_loadings.items()  # type: ignore[attr-defined]
             if isinstance(values, dict)
         }
         metrics = calculate_portfolio_risk(
@@ -145,7 +145,7 @@ class RiskService:
         raw_limits = policy.limits.get("limits", [])
         limits = tuple(
             RiskLimitInput(str(item["name"]), str(item["type"]), Decimal(str(item["maximum"])))
-            for item in raw_limits
+            for item in raw_limits  # type: ignore[attr-defined]
             if isinstance(item, dict)
         )
         evaluated = evaluate_risk_limits(metrics.observations, limits)
@@ -248,4 +248,4 @@ class RiskService:
             .where(RiskBreach.id.in_(breach_ids), RiskBreach.status == "waived")
             .values(status="open")
         )
-        return int(result.rowcount)
+        return int(result.rowcount)  # type: ignore[attr-defined]

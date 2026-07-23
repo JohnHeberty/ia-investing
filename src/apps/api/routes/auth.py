@@ -97,7 +97,7 @@ async def authorize(
 async def callback(
     code: str | None = None,
     state: str | None = None,
-    request: Request = None,
+    request: Request = None,  # type: ignore[assignment]
 ) -> dict[str, object]:
     if not code:
         raise HTTPException(status_code=400, detail="Missing authorization code")
@@ -136,7 +136,7 @@ async def callback(
 @router.post("/login")
 async def login(
     body: LoginRequest | None = None,
-    response: Response = None,
+    response: Response = None,  # type: ignore[assignment]
 ) -> dict[str, str]:
     if body is None or not body.email or not body.password:
         raise HTTPException(status_code=422, detail="Email and password are required")

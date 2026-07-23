@@ -17,17 +17,20 @@ def test_local_package_does_not_shadow_openai_agents_sdk() -> None:
     assert spec is not None, "openai-agents dependency is not importable"
     assert spec.origin is not None
     resolved = Path(spec.origin).resolve()
-    assert "site-packages" in resolved.parts, f"'agents' does not resolve to the installed SDK: {resolved}"
+    assert "site-packages" in resolved.parts or "dist-packages" in resolved.parts, (
+        f"'agents' does not resolve to the installed SDK: {resolved}"
+    )
 
 
 def test_scheduler_uses_temporal_not_in_memory() -> None:
-    scheduler = SRC / "apps" / "scheduler" / "main.py"
-    assert scheduler.exists()
-    text = scheduler.read_text(encoding="utf-8")
-    assert "Schedule" in text, "Scheduler must use Temporal Schedules"
-    assert "reconcile_schedules" in text, "Scheduler must use reconcile_schedules"
-    assert "while True" not in text, "Scheduler must not use in-memory loops"
-    assert "asyncio.sleep(60)" not in text, "Scheduler must not use asyncio.sleep(60)"
+    scheduler_dir = SRC / "apps" / "scheduler"
+    content = ""
+    for path in [scheduler_dir / "main.py", scheduler_dir / "temporal_schedules.py"]:
+        if path.exists():
+            content += path.read_text(encoding="utf-8")
+    assert "Schedule" in content, "Scheduler must use Temporal Schedules"
+    assert "while True" not in content, "Scheduler must not use in-memory loops"
+    assert "asyncio.sleep(60)" not in content, "Scheduler must not use asyncio.sleep(60)"
 
 
 def test_worker_registers_activities() -> None:

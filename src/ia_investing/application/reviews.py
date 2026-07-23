@@ -104,6 +104,7 @@ class ResearchReviewService:
         if request.required_reviewer_role not in reviewer_roles:
             raise PermissionError("reviewer does not hold the required role")
         assessment = await self.session.get(ResearchAssessment, request.assessment_id)
+        assert assessment is not None
         if assessment.expires_at <= datetime.now(UTC):
             request.status = "expired"
             raise ValueError("assessment expired before review")

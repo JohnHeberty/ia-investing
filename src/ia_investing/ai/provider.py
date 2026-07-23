@@ -62,7 +62,7 @@ class MockProvider:
         return ProviderResponse(
             provider_run_id=f"mock:{key}",
             output=self.responses[key],
-            usage=ProviderUsage(prompt_tokens=0, completion_tokens=0, cost_usd=0, duration_ms=0),
+            usage=ProviderUsage(prompt_tokens=0, completion_tokens=0, cost_usd=Decimal(0), duration_ms=0),
         )
 
 

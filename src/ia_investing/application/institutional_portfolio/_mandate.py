@@ -41,7 +41,7 @@ class MandateService:
             )
         ).scalar_one_or_none()
         if existing is not None:
-            return existing  # type: ignore[no-any-return]
+            return existing
         next_version = (
             await self.session.scalar(
                 sa.select(sa.func.coalesce(sa.func.max(StrategyMandate.version), 0) + 1).where(

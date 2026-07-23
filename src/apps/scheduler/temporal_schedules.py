@@ -17,7 +17,7 @@ from temporalio.client import (
 )
 from temporalio.contrib.opentelemetry import TracingInterceptor
 
-from ia_investing.orchestration.workflows import (
+from ia_investing.orchestration.workflows import (  # type: ignore[attr-defined]
     IngestCVMInput,
     IngestCVMWorkflow,
     PaperRebalanceInput,

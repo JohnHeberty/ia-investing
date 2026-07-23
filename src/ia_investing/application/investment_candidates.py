@@ -747,7 +747,7 @@ class InvestmentCandidateApplicationService:
                     confidence=Decimal(str(item.get("confidence", "0.5000"))),
                     official=False,
                     discovered_by="agent:autonomous-equity-explorer",
-                    evidence=dict(item.get("evidence", {})),
+                    evidence=dict(item.get("evidence", {})),  # type: ignore[call-overload]
                     created_at=now,
                 )
             )

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -20,8 +21,8 @@ class AuditEntryV1(BaseModel):
     action: str
     resource_type: str
     resource_id: UUID | None
-    changes: dict | None
-    metadata: dict
+    changes: dict[str, Any] | None
+    metadata: dict[str, Any]
     hash_prev: str | None
     hash: str
     timestamp: datetime
@@ -36,7 +37,7 @@ class AuditLogQueryV1(BaseModel):
 
 
 class ChainVerificationResultV1(BaseModel):
-    tampered_entries: list[dict]
+    tampered_entries: list[dict[str, Any]]
     verified: bool
 
 

@@ -112,4 +112,4 @@ class ApprovalService:
             )
         )
         await self.session.flush()
-        return version  # type: ignore[no-any-return]
+        return version

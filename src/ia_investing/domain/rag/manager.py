@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,7 +50,7 @@ class RAGManager:
         document_id: uuid.UUID,
         text: str,
         content_type: str,
-        metadata: dict | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> int:
         text_chunks = self._chunker.chunk_text(text)
         embeddings = await self._embedder.embed_chunks(text_chunks)

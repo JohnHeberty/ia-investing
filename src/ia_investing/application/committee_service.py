@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from typing import Any, cast
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -32,9 +33,9 @@ class CommitteeService:
     async def create_session(
         self,
         thesis_ids: list[str],
-        members: list[dict],
+        members: list[dict[str, Any]],
         scheduled_at: datetime,
-        agenda: dict | None = None,
+        agenda: dict[str, Any] | None = None,
         actor_id: UUID | None = None,
     ) -> CommitteeSession:
         session = CommitteeSession(
@@ -51,7 +52,7 @@ class CommitteeService:
             actor_id=actor_id,
             action="create",
             resource_type="committee_session",
-            resource_id=session.id,
+            resource_id=cast(UUID, session.id),
             changes={"thesis_ids": thesis_ids, "total_members": len(members)},
         )
         return session
@@ -62,20 +63,20 @@ class CommitteeService:
         trigger: str,
         reason: str | None = None,
         actor_id: UUID | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> CommitteeSession:
         db_session = await self._session.get(CommitteeSession, session_id)
         if db_session is None:
             raise LookupError(f"Committee session {session_id} not found")
 
         model = CommitteeMachineModel(
-            id=db_session.id,
-            state=db_session.state,
-            total_members=db_session.total_members,
-            present_members=db_session.present_members,
-            votes_in_favor=db_session.votes_in_favor,
-            votes_against=db_session.votes_against,
-            members_notified=db_session.members_notified,
+            id=cast(UUID, db_session.id),
+            state=cast(str, db_session.state),
+            total_members=cast(int, db_session.total_members),
+            present_members=cast(int, db_session.present_members),
+            votes_in_favor=cast(int, db_session.votes_in_favor),
+            votes_against=cast(int, db_session.votes_against),
+            members_notified=cast(bool, db_session.members_notified),
         )
         machine = create_committee_machine(model)
 
@@ -84,11 +85,11 @@ class CommitteeService:
         except InvalidTransitionError as exc:
             raise InvalidTransitionError(str(exc)) from exc
 
-        db_session.state = new_state
-        db_session.present_members = model.present_members
-        db_session.votes_in_favor = model.votes_in_favor
-        db_session.votes_against = model.votes_against
-        db_session.members_notified = model.members_notified
+        db_session.state = new_state  # type: ignore[assignment]
+        db_session.present_members = model.present_members  # type: ignore[assignment]
+        db_session.votes_in_favor = model.votes_in_favor  # type: ignore[assignment]
+        db_session.votes_against = model.votes_against  # type: ignore[assignment]
+        db_session.members_notified = model.members_notified  # type: ignore[assignment]
 
         await self._audit.log(
             actor_id=actor_id,
@@ -113,16 +114,16 @@ class CommitteeService:
             raise LookupError(f"Committee session {session_id} not found")
 
         if present_members is not None:
-            db_session.present_members = present_members
+            db_session.present_members = present_members  # type: ignore[assignment]
 
         result = await self._transition(session_id, "convene", actor_id=actor_id)
-        result.convened_at = datetime.now(UTC)
+        result.convened_at = datetime.now(UTC)  # type: ignore[assignment]
         return result
 
     async def start_voting(
         self,
         session_id: UUID,
-        proposals: list[dict],
+        proposals: list[dict[str, Any]],
         actor_id: UUID | None = None,
     ) -> CommitteeSession:
         db_session = await self._session.get(CommitteeSession, session_id)
@@ -135,7 +136,7 @@ class CommitteeService:
                 f"need at least {db_session.total_members // 2 + 1}"
             )
 
-        db_session.agenda = {**db_session.agenda, "proposals": proposals}
+        db_session.agenda = {**db_session.agenda, "proposals": proposals}  # type: ignore[assignment]
         result = await self._transition(session_id, "start_voting", actor_id=actor_id)
         return result
 
@@ -175,15 +176,15 @@ class CommitteeService:
         self._session.add(vote_record)
 
         if vote == "in_favor":
-            db_session.votes_in_favor += 1
+            db_session.votes_in_favor += 1  # type: ignore[assignment]
         elif vote == "against":
-            db_session.votes_against += 1
+            db_session.votes_against += 1  # type: ignore[assignment]
 
         await self._audit.log(
             actor_id=actor_id,
             action="committee:cast_vote",
             resource_type="committee_vote",
-            resource_id=vote_record.id,
+            resource_id=cast(UUID, vote_record.id),
             changes={"session_id": str(session_id), "member_id": member_id, "proposal_id": proposal_id, "vote": vote},
         )
         return vote_record
@@ -237,9 +238,9 @@ class CommitteeService:
 
         result = await self._transition(session_id, "publish", reason="Decision published", actor_id=actor_id)
 
-        db_session.decision = decision
-        db_session.rationale = rationale
-        db_session.published_at = datetime.now(UTC)
+        db_session.decision = decision  # type: ignore[assignment]
+        db_session.rationale = rationale  # type: ignore[assignment]
+        db_session.published_at = datetime.now(UTC)  # type: ignore[assignment]
 
         decision_record = CommitteeDecision(
             session_id=session_id,
@@ -253,22 +254,22 @@ class CommitteeService:
             actor_id=actor_id,
             action="committee:publish",
             resource_type="committee_decision",
-            resource_id=decision_record.id,
+            resource_id=cast(UUID, decision_record.id),
             changes={"session_id": str(session_id), "decision": decision, "votes_summary": votes_summary},
         )
         return result
 
-    async def get_session(self, session_id: UUID) -> dict:
+    async def get_session(self, session_id: UUID) -> dict[str, Any]:
         db_session = await self._session.get(CommitteeSession, session_id)
         if db_session is None:
             raise LookupError(f"Committee session {session_id} not found")
 
         model = CommitteeMachineModel(
-            state=db_session.state,
-            total_members=db_session.total_members,
-            present_members=db_session.present_members,
-            votes_in_favor=db_session.votes_in_favor,
-            votes_against=db_session.votes_against,
+            state=cast(str, db_session.state),
+            total_members=cast(int, db_session.total_members),
+            present_members=cast(int, db_session.present_members),
+            votes_in_favor=cast(int, db_session.votes_in_favor),
+            votes_against=cast(int, db_session.votes_against),
         )
         machine = create_committee_machine(model)
 
@@ -321,7 +322,7 @@ class CommitteeService:
             else None,
         }
 
-    async def get_pending_sessions(self) -> list[dict]:
+    async def get_pending_sessions(self) -> list[dict[str, Any]]:
         stmt = (
             sa.select(CommitteeSession)
             .where(CommitteeSession.state.in_(["scheduled", "in_session", "voting", "deliberating", "decided"]))

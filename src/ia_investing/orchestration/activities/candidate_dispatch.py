@@ -75,7 +75,7 @@ async def _dispatch_event(client: Client, event: DomainOutboxEvent) -> None:
         return
 
     if event.event_type == "candidate.source.validation.requested":
-        command = CandidateSourceValidationInput(
+        command = CandidateSourceValidationInput(  # type: ignore[assignment]
             candidate_id=_uuid(payload, "candidate_id"),
             source_id=_uuid(payload, "source_id"),
             organization_id=_uuid(payload, "organization_id"),
@@ -84,15 +84,15 @@ async def _dispatch_event(client: Client, event: DomainOutboxEvent) -> None:
         await client.start_workflow(
             CandidateSourceValidationWorkflow.run,
             command,
-            id=f"candidate-source-validation-{command.source_id}",
+            id=f"candidate-source-validation-{command.source_id}",  # type: ignore[attr-defined]
             task_queue="research-agents",
-        )
+        )  # type: ignore[misc]
         return
 
     if event.event_type == "equity.exploration.requested":
         run_id = _uuid(payload, "exploration_run_id")
         organization_id = _uuid(payload, "organization_id")
-        command = ExplorationWorkflowInput(
+        command = ExplorationWorkflowInput(  # type: ignore[assignment]
             exploration_run_id=run_id,
             organization_id=organization_id,
             data_as_of=_datetime(payload, "data_as_of"),
@@ -103,7 +103,7 @@ async def _dispatch_event(client: Client, event: DomainOutboxEvent) -> None:
             command,
             id=f"equity-exploration-{run_id}",
             task_queue="research-agents",
-        )
+        )  # type: ignore[misc]
         return
 
     raise ValueError(f"unsupported candidate event type {event.event_type!r}")

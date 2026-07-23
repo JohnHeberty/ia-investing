@@ -221,6 +221,7 @@ class ThesisService:
         version.approved_at = now
         version.review_decision_id = review_decision_id
         thesis = await self.session.get(ResearchThesis, version.thesis_id, with_for_update=True)
+        assert thesis is not None
         thesis.status = "active"
         thesis.lock_version += 1
         self.session.add(
@@ -281,4 +282,4 @@ class ThesisService:
             )
             .values(status="stale", lock_version=ResearchThesis.lock_version + 1)
         )
-        return int(result.rowcount)
+        return int(result.rowcount)  # type: ignore[attr-defined]

@@ -70,7 +70,7 @@ class OperationService:
         if existing is not None:
             if existing.request_hash != request_hash:
                 raise IdempotencyConflictError("idempotency key was already used with a different request")
-            return OperationAcceptedV1(operation_id=existing.id, state=existing.state)
+            return OperationAcceptedV1(operation_id=existing.id, state=existing.state)  # type: ignore[arg-type]
 
         operation_id = uuid4()
         operation = Operation(
@@ -103,16 +103,22 @@ class OperationService:
                 RunAgentWorkflow.run,
                 RunAgentInput(
                     operation_id=str(operation_id),
-                    agent_name=command.agent_name,
-                    input_data=command.input_data,
+                    organization_id=str(command.input_data.get("organization_id", "")),
+                    capability=command.agent_name,
+                    case_id=str(command.input_data["case_id"]) if command.input_data.get("case_id") else None,
+                    input_payload=command.input_data,
+                    data_as_of=str(command.input_data.get("data_as_of", "")),
+                    knowledge_cutoff=str(command.input_data.get("knowledge_cutoff", "")),
+                    requested_by=command.actor_subject,
+                    idempotency_key=idempotency_key,
                 ),
                 id=f"operation-{operation_id}",
                 task_queue=TASK_QUEUES[Capability.RESEARCH_AGENTS],
             )
         except Exception:
-            operation.state = OperationState.FAILED
-            operation.error_code = "workflow_start_failed"
-            operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."
+            operation.state = OperationState.FAILED  # type: ignore[assignment]
+            operation.error_code = "workflow_start_failed"  # type: ignore[assignment]
+            operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."  # type: ignore[assignment]
             await self.session.commit()
             raise
         return OperationAcceptedV1(operation_id=operation_id)
@@ -132,7 +138,7 @@ class OperationService:
         if existing is not None:
             if existing.request_hash != request_hash:
                 raise IdempotencyConflictError("idempotency key was already used with a different request")
-            return OperationAcceptedV1(operation_id=existing.id, state=existing.state)
+            return OperationAcceptedV1(operation_id=existing.id, state=existing.state)  # type: ignore[arg-type]
 
         operation_id = uuid4()
         operation = Operation(
@@ -168,9 +174,9 @@ class OperationService:
                     task_queue=TASK_QUEUES[command.task_queue],
                 )
             except Exception:
-                operation.state = OperationState.FAILED
-                operation.error_code = "workflow_start_failed"
-                operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."
+                operation.state = OperationState.FAILED  # type: ignore[assignment]
+                operation.error_code = "workflow_start_failed"  # type: ignore[assignment]
+                operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."  # type: ignore[assignment]
                 await self.session.commit()
                 raise
         return OperationAcceptedV1(operation_id=operation_id)
@@ -180,12 +186,12 @@ class OperationService:
         if operation is None:
             return None
         return OperationStatusV1(
-            operation_id=operation.id,
-            state=operation.state,
-            created_at=operation.created_at,
-            updated_at=operation.updated_at,
-            result_url=operation.result_url,
-            error_code=operation.error_code,
-            error_detail=operation.error_detail,
+            operation_id=operation.id,  # type: ignore[arg-type]
+            state=operation.state,  # type: ignore[arg-type]
+            created_at=operation.created_at,  # type: ignore[arg-type]
+            updated_at=operation.updated_at,  # type: ignore[arg-type]
+            result_url=operation.result_url,  # type: ignore[arg-type]
+            error_code=operation.error_code,  # type: ignore[arg-type]
+            error_detail=operation.error_detail,  # type: ignore[arg-type]
             metadata={},
         )

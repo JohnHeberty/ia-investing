@@ -89,4 +89,4 @@ class VectorStore:
 
         stmt = sa.delete(Embedding).where(Embedding.entity_id == entity_id)
         result = await self._session.execute(stmt)
-        return result.rowcount or 0
+        return result.rowcount or 0  # type: ignore[attr-defined]

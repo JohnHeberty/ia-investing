@@ -7,7 +7,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from decimal import Decimal
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -109,7 +109,7 @@ class OpenAIGateway(AIGateway):
 
     async def chat_completion(self, request: ChatCompletionRequest) -> ChatCompletionResponse:
         model = request.model or self.default_model
-        kwargs: dict = {
+        kwargs: dict[str, Any] = {
             "model": model,
             "messages": [{"role": m.role, "content": m.content} for m in request.messages],
         }
@@ -158,7 +158,7 @@ class OpenAIGateway(AIGateway):
 
     async def stream_chat_completion(self, request: ChatCompletionRequest) -> AsyncIterator[str]:
         model = request.model or self.default_model
-        kwargs: dict = {
+        kwargs: dict[str, Any] = {
             "model": model,
             "messages": [{"role": m.role, "content": m.content} for m in request.messages],
             "stream": True,
@@ -262,10 +262,10 @@ class AnthropicGateway(AIGateway):
         try:
             response = await self._client.messages.create(
                 model=model,
-                system=system,
-                messages=messages,
+                system=system,  # type: ignore[arg-type]
+                messages=messages,  # type: ignore[arg-type]
                 max_tokens=request.max_tokens or 4096,
-                temperature=request.temperature,
+                temperature=request.temperature,  # type: ignore[arg-type]
             )
         except self._anthropic.APITimeoutError as exc:
             raise ProviderTimeoutError("Anthropic request timed out") from exc
@@ -308,10 +308,10 @@ class AnthropicGateway(AIGateway):
         try:
             async with self._client.messages.stream(
                 model=model,
-                system=system,
-                messages=messages,
+                system=system,  # type: ignore[arg-type]
+                messages=messages,  # type: ignore[arg-type]
                 max_tokens=request.max_tokens or 4096,
-                temperature=request.temperature,
+                temperature=request.temperature,  # type: ignore[arg-type]
             ) as stream:
                 async for text in stream.text_stream:
                     yield text

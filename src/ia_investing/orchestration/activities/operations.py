@@ -22,7 +22,7 @@ async def _set_state(operation_id: str, **values: Any) -> None:
     values["updated_at"] = datetime.now(UTC)
     async with session_scope() as session:
         result = await session.execute(update(Operation).where(Operation.id == operation_uuid).values(**values))
-        if result.rowcount != 1:
+        if result.rowcount != 1:  # type: ignore[attr-defined]
             raise ApplicationError("operation not found", type="DataValidationError", non_retryable=True)
 
 

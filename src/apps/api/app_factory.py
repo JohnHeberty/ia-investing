@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, FastAPI, Request, Response
@@ -57,7 +58,7 @@ _NO_CSRF_PATHS = frozenset(
 )
 
 
-def _build_lifespan(settings: Settings):
+def _build_lifespan(settings: Settings) -> Callable[..., Any]:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
         from apps.api.security import _build_oidc_verifier
@@ -67,7 +68,7 @@ def _build_lifespan(settings: Settings):
         app.state.agent_registry = ArtifactLoader(prompts_root).load_registry()
         app.state.oidc_verifier = _build_oidc_verifier(settings)
         yield
-        from ia_investing.database.core import close_db
+        from ia_investing.database.core import close_db  # type: ignore[attr-defined]
 
         await close_db()
 
@@ -107,7 +108,7 @@ _AUTH_ROUTERS = [
 ]
 
 
-async def _session_middleware(request: Request, call_next):
+async def _session_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     if not request.url.path.startswith("/api/v1/auth/"):
         session = _session_from_request(request)
         if session is not None:
@@ -141,7 +142,7 @@ async def _session_middleware(request: Request, call_next):
     return await call_next(request)
 
 
-async def _csrf_middleware(request: Request, call_next):
+async def _csrf_middleware(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
     if (
         request.method in _MUTATING
         and not request.url.path.startswith("/api/v1/auth/")
@@ -157,8 +158,8 @@ async def _csrf_middleware(request: Request, call_next):
                     status_code=403,
                     content={"detail": "CSRF token validation failed"},
                 )
-    response: Response = await call_next(request)
-    auth_context: AuthContext | None = getattr(request.state, "auth_context", None)
+    response = await call_next(request)
+    auth_context = getattr(request.state, "auth_context", None)
     if auth_context is not None and auth_context.session_id:
         csrf_token = generate_csrf_token(auth_context.session_id)
         response.set_cookie(

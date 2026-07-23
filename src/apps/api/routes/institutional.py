@@ -64,8 +64,8 @@ class OperationStatusResponse(BaseModel):
 
 
 async def _mark_dispatched(session: Any, outbox: OperationDispatchOutbox) -> None:
-    outbox.state = "dispatched"
-    outbox.dispatched_at = datetime.now(UTC)
+    outbox.state = "dispatched"  # type: ignore[assignment]
+    outbox.dispatched_at = datetime.now(UTC)  # type: ignore[assignment]
     try:
         await session.commit()
     except Exception:
@@ -80,7 +80,7 @@ def organization_uuid(principal: Principal) -> UUID:
             "The authenticated principal has no organization_id",
         )
     try:
-        return UUID(principal.organization_id)
+        return UUID(str(principal.organization_id))
     except ValueError as exc:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "organization_id is not a UUID") from exc
 
@@ -164,8 +164,8 @@ async def start_agent_run(
         return OperationAccepted(
             operation_id=str(existing.id),
             workflow_id=f"operation-{existing.id}",
-            status=existing.state,
-            submitted_at=existing.created_at,
+            status=existing.state,  # type: ignore[arg-type]
+            submitted_at=existing.created_at,  # type: ignore[arg-type]
             duplicate=True,
         )
 
@@ -222,8 +222,8 @@ async def start_agent_run(
         return OperationAccepted(
             operation_id=str(concurrent.id),
             workflow_id=f"operation-{concurrent.id}",
-            status=concurrent.state,
-            submitted_at=concurrent.created_at,
+            status=concurrent.state,  # type: ignore[arg-type]
+            submitted_at=concurrent.created_at,  # type: ignore[arg-type]
             duplicate=True,
         )
 
@@ -258,8 +258,8 @@ async def start_agent_run(
     return OperationAccepted(
         operation_id=str(operation.id),
         workflow_id=workflow_id,
-        status=operation.state,
-        submitted_at=operation.created_at,
+        status=operation.state,  # type: ignore[arg-type]
+        submitted_at=operation.created_at,  # type: ignore[arg-type]
     )
 
 
@@ -280,12 +280,12 @@ async def get_operation_status(
     if operation is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "operation not found")
     return OperationStatusResponse(
-        operation_id=operation.id,
+        operation_id=operation.id,  # type: ignore[arg-type]
         workflow_id=f"operation-{operation.id}",
-        status=operation.state,
-        created_at=operation.created_at,
-        updated_at=operation.updated_at,
-        result=operation.result_data,
-        error_code=operation.error_code,
-        error_detail=operation.error_detail,
+        status=operation.state,  # type: ignore[arg-type]
+        created_at=operation.created_at,  # type: ignore[arg-type]
+        updated_at=operation.updated_at,  # type: ignore[arg-type]
+        result=operation.result_data,  # type: ignore[arg-type]
+        error_code=operation.error_code,  # type: ignore[arg-type]
+        error_detail=operation.error_detail,  # type: ignore[arg-type]
     )

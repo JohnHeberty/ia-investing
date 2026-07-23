@@ -193,7 +193,7 @@ class SourceRegistryService:
                     name=source.name,
                     source_schema_version=source.schema_version,
                     owner_role=source.owner_role,
-                    status=status,
+                    status=status,  # type: ignore[arg-type]
                     last_success_at=sla.last_success_at if sla else None,
                     last_failure_at=sla.last_failure_at if sla else None,
                     freshness_due_at=due_at,

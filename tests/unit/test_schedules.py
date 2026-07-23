@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 from temporalio.client import ScheduleAlreadyRunningError, ScheduleOverlapPolicy
 
-from apps.scheduler.main import (
+from apps.scheduler.temporal_schedules import (
     cvm_schedule_definition,
     paper_rebalance_schedule_definition,
     paper_reconciliation_schedule_definition,
