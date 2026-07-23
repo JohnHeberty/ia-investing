@@ -97,7 +97,7 @@ def _aggregate_oos_results(folds: tuple[WalkForwardFold, ...]) -> BacktestResult
             trades=[],
         )
 
-    all_trades: list[dict] = []
+    all_trades: list[dict[str, object]] = []
     for fold in folds:
         all_trades.extend(fold.oos_result.trades)
 

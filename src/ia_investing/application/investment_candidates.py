@@ -711,7 +711,9 @@ class InvestmentCandidateApplicationService:
                     source_kind=requirement.kind.value,
                     level=requirement.level.value,
                     status="open",
-                    requested_user_action=f"Informe a URL oficial de {requirement.label.lower()} se a descoberta falhar.",
+                    requested_user_action=(
+                        f"Informe a URL oficial de {requirement.label.lower()} se a descoberta falhar."
+                    ),
                     created_at=now,
                 )
             )

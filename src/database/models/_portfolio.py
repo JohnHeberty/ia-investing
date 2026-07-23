@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -17,7 +16,7 @@ class Portfolio(Base):
     base_currency = sa.Column(sa.String(3), default="BRL")
     initial_capital = sa.Column(sa.Numeric(20, 4))
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Portfolio(name={self.name!r}, is_paper_trading={self.is_paper_trading})"
@@ -43,7 +42,7 @@ class Position(Base):
     current_price = sa.Column(sa.Numeric(14, 6))
 
     weight_pct = sa.Column(sa.Float)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Position(ticker_symbol={self.ticker_symbol!r}, quantity={self.quantity})"
@@ -68,7 +67,7 @@ class Transaction(Base):
     execution_date = sa.Column(sa.DateTime(timezone=True), index=True)
     status = sa.Column(sa.String(20))  # "pending", "executed", "cancelled"
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Transaction(side={self.side!r}, ticker_symbol={self.ticker_symbol!r}, status={self.status!r})"
@@ -88,7 +87,7 @@ class PortfolioConstraint(Base):
     target = sa.Column(sa.String(100))
     limit_value = sa.Column(sa.Float)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"PortfolioConstraint(constraint_type={self.constraint_type!r}, target={self.target!r})"
@@ -113,7 +112,7 @@ class RiskSnapshot(Base):
     max_drawdown_pct = sa.Column(sa.Float)
     volatility_annualized = sa.Column(sa.Float)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"RiskSnapshot(sharpe_ratio={self.sharpe_ratio}, max_drawdown_pct={self.max_drawdown_pct})"
@@ -137,7 +136,7 @@ class RebalanceProposal(Base):
     risk_impact = sa.Column(JSONB())
 
     status = sa.Column(sa.String(20), default="pending")  # "pending", "approved", "rejected"
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"RebalanceProposal(status={self.status!r})"
@@ -159,7 +158,7 @@ class ProposedTrade(Base):
     target_price = sa.Column(sa.Numeric(14, 6))
 
     rationale_pt = sa.Column(sa.Text)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"ProposedTrade(ticker_symbol={self.ticker_symbol!r}, side={self.side!r})"

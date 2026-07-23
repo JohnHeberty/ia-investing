@@ -53,9 +53,7 @@ def replace_once(path: Path, old: str, new: str) -> None:
     text = path.read_text(encoding="utf-8")
     count = text.count(old)
     if count != 1:
-        raise RuntimeError(
-            f"expected exactly one match in {path}: found {count}\n--- expected ---\n{old}"
-        )
+        raise RuntimeError(f"expected exactly one match in {path}: found {count}\n--- expected ---\n{old}")
     path.write_text(text.replace(old, new, 1), encoding="utf-8")
 
 
@@ -70,13 +68,10 @@ def patch_research_model(root: Path) -> None:
     replace_once(path, RESEARCH_MODEL_HEADER, RESEARCH_MODEL_HEADER_WITH_TENANT)
     replace_once(
         path,
-        '    idempotency_key: Mapped[str] = mapped_column(sa.String(255), unique=True)\n',
-        '    idempotency_key: Mapped[str] = mapped_column(sa.String(255))\n',
+        "    idempotency_key: Mapped[str] = mapped_column(sa.String(255), unique=True)\n",
+        "    idempotency_key: Mapped[str] = mapped_column(sa.String(255))\n",
     )
-    marker = (
-        '        sa.CheckConstraint("request_hash ~ \'^[0-9a-f]{64}$\'", '
-        'name="request_hash_format"),\n'
-    )
+    marker = '        sa.CheckConstraint("request_hash ~ \'^[0-9a-f]{64}$\'", name="request_hash_format"),\n'
     replace_once(path, marker, marker + RESEARCH_TENANT_UNIQUE)
 
 
@@ -145,9 +140,9 @@ def patch_model_exports(root: Path) -> None:
     path = root / "src/database/models/__init__.py"
     replace_once(
         path,
-        'from .portfolio import (  # noqa: F401\n',
-        'from .operations import Operation, OperationDispatchOutbox  # noqa: F401'
-        '\nfrom .portfolio import (  # noqa: F401\n',
+        "from .portfolio import (  # noqa: F401\n",
+        "from .operations import Operation, OperationDispatchOutbox  # noqa: F401"
+        "\nfrom .portfolio import (  # noqa: F401\n",
     )
 
 

@@ -8,7 +8,6 @@ import pytest
 
 from ia_investing.application.paper_execution import PaperExecutionService
 from ia_investing.domain.identity import InstitutionalAccessContext, ensure_four_eyes
-
 from ia_investing.domain.operational_alerts import (
     OPERATIONAL_ALERT_CATALOG,
     EscalationAction,
@@ -982,7 +981,9 @@ class TestKillSwitch:
         ensure_four_eyes("alice@test.com", "bob@test.com")
 
 
-def _make_ctx(subject: str = "ops@test.com", org_id: UUID | None = None, perms: set[str] | None = None) -> InstitutionalAccessContext:
+def _make_ctx(
+    subject: str = "ops@test.com", org_id: UUID | None = None, perms: set[str] | None = None
+) -> InstitutionalAccessContext:
     return InstitutionalAccessContext(
         subject=subject,
         organization_id=org_id or uuid4(),
@@ -1190,7 +1191,7 @@ class TestFaultInjection:
         assert result1.status == result2.status
         assert len(result1.fills) == len(result2.fills)
         assert result1.input_sha256 == result2.input_sha256
-        for f1, f2 in zip(result1.fills, result2.fills):
+        for f1, f2 in zip(result1.fills, result2.fills, strict=True):
             assert f1.quantity == f2.quantity
             assert f1.price == f2.price
 
@@ -1232,19 +1233,17 @@ class TestFaultInjection:
             tax_bps=Decimal(2),
             latency_ms=100,
         )
-        snapshots = (
-            MarketSnapshot(datetime(2024, 1, 2, 10, 0, tzinfo=UTC), Decimal(100), Decimal(1000), True),
-        )
-        common = dict(
-            side="buy",
-            quantity=Decimal(100),
-            signal_at=datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
-            approved_at=datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
-            expires_at=datetime(2024, 1, 2, 10, 3, tzinfo=UTC),
-            snapshots=snapshots,
-            configuration=config,
-            limit_price=Decimal(105),
-        )
+        snapshots = (MarketSnapshot(datetime(2024, 1, 2, 10, 0, tzinfo=UTC), Decimal(100), Decimal(1000), True),)
+        common = {
+            "side": "buy",
+            "quantity": Decimal(100),
+            "signal_at": datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
+            "approved_at": datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
+            "expires_at": datetime(2024, 1, 2, 10, 3, tzinfo=UTC),
+            "snapshots": snapshots,
+            "configuration": config,
+            "limit_price": Decimal(105),
+        }
         r1 = simulate_order(**common, seed=7)
         r2 = simulate_order(**common, seed=7)
         assert r1.input_sha256 == r2.input_sha256
@@ -1262,9 +1261,7 @@ class TestFaultInjection:
             tax_bps=Decimal(2),
             latency_ms=100,
         )
-        snapshots = (
-            MarketSnapshot(datetime(2024, 1, 2, 10, 0, tzinfo=UTC), Decimal(0), Decimal(1000), True),
-        )
+        snapshots = (MarketSnapshot(datetime(2024, 1, 2, 10, 0, tzinfo=UTC), Decimal(0), Decimal(1000), True),)
         result = simulate_order(
             side="buy",
             quantity=Decimal(100),
@@ -1290,9 +1287,7 @@ class TestFaultInjection:
             tax_bps=Decimal(2),
             latency_ms=100,
         )
-        snapshots = (
-            MarketSnapshot(datetime(2024, 1, 2, 10, 0, tzinfo=UTC), Decimal(100), Decimal(-100), True),
-        )
+        snapshots = (MarketSnapshot(datetime(2024, 1, 2, 10, 0, tzinfo=UTC), Decimal(100), Decimal(-100), True),)
         result = simulate_order(
             side="buy",
             quantity=Decimal(100),
@@ -1323,16 +1318,16 @@ class TestFaultInjection:
             MarketSnapshot(datetime(2024, 1, 2, 10, 1, tzinfo=UTC), Decimal(101), Decimal(900), True),
             MarketSnapshot(datetime(2024, 1, 2, 10, 2, tzinfo=UTC), Decimal(102), Decimal(800), True),
         )
-        common = dict(
-            side="buy",
-            quantity=Decimal(500),
-            signal_at=datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
-            approved_at=datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
-            expires_at=datetime(2024, 1, 2, 10, 3, tzinfo=UTC),
-            snapshots=snapshots,
-            configuration=config,
-            limit_price=Decimal(105),
-        )
+        common = {
+            "side": "buy",
+            "quantity": Decimal(500),
+            "signal_at": datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
+            "approved_at": datetime(2024, 1, 2, 10, 0, tzinfo=UTC),
+            "expires_at": datetime(2024, 1, 2, 10, 3, tzinfo=UTC),
+            "snapshots": snapshots,
+            "configuration": config,
+            "limit_price": Decimal(105),
+        }
         result_a = simulate_order(**common, seed=1)
         result_b = simulate_order(**common, seed=99)
         slippages_a = [f.slippage_bps for f in result_a.fills]
@@ -1351,9 +1346,7 @@ class TestFaultInjection:
             tax_bps=Decimal(2),
             latency_ms=100,
         )
-        snapshots = (
-            MarketSnapshot(datetime(2024, 1, 2, 10, 0, tzinfo=UTC), Decimal(100), Decimal(1000), True),
-        )
+        snapshots = (MarketSnapshot(datetime(2024, 1, 2, 10, 0, tzinfo=UTC), Decimal(100), Decimal(1000), True),)
         result = simulate_order(
             side="buy",
             quantity=Decimal(500),

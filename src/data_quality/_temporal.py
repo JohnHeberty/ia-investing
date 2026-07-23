@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from datetime import date as _date
+from typing import Any
 
 from ._models import ValidationResult
 
 
 def check_temporal_consistency(
-    time_series: list[dict],
+    time_series: list[dict[str, Any]],
     date_field: str,
     value_field: str,
 ) -> list[ValidationResult]:

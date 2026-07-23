@@ -308,7 +308,9 @@ class CandidateAnalysisOrchestrator:
                     source_kind=None,
                     level=RequirementLevel.BLOCKING,
                     status=GapStatus.OPEN,
-                    requested_user_action="Revise a fonte/documento ou aprove uma correção de dados antes de reprocessar.",
+                    requested_user_action=(
+                        "Revise a fonte/documento ou aprove uma correção de dados antes de reprocessar."
+                    ),
                     created_at=utcnow(),
                 )
                 for code in quality.blocker_codes

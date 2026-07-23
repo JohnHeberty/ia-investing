@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -36,7 +35,7 @@ class FinancialStatement(Base):
     is_audited = sa.Column(sa.Boolean, default=False)
     restatement_flag = sa.Column(sa.Boolean, default=False)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     __table_args__ = (
         sa.UniqueConstraint(
@@ -84,7 +83,7 @@ class FinancialMetric(Base):
     )
     calculation_method = sa.Column(JSONB)  # Fórmula aplicada para auditoria
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     __table_args__ = (
         sa.Index("ix_financial_metrics_issuer_metric_period", "issuer_id", "metric_name", "reporting_period_end"),
@@ -121,7 +120,7 @@ class Dividend(Base):
 
     source_url = sa.Column(sa.Text)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return (
@@ -151,7 +150,7 @@ class ShareStatistics(Base):
 
     source_url = sa.Column(sa.Text)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"ShareStatistics(issuer_id={self.issuer_id!r}, as_of_date={self.as_of_date!r})"

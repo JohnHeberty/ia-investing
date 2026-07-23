@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ThesisVerdict(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     action: Literal["buy", "sell", "hold"]
     confidence: float = Field(ge=0.0, le=1.0)
     target_price: float | None = None

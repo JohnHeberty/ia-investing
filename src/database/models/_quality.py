@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -19,7 +18,7 @@ class DataQualityCheck(Base):
     passed = sa.Column(sa.Boolean, nullable=False)
     details = sa.Column(JSONB)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"DataQualityCheck(check_name={self.check_name!r}, passed={self.passed})"
@@ -40,7 +39,7 @@ class DataRefreshLog(Base):
     status = sa.Column(sa.String(20))  # "success", "partial_failure", "failed"
     error_message = sa.Column(sa.Text)
 
-    started_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    started_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
     finished_at = sa.Column(sa.DateTime(timezone=True))
 
     def __repr__(self) -> str:

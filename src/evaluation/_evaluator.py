@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+from collections.abc import Awaitable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from ._decision import evaluate_decision
 from ._extraction import evaluate_extraction
@@ -20,13 +22,13 @@ class EvaluationResult:
     value: float
     expected: float | None = None
     passed: bool = False
-    details: dict = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 class AgentEvaluator:
     def __init__(self, golden_docs_path: str | None = None) -> None:
         self._golden_docs_path = Path(golden_docs_path) if golden_docs_path else None
-        self._golden_docs: dict = {}
+        self._golden_docs: dict[str, Any] = {}
         if self._golden_docs_path and self._golden_docs_path.exists():
             self._load_golden_docs()
 
@@ -36,16 +38,22 @@ class AgentEvaluator:
         except Exception:
             logger.exception("Failed to load golden docs from %s", self._golden_docs_path)
 
-    async def evaluate_extraction(self, agent_output: dict, ground_truth: dict) -> list[EvaluationResult]:
-        return await evaluate_extraction(agent_output, ground_truth)
+    def evaluate_extraction(
+        self, agent_output: dict[str, Any], ground_truth: dict[str, Any]
+    ) -> Awaitable[list[EvaluationResult]]:
+        return evaluate_extraction(agent_output, ground_truth)
 
-    async def evaluate_interpretation(self, agent_output: dict, expected_verdict: str) -> list[EvaluationResult]:
-        return await evaluate_interpretation(agent_output, expected_verdict)
+    def evaluate_interpretation(
+        self, agent_output: dict[str, Any], expected_verdict: str
+    ) -> Awaitable[list[EvaluationResult]]:
+        return evaluate_interpretation(agent_output, expected_verdict)
 
-    async def evaluate_decision(self, agent_output: dict, expected_action: str) -> list[EvaluationResult]:
-        return await evaluate_decision(agent_output, expected_action)
+    def evaluate_decision(
+        self, agent_output: dict[str, Any], expected_action: str
+    ) -> Awaitable[list[EvaluationResult]]:
+        return evaluate_decision(agent_output, expected_action)
 
-    def calculate_accuracy(self, results: list[EvaluationResult]) -> dict:
+    def calculate_accuracy(self, results: list[EvaluationResult]) -> dict[str, object]:
         if not results:
             return {
                 "total_metrics": 0,
@@ -59,7 +67,7 @@ class AgentEvaluator:
         passed = sum(1 for r in results if r.passed)
         total = len(results)
 
-        by_type: dict[str, dict] = {}
+        by_type: dict[str, dict[str, int | float]] = {}
         for r in results:
             if r.evaluation_type not in by_type:
                 by_type[r.evaluation_type] = {"total": 0, "passed": 0}

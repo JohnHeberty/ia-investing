@@ -6,6 +6,7 @@ Revises: f7a100000007
 The public migration graph already resolves to a single head at f7a100000007.
 This revision extends that linear history with deterministic ranking inputs.
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa

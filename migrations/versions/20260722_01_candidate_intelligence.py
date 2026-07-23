@@ -40,17 +40,24 @@ def upgrade() -> None:
         sa.Column("universe_size", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("eligible_size", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("error_detail", sa.Text()),
-        sa.CheckConstraint("status IN ('queued','running','succeeded','partial','failed','cancelled')", name="ck_exploration_runs_status_values"),
+        sa.CheckConstraint(
+            "status IN ('queued','running','succeeded','partial','failed','cancelled')",
+            name="ck_exploration_runs_status_values",
+        ),
         sa.CheckConstraint("minimum_liquidity >= 0", name="ck_exploration_runs_nonnegative_liquidity"),
         sa.CheckConstraint("maximum_suggestions BETWEEN 1 AND 100", name="ck_exploration_runs_suggestion_limit"),
     )
-    op.create_index("ix_exploration_runs_org_created", "exploration_runs", ["organization_id", sa.text("created_at DESC")])
+    op.create_index(
+        "ix_exploration_runs_org_created", "exploration_runs", ["organization_id", sa.text("created_at DESC")]
+    )
     op.create_index("ix_exploration_runs_status", "exploration_runs", ["status"])
 
     op.create_table(
         "exploration_suggestions",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("exploration_run_id", sa.Uuid(), sa.ForeignKey("exploration_runs.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "exploration_run_id", sa.Uuid(), sa.ForeignKey("exploration_runs.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("organization_id", sa.Uuid(), sa.ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False),
         sa.Column("instrument_id", sa.Uuid(), sa.ForeignKey("instruments.id", ondelete="RESTRICT"), nullable=False),
         sa.Column("issuer_id", sa.Uuid(), sa.ForeignKey("issuers.id", ondelete="RESTRICT"), nullable=False),
@@ -71,13 +78,16 @@ def upgrade() -> None:
         sa.Column("dismissed_by", sa.String(255)),
         sa.Column("dismissal_reason", sa.Text()),
         sa.UniqueConstraint("exploration_run_id", "instrument_id", name="uq_exploration_suggestion_instrument"),
-        sa.CheckConstraint("status IN ('new','promoted','dismissed','duplicate','expired')", name="ck_exploration_suggestions_status_values"),
         sa.CheckConstraint(
-            "quantitative_score BETWEEN 0 AND 1 AND data_coverage_score BETWEEN 0 AND 1 AND source_discovery_score BETWEEN 0 AND 1",
+            "status IN ('new','promoted','dismissed','duplicate','expired')",
+            name="ck_exploration_suggestions_status_values",
+        ),
+        sa.CheckConstraint(
+            "quantitative_score BETWEEN 0 AND 1 AND data_coverage_score BETWEEN 0 AND 1 AND source_discovery_score BETWEEN 0 AND 1",  # noqa: E501
             name="ck_exploration_suggestions_score_ranges",
         ),
         sa.CheckConstraint(
-            "status <> 'dismissed' OR (dismissed_at IS NOT NULL AND dismissed_by IS NOT NULL AND dismissal_reason IS NOT NULL)",
+            "status <> 'dismissed' OR (dismissed_at IS NOT NULL AND dismissed_by IS NOT NULL AND dismissal_reason IS NOT NULL)",  # noqa: E501
             name="ck_exploration_suggestions_dismissal_fields",
         ),
     )
@@ -98,7 +108,9 @@ def upgrade() -> None:
         sa.Column("issuer_id", sa.Uuid(), sa.ForeignKey("issuers.id", ondelete="RESTRICT")),
         sa.Column("instrument_id", sa.Uuid(), sa.ForeignKey("instruments.id", ondelete="RESTRICT")),
         sa.Column("rationale", sa.Text()),
-        sa.Column("exploration_suggestion_id", sa.Uuid(), sa.ForeignKey("exploration_suggestions.id", ondelete="SET NULL")),
+        sa.Column(
+            "exploration_suggestion_id", sa.Uuid(), sa.ForeignKey("exploration_suggestions.id", ondelete="SET NULL")
+        ),
         sa.Column("final_decision", sa.String(20)),
         sa.Column("final_decision_reason", sa.Text()),
         sa.Column("approved_portfolio_eligible", sa.Boolean(), nullable=False, server_default=sa.false()),
@@ -110,10 +122,13 @@ def upgrade() -> None:
         sa.Column("lock_version", sa.Integer(), nullable=False, server_default="1"),
         sa.CheckConstraint("origin IN ('manual','explorer')", name="ck_investment_candidates_origin_values"),
         sa.CheckConstraint(
-            "status IN ('suggested','identity_resolution','source_discovery','awaiting_user_input','source_validation','document_collection','data_quality','fundamental_analysis','risk_analysis','committee_review','approved','rejected','watchlist','cancelled')",
+            "status IN ('suggested','identity_resolution','source_discovery','awaiting_user_input','source_validation','document_collection','data_quality','fundamental_analysis','risk_analysis','committee_review','approved','rejected','watchlist','cancelled')",  # noqa: E501
             name="ck_investment_candidates_status_values",
         ),
-        sa.CheckConstraint("final_decision IS NULL OR final_decision IN ('approve','reject','pending','watchlist')", name="ck_investment_candidates_final_decision_values"),
+        sa.CheckConstraint(
+            "final_decision IS NULL OR final_decision IN ('approve','reject','pending','watchlist')",
+            name="ck_investment_candidates_final_decision_values",
+        ),
         sa.CheckConstraint("lock_version > 0", name="ck_investment_candidates_positive_lock_version"),
         sa.CheckConstraint("request_hash ~ '^[0-9a-f]{64}$'", name="ck_investment_candidates_request_hash_format"),
         sa.UniqueConstraint("organization_id", "idempotency_key", name="uq_candidate_org_idempotency"),
@@ -139,7 +154,9 @@ def upgrade() -> None:
     op.create_table(
         "candidate_sources",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("candidate_id", sa.Uuid(), sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "candidate_id", sa.Uuid(), sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("kind", sa.String(40), nullable=False),
         sa.Column("url", sa.Text(), nullable=False),
         sa.Column("normalized_url_hash", sa.String(64), nullable=False),
@@ -155,16 +172,26 @@ def upgrade() -> None:
         sa.Column("last_checked_at", sa.DateTime(timezone=True)),
         sa.UniqueConstraint("candidate_id", "kind", "normalized_url_hash", name="uq_candidate_source_kind_url"),
         sa.CheckConstraint("confidence BETWEEN 0 AND 1", name="ck_candidate_sources_confidence_range"),
-        sa.CheckConstraint("status IN ('discovered','verified','rejected','stale','unreachable')", name="ck_candidate_sources_status_values"),
-        sa.CheckConstraint("NOT (official AND verification_method = 'agent_inference')", name="ck_candidate_sources_agent_cannot_confirm_official"),
-        sa.CheckConstraint("status <> 'verified' OR verified_at IS NOT NULL", name="ck_candidate_sources_verified_timestamp"),
+        sa.CheckConstraint(
+            "status IN ('discovered','verified','rejected','stale','unreachable')",
+            name="ck_candidate_sources_status_values",
+        ),
+        sa.CheckConstraint(
+            "NOT (official AND verification_method = 'agent_inference')",
+            name="ck_candidate_sources_agent_cannot_confirm_official",
+        ),
+        sa.CheckConstraint(
+            "status <> 'verified' OR verified_at IS NOT NULL", name="ck_candidate_sources_verified_timestamp"
+        ),
     )
     op.create_index("ix_candidate_sources_candidate_kind", "candidate_sources", ["candidate_id", "kind"])
 
     op.create_table(
         "candidate_gaps",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("candidate_id", sa.Uuid(), sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "candidate_id", sa.Uuid(), sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("code", sa.String(100), nullable=False),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("description", sa.Text(), nullable=False),
@@ -178,7 +205,10 @@ def upgrade() -> None:
         sa.Column("resolution_notes", sa.Text()),
         sa.CheckConstraint("level IN ('blocking','required','optional')", name="ck_candidate_gaps_level_values"),
         sa.CheckConstraint("status IN ('open','resolved','waived')", name="ck_candidate_gaps_status_values"),
-        sa.CheckConstraint("status = 'open' OR (resolved_at IS NOT NULL AND resolved_by IS NOT NULL)", name="ck_candidate_gaps_resolution_fields"),
+        sa.CheckConstraint(
+            "status = 'open' OR (resolved_at IS NOT NULL AND resolved_by IS NOT NULL)",
+            name="ck_candidate_gaps_resolution_fields",
+        ),
     )
     op.create_index(
         "uq_candidate_open_gap_code",
@@ -191,7 +221,9 @@ def upgrade() -> None:
     op.create_table(
         "candidate_analysis_runs",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("candidate_id", sa.Uuid(), sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "candidate_id", sa.Uuid(), sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("run_number", sa.Integer(), nullable=False),
         sa.Column("trigger", sa.String(30), nullable=False),
         sa.Column("status", sa.String(20), nullable=False),
@@ -212,15 +244,25 @@ def upgrade() -> None:
         sa.Column("error_detail", sa.Text()),
         sa.UniqueConstraint("candidate_id", "run_number", name="uq_candidate_analysis_run_number"),
         sa.CheckConstraint("run_number > 0", name="ck_candidate_analysis_runs_positive_number"),
-        sa.CheckConstraint("status IN ('queued','running','blocked','succeeded','failed','cancelled')", name="ck_candidate_analysis_runs_status_values"),
-        sa.CheckConstraint("decision IS NULL OR decision IN ('approve','reject','pending','watchlist')", name="ck_candidate_analysis_runs_decision_values"),
+        sa.CheckConstraint(
+            "status IN ('queued','running','blocked','succeeded','failed','cancelled')",
+            name="ck_candidate_analysis_runs_status_values",
+        ),
+        sa.CheckConstraint(
+            "decision IS NULL OR decision IN ('approve','reject','pending','watchlist')",
+            name="ck_candidate_analysis_runs_decision_values",
+        ),
     )
-    op.create_index("ix_candidate_analysis_runs_candidate_status", "candidate_analysis_runs", ["candidate_id", "status"])
+    op.create_index(
+        "ix_candidate_analysis_runs_candidate_status", "candidate_analysis_runs", ["candidate_id", "status"]
+    )
 
     op.create_table(
         "candidate_events",
         sa.Column("id", sa.Uuid(), primary_key=True),
-        sa.Column("candidate_id", sa.Uuid(), sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "candidate_id", sa.Uuid(), sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"), nullable=False
+        ),
         sa.Column("organization_id", sa.Uuid(), sa.ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False),
         sa.Column("event_type", sa.String(100), nullable=False),
         sa.Column("actor_type", sa.String(30), nullable=False),

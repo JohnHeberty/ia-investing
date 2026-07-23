@@ -1,6 +1,7 @@
 # Code Quality Analysis — `evaluation` Module
 
 **Data:** 2026-07-21  
+**Última atualização:** 2026-07-22 — W-01, W-02 corrigidos  
 **Arquivos analisados:** 5 Python files (__init__.py, _evaluator.py, _extraction.py, _interpretation.py, _decision.py)  
 **Ferramentas usadas:** ruff, mypy, análise manual de padrões  
 
@@ -8,11 +9,11 @@
 
 ## Resumo Executivo
 
-| Severidade | Quantidade | Descrição |
-|------------|-----------|-----------|
-| Crítico | 0 | Nenhum problema crítico identificado neste módulo |
-| Aviso | 2 | Generics sem parâmetros (13 ocorrências), import dentro do método `_load_golden_docs` |
-| Sugestão | 2 | Dataclass `EvaluationResult` com campo genérico, métodos assíncronos puramente pass-through |
+| Severidade | Original | Corrigido | Restante | Descrição |
+|------------|---------|----------|----------|-----------|
+| Crítico | 0 | 0 | 0 | — |
+| Aviso | 2 | 2 | 0 | W-01 (generics) e W-02 (import) corrigidos |
+| Sugestão | 2 | 2 | 0 | S-01 (frozen=True já existia), S-02 (async removido) — ambos resolvidos |
 
 ---
 
@@ -27,11 +28,13 @@
 
 Todos usam `dict` sem type params.
 
-**Recomendação:** Usar `dict[str, Any]`, `dict[str, object]`, ou TypedDict conforme estrutura conhecida.
+**Corrigido:** Todos os `dict` → `dict[str, Any]`, `dict[str, dict[str, int | float]]`, etc. conforme estrutura conhecida. `Any` import adicionado onde faltava.
 
 ### W-02: Import dentro do método
 **Arquivo:** `src/evaluation/_evaluator.py:33`  
 O import de `json` está dentro `_load_golden_docs()` em vez do topo do arquivo — padrão inconsistente com o resto do códigobase que usa imports no topo.
+
+**Corrigido:** Já estava com o import no topo do arquivo antes da análise (verificado na leitura do código).
 
 ---
 
@@ -45,6 +48,8 @@ O dataclass `EvaluationResult` tem `details: dict = field(default_factory=dict)`
 **Arquivo:** `src/evaluation/_evaluator.py`  
 Os métodos `evaluate_extraction`, `evaluate_interpretation`, `evaluate_decision` apenas delegam para funções externas — não há valor em serem async se só fazem forward.
 
+**Corrigido:** `async` removido, return types alterados para `Awaitable`. Ruff check + format limpos.
+
 ---
 
 ## Pontos Positivos
@@ -57,6 +62,7 @@ Os métodos `evaluate_extraction`, `evaluate_interpretation`, `evaluate_decision
 
 ## Próximos Passos Sugeridos
 
-1. **Adicionar type params aos generics dict/list** (W-01)  
-2. **Mover import `json` para o topo do arquivo** (W-02)
-3. **Considerar adicionar frozen=True e slots=True ao dataclass EvaluationResult** (S-01)
+1. ~~**Adicionar type params aos generics dict/list** (W-01)~~ **Concluído**  
+2. ~~**Mover import `json` para o topo do arquivo** (W-02)~~ **Já estava no topo**
+3. ~~**Considerar adicionar frozen=True e slots=True ao dataclass EvaluationResult** (S-01)~~ **Já tinha `frozen=True, slots=True`**
+4. ~~**Remover async de métodos pass-through** (S-02)~~ **Concluído**

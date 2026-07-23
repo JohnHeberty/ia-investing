@@ -11,9 +11,9 @@ from ._metrics import BacktestMetrics, compute_metrics
 
 logger = logging.getLogger(__name__)
 
-MIN_HISTORY_BARS = 20
-WEIGHT_THRESHOLD = 1e-6
-BPS_DIVISOR = 10_000.0
+MIN_HISTORY_BARS = 20  # Minimum bars for reliable metric computation
+WEIGHT_THRESHOLD = 1e-6  # Positions below this weight are excluded from turnover calculations
+BPS_DIVISOR = 10_000.0  # 1 basis point = 0.01% = 1/10_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,7 +29,7 @@ class BacktestResult:
     benchmark_return: float
     alpha: float
     information_ratio: float
-    trades: list[dict] = field(default_factory=list)
+    trades: list[dict[str, object]] = field(default_factory=list)
     metrics: BacktestMetrics | None = None
 
 
@@ -109,14 +109,14 @@ def _rebalance_on_date(
     new_equity: float,
     cost_bps: float,
     slippage_bps: float,
-) -> tuple[dict[str, float], float, list[dict]]:
+) -> tuple[dict[str, float], float, list[dict[str, object]]]:
     """Execute rebalance for a single date. Returns (new_weights, updated_equity, trades)."""
     available_history = prices_df.filter(pl.col("date") <= current_date)
     if available_history.height < MIN_HISTORY_BARS:
         return current_weights.copy(), new_equity, []
 
     new_weights = {ticker: target_weights.get(ticker, 0.0) for ticker in price_cols}
-    trades: list[dict] = []
+    trades: list[dict[str, object]] = []
 
     for ticker in price_cols:
         old_w = current_weights.get(ticker, 0.0)
@@ -189,7 +189,7 @@ class BacktestEngine:
 
         equity_curve: list[float] = [self.initial_capital]
         current_weights: dict[str, float] = dict.fromkeys(price_cols, 0.0)
-        trades_log: list[dict] = []
+        trades_log: list[dict[str, object]] = []
 
         for i in range(1, len(dates)):
             daily_returns = returns_df.row(i - 1, named=True)

@@ -1,18 +1,19 @@
 # Code Quality Analysis — `parsers` Module
 
 **Data:** 2026-07-21  
-**Arquivos analisados:** 3 Python files (__init__.py, _html.py, _pdf.py)  
+**Última atualização:** 2026-07-22 — W-01 corrigido  
+**Arquivos analisados:** 4 Python files (__init__.py, _types.py, _html.py, _pdf.py)  
 **Ferramentas usadas:** ruff, mypy, análise manual de padrões  
 
 ---
 
 ## Resumo Executivo
 
-| Severidade | Quantidade | Descrição |
-|------------|-----------|-----------|
-| Crítico | 0 | Nenhum problema crítico identificado neste módulo |
-| Aviso | 1 | Import circular entre `_html.py` e `_pdf.py` via `ParsedDocument` |
-| Sugestão | 3 | Sem tratamento de erros para arquivos PDF corrompidos, classes internas duplicadas no HTML parser, sem testes unitários |
+| Severidade | Original | Corrigido | Restante | Descrição |
+|------------|---------|----------|----------|-----------|
+| Crítico | 0 | 0 | 0 | — |
+| Aviso | 1 | 1 | 0 | W-01 corrigido — `ParsedDocument` movido para `_types.py` |
+| Sugestão | 3 | 0 | 3 | Sem tratamento de erros para arquivos PDF corrompidos, classes internas duplicadas no HTML parser, sem testes unitários |
 
 ---
 
@@ -25,14 +26,9 @@ O módulo `_html.py` importa de `_pdf.py`:
 from ._pdf import ParsedDocument
 ```
 
-Isso cria uma dependência assimétrica — o tipo compartilhado (`ParsedDocument`) vive no módulo PDF mas é usado pelo HTML parser. Se alguém remover ou renomear `_pdf.py`, quebra `_html.py`.
+Isso cria uma dependência assimétrica — o tipo compartilhado (`ParsedDocument`) vive no módulo PDF mas é usado pelo HTML parser.
 
-**Recomendação:** Mover `ParsedDocument` para um arquivo dedicado como `_types.py`:
-```python
-# parsers/_types.py
-@dataclass(slots=True)
-class ParsedDocument: ...
-```
+**Corrigido:** `ParsedDocument` movido para novo arquivo `parsers/_types.py`. `_pdf.py` e `_html.py` agora importam de `._types` — dependência cruzada eliminada.
 
 ---
 
@@ -88,6 +84,6 @@ Não foram encontrados testes para o módulo `parsers`. Dado que envolve parsing
 
 ## Próximos Passos Sugeridos
 
-1. **Mover `ParsedDocument` para arquivo dedicado** (W-01) — quebra dependência cruzada
+1. ~~**Mover `ParsedDocument` para arquivo dedicado** (W-01)~~ **Concluído**
 2. **Adicionar tratamento de erros em `parse_pdf()`** (S-01)
 3. **Criar testes unitários com arquivos de amostra** (S-03)

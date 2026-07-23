@@ -21,7 +21,7 @@ def _resolve_canonical(entry: FinancialEntry) -> str | None:
     return None
 
 
-def normalize_bpa(rows: list[dict]) -> dict[str, float]:
+def normalize_bpa(rows: list[dict[str, object]]) -> dict[str, float]:
     entries = _to_entries(rows)
     result: dict[str, float] = {}
 
@@ -56,7 +56,7 @@ def normalize_bpa(rows: list[dict]) -> dict[str, float]:
     return result
 
 
-def normalize_bpp(rows: list[dict]) -> dict[str, float]:
+def normalize_bpp(rows: list[dict[str, object]]) -> dict[str, float]:
     entries = _to_entries(rows)
     result: dict[str, float] = {}
 
@@ -114,7 +114,7 @@ def normalize_bpp(rows: list[dict]) -> dict[str, float]:
     return result
 
 
-def normalize_dre(rows: list[dict]) -> dict[str, float]:
+def normalize_dre(rows: list[dict[str, object]]) -> dict[str, float]:
     entries = _to_entries(rows)
     result: dict[str, float] = {}
 
@@ -127,7 +127,7 @@ def normalize_dre(rows: list[dict]) -> dict[str, float]:
     return result
 
 
-def normalize_dfc(rows: list[dict]) -> dict[str, float]:
+def normalize_dfc(rows: list[dict[str, object]]) -> dict[str, float]:
     entries = _to_entries(rows)
     result: dict[str, float] = {}
 
@@ -140,15 +140,15 @@ def normalize_dfc(rows: list[dict]) -> dict[str, float]:
     return result
 
 
-def normalize_dmpl(rows: list[dict]) -> dict[str, float]:
+def normalize_dmpl(rows: list[dict[str, object]]) -> dict[str, float]:
     return normalize_dfc(rows)
 
 
-def normalize_dva(rows: list[dict]) -> dict[str, float]:
+def normalize_dva(rows: list[dict[str, object]]) -> dict[str, float]:
     return normalize_dfc(rows)
 
 
-def _to_entries(rows: list[dict]) -> list[FinancialEntry]:
+def _to_entries(rows: list[dict[str, object]]) -> list[FinancialEntry]:
     entries: list[FinancialEntry] = []
     for r in rows:
         if isinstance(r, FinancialEntry):
@@ -163,7 +163,7 @@ def _to_entries(rows: list[dict]) -> list[FinancialEntry]:
                     nome_empresa=str(r.get("nome_empresa", r.get("DENOM_CIA", ""))),
                     cod_cvm=str(r.get("cod_cvm", r.get("CD_CVM", ""))),
                     dt_referencia=str(r.get("dt_referencia", r.get("DT_REFER", ""))),
-                    versao=int(r.get("versao", r.get("VERSAO", 0)) or 0),
+                    versao=int(str(r.get("versao", r.get("VERSAO", 0)) or 0)),
                     cod_conta=str(r.get("cod_conta", r.get("CD_CONTA", ""))),
                     desc_conta=str(r.get("desc_conta", r.get("DS_CONTA", ""))),
                     valor=_parse_valor(str(raw_value)),

@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -20,7 +19,7 @@ class PromptVersion(Base):
     structured_output_schema_id = sa.Column(UUID(as_uuid=True))
 
     is_active = sa.Column(sa.Boolean, default=False)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"PromptVersion(agent_name={self.agent_name!r}, version_number={self.version_number})"
@@ -38,7 +37,7 @@ class WorkflowRun(Base):
     status = sa.Column(sa.String(20), default="running")  # "running", "completed", "failed"
     error_message = sa.Column(sa.Text)
 
-    started_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    started_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
     finished_at = sa.Column(sa.DateTime(timezone=True))
 
     def __repr__(self) -> str:
@@ -57,7 +56,7 @@ class StructuredOutputSchema(Base):
     json_schema = sa.Column(JSONB)  # Schema JSON completo
 
     is_active = sa.Column(sa.Boolean, default=True)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"StructuredOutputSchema(name={self.name!r}, version_number={self.version_number})"

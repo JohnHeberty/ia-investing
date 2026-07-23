@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from datetime import UTC, datetime
+from datetime import datetime
 from hashlib import sha256
 from uuid import UUID
 
@@ -10,6 +10,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from ._utils import utcnow
 from .base import Base
 
 AUDIT_ACTIONS = frozenset(
@@ -46,12 +47,8 @@ class AuditLogEntry(Base):
     meta_data: Mapped[dict] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     hash_prev: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     hash: Mapped[str] = mapped_column(sa.String(64), nullable=False, unique=True)
-    timestamp: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
-    )
+    timestamp: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
 
     __table_args__ = (
         sa.Index("ix_audit_log_tenant_timestamp", "tenant_id", "timestamp"),

@@ -1,6 +1,7 @@
 # Code Quality Analysis — `portfolio` Module
 
 **Data:** 2026-07-21  
+**Última atualização:** 2026-07-22 — C-01, W-01 corrigidos  
 **Arquivos analisados:** 4 Python files (__init__.py, _optimizer.py)  
 **Ferramentas usadas:** ruff, mypy, análise manual de padrões  
 
@@ -8,11 +9,11 @@
 
 ## Resumo Executivo
 
-| Severidade | Quantidade | Descrição |
-|------------|-----------|-----------|
-| Crítico | 1 | Mypy reporta `Module has no attribute "sum"`, `"norm"`, `"quad_form"` — imports do CVXPY podem estar quebrados ou mal tipados |
-| Aviso | 3 | Generics sem parâmetros (8 ocorrências), `ndarray` e `list` sem type params, `type: ignore[arg-type]` no constructor |
-| Sugestão | 2 | Construtor com dual API (`config` vs kwargs) é frágil; `_build_constraints` retorna tipo genérico `list` |
+| Severidade | Original | Corrigido | Restante | Descrição |
+|------------|---------|----------|----------|-----------|
+| Crítico | 1 | 1 | 0 | C-01 resolvido — `follow_imports = "skip"` para cvxpy no mypy config |
+| Aviso | 3 | 1 | 2 | W-01 corrigido; W-02 (type:ignore) necessário pelo OptimizerConfig(**kwargs); S-02 sugestão |
+| Sugestão | 2 | 0 | 2 | Construtor com dual API (`config` vs kwargs) é frágil; `_build_constraints` retorna tipo genérico `list` |
 
 ---
 
@@ -20,7 +21,9 @@
 
 ### C-01: Mypy `[attr-defined]` para atributos do CVXPY — possível import quebrado
 **Arquivo:** `src/portfolio/_optimizer.py`  
-Mypy reporta que o módulo não tem os atributos usados, indicando um problema de tipagem ou imports mal configurados. Se o código roda em runtime mas mypy falha, é necessário adicionar stubs ou ajustar a configuração do mypy para reconhecer CVXPY.
+Mypy reporta que o módulo não tem os atributos usados (`cp.sum`, `cp.norm`, `cp.quad_form`) — CVXPY não distribui type stubs.
+
+**Corrigido:** Adicionado `[[tool.mypy.overrides]] module = "cvxpy.*" follow_imports = "skip"` no `pyproject.toml`. CVXPY tratado como `Any` pelo type checker. `mypy src/portfolio/` → 0 erros.
 
 ---
 
@@ -29,6 +32,8 @@ Mypy reporta que o módulo não tem os atributos usados, indicando um problema d
 ### W-01: Generics sem parâmetros — 8 ocorrências
 **Arquivo:** `src/portfolio/_optimizer.py`  
 Linhas 27 (`dict`), 58,97,98 (`ndarray`), 60,100,101,119 (`dict`) e 62-63 (`list`).
+
+**Corrigido:** `constraints: dict` → `dict[str, Any]`, `transactions: list[dict]` → `list[dict[str, object]]`, `constraint_list: list` → `list[cp.Constraint]`.
 
 ### W-02: `type: ignore[arg-type]` no constructor
 **Arquivo:** `src/portfolio/_optimizer.py:52`  
@@ -58,6 +63,6 @@ A função retorna `list` sem type params — deveria retornar `list[cp.Constrai
 
 ## Próximos Passos Sugeridos
 
-1. **Resolver imports do CVXPY para mypy (C-01)** — adicionar stubs ou `# type: ignore[attr-defined]` com justificativa
-2. **Adicionar type params aos generics** (W-01)  
+1. ~~**Resolver imports do CVXPY para mypy (C-01)**~~ **Concluído** — `follow_imports = "skip"` no mypy config
+2. ~~**Adicionar type params aos generics** (W-01)~~ **Concluído**  
 3. **Simplificar constructor para aceitar apenas config object** (S-01)

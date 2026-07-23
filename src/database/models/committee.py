@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -25,12 +24,12 @@ class CommitteeSession(Base):
     rationale = sa.Column(sa.Text)
     published_at = sa.Column(sa.DateTime(timezone=True))
     archived_at = sa.Column(sa.DateTime(timezone=True))
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = sa.Column(
         sa.DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=utcnow,
+        onupdate=utcnow,
     )
 
     __table_args__ = (
@@ -59,7 +58,7 @@ class CommitteeVote(Base):
     proposal_id = sa.Column(sa.String(100), nullable=False)
     vote = sa.Column(sa.String(20), nullable=False)
     justification = sa.Column(sa.Text)
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
 
     __table_args__ = (
         sa.CheckConstraint(
@@ -89,5 +88,5 @@ class CommitteeDecision(Base):
     decision = sa.Column(sa.Text, nullable=False)
     rationale = sa.Column(sa.Text)
     votes_summary = sa.Column(JSONB, nullable=False, default=dict)
-    published_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    published_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)

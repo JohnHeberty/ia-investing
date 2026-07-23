@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -17,7 +16,7 @@ class UniverseFilter(Base):
     criteria = sa.Column(JSONB)  # Critérios de filtro: min_market_cap, sectors_include...
     is_active = sa.Column(sa.Boolean, default=True)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"UniverseFilter(name={self.name!r}, is_active={self.is_active})"

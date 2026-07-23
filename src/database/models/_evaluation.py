@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -29,7 +28,7 @@ class Scorecard(Base):
 
     veto_conditions_triggered = sa.Column(JSONB)  # Condições de veto ativadas
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Scorecard(scorecard_type={self.scorecard_type!r}, overall_score={self.overall_score})"
@@ -57,7 +56,7 @@ class BacktestResult(Base):
     benchmark_cagr_pct = sa.Column(sa.Float)
 
     details = sa.Column(JSONB)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"BacktestResult(strategy_name={self.strategy_name!r}, cagr_pct={self.cagr_pct})"

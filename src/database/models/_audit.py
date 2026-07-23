@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -23,7 +22,7 @@ class Approval(Base):
     decision = sa.Column(sa.String(20))  # "approved", "rejected"
     notes_pt = sa.Column(sa.Text)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Approval(approver_name={self.approver_name!r}, decision={self.decision!r})"
@@ -42,7 +41,7 @@ class ExecutionReconciliation(Base):
     status = sa.Column(sa.String(20))  # "matched", "unmatched"
     discrepancy_notes = sa.Column(sa.Text)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"ExecutionReconciliation(status={self.status!r}, broker_order_id={self.broker_order_id!r})"
@@ -66,7 +65,7 @@ class EvaluationResultRecord(Base):
     dataset_id = sa.Column(UUID(as_uuid=True))
     model_version = sa.Column(sa.String(100))
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return (
@@ -90,7 +89,7 @@ class AuditLog(Base):
     correlation_id = sa.Column(UUID(as_uuid=True), nullable=False, index=True)
 
     details = sa.Column(JSONB, nullable=False)
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
 
     def __repr__(self) -> str:
         return f"AuditLog(actor_type={self.actor_type!r}, action={self.action!r})"

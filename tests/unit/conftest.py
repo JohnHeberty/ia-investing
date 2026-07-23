@@ -56,6 +56,7 @@ def _load_module_from_file(name: str, rel_path: str) -> Any:
 # Session-scoped database fixtures (reusable across tests that need ORM)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture()
 def make_session() -> Any:
     """Return a factory that creates lightweight SQLAlchemy session mocks."""

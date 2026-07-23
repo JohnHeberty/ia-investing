@@ -4,6 +4,7 @@ import asyncio
 import json
 from dataclasses import dataclass, field
 from decimal import Decimal
+from typing import Any
 
 from .eval_datasets import EvalDatasetFile
 from .eval_gate import EvalGate
@@ -42,7 +43,7 @@ class ShadowGate:
     async def run_shadow_gate(
         self,
         case_id: str,
-        input_payload: dict,
+        input_payload: dict[str, Any],
         config: ShadowGateConfig,
     ) -> ShadowGateResult:
         capability = case_id.split("/")[0]
@@ -94,7 +95,7 @@ class ShadowGate:
 
     async def batch_shadow_gate(
         self,
-        cases: list[tuple[str, dict]],
+        cases: list[tuple[str, dict[str, Any]]],
         config: ShadowGateConfig,
     ) -> list[ShadowGateResult]:
         tasks = [self.run_shadow_gate(case_id, input_payload, config) for case_id, input_payload in cases]

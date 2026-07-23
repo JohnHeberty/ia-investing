@@ -20,7 +20,7 @@ sys.modules["_scorecard"] = _scorecard
 _spec.loader.exec_module(_scorecard)  # type: ignore[union-attr]
 ScorecardCalculator = _scorecard.ScorecardCalculator
 
-from workflows._portfolio_construction import (
+from workflows._portfolio_construction import (  # noqa: E402
     PipelineConfig,
     PortfolioConstructionInput,
     PortfolioConstructionWorkflow,
@@ -304,9 +304,11 @@ class TestPortfolioConstructionWorkflow:
                 return {"passed": True, "issues": [], "weights_sum": 1.0, "sector_totals": {}}
             return {}
 
-        with patch("workflows._portfolio_construction.workflow.execute_activity", side_effect=mock_activity):
-            with patch("workflows._portfolio_construction.workflow.wait_condition", new_callable=AsyncMock):
-                result = await wf.run(cmd)
+        with (
+            patch("workflows._portfolio_construction.workflow.execute_activity", side_effect=mock_activity),
+            patch("workflows._portfolio_construction.workflow.wait_condition", new_callable=AsyncMock),
+        ):
+            result = await wf.run(cmd)
 
         assert result.state == "approved"
         assert result.pipeline_summary["scorecard"]["eligibility"] == "eligible"
@@ -358,9 +360,11 @@ class TestPortfolioConstructionWorkflow:
                 }
             return {}
 
-        with patch("workflows._portfolio_construction.workflow.execute_activity", side_effect=mock_activity):
-            with patch("workflows._portfolio_construction.workflow.wait_condition", new_callable=AsyncMock):
-                result = await wf.run(cmd)
+        with (
+            patch("workflows._portfolio_construction.workflow.execute_activity", side_effect=mock_activity),
+            patch("workflows._portfolio_construction.workflow.wait_condition", new_callable=AsyncMock),
+        ):
+            result = await wf.run(cmd)
 
         assert result.state == "rejected"
         assert result.pipeline_summary["constraints"]["passed"] is False

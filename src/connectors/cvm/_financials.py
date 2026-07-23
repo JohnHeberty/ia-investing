@@ -38,7 +38,7 @@ class StatementType(StrEnum):
     DVA_IND = "DVA_ind"  # Demonstração do Valor Adicionado - Individual
 
 
-@dataclass(slots=True)
+@dataclass(frozen=True, slots=True)
 class FinancialEntry:
     """Linha de demonstrativo financeiro."""
 

@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -17,7 +16,7 @@ class AgentDefinition(Base):
     model_config = sa.Column(JSONB)
 
     is_active = sa.Column(sa.Boolean, default=True)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"AgentDefinition(name={self.name!r}, is_active={self.is_active})"
@@ -44,7 +43,7 @@ class AgentRun(Base):
     status = sa.Column(sa.String(20), default="running")  # "running", "completed", "failed"
     error_message = sa.Column(sa.Text)
 
-    started_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    started_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
     finished_at = sa.Column(sa.DateTime(timezone=True))
 
     def __repr__(self) -> str:
@@ -67,7 +66,7 @@ class AgentToolCall(Base):
 
     status = sa.Column(sa.String(20))  # "success", "failed"
     duration_ms = sa.Column(sa.Float)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"AgentToolCall(tool_name={self.tool_name!r}, status={self.status!r})"

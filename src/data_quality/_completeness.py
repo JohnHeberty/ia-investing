@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from typing import Any
+
 from ._models import ValidationResult
 
 
 def check_data_completeness(
     entity_type: str,
-    data: dict,
+    data: dict[str, Any],
     required_fields: list[str],
 ) -> list[ValidationResult]:
     missing = [f for f in required_fields if f not in data or data[f] is None]

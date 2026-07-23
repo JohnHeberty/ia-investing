@@ -15,5 +15,3 @@ def test_valid_incident_transitions(current: str, target: str) -> None:
 def test_invalid_incident_transitions(current: str, target: str) -> None:
     with pytest.raises(ValueError, match="invalid"):
         validate_transition(current, target)
-
-

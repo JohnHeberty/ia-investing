@@ -31,9 +31,10 @@ class RunAgentWorkflow:
     async def run(self, command: RunAgentInput) -> dict[str, Any]:
         payload = asdict(command)
         payload["workflow_id"] = workflow.info().workflow_id
-        return await workflow.execute_activity(
+        result: dict[str, Any] = await workflow.execute_activity(
             "create_and_execute_agent_run",
             payload,
             start_to_close_timeout=timedelta(minutes=8),
             retry_policy=EXTERNAL_IO_RETRY_POLICY,
         )
+        return result

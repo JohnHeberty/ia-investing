@@ -32,7 +32,7 @@ def _compute_cagr(equity_curve: list[float], periods_per_year: float) -> float:
     initial = equity_curve[0]
     if final <= 0 or initial <= 0:
         return 0.0
-    return (final / initial) ** (periods_per_year / n_periods) - 1.0
+    return (final / initial) ** (periods_per_year / n_periods) - 1.0  # type: ignore[no-any-return]
 
 
 def _compute_max_drawdown(equity_curve: list[float]) -> float:

@@ -10,8 +10,6 @@ import importlib
 import tomllib
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
 PYPROJECT = ROOT / "pyproject.toml"
@@ -44,8 +42,7 @@ class TestNoSrcAgents:
     def test_src_agents_removed(self) -> None:
         agents_dir = SRC / "agents"
         assert not agents_dir.exists(), (
-            f"src/agents/ still exists and would shadow the openai-agents package. "
-            f"Remove it: rm -rf {agents_dir}"
+            f"src/agents/ still exists and would shadow the openai-agents package. Remove it: rm -rf {agents_dir}"
         )
 
     def test_agents_module_resolves_to_installed_package(self) -> None:
@@ -53,8 +50,7 @@ class TestNoSrcAgents:
         mod_file = getattr(mod, "__file__", "") or ""
         assert mod_file, "agents module has no __file__"
         assert "src/agents" not in mod_file, (
-            f"agents module resolves to local src/agents ({mod_file}), "
-            f"not the installed openai-agents package"
+            f"agents module resolves to local src/agents ({mod_file}), not the installed openai-agents package"
         )
 
 
@@ -64,12 +60,8 @@ class TestEntryPointsHaveActivities:
     def test_worker_imports_activities(self) -> None:
         worker_main = SRC / "apps" / "worker" / "main.py"
         content = worker_main.read_text(encoding="utf-8")
-        assert "ACTIVITIES_BY_CAPABILITY" in content, (
-            "Worker does not define ACTIVITIES_BY_CAPABILITY"
-        )
-        assert "activities=activities" in content, (
-            "Worker does not pass activities to Worker()"
-        )
+        assert "ACTIVITIES_BY_CAPABILITY" in content, "Worker does not define ACTIVITIES_BY_CAPABILITY"
+        assert "activities=activities" in content, "Worker does not pass activities to Worker()"
 
     def test_api_mounts_all_routers(self) -> None:
         candidates = [
@@ -94,9 +86,7 @@ class TestEntryPointsHaveActivities:
                 or f"include_router({router}_router" in content
                 or f"from .routes.{router} import" in content
                 or f"from apps.api.routes.{router} import" in content
-            ), (
-                f"API does not mount {router} router"
-            )
+            ), f"API does not mount {router} router"
 
 
 class TestSchedulerUsesTemporal:
@@ -131,6 +121,4 @@ class TestSecurityInfrastructure:
     def test_auth_required_on_paper_routes(self) -> None:
         paper_routes = SRC / "apps" / "api" / "routes" / "paper_execution.py"
         content = paper_routes.read_text(encoding="utf-8")
-        assert "get_auth_context" in content, (
-            "Paper execution routes do not require authentication"
-        )
+        assert "get_auth_context" in content, "Paper execution routes do not require authentication"

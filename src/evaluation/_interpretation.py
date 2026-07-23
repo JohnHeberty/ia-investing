@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from ._evaluator import EvaluationResult
 
 
 def _classification_accuracy(
-    agent_output: dict,
+    agent_output: dict[str, Any],
     expected: str,
     agent_name: str,
     eval_type: str,
@@ -35,7 +37,7 @@ def _classification_accuracy(
 
 
 def _confidence_calibration(
-    agent_output: dict,
+    agent_output: dict[str, Any],
     expected_correct: bool,
     agent_name: str,
     eval_type: str,
@@ -62,7 +64,7 @@ def _confidence_calibration(
     ]
 
 
-async def evaluate_interpretation(agent_output: dict, expected_verdict: str) -> list[EvaluationResult]:
+async def evaluate_interpretation(agent_output: dict[str, Any], expected_verdict: str) -> list[EvaluationResult]:
     agent_name = agent_output.get("agent_name", "unknown")
     results: list[EvaluationResult] = []
 

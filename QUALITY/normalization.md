@@ -1,6 +1,7 @@
 # Code Quality Analysis — `normalization` Module
 
 **Data:** 2026-07-21  
+**Última atualização:** 2026-07-22 — W-01 corrigido  
 **Arquivos analisados:** 5 Python files (__init__.py, _mappings.py, _derived.py, _financials.py, _normalizers.py)  
 **Ferramentas usadas:** ruff, mypy, análise manual de padrões  
 
@@ -8,11 +9,11 @@
 
 ## Resumo Executivo
 
-| Severidade | Quantidade | Descrição |
-|------------|-----------|-----------|
-| Crítico | 0 | Nenhum problema crítico identificado neste módulo |
-| Aviso | 2 | Generics sem parâmetros (7 ocorrências), import não encontrado pelo mypy |
-| Sugestão | 3 | Uso de `float` para valores financeiros, lógica duplicada em funções normalize_*, nomenclatura `_` prefixo ambígua |
+| Severidade | Original | Corrigido | Restante | Descrição |
+|------------|---------|----------|----------|-----------|
+| Crítico | 0 | 0 | 0 | — |
+| Aviso | 2 | 1 | 1 | W-01 corrigido; W-02 (import-not-found) é pré-existente — mypy não resolve módulos sem path config |
+| Sugestão | 3 | 0 | 3 | Uso de `float` para valores financeiros, lógica duplicada em funções normalize_*, nomenclatura `_` prefixo ambígua |
 
 ---
 
@@ -27,7 +28,7 @@ def normalize_bpa(rows: list[dict]) -> dict[str, float]:  # ← retorno OK mas p
     ...
 ```
 
-**Recomendação:** Usar `list[dict[str, object]]` ou criar um TypedDict para o formato esperado de entrada.
+**Corrigido:** `list[dict]` → `list[dict[str, Any]]` em 7 ocorrências. Também fixado `int(r.get(...))` → `int(str(r.get(...)))` para compatibilidade mypy.
 
 ### W-02: Import não encontrado pelo mypy — `connectors.cvm._financials`
 **Arquivo:** `src/normalization/_normalizers.py:5`  
@@ -63,6 +64,6 @@ Arquivos como `_normalizers.py`, `_mappings.py`, etc. usam underscore inicial in
 
 ## Próximos Passos Sugeridos
 
-1. **Adicionar type params aos generics** — `dict[str, object]` ou TypedDict  
+1. ~~**Adicionar type params aos generics**~~ **Concluído**  
 2. **Considerar usar Decimal em vez de float** para valores financeiros (S-01)
 3. **Consolidar lógica duplicada entre funções normalize_*** (S-02)

@@ -10,29 +10,23 @@ import pytest
 
 from connectors.policy._official import (
     FetchedOfficialPayload,
-    OfficialPolicyClient,
-    OfficialPolicyRecord,
     parse_dou_xml,
 )
 from ia_investing.domain.policy import (
     HistoricalOutcome,
     ImpactEdge,
-    PolicyTheme,
     PolicyDeadline,
-    RectificationRecord,
+    PolicyTheme,
     base_rate,
-    canonical_policy_key,
     compute_versioned_features,
     detect_rectification,
     features_hash,
     material_review_required,
     propagate_impact,
-    text_diff,
     validate_policy_stage_transition,
 )
 from ia_investing.domain.policy_historical import (
     HISTORICAL_OUTCOMES,
-    HistoricalPoliticalOutcome,
     get_historical_outcomes,
 )
 
@@ -40,6 +34,7 @@ FIXTURES = Path(__file__).parents[1] / "fixtures" / "policy"
 
 
 # ── DOU XML parsing ──────────────────────────────────────────────────────────
+
 
 class TestDOUXMLParsing:
     def test_parse_dou_xml_extracts_records(self) -> None:
@@ -111,6 +106,7 @@ class TestDOUXMLParsing:
 
 # ── Historical outcomes with legal type ──────────────────────────────────────
 
+
 class TestHistoricalOutcomesLegalType:
     def test_dataset_has_all_legal_types(self) -> None:
         types = {o.legal_type for o in HISTORICAL_OUTCOMES}
@@ -148,6 +144,7 @@ class TestHistoricalOutcomesLegalType:
 
 
 # ── E2E lineage: source → sector → driver → issuer → portfolio ──────────────
+
 
 class TestE2ELineage:
     def test_full_propagation_path(self) -> None:

@@ -4,6 +4,13 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 
+def _get(line_items: dict[str, Any], key: str) -> float:
+    raw = line_items.get(key)
+    if raw is None:
+        raise ValueError(f"required financial field is missing: {key}")
+    return float(raw)
+
+
 @dataclass(slots=True)
 class ValidationResult:
     check_name: str
@@ -30,13 +37,6 @@ def _make(
         details=dict(details),
         severity=severity,
     )
-
-
-def _get(line_items: dict, key: str) -> float:
-    raw = line_items.get(key)
-    if raw is None:
-        raise ValueError(f"required financial field is missing: {key}")
-    return float(raw)
 
 
 def _close(a: float, b: float, tolerance_pct: float = 0.001) -> bool:

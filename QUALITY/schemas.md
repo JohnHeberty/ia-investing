@@ -8,11 +8,11 @@
 
 ## Resumo Executivo
 
-| Severidade | Quantidade | Descrição |
-|------------|-----------|-----------|
-| Crítico | 0 | Nenhum problema crítico identificado neste módulo |
-| Aviso | 0 | Zero erros do mypy e ruff — módulo limpo em todas as verificações automáticas |
-| Sugestão | 1 | Modelos Pydantic sem `model_config` explícito (ex: `str_strip_whitespace=True`) para validação de strings de entrada |
+| Severidade | Original | Corrigido | Restante | Descrição |
+|------------|---------|----------|----------|-----------|
+| Crítico | 0 | 0 | 0 | — |
+| Aviso | 0 | 0 | 0 | — |
+| Sugestão | 1 | 1 | 0 | S-01 — `model_config` adicionado a 6 modelos |
 
 ---
 
@@ -21,6 +21,8 @@
 ### S-01: Modelos Pydantic sem configuração adicional  
 **Arquivo:** `src/schemas/_filing.py`  
 Os modelos usam apenas campos básicos com `Field(ge=..., le=...)`. Para dados financeiros, considerar adicionar validação extra como `str_strip_whitespace=True`, ou constraints de string length para campos como `summary_pt`.
+
+**Corrigido:** `model_config = ConfigDict(str_strip_whitespace=True)` adicionado a todos os 6 modelos nos arquivos: `_risk.py`, `_thesis.py`, `_news.py`, `_discovery.py`, `_committee.py`, `_filing.py`.
 
 ---
 
@@ -34,4 +36,4 @@ Os modelos usam apenas campos básicos com `Field(ge=..., le=...)`. Para dados f
 
 ## Próximos Passos Sugeridos
 
-Nenhum ação imediata necessária. Módulo em bom estado. Considerar adicionar constraints extras para validação mais robusta (S-01).
+~~**Adicionar model_config** (S-01)~~ **Concluído**. Nenhuma ação adicional necessária agora.

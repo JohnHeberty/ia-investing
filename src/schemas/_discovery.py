@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DiscoveryBrief(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     ticker: str
     issuer_name: str
     sector: str

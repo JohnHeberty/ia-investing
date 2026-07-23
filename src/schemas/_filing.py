@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Claim(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     text: str
     status: Literal["verified", "unverified"]
     source_location: str
@@ -13,6 +14,7 @@ class Claim(BaseModel):
 
 
 class Risk(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     description: str
     severity: Literal["high", "medium", "low"]
     probability: float = Field(ge=0.0, le=1.0)
@@ -20,6 +22,7 @@ class Risk(BaseModel):
 
 
 class FilingReviewVerdict(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     verdict: Literal["positive", "negative", "neutral"]
     confidence: float = Field(ge=0.0, le=1.0)
     summary_pt: str

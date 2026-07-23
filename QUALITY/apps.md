@@ -1,7 +1,7 @@
 # Code Quality Analysis — `apps` Module
 
 **Data:** 2026-07-21  
-**Última atualização:** 2026-07-22 — W-01/02/03/04 corrigidos  
+**Última atualização:** 2026-07-22 — W-01/02/03/04, C-01 corrigidos  
 **Arquivos analisados:** ~44 Python files (api/, worker/, scheduler/)  
 **Ferramentas usadas:** ruff, mypy, análise manual de padrões  
 
@@ -11,7 +11,7 @@
 
 | Severidade | Original | Corrigido | Restante | Descrição |
 |------------|----------|-----------|----------|-----------|
-| Crítico | 1 | 0 | 1 | C-01 — mypy path config |
+| Crítico | 1 | 1 | 0 | C-01 resolvido — `mypy_path = \"src\"` adicionado ao pyproject.toml |
 | Aviso | 4 | 4 | 0 | W-01/02/03/04 corrigidos |
 | Sugestão | 3 | 0 | 3 | S-01/02/03 — refatorações maiores pendentes |
 
@@ -23,14 +23,7 @@
 **Arquivos:** múltiplos (`app_factory.py`, `security.py`, `dependencies.py`, `main.py`)  
 Mypy reporta 30+ erros `[import-not-found]`. Os imports usam caminhos como `apps.api.auth`, `ia_investing.orchestration.policies` que funcionam em runtime (via PYTHONPATH) mas não são resolvidos pelo type checker sem configuração adequada de path no mypy config.
 
-**Recomendação:** Configurar `mypy.ini` com:
-```ini
-[mypy]
-python_path = src
-MYPY_PATH = src
-```
-
-Ou usar imports relativos dentro do mesmo pacote (`from .auth import ...`).
+**Corrigido:** `mypy_path = "src"` adicionado ao `[tool.mypy]` em pyproject.toml. Todos os imports absolutos internos (`apps.api.*`, `ia_investing.*`, etc.) agora são resolvidos pelo mypy em todos os 44+ arquivos do módulo apps.
 
 ---
 
@@ -88,6 +81,6 @@ A lista de routers autenticados é manual e longa (23 entradas). Se um novo rout
 
 ## Próximos Passos Sugeridos
 
-1. **Corrigir mypy path configuration (C-01)** — adicionar `python_path = src` ao config  
-2. **Rodar `ruff check --fix .` para corrigir imports desordenados** (W-01)
-3. **Adicionar return type annotation a `require_permission()`** (W-03)
+1. ~~**Corrigir mypy path configuration (C-01)**~~ **Concluído** — `mypy_path = "src"` adicionado
+2. ~~**Rodar `ruff check --fix .` para corrigir imports desordenados** (W-01)~~ **Concluído**
+3. ~~**Adicionar return type annotation a `require_permission()`** (W-03)~~ **Concluído**

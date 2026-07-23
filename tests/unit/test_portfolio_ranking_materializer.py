@@ -31,20 +31,22 @@ def bundle() -> RankingEvidenceBundle:
         data_confidence=Decimal("0.98"),
         low_liquidity=False,
         high_turnover=False,
-        components=RankingComponents(**{
-            name: Decimal("0.8")
-            for name in (
-                "excess_return",
-                "sortino",
-                "drawdown_control",
-                "regime_stability",
-                "walk_forward_robustness",
-                "risk_compliance",
-                "thesis_health",
-                "cost_capacity",
-                "data_model_confidence",
-            )
-        }),
+        components=RankingComponents(
+            **{
+                name: Decimal("0.8")
+                for name in (
+                    "excess_return",
+                    "sortino",
+                    "drawdown_control",
+                    "regime_stability",
+                    "walk_forward_robustness",
+                    "risk_compliance",
+                    "thesis_health",
+                    "cost_capacity",
+                    "data_model_confidence",
+                )
+            }
+        ),
         methodology_version="institutional-v1",
     )
 

@@ -59,6 +59,7 @@ async def test_register_source_creates_entities_and_audit() -> None:
         class FakeResult:
             def scalar_one_or_none(self):
                 return None
+
         return FakeResult()
 
     mock_session.execute.side_effect = fake_execute

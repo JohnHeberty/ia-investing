@@ -7,6 +7,7 @@ Existing unscoped rows remain NULL and are intentionally invisible to tenant-sco
 APIs until an operator assigns them to an organization. New application writes
 must always provide organization_id.
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa

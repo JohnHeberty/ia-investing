@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -17,7 +16,7 @@ class NewsSource(Base):
     source_type = sa.Column(sa.String(20))
 
     is_active = sa.Column(sa.Boolean, default=True)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"NewsSource(name={self.name!r}, trust_level={self.trust_level})"
@@ -38,14 +37,14 @@ class NewsItem(Base):
     url = sa.Column(sa.Text)
 
     published_at = sa.Column(sa.DateTime(timezone=True))
-    retrieved_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    retrieved_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     language = sa.Column(sa.String(10))
     sentiment_score = sa.Column(sa.Float)
 
     raw_data = sa.Column(JSONB)
     is_processed = sa.Column(sa.Boolean, default=False)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"NewsItem(title={self.title!r}, published_at={self.published_at!r})"
@@ -66,7 +65,7 @@ class NewsEntityLink(Base):
     )
 
     relevance_score = sa.Column(sa.Float)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"NewsEntityLink(relevance_score={self.relevance_score})"
@@ -94,7 +93,7 @@ class DetectedEvent(Base):
 
     affected_metrics = sa.Column(JSONB)
     agent_run_id = sa.Column(UUID(as_uuid=True), sa.ForeignKey("agent_runs.id", ondelete="SET NULL"), nullable=True)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"DetectedEvent(event_type={self.event_type!r}, direction_hint={self.direction_hint!r})"
@@ -116,7 +115,7 @@ class EventImpact(Base):
     reasoning = sa.Column(sa.Text)
 
     thesis_effect = sa.Column(sa.String(20))  # "strengthen", "weaken", "neutral"
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"EventImpact(impact_score={self.impact_score}, thesis_effect={self.thesis_effect!r})"
@@ -139,7 +138,7 @@ class EventDuplicate(Base):
 
     similarity_method = sa.Column(sa.String(50))
     similarity_score = sa.Column(sa.Float)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"EventDuplicate(similarity_method={self.similarity_method!r})"

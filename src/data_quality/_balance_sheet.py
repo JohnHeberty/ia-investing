@@ -1,9 +1,28 @@
 from __future__ import annotations
 
+from typing import Any, Literal
+
 from ._models import ValidationResult, _close, _get, _make
 
 
-def validate_balance_sheet(line_items: dict) -> list[ValidationResult]:
+def _check_non_negative(
+    name: str,
+    value: float,
+    entity_type: str,
+    entity_id: str,
+    severity: Literal["error", "warning", "info"] | None = None,
+) -> ValidationResult:
+    return _make(
+        f"{name}_non_negative",
+        value >= 0,
+        entity_type,
+        entity_id,
+        severity=(severity if severity is not None else ("error" if value < 0 else "info")),
+        **{name: value},
+    )
+
+
+def validate_balance_sheet(line_items: dict[str, Any]) -> list[ValidationResult]:
     entity_type = "balance_sheet"
     entity_id = str(line_items.get("entity_id", ""))
     results: list[ValidationResult] = []
@@ -48,86 +67,10 @@ def validate_balance_sheet(line_items: dict) -> list[ValidationResult]:
         )
     )
 
-    current_assets = _get(line_items, "current_assets")
-    results.append(
-        _make(
-            "current_assets_non_negative",
-            current_assets >= 0,
-            entity_type,
-            entity_id,
-            severity="error" if current_assets < 0 else "info",
-            current_assets=current_assets,
-        )
-    )
+    for field in ["current_assets", "non_current_assets", "cash", "accounts_receivable", "inventory"]:
+        results.append(_check_non_negative(field, _get(line_items, field), entity_type, entity_id))
 
-    non_current_assets = _get(line_items, "non_current_assets")
-    results.append(
-        _make(
-            "non_current_assets_non_negative",
-            non_current_assets >= 0,
-            entity_type,
-            entity_id,
-            severity="error" if non_current_assets < 0 else "info",
-            non_current_assets=non_current_assets,
-        )
-    )
-
-    results.append(
-        _make(
-            "total_liabilities_non_negative",
-            total_liabilities >= 0,
-            entity_type,
-            entity_id,
-            severity="error" if total_liabilities < 0 else "info",
-            total_liabilities=total_liabilities,
-        )
-    )
-
-    results.append(
-        _make(
-            "equity_non_negative",
-            equity >= 0,
-            entity_type,
-            entity_id,
-            severity="warning" if equity < 0 else "info",
-            equity=equity,
-        )
-    )
-
-    cash = _get(line_items, "cash")
-    results.append(
-        _make(
-            "cash_non_negative",
-            cash >= 0,
-            entity_type,
-            entity_id,
-            severity="error" if cash < 0 else "info",
-            cash=cash,
-        )
-    )
-
-    accounts_receivable = _get(line_items, "accounts_receivable")
-    results.append(
-        _make(
-            "accounts_receivable_non_negative",
-            accounts_receivable >= 0,
-            entity_type,
-            entity_id,
-            severity="error" if accounts_receivable < 0 else "info",
-            accounts_receivable=accounts_receivable,
-        )
-    )
-
-    inventory = _get(line_items, "inventory")
-    results.append(
-        _make(
-            "inventory_non_negative",
-            inventory >= 0,
-            entity_type,
-            entity_id,
-            severity="error" if inventory < 0 else "info",
-            inventory=inventory,
-        )
-    )
+    results.append(_check_non_negative("total_liabilities", total_liabilities, entity_type, entity_id))
+    results.append(_check_non_negative("equity", equity, entity_type, entity_id, severity="warning"))
 
     return results

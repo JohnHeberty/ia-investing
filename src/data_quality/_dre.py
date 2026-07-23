@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 from ._models import ValidationResult, _close, _get, _make
 
 
-def validate_dre(line_items: dict) -> list[ValidationResult]:
+def validate_dre(line_items: dict[str, Any]) -> list[ValidationResult]:
     entity_type = "dre"
     entity_id = str(line_items.get("entity_id", ""))
     results: list[ValidationResult] = []

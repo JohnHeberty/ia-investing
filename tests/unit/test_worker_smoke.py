@@ -1,7 +1,3 @@
-from typing import Any
-
-from temporalio import activity as temporal_activity
-
 from apps.worker.main import ACTIVITIES_BY_CAPABILITY, WORKFLOWS_BY_CAPABILITY
 from ia_investing.orchestration import TASK_QUEUES, Capability
 
@@ -43,9 +39,7 @@ def test_activity_names_are_unique_within_capability() -> None:
 def test_all_workflows_have_temporal_decoration() -> None:
     for cap, wfs in WORKFLOWS_BY_CAPABILITY.items():
         for wf in wfs:
-            assert hasattr(wf, "__temporal_workflow_definition"), (
-                f"{wf.__name__} in {cap} is not a Temporal workflow"
-            )
+            assert hasattr(wf, "__temporal_workflow_definition"), f"{wf.__name__} in {cap} is not a Temporal workflow"
 
 
 def test_workflow_names_are_unique_across_capabilities() -> None:

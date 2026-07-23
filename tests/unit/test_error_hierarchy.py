@@ -1,5 +1,4 @@
-import pytest
-
+from ia_investing.ai.errors import AiProviderError, GuardrailViolationError
 from ia_investing.application.errors import (
     BusinessRejectionError,
     IaInvestingError,
@@ -9,7 +8,6 @@ from ia_investing.application.errors import (
     is_retryable,
     temporal_retry_policy_from_error,
 )
-from ia_investing.ai.errors import AiProviderError, GuardrailViolationError
 
 
 class TestInstantiation:

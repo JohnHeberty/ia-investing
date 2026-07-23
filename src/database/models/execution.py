@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -27,12 +26,12 @@ class Execution(Base):
     dispatched_at = sa.Column(sa.DateTime(timezone=True))
     confirmed_at = sa.Column(sa.DateTime(timezone=True))
     settled_at = sa.Column(sa.DateTime(timezone=True))
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = sa.Column(
         sa.DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=utcnow,
+        onupdate=utcnow,
     )
 
     __table_args__ = (

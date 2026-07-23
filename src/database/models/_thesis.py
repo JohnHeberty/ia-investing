@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -23,7 +22,7 @@ class InvestmentThesis(Base):
     invalidation_criteria = sa.Column(JSONB)
 
     review_deadline = sa.Column(sa.DateTime(timezone=True))
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"InvestmentThesis(status={self.status!r}, summary_pt={self.summary_pt!r})"
@@ -48,7 +47,7 @@ class ThesisVersion(Base):
     invalidation_criteria = sa.Column(JSONB)
 
     agent_run_id = sa.Column(UUID(as_uuid=True), nullable=True)
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"ThesisVersion(version_number={self.version_number}, change_summary={self.change_summary!r})"
@@ -78,7 +77,7 @@ class Recommendation(Base):
     review_deadline = sa.Column(sa.DateTime(timezone=True))
     invalidation_triggers = sa.Column(JSONB)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Recommendation(action={self.action!r}, confidence={self.confidence})"

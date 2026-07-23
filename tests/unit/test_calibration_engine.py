@@ -87,9 +87,7 @@ def test_drift_detection_no_drift():
         )
         calibrated_at = datetime.now(UTC) - timedelta(days=60 - i)
         record = engine._records[rec.id]
-        engine._records[rec.id] = record.model_copy(
-            update={"last_calibrated_at": calibrated_at}
-        )
+        engine._records[rec.id] = record.model_copy(update={"last_calibrated_at": calibrated_at})
         engine.record_outcome(rec.id, {"positive": True}, is_synthetic=True)
 
     drift = engine.detect_drift("risk_assessment", window_days=30)
@@ -108,9 +106,7 @@ def test_drift_detection_drift_present():
         )
         engine.record_outcome(rec.id, {"positive": True}, is_synthetic=True)
         calibrated_at = now - timedelta(days=60 - i)
-        engine._records[rec.id] = engine._records[rec.id].model_copy(
-            update={"last_calibrated_at": calibrated_at}
-        )
+        engine._records[rec.id] = engine._records[rec.id].model_copy(update={"last_calibrated_at": calibrated_at})
 
     for i in range(20):
         rec = engine.record_prediction(
@@ -121,9 +117,7 @@ def test_drift_detection_drift_present():
         )
         engine.record_outcome(rec.id, {"positive": False}, is_synthetic=True)
         calibrated_at = now - timedelta(hours=i)
-        engine._records[rec.id] = engine._records[rec.id].model_copy(
-            update={"last_calibrated_at": calibrated_at}
-        )
+        engine._records[rec.id] = engine._records[rec.id].model_copy(update={"last_calibrated_at": calibrated_at})
 
     drift = engine.detect_drift("market_prediction", window_days=30)
     assert drift["drift_detected"] is True

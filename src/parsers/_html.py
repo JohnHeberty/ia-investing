@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from html.parser import HTMLParser
 
-from ._pdf import ParsedDocument
+from ._types import ParsedDocument
 
 
 def parse_html(html: str) -> ParsedDocument:

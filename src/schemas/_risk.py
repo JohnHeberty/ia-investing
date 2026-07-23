@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ._filing import Risk
 
 
 class RiskAssessment(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
     overall_risk: Literal["low", "medium", "high", "critical"]
     risk_score: float = Field(ge=0.0, le=1.0)
     top_risks: list[Risk]

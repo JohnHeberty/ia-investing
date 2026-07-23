@@ -458,9 +458,11 @@ class TestThesisReviewBehavioral:
             wf._reviewer = "reviewer-1"
 
         mock_act = self._mock_activity()
-        with patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act):
-            with patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject):
-                r = await wf.run(cmd)
+        with (
+            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
+            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
+        ):
+            r = await wf.run(cmd)
         assert isinstance(r, ThesisReviewResult)
         assert r.decision == "approved"
         assert r.approved_by == "reviewer-1"
@@ -476,9 +478,11 @@ class TestThesisReviewBehavioral:
             wf._reviewer = "reviewer-2"
 
         mock_act = self._mock_activity()
-        with patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act):
-            with patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject):
-                r = await wf.run(cmd)
+        with (
+            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
+            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
+        ):
+            r = await wf.run(cmd)
         assert r.decision == "rejected"
 
     @pytest.mark.asyncio
@@ -490,9 +494,11 @@ class TestThesisReviewBehavioral:
             wf._decision = "cancelled"
 
         mock_act = self._mock_activity()
-        with patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act):
-            with patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject):
-                r = await wf.run(cmd)
+        with (
+            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
+            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
+        ):
+            r = await wf.run(cmd)
         assert r.decision == "cancelled"
 
     @pytest.mark.asyncio
@@ -500,9 +506,11 @@ class TestThesisReviewBehavioral:
         wf = ThesisReviewWorkflow()
         cmd = self._make_cmd()
         mock_act = self._mock_activity()
-        with patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act):
-            with patch("workflows._thesis_review.workflow.wait_condition", side_effect=TimeoutError):
-                r = await wf.run(cmd)
+        with (
+            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
+            patch("workflows._thesis_review.workflow.wait_condition", side_effect=TimeoutError),
+        ):
+            r = await wf.run(cmd)
         assert r.decision == "expired"
         assert r.status == "expired"
 
@@ -538,9 +546,11 @@ class TestThesisReviewBehavioral:
             wf._decision = "approved"
             wf._reviewer = "r-1"
 
-        with patch("workflows._thesis_review.workflow.execute_activity", side_effect=AsyncMock(side_effect=route)):
-            with patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject):
-                r = await wf.run(cmd)
+        with (
+            patch("workflows._thesis_review.workflow.execute_activity", side_effect=AsyncMock(side_effect=route)),
+            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
+        ):
+            r = await wf.run(cmd)
         assert "specialists_disagree_on_direction" in r.contradictions_found
 
     @pytest.mark.asyncio

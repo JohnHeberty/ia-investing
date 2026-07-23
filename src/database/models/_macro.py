@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -21,7 +20,7 @@ class MacroIndicator(Base):
 
     published_at = sa.Column(sa.DateTime(timezone=True), index=True)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"MacroIndicator(indicator_name={self.indicator_name!r}, period_date={self.period_date!r})"

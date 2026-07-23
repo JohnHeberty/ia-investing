@@ -108,3 +108,9 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 explicit_package_bases = true
+mypy_path = "src"
+enable_incomplete_feature = "NewGenericSyntax"
+
+[[tool.mypy.overrides]]
+module = "cvxpy.*"
+follow_imports = "skip"

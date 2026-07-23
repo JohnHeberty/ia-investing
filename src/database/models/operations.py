@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -31,12 +30,12 @@ class Operation(Base):
     result_url = sa.Column(sa.Text)
     error_code = sa.Column(sa.String(100))
     error_detail = sa.Column(sa.Text)
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = sa.Column(
         sa.DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=utcnow,
+        onupdate=utcnow,
     )
 
     __table_args__ = (
@@ -78,16 +77,16 @@ class OperationDispatchOutbox(Base):
     next_attempt_at = sa.Column(
         sa.DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
+        default=utcnow,
     )
     dispatched_at = sa.Column(sa.DateTime(timezone=True))
     last_error = sa.Column(sa.String(200))
-    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = sa.Column(
         sa.DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=utcnow,
+        onupdate=utcnow,
     )
 
     __table_args__ = (

@@ -7,6 +7,7 @@ from decimal import Decimal
 
 import pytest
 
+from connectors.macro import MACRO_SERIES_INVENTORY
 from ia_investing.domain.policy import (
     LEGAL_TYPE_STAGE_TRANSITIONS,
     PolicyDeadline,
@@ -19,7 +20,6 @@ from ia_investing.domain.policy import (
 )
 from ia_investing.domain.policy_alerts import (
     DEFAULT_ALERT_RULES,
-    AlertDeduplicationKey,
     AlertSeverity,
     AlertType,
     PolicyAlert,
@@ -30,10 +30,9 @@ from ia_investing.domain.policy_historical import (
     HISTORICAL_OUTCOMES,
     get_historical_outcomes,
 )
-from connectors.macro import MACRO_SERIES_INVENTORY
-
 
 # ── Legal-type-specific state machines ───────────────────────────────────────
+
 
 class TestLegalTypeStageTransitions:
     def test_all_four_legal_types_defined(self) -> None:
@@ -45,7 +44,6 @@ class TestLegalTypeStageTransitions:
         }
 
     def test_projeto_lei_full_lifecycle(self) -> None:
-        transitions = LEGAL_TYPE_STAGE_TRANSITIONS["projeto_lei"]
         validate_policy_stage_transition("discovered", "introduced", "projeto_lei")
         validate_policy_stage_transition("introduced", "committee", "projeto_lei")
         validate_policy_stage_transition("committee", "floor", "projeto_lei")
@@ -92,6 +90,7 @@ class TestLegalTypeStageTransitions:
 
 
 # ── Rectification tracking ───────────────────────────────────────────────────
+
 
 class TestRectification:
     def test_detect_rectification_returns_none_for_identical_text(self) -> None:
@@ -150,6 +149,7 @@ class TestRectification:
 
 # ── Policy themes and deadlines ──────────────────────────────────────────────
 
+
 class TestPolicyThemesAndDeadlines:
     def test_theme_creation(self) -> None:
         theme = PolicyTheme(
@@ -186,18 +186,15 @@ class TestPolicyThemesAndDeadlines:
 
 # ── Versioned features computation ───────────────────────────────────────────
 
+
 class TestVersionedFeatures:
     def test_compute_features_basic(self) -> None:
         now = datetime.now(UTC)
         features = compute_versioned_features(
             stage="committee",
             legal_type="projeto_lei",
-            themes=(
-                PolicyTheme("tributaria", ("financeiro",), Decimal("0.8"), Decimal("0.9")),
-            ),
-            deadlines=(
-                PolicyDeadline("committee_vote", now + timedelta(days=15), "Prazo comissão"),
-            ),
+            themes=(PolicyTheme("tributaria", ("financeiro",), Decimal("0.8"), Decimal("0.9")),),
+            deadlines=(PolicyDeadline("committee_vote", now + timedelta(days=15), "Prazo comissão"),),
             base_rate=Decimal("0.35"),
             corroboration_count=3,
             materiality=Decimal("0.7"),
@@ -211,7 +208,6 @@ class TestVersionedFeatures:
         assert features["materiality"] == "0.7"
 
     def test_features_hash_deterministic(self) -> None:
-        now = datetime.now(UTC)
         features = compute_versioned_features(
             stage="floor",
             legal_type="decreto",
@@ -227,19 +223,29 @@ class TestVersionedFeatures:
         assert len(h1) == 64
 
     def test_features_hash_changes_with_different_features(self) -> None:
-        now = datetime.now(UTC)
         f1 = compute_versioned_features(
-            stage="committee", legal_type="projeto_lei", themes=(), deadlines=(),
-            base_rate=Decimal("0.3"), corroboration_count=1, materiality=Decimal("0.5"),
+            stage="committee",
+            legal_type="projeto_lei",
+            themes=(),
+            deadlines=(),
+            base_rate=Decimal("0.3"),
+            corroboration_count=1,
+            materiality=Decimal("0.5"),
         )
         f2 = compute_versioned_features(
-            stage="floor", legal_type="projeto_lei", themes=(), deadlines=(),
-            base_rate=Decimal("0.3"), corroboration_count=1, materiality=Decimal("0.5"),
+            stage="floor",
+            legal_type="projeto_lei",
+            themes=(),
+            deadlines=(),
+            base_rate=Decimal("0.3"),
+            corroboration_count=1,
+            materiality=Decimal("0.5"),
         )
         assert features_hash(f1) != features_hash(f2)
 
 
 # ── Alert rules ──────────────────────────────────────────────────────────────
+
 
 class TestAlertRules:
     def test_default_rules_defined(self) -> None:
@@ -261,6 +267,7 @@ class TestAlertRules:
 
     def test_disabled_rule_never_fires(self) -> None:
         from ia_investing.domain.policy_alerts import AlertRule
+
         rule = AlertRule(
             alert_type=AlertType.STAGE_CHANGED,
             severity=AlertSeverity.INFO,
@@ -272,6 +279,7 @@ class TestAlertRules:
 
 
 # ── Alert deduplication ─────────────────────────────────────────────────────
+
 
 class TestAlertDeduplication:
     def test_no_duplicate_when_no_existing_alerts(self) -> None:
@@ -328,6 +336,7 @@ class TestAlertDeduplication:
 
 # ── Historical outcomes dataset ──────────────────────────────────────────────
 
+
 class TestHistoricalOutcomes:
     def test_dataset_has_minimum_samples(self) -> None:
         outcomes = get_historical_outcomes()
@@ -354,6 +363,7 @@ class TestHistoricalOutcomes:
 
 # ── Macro series inventory ──────────────────────────────────────────────────
 
+
 class TestMacroSeriesInventory:
     def test_inventory_has_all_series(self) -> None:
         assert "SELIC" in MACRO_SERIES_INVENTORY
@@ -364,7 +374,7 @@ class TestMacroSeriesInventory:
         assert "FOCUS_USD" in MACRO_SERIES_INVENTORY
 
     def test_inventory_metadata_complete(self) -> None:
-        for name, meta in MACRO_SERIES_INVENTORY.items():
+        for _name, meta in MACRO_SERIES_INVENTORY.items():
             assert "code" in meta
             assert "unit" in meta
             assert "frequency" in meta

@@ -1,7 +1,7 @@
 # Code Quality Analysis — `database` Module
 
 **Data:** 2026-07-21  
-**Última atualização:** 2026-07-22 — W-01, W-02, W-03, C-01 corrigidos  
+**Última atualização:** 2026-07-22 — W-01, W-02, W-03, C-01, C-02 corrigidos  
 **Arquivos analisados:** 45 Python files (core.py, config.py, base.py + models/)  
 **Ferramentas usadas:** ruff, mypy, análise manual de padrões  
 
@@ -11,9 +11,9 @@
 
 | Severidade | Original | Corrigido | Restante | Descrição |
 |------------|----------|-----------|----------|-----------|
-| Crítico | 2 | 1 | 1 | C-01 resolvido com `__all__`, C-02 pendente (3 arquivos órfãos) |
-| Aviso | 5 | 3 | 2 | W-01/02/03 corrigidos, W-04/05 config-dependentes restam |
-| Sugestão | 4 | 0 | 4 | S-01 a S-04 — refatorações maiores pendentes |
+| Crítico | 2 | 2 | 0 | C-01 resolvido com `__all__`, C-02 false positive (re-export modules) |
+| Aviso | 5 | 4 | 1 | W-01/02/03/04 corrigidos (W-04 via C-01), W-05 (import-not-found) pré-existente |
+| Sugestão | 4 | 1 | 3 | S-02 (lambda→function reference) corrigido com utcnow consolidation; S-01/S-03/S-04 pendentes |
 
 ---
 
@@ -44,9 +44,7 @@ from database.base import Base  # em vez de from .base import Base
 - `src/database/models/portfolio.py` — mesmo problema  
 - `src/database/models/portfolio_domain.py` — mesmo problema  
 
-Esses arquivos definem modelos SQLAlchemy sem herdar de `Base`, tornando-os invisíveis para o ORM.
-
-**Recomendação:** Verificar se esses models realmente precisam ser tabelas ou são apenas DTOs/schemas Pydantic. Se forem tabelas, adicionar import e herança correta.
+**Resolvido: FALSE POSITIVE.** Investigado via subagent. Os 3 arquivos são **re-export aggregators** — não definem modelos diretamente. Os 46 modelos reais estão em seus sub-módulos privados (`_assessments.py`, `_portfolio.py`, `portfolio_mandates.py`, etc.), todos herdando de `Base` corretamente. O `__init__.py` re-exporta todos para descoberta pelo `Base.metadata` (Alembic autogenerate).
 
 ---
 
@@ -114,7 +112,7 @@ created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default
 ### S-02: Lambda vs function reference para `default` de timestamp
 Arquivos com estilo antigo usam `lambda: datetime.now(UTC)`, enquanto os novos usam a função `utcnow`. O lambda cria uma closure nova por instância, o que é desnecessário quando há uma função pura.
 
-**Recomendação:** Padronizar na function reference (`default=utcnow`) após consolidar em módulo compartilhado (W-01).
+**Corrigido:** 72 ocorrências de `lambda: datetime.now(UTC)` substituídas por `utcnow` em 19 arquivos, usando script sed. Todos os modelos agora usam function reference consistente.
 
 ### S-03: Nomenclatura ambígua com prefixo `_`
 Arquivos como `_audit.py`, `_definitions.py`, `_portfolio.py`, etc. usam underscore inicial, que em Python indica "privado/internal". Mas esses módulos são importados publicamente pelo `__init__.py`. A nomenclatura é enganosa.
@@ -143,6 +141,6 @@ Não foram encontrados testes unitários específicos para o módulo `database`.
 
 ## Próximos Passos Sugeridos
 
-1. ~~**Corrigir C-02 primeiro** — verificar os 3 arquivos órfãos (`agents.py`, `portfolio.py`, `portfolio_domain.py`)~~ *Pendente — requer análise de design (DTOs vs tabelas)*
+1. ~~**Corrigir C-02 primeiro** — verificar os 3 arquivos órfãos~~ **FALSE POSITIVE** — todos são re-export aggregators, modelos herdados de `Base` corretamente em sub-módulos
 2. ~~**Consolidar `utcnow()` em módulo compartilhado** (W-01)~~ **Concluído**  
 3. **Migrar estilos de coluna antigos para `Mapped`/`mapped_column`** (S-01) — maior impacto na type safety

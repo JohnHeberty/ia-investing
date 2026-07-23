@@ -13,7 +13,7 @@
 |------------|----------|-----------|----------|-----------|
 | Crítico | 0 | 0 | 0 | — |
 | Aviso | 3 | 3 | 0 | W-01/02/03 corrigidos |
-| Sugestão | 5 | 0 | 5 | Refatorações maiores pendentes |
+| Sugestão | 5 | 1 | 4 | S-04 (frozen=True) corrigido; S-01/02/03/05 pendentes |
 
 ---
 
@@ -68,13 +68,9 @@ Não foram encontrados testes específicos para o módulo `connectors`. Os conec
 
 ### S-04: Dataclass mutável para dados financeiros
 **Arquivo:** `src/connectors/cvm/_financials.py:42`  
-A classe `FinancialEntry` usa `@dataclass(slots=True)` (mutável) com campo `valor: float = 0.0`. Dados financeiros extraídos de fontes oficiais deveriam ser imutáveis após parsing para evitar mutação acidental downstream.
+A classe `FinancialEntry` usa `@dataclass(slots=True)` (mutável) com campo `valor: float = 0.0`.
 
-**Recomendação:** Usar `frozen=True`:
-```python
-@dataclass(frozen=True, slots=True)
-class FinancialEntry: ...
-```
+**Corrigido:** `frozen=True` adicionado — `@dataclass(frozen=True, slots=True)`.
 
 ### S-05: Parsing de preços como `float` em vez de `Decimal`
 Múltiplos conectores usam `float` para valores monetários:

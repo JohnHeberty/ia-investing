@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -34,7 +33,7 @@ class AgentAssessment(Base):
     data_gaps = sa.Column(JSONB)
     invalidation_triggers = sa.Column(JSONB)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return (
@@ -63,7 +62,7 @@ class EvidenceItem(Base):
     source_location = sa.Column(sa.Text)  # "DFP, nota 24, pagina 71"
     metric_ids = sa.Column(JSONB)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"EvidenceItem(status={self.status!r}, source_location={self.source_location!r})"

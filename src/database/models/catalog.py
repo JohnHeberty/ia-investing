@@ -1,9 +1,8 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
 from sqlalchemy.dialects.postgresql import UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -14,7 +13,7 @@ class Sector(Base):
     name_pt = sa.Column(sa.String(100), nullable=False)
     name_en = sa.Column(sa.String(100))
     code_anbima = sa.Column(sa.String(20))
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     industries = sa.orm.relationship("Industry", back_populates="sector")
 
@@ -33,7 +32,7 @@ class Industry(Base):
         sa.ForeignKey("sectors.id", ondelete="CASCADE"),
         nullable=False,
     )
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     sector = sa.orm.relationship("Sector", back_populates="industries")
     issuers = sa.orm.relationship("Issuer", back_populates="industry")
@@ -56,11 +55,11 @@ class Issuer(Base):
     website_ri_url = sa.Column(sa.Text)
     is_active = sa.Column(sa.Boolean, default=True)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
     updated_at = sa.Column(
         sa.DateTime(timezone=True),
-        default=lambda: datetime.now(UTC),
-        onupdate=lambda: datetime.now(UTC),
+        default=utcnow,
+        onupdate=utcnow,
     )
 
     tickers = sa.orm.relationship("Ticker", back_populates="issuer")
@@ -84,7 +83,7 @@ class Ticker(Base):
     listing_date = sa.Column(sa.Date)
     delisting_date = sa.Column(sa.Date, index=True)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     issuer = sa.orm.relationship("Issuer", back_populates="tickers")
 
@@ -114,7 +113,7 @@ class MarketPrice(Base):
     num_trades = sa.Column(sa.Integer)
 
     source = sa.Column(sa.String(50))  # "B3", "Yahoo Finance"
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     __table_args__ = (
         sa.Index("ix_market_prices_ticker_id", "ticker_id"),
@@ -137,7 +136,7 @@ class Embedding(Base):
     vector = sa.Column(Vector(1536))
     __table_args__ = (sa.Index("ix_embeddings_entity_id", "entity_id"),)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Embedding(content_type={self.content_type!r}, entity_id={self.entity_id!r})"

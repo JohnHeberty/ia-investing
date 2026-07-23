@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from ._evaluator import EvaluationResult
 from ._interpretation import _classification_accuracy
 
 
-async def evaluate_decision(agent_output: dict, expected_action: str) -> list[EvaluationResult]:
+async def evaluate_decision(agent_output: dict[str, Any], expected_action: str) -> list[EvaluationResult]:
     agent_name = agent_output.get("agent_name", "unknown")
     results: list[EvaluationResult] = []
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import dataclass, field
+from typing import Any
 
 import cvxpy as cp
 import numpy as np
@@ -24,7 +25,7 @@ class OptimizationResult:
     expected_risk: float | None
     sharpe_ratio: float | None
     turnover: float | None
-    transactions: list[dict] = field(default_factory=list)
+    transactions: list[dict[str, object]] = field(default_factory=list)
     diagnostics: dict[str, object] = field(default_factory=dict)
     slacks: dict[str, float] = field(default_factory=dict)
 
@@ -57,10 +58,10 @@ class PortfolioOptimizer:
         n: int,
         current_w: np.ndarray,
         has_current: bool,
-        constraints: dict | None,
+        constraints: dict[str, Any] | None,
         asset_idx: dict[str, int],
-    ) -> list:
-        constraint_list: list = [
+    ) -> list[cp.Constraint]:
+        constraint_list: list[cp.Constraint] = [
             cp.sum(w) >= 1 - self._cfg.max_cash_weight,
             cp.sum(w) <= 1 - self._cfg.min_cash_weight,
             w >= self._cfg.min_weight,
@@ -97,8 +98,8 @@ class PortfolioOptimizer:
         opt_w: np.ndarray,
         current_w: np.ndarray,
         n: int,
-    ) -> list[dict]:
-        transactions: list[dict] = []
+    ) -> list[dict[str, object]]:
+        transactions: list[dict[str, object]] = []
         for i in range(n):
             delta = float(opt_w[i] - current_w[i])
             if abs(delta) > WEIGHT_THRESHOLD:
@@ -116,7 +117,7 @@ class PortfolioOptimizer:
         self,
         returns: pl.DataFrame,
         current_weights: dict[str, float] | None = None,
-        constraints: dict | None = None,
+        constraints: dict[str, Any] | None = None,
     ) -> OptimizationResult:
         assets = returns.columns
         n = len(assets)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from difflib import SequenceMatcher
+from typing import Any
 
 from ._evaluator import EvaluationResult
 
@@ -21,7 +22,7 @@ def _field_accuracy(
         total += 1
         extracted_val = extracted.get(key)
         is_match = False
-        detail: dict = {
+        detail: dict[str, object] = {
             "field": key,
             "extracted": extracted_val,
             "expected": expected_val,
@@ -69,7 +70,7 @@ def _field_accuracy(
     return results
 
 
-async def evaluate_extraction(agent_output: dict, ground_truth: dict) -> list[EvaluationResult]:
+async def evaluate_extraction(agent_output: dict[str, Any], ground_truth: dict[str, Any]) -> list[EvaluationResult]:
     agent_name = agent_output.get("agent_name", "unknown")
     extracted_fields = agent_output.get("extracted_fields", agent_output)
     gt_fields = ground_truth.get("fields", ground_truth)

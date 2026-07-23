@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from uuid import uuid4
 
-import pytest
 import jwt
+import pytest
 from fastapi.testclient import TestClient
 
 from apps.api.main import app

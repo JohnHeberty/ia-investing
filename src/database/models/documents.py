@@ -1,8 +1,7 @@
-from datetime import UTC, datetime
-
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 
+from ._utils import utcnow
 from .base import Base
 
 
@@ -30,7 +29,7 @@ class RawDocument(Base):
     http_etag = sa.Column(sa.Text)
     http_last_modified = sa.Column(sa.DateTime(timezone=True))
 
-    retrieved_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    retrieved_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
     published_at = sa.Column(sa.DateTime(timezone=True))  # Data de publicação do documento
 
     reporting_period_start = sa.Column(sa.Date, index=True)
@@ -39,7 +38,7 @@ class RawDocument(Base):
     parser_version = sa.Column(sa.String(50))
     license_policy = sa.Column(sa.Text)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"RawDocument(document_type={self.document_type!r}, sha256_hash={self.sha256_hash!r})"
@@ -72,7 +71,7 @@ class DocumentMetadata(Base):
     is_validated = sa.Column(sa.Boolean, default=False)
     validation_notes = sa.Column(sa.Text)
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"DocumentMetadata(title={self.title!r}, is_validated={self.is_validated})"
@@ -101,7 +100,7 @@ class Document(Base):
 
     canonical_data = sa.Column(JSONB)  # Dados canônicos validados e normalizados
 
-    created_at = sa.Column(sa.DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at = sa.Column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Document(document_type={self.document_type!r}, reporting_period_end={self.reporting_period_end!r})"
