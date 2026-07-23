@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from functools import lru_cache
 from typing import Literal
 
@@ -118,6 +119,24 @@ class WorkerSettings(BaseModel):
     activity_threads: int = Field(default=8, ge=1, le=64)
 
 
+class CandidateSettings(BaseModel):
+    enabled: bool = False
+    runtime_factory: str = ""
+    minimum_source_confidence: Decimal = Decimal("0.85")
+    auto_exploration_enabled: bool = False
+    exploration_cron: str = "0 7 * * 1-5"
+    max_candidates_per_run: int = Field(default=20, ge=1, le=1000)
+    max_documents_per_candidate: int = Field(default=100, ge=1, le=10000)
+
+    @model_validator(mode="after")
+    def validate_settings(self) -> CandidateSettings:
+        if self.enabled and not self.runtime_factory:
+            raise ValueError("CANDIDATE__RUNTIME_FACTORY must be set when CANDIDATE__ENABLED is true")
+        if self.auto_exploration_enabled and not self.exploration_cron:
+            raise ValueError("exploration_cron must be set when auto_exploration_enabled is true")
+        return self
+
+
 class ApplicationSettings(BaseModel):
     environment: Literal["development", "test", "production"] = "development"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
@@ -143,6 +162,7 @@ class Settings(BaseSettings):
     scheduler: SchedulerSettings = Field(default_factory=SchedulerSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     application: ApplicationSettings = Field(default_factory=ApplicationSettings)
+    candidate: CandidateSettings = Field(default_factory=CandidateSettings)
 
     @model_validator(mode="after")
     def validate_production(self) -> Settings:

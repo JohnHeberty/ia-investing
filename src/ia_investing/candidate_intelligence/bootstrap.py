@@ -2,50 +2,55 @@ from __future__ import annotations
 
 import importlib
 import inspect
-import os
-from collections.abc import Callable
-from typing import cast
+from typing import Any
 
 from ia_investing.orchestration.activities.candidate_intelligence import (
-    CandidateActivityRuntime,
     candidate_activity_runtime_configured,
     configure_candidate_activity_runtime,
 )
-
-_TRUE_VALUES = frozenset({"1", "true", "yes", "on"})
+from ia_investing.platform.database.runtime import DatabaseRuntime
+from ia_investing.settings import get_settings
 
 
 def candidate_intelligence_enabled() -> bool:
-    return os.getenv("CANDIDATE_INTELLIGENCE_ENABLED", "false").strip().lower() in _TRUE_VALUES
+    return get_settings().candidate.enabled
 
 
-def _load_factory(path: str) -> Callable[[], object]:
+def _load_factory(path: str) -> Any:
     module_name, separator, attribute = path.partition(":")
     if not separator or not module_name or not attribute:
-        raise RuntimeError("CANDIDATE_RUNTIME_FACTORY must use the format 'python.module:factory_name'")
+        raise RuntimeError("candidate.runtime_factory must use the format 'python.module:factory_name'")
     module = importlib.import_module(module_name)
     factory = getattr(module, attribute, None)
     if factory is None or not callable(factory):
         raise RuntimeError(f"candidate runtime factory is not callable: {path}")
-    return cast(Callable[[], object], factory)
+    return factory
 
 
-async def configure_candidate_runtime_from_environment() -> bool:
+async def configure_candidate_runtime_from_environment(
+    db: DatabaseRuntime | None = None,
+) -> bool:
     """Configure the candidate runtime exactly once when the feature is enabled.
 
+    The factory receives the shared DatabaseRuntime as its single argument so that
+    connection-pool lifecycle is managed by the caller (the worker or API process).
+
     The factory may be synchronous or asynchronous and must return an object that
-    implements CandidateActivityRuntime. Missing configuration fails worker startup
-    instead of allowing workflows to fail later after accepting durable commands.
+    implements CandidateActivityRuntime.
     """
 
     if not candidate_intelligence_enabled():
         return False
     if candidate_activity_runtime_configured():
         return True
-    factory_path = os.getenv("CANDIDATE_RUNTIME_FACTORY", "").strip()
-    if not factory_path:
-        raise RuntimeError("candidate intelligence is enabled but CANDIDATE_RUNTIME_FACTORY is not configured")
-    result = _load_factory(factory_path)()
+    settings = get_settings()
+    factory_path = settings.candidate.runtime_factory
+
+    if db is None:
+        db = DatabaseRuntime.create(get_settings().database.url)
+
+    factory = _load_factory(factory_path)
+    result = factory(db)
     if inspect.isawaitable(result):
         result = await result
     required_methods = (
@@ -68,5 +73,5 @@ async def configure_candidate_runtime_from_environment() -> bool:
     missing = [name for name in required_methods if not callable(getattr(result, name, None))]
     if missing:
         raise RuntimeError("candidate runtime factory returned an incompatible object; missing: " + ", ".join(missing))
-    configure_candidate_activity_runtime(cast(CandidateActivityRuntime, result))
+    configure_candidate_activity_runtime(result)
     return True

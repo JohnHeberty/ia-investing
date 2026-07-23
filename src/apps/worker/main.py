@@ -13,6 +13,7 @@ from ia_investing.candidate_intelligence.bootstrap import (
 )
 from ia_investing.orchestration.queues import Capability
 from ia_investing.orchestration.registry import CAPABILITIES, definitions_for
+from ia_investing.platform.database import DatabaseRuntime
 from ia_investing.settings import get_settings
 from observability import setup_telemetry
 
@@ -41,7 +42,8 @@ async def start_worker() -> None:
 
     task_queue, workflows, activities = definitions_for(capability)
     if capability == "research-agents":
-        await configure_candidate_runtime_from_environment()
+        db = DatabaseRuntime.create(settings.database.url)
+        await configure_candidate_runtime_from_environment(db=db)
     if not workflows and not activities:
         raise RuntimeError(f"capability {capability!r} has no registered workflows or activities")
 
