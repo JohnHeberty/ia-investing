@@ -39,6 +39,7 @@ dependencies = [
     "httpx[socks]>=0.28",
     "aiofiles>=24.1",
     "pyjwt[crypto]>=2.10",
+    "python-jose[cryptography]>=3.5",
 
     # Parsing
     "python-docx>=1.1",
