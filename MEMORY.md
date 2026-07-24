@@ -136,6 +136,7 @@
 - [x] **Permissions frontend** — use-permissions hook + Can components + sidebar ✅ (commit 9719188)
 - [x] **Evals: company_source_discovery** — 6 cases + seed script + test suite ✅ (commit 9719188)
 - [x] **proxy.ts** — deletado (substituído por middleware.ts) ✅ (commit 9719188)
+- [x] **12 testes quebrados** — IntegrityError import errado (SA 2.0) + python-jose ausente ✅ (commit 346cb3e)
 
 ### Melhorias desejáveis
 - [ ] Testes de integração OIDC (zero cobertura)
