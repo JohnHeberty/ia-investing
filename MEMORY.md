@@ -97,9 +97,7 @@
 
 ## Pendências Abertas
 
-### fix/PENDENCIAS.md — Resolvido em 2026-07-24
-
-Todos os 14 itens resolvidos em dois commits:
+### Resolvidos em 2026-07-24
 
 **Commit `fc9d701` — 5 backend bugs:**
 - [x] #1 source_registry.py — TOCTOU → upsert atômico com `pg_insert`
@@ -117,6 +115,13 @@ Todos os 14 itens resolvidos em dois commits:
 - [x] #13 migrations/env.py sys.path dedup guard
 - [x] #14 AGENTS.md cross-reference raiz→web
 
-**Deferidos (feature/infra, não bugs):**
-- [ ] #8 Observabilidade — dashboards Grafana/MLflow (precisa de escopo)
-- [ ] #9 Conectores avançados — sitemap/RSS/institutional (precisa de escopo)
+### Pendências de FIX/File.md (consolidadas aqui)
+
+- [x] Permissões frontend — implementado (hook + Can + sidebar filtrado + logout)
+- [x] Evals source discovery — datasets criados + seed CLI entrypoint
+
+### Feature/Infra (não bugs — precisam de escopo)
+
+- [ ] Mission Control candidatos — frontend
+- [ ] Observabilidade — dashboards Grafana/MLflow
+- [ ] Conectores avançados — sitemap/RSS/institutional site resolvers
