@@ -69,3 +69,10 @@ Integramos um overlay externo de ~9k linhas (47 arquivos) chamado **Candidate In
 
 ### Limitação conhecida
 Testes de integração asyncpg falham no Windows com `ConnectionResetError: [WinError 64]` — pré-existente.
+
+## Session Memory
+
+This project maintains a `MEMORY.md` file at the project root.
+- Read it at session start to understand context and pending items.
+- Update it at session end with what was done, what worked, and what failed.
+- Keep only the last ~24h of session history (prune older entries).

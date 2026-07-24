@@ -80,7 +80,9 @@
     "plugin": [
         "opencode-pty",
         "@tarquinen/opencode-dcp",
-        "opencode-websearch-cited@1.2.0"
+        "opencode-websearch-cited",
+        "opencode-mem",
+        "@ramtinj95/opencode-tokenscope"
     ],
     "compaction": {
         "auto": true,
@@ -132,47 +134,17 @@
             "enabled": true,
             "timeout": 60000
         },
-        "serena": {
-            "type": "local",
-            "command": [
-                "docker",
-                "run",
-                "--rm",
-                "-i",
-                "--network",
-                "host",
-                "-v",
-                "/opt/jupyter:/workspaces/projects/disbral-beatriz-margem",
-                "-v",
-                "/root/.serena/serena_config.yml:/root/.serena/serena_config.yml:ro",
-                "ghcr.io/oraios/serena:latest",
-                "serena",
-                "start-mcp-server",
-                "--context=ide",
-                "--project",
-                "/workspaces/projects/disbral-beatriz-margem"
-            ],
-            "enabled": true,
-            "timeout": 60000
-        },
         "context7": {
             "type": "remote",
             "url": "https://mcp.context7.com/mcp",
             "enabled": true,
             "timeout": 30000
-        },
-        "protheus": {
-            "type": "local",
-            "command": [
-                "python3",
-                "/opt/jupyter/.opencode/mcp_protheus.py"
-            ],
-            "enabled": true
         }
     },
     "skills": {
         "paths": [".opencode/skills"]
     },
+
     "instructions": ["AGENTS.md", "web/AGENTS.md"],
     "permission": {
         "read": "allow",
