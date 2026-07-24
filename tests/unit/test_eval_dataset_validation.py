@@ -22,7 +22,7 @@ def test_dataset_version_is_positive() -> None:
     assert dataset.version > 0
 
 
-def test_all_six_capabilities_present() -> None:
+def test_all_seven_capabilities_present() -> None:
     dataset, _ = load_eval_dataset(FIXTURE_PATH)
     assert set(dataset.capabilities.keys()) == REQUIRED_CAPABILITIES
 

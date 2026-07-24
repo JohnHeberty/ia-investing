@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 /**
@@ -11,10 +11,12 @@ export function useUrlState<T extends Record<string, string | string[] | undefin
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const defaultsRef = useRef(defaults);
+  defaultsRef.current = defaults;
 
   const state = useMemo(() => {
     const result = {} as Record<string, string | string[] | undefined>;
-    for (const [key, defaultValue] of Object.entries(defaults)) {
+    for (const [key, defaultValue] of Object.entries(defaultsRef.current)) {
       const param = searchParams.get(key);
       if (param === null) {
         result[key] = defaultValue;
@@ -25,13 +27,19 @@ export function useUrlState<T extends Record<string, string | string[] | undefin
       }
     }
     return result as T;
-  }, [searchParams, defaults]);
+  }, [searchParams]);
 
   const setState = useCallback(
     (updates: Partial<T>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [key, value] of Object.entries(updates)) {
-        if (value === undefined || value === null || value === "" || value === defaults[key]) {
+        const defaultVal = defaultsRef.current[key];
+        const isDefault =
+          value === undefined ||
+          value === null ||
+          value === "" ||
+          JSON.stringify(value) === JSON.stringify(defaultVal);
+        if (isDefault) {
           params.delete(key);
         } else if (Array.isArray(value)) {
           params.delete(key);
@@ -45,7 +53,7 @@ export function useUrlState<T extends Record<string, string | string[] | undefin
       const qs = params.toString();
       router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-    [router, pathname, searchParams, defaults],
+    [router, pathname, searchParams],
   );
 
   return [state, setState] as const;

@@ -12,6 +12,7 @@ export type UserInfo = {
   organization_id: string | null;
   roles: string[];
   team_ids: string[];
+  permissions: string[];
 };
 
 type AuthContextValue = {

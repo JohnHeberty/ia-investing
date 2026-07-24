@@ -17,7 +17,8 @@ function LoginForm() {
   const [submitting, setSubmitting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
 
-  const returnTo = searchParams.get("return_to") || "/";
+  const rawReturnTo = searchParams.get("return_to") || "/";
+  const returnTo = rawReturnTo.startsWith("/") && !rawReturnTo.startsWith("//") ? rawReturnTo : "/";
 
   useEffect(() => {
     if (!loading && user) {

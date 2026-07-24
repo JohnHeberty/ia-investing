@@ -14,15 +14,9 @@ import {
 } from "@/components/data-state-components";
 import { useResearchCases } from "@/hooks/use-research-cases";
 import { useUrlState, filterPresets } from "@/hooks/use-url-state";
+import { usePermissions } from "@/hooks/use-permissions";
 import { commandHeaders } from "@/lib/api";
 import { queryKeys } from "@/lib/api-client";
-
-/* ------------------------------------------------------------------ */
-/*  Permission hook (mock — would come from auth context in prod)     */
-/* ------------------------------------------------------------------ */
-function usePermissions() {
-  return { canCreateCase: true, role: "analyst" as const };
-}
 
 /* ------------------------------------------------------------------ */
 /*  New-case form schema                                              */
@@ -58,7 +52,10 @@ function NewCaseForm({ onClose }: { onClose: () => void }) {
       setSubmitError(null);
       setSubmitSuccess(false);
 
-      const idempotencyKey = crypto.randomUUID();
+      const idempotencyKey =
+        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+          ? crypto.randomUUID()
+          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
       try {
         // Check for existing case by instrument (mock search)
@@ -320,7 +317,8 @@ function OpportunitiesContent() {
     dataState,
     count,
   } = useResearchCases();
-  const { canCreateCase } = usePermissions();
+  const { can } = usePermissions();
+  const canCreateCase = can("research_cases:create");
   const [showNewCaseForm, setShowNewCaseForm] = useState(false);
 
   if (isLoading) {

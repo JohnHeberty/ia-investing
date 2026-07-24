@@ -98,6 +98,7 @@ export function useAudit() {
   const dataState: DataState = computeDataState(
     isLoading,
     isError,
+    null,
     auditEvents.length > 0,
   );
 

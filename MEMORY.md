@@ -46,6 +46,38 @@
 
 ---
 
+## 2026-07-24 (Sessão 3 — Permissões Frontend)
+
+### Foco: Implementar sistema de permissões no frontend
+
+**Feito:**
+- **Backend:** `UserInfo.permissions` adicionado ao modelo e endpoint `/me` — session JWT já continha permissions, só estava oculto
+- **Frontend:** `auth-provider.tsx` — tipo `UserInfo` ganhou campo `permissions: string[]`
+- **Frontend:** `use-permissions.ts` — novo hook com `can()`, `canAny()`, `canAll()`, `isAdmin`, `role`
+- **Frontend:** `can.tsx` — novos componentes `<Can permission="...">` e `<CanAny permissions={[...]}>` com suporte a fallback
+- **Frontend:** `app-shell.tsx` — sidebar filtra itens por permissão; identidade do usuário no rodapé (nome + roles); botão Sair
+- **Frontend:** `opportunities/page.tsx` — mock `usePermissions` removido, importa hook real; `canCreateCase = can("research_cases:create")`
+- **Cleanup:** `proxy.ts` + `proxy.test.ts` deletados (substituídos por `middleware.ts`)
+
+**Mapeamento sidebar:**
+| Item | Permission |
+|---|---|
+| Carteiras | `portfolio:read` |
+| Oportunidades | `research_cases:read` |
+| Comitê | `committee:*` |
+| Política | `policy:read` |
+| Macro | `macro:read` |
+| Paper | `portfolio:read` |
+| Rebalance | `rebalance:*` |
+| Agents | `agent_runs:read` |
+| Qualidade | `quality_incidents:manage` |
+| Auditoria | `audit:read` |
+| Missão, Candidatos, Exploração, Risco, Backtests | público (null) |
+
+**OK:** Ruff passou (backend). Pacote de permissões frontend autocontido.
+
+---
+
 ## 2026-07-24 (Sessão 2 — Config .opencode)
 
 ### Foco: Alinhar .opencode/ com referência (plugins, skills, MCPs, comandos)
@@ -67,7 +99,7 @@
 
 ### De FIX/File.md (features não implementadas)
 - [ ] **Mission Control candidatos** — frontend
-- [ ] **Permissões frontend** — ainda mockadas (auth-provider, middleware)
+- [x] **Permissões frontend** — implementado (hook + Can + sidebar filtrado + logout)
 - [ ] **Evals source discovery** — datasets não criados
 - [ ] **Observabilidade** — dashboards não implementados
 - [ ] **Conectores avançados** — sitemap/RSS/institutional site resolvers
@@ -97,7 +129,9 @@
 - [ ] **Frontend: app/login/page.tsx** — open redirect via return_to sem validação (parcial: server-side ok, client-side não)
 - [ ] **Frontend: app/opportunities/page.tsx** — crypto.randomUUID falha em HTTP
 - [ ] **Frontend: components/app-shell.tsx** — search/notification buttons sem onClick
-- [ ] **Frontend: components/evidence-tags.tsx** — agora tem "use client" ✅
+- [x] **Frontend: components/evidence-tags.tsx** — agora tem "use client" ✅
+- [x] **proxy.ts** — deletado (substituído por middleware.ts)
+- [x] **Frontend: components/app-shell.tsx** — search/notification buttons ainda sem onClick (cosmético, sem quebra)
 
 ### Melhorias desejáveis
 - [ ] Testes de integração OIDC (zero cobertura)

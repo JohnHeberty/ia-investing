@@ -27,6 +27,7 @@ const defaultData = {
   agent_operations: { running: 3, succeeded_24h: 15, failed_24h: 0, evidence_coverage: "0.85", schema_pass_rate: "0.95", cost_usd_24h: "12.50" },
   source_health: [],
   research_funnel: { open: 5, triaged: 3, in_research: 4, ready_for_committee: 2 },
+  candidate_pipeline: null,
 };
 
 beforeEach(() => {

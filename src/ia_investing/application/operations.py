@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import select
+from sqlalchemy import IntegrityError, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
 
@@ -56,7 +56,9 @@ class OperationService:
         self.session = session
         self.temporal_client = temporal_client
 
-    async def submit_agent_run(self, command: AgentRunCommand, idempotency_key: str, organization_id: UUID | None = None) -> OperationAcceptedV1:
+    async def submit_agent_run(
+        self, command: AgentRunCommand, idempotency_key: str, organization_id: UUID | None = None
+    ) -> OperationAcceptedV1:
         operation_type = "agent-run"
         payload = command.payload()
         request_hash = _request_hash(payload)
@@ -71,7 +73,7 @@ class OperationService:
         ).scalar_one_or_none()
         if existing is not None:
             if existing.request_hash != request_hash:
-                raise IdempotencyConflictError("idempotency key was already used with a different request")
+                raise IdempotencyConflictError("idempotency key was already used with a different request") from None
             return OperationAcceptedV1(operation_id=existing.id, state=existing.state)  # type: ignore[arg-type]
 
         operation_id = uuid4()
@@ -99,6 +101,24 @@ class OperationService:
                 },
             )
         )
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            existing = (
+                await self.session.execute(
+                    select(Operation).where(
+                        Operation.operation_type == operation_type,
+                        Operation.idempotency_key == idempotency_key,
+                        Operation.organization_id == organization_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                if existing.request_hash != request_hash:
+                    raise IdempotencyConflictError("idempotency key already used with a different request") from None
+                return OperationAcceptedV1(operation_id=existing.id, state=existing.state)
+            raise
         try:
             await self.temporal_client.start_workflow(
                 RunAgentWorkflow.run,
@@ -130,7 +150,11 @@ class OperationService:
         return OperationAcceptedV1(operation_id=operation_id)
 
     async def submit_portfolio_operation(
-        self, command: PortfolioOperationCommand, idempotency_key: str, actor_subject: str, organization_id: UUID | None = None
+        self,
+        command: PortfolioOperationCommand,
+        idempotency_key: str,
+        actor_subject: str,
+        organization_id: UUID | None = None,
     ) -> OperationAcceptedV1:
         request_hash = _request_hash(command.payload)
         existing = (
@@ -144,7 +168,7 @@ class OperationService:
         ).scalar_one_or_none()
         if existing is not None:
             if existing.request_hash != request_hash:
-                raise IdempotencyConflictError("idempotency key was already used with a different request")
+                raise IdempotencyConflictError("idempotency key was already used with a different request") from None
             return OperationAcceptedV1(operation_id=existing.id, state=existing.state)  # type: ignore[arg-type]
 
         operation_id = uuid4()
@@ -171,6 +195,24 @@ class OperationService:
                 },
             )
         )
+        try:
+            await self.session.commit()
+        except IntegrityError:
+            await self.session.rollback()
+            existing = (
+                await self.session.execute(
+                    select(Operation).where(
+                        Operation.operation_type == command.operation_type,
+                        Operation.idempotency_key == idempotency_key,
+                        Operation.organization_id == organization_id,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                if existing.request_hash != request_hash:
+                    raise IdempotencyConflictError("idempotency key already used with a different request") from None
+                return OperationAcceptedV1(operation_id=existing.id, state=existing.state)
+            raise
 
         if command.workflow_class is not None and command.workflow_id is not None:
             try:
@@ -189,8 +231,8 @@ class OperationService:
                 await self.session.commit()
                 raise
             operation.state = OperationState.RUNNING
+            await self.session.commit()
 
-        await self.session.commit()
         return OperationAcceptedV1(operation_id=operation_id)
 
     async def get(self, operation_id: UUID) -> OperationStatusV1 | None:

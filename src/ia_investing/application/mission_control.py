@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections import Counter
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
@@ -12,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ia_investing.contracts.v1 import (
     AgentOperationsSummary,
+    CandidatePipelineSummary,
     MissionControlResponse,
     PortfolioRankItem,
     ResearchFunnel,
@@ -24,6 +26,8 @@ from ia_investing.domain.portfolio_ranking import (
     RankingPolicy,
     rank_portfolios,
 )
+
+logger = logging.getLogger(__name__)
 
 PORTFOLIO_INPUT_SQL = text(
     """
@@ -194,6 +198,15 @@ RISK_SUMMARY_SQL = text(
     """
 )
 
+CANDIDATE_PIPELINE_SQL = text(
+    """
+    SELECT status, count(*) AS count
+    FROM investment_candidates
+    WHERE organization_id = :organization_id
+    GROUP BY status
+    """
+)
+
 PENDING_APPROVALS_SQL = text(
     """
     SELECT
@@ -340,6 +353,7 @@ class MissionControlService:
         funnel = await self._research_funnel(organization_id)
         agent_ops = await self._agent_operations(generated_at, organization_id)
         sources = await self._source_health(generated_at)
+        candidate_pipeline = await self._candidate_pipeline(organization_id)
         risk = await self._risk_summary(generated_at, organization_id)
         pending = int(await self._session.scalar(PENDING_APPROVALS_SQL, {"organization_id": organization_id}) or 0)
         critical_alerts = risk.open_hard_breaches + sum(
@@ -362,6 +376,7 @@ class MissionControlService:
             risk=risk,
             pending_approvals=pending,
             critical_alerts=critical_alerts,
+            candidate_pipeline=candidate_pipeline,
         )
 
     @staticmethod
@@ -458,6 +473,28 @@ class MissionControlService:
                 )
             )
         return output
+
+    async def _candidate_pipeline(self, organization_id: UUID) -> CandidatePipelineSummary | None:
+        try:
+            rows = (
+                await self._session.execute(
+                    CANDIDATE_PIPELINE_SQL,
+                    {"organization_id": organization_id},
+                )
+            ).mappings()
+        except Exception:
+            logger.warning("investment_candidates table not available; skipping candidate pipeline")
+            return None
+        counts = {row["status"]: int(row["count"]) for row in rows}
+        return CandidatePipelineSummary(
+            total=sum(counts.values()),
+            awaiting_input=counts.get("awaiting_user_input", 0),
+            in_committee=counts.get("committee_review", 0),
+            approved=counts.get("approved", 0),
+            rejected=counts.get("rejected", 0),
+            blocked=counts.get("blocked", 0),
+            funnel_by_status=counts,
+        )
 
     async def _risk_summary(self, now: datetime, organization_id: UUID) -> RiskSummary:
         row = (

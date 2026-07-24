@@ -118,6 +118,43 @@ export default function MissionControlPage() {
         />
       </section>
 
+      {data.candidate_pipeline && (
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold text-slate-100">Pipeline de candidatos</h2>
+              <p className="mt-1 text-sm text-slate-400">Fluxo de investigação: da sugestão ao comitê de investimento.</p>
+            </div>
+            <Link className="text-sm text-blue-400 hover:underline" href="/opportunities/candidates">Abrir candidatos</Link>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3 xl:grid-cols-6">
+            {[
+              ["Total", data.candidate_pipeline.total, false],
+              ["Aguardando", data.candidate_pipeline.awaiting_input, data.candidate_pipeline.awaiting_input > 0],
+              ["Bloqueados", data.candidate_pipeline.blocked, data.candidate_pipeline.blocked > 0],
+              ["Em comitê", data.candidate_pipeline.in_committee, false],
+              ["Aprovados", data.candidate_pipeline.approved, false],
+              ["Rejeitados", data.candidate_pipeline.rejected, false],
+            ].map(([label, value, critical]) => (
+              <article key={String(label)} className={`rounded-xl border p-4 ${critical ? "border-amber-900 bg-amber-950/30" : "border-slate-800 bg-slate-950"}`}>
+                <div className="text-xs uppercase tracking-wide text-slate-500">{String(label)}</div>
+                <div className={`mt-2 text-3xl font-semibold tabular-nums ${critical ? "text-amber-200" : "text-slate-100"}`}>
+                  {integer.format(Number(value))}
+                </div>
+              </article>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+            {Object.entries(data.candidate_pipeline.funnel_by_status).map(([status, count]) => (
+              <div key={status} className="rounded-lg border border-slate-800 p-3">
+                <div className="text-xs uppercase tracking-wide text-slate-500">{status.replaceAll("_", " ")}</div>
+                <div className="mt-2 text-2xl font-semibold tabular-nums text-slate-100">{integer.format(count)}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div>

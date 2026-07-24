@@ -28,10 +28,9 @@ export function useCommittee() {
   const decisionPacksQuery = useQuery({
     queryKey: queryKeys.decisionPacks(),
     queryFn: async () => {
-      // Decision packs are created via POST; for reading, we derive from agent runs
-      // This query returns empty when no packs exist — the hook falls back to agent run data
       return [] as Array<Record<string, unknown>>;
     },
+    enabled: false,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
@@ -129,6 +128,7 @@ export function useCommittee() {
   const dataState: DataState = computeDataState(
     isLoading,
     isError,
+    null,
     decisions.length > 0,
   );
 

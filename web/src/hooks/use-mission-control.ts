@@ -27,6 +27,16 @@ export type PortfolioRankItem = {
   thesis_coverage: string;
 };
 
+export type CandidatePipeline = {
+  total: number;
+  awaiting_input: number;
+  in_committee: number;
+  approved: number;
+  rejected: number;
+  blocked: number;
+  funnel_by_status: Record<string, number>;
+};
+
 export type MissionControl = {
   generated_at: string;
   data_as_of: string | null;
@@ -62,12 +72,16 @@ export type MissionControl = {
   };
   pending_approvals: number;
   critical_alerts: number;
+  candidate_pipeline: CandidatePipeline | null;
 };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 const organizationId = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
 
 async function fetchMissionControl(): Promise<MissionControl> {
+  if (!apiBaseUrl) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL não está configurado");
+  }
   if (!organizationId) {
     throw new Error("NEXT_PUBLIC_ORGANIZATION_ID não está configurado");
   }

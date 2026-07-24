@@ -13,6 +13,7 @@ from .discovery import DiscoveryBriefV1, ScreenFiltersV1
 from .filing import FilingDataV1, FilingReviewV1
 from .mission_control import (
     AgentOperationsSummary,
+    CandidatePipelineSummary,
     MissionControlResponse,
     PortfolioRankItem,
     ResearchFunnel,
@@ -26,6 +27,7 @@ from .problem import ProblemDetails
 __all__ = [
     "AgentOperationsSummary",
     "AnalysisVerdict",
+    "CandidatePipelineSummary",
     "CanonicalAnalysisV1",
     "Claim",
     "ClaimStatus",

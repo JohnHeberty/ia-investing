@@ -26,6 +26,9 @@ class AuditService:
         changes: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> AuditLogEntry:
+        await self._session.execute(
+            sa.text("SELECT pg_advisory_xact_lock(hashtext(:tid))"), {"tid": str(self._tenant_id)}
+        )
         await self._session.flush()
         prev_hash = await self._get_latest_hash()
         now = datetime.now(UTC)

@@ -8,10 +8,10 @@ from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
-from pydantic import BaseModel
 from jose import jwk, jwt
 from jose.constants import Algorithms
 from jose.exceptions import JWKError, JWTError
+from pydantic import BaseModel
 
 from apps.api.security import (
     CSRF_COOKIE_NAME,
@@ -44,6 +44,7 @@ class UserInfo(BaseModel):
     organization_id: str | None = None
     roles: list[str] = []
     team_ids: list[str] = []
+    permissions: list[str] = []
 
 
 def _is_production() -> bool:
@@ -343,6 +344,8 @@ async def me(
     team_ids = [str(t) for t in team_ids_raw] if isinstance(team_ids_raw, list) else []
     roles_raw = session.get("roles", [])
     roles = [str(r) for r in roles_raw] if isinstance(roles_raw, list) else []
+    permissions_raw = session.get("permissions", [])
+    permissions = [str(p) for p in permissions_raw] if isinstance(permissions_raw, list) else []
     return UserInfo(
         subject=subject,
         name=str(session["name"]) if session.get("name") else None,
@@ -350,6 +353,7 @@ async def me(
         organization_id=str(session["organization_id"]) if session.get("organization_id") else None,
         roles=roles,
         team_ids=team_ids,
+        permissions=permissions,
     )
 
 

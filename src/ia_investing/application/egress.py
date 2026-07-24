@@ -102,12 +102,18 @@ def validate_egress(settings: Settings | None = None) -> list[EgressRule]:
 
     for rule in allowed:
         try:
-            addr = (rule.host, rule.port)
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(2.0)
-            result = sock.connect_ex(addr)
-            sock.close()
-            if result != 0:
+            addrinfos = socket.getaddrinfo(rule.host, rule.port, socket.AF_UNSPEC, socket.SOCK_STREAM)
+            connected = False
+            for family, socktype, proto, _canonname, sockaddr in addrinfos:
+                try:
+                    with socket.socket(family, socktype, proto) as sock:
+                        sock.settimeout(2.0)
+                        if sock.connect_ex(sockaddr) == 0:
+                            connected = True
+                            break
+                except OSError:
+                    continue
+            if not connected:
                 violations.append(rule)
         except OSError:
             violations.append(rule)

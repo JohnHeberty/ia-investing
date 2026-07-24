@@ -49,9 +49,14 @@ class VaultSecretsManager(SecretsManager):
         headers = {"X-Vault-Token": self._token, "Accept": "application/json"}
         req = urllib.request.Request(url, headers=headers, method="GET")
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read().decode())
-            return str(data["data"]["data"])
+            secret_data = data.get("data", {}).get("data", {})
+            if isinstance(secret_data, dict) and len(secret_data) == 1:
+                return next(iter(secret_data.values()))
+            if isinstance(secret_data, dict):
+                return json.dumps(secret_data)
+            return str(secret_data)
         except urllib.error.HTTPError as exc:
             raise KeyError(f"Vault secret at {path!r} not found: {exc}") from exc
 
@@ -69,7 +74,7 @@ class VaultSecretsManager(SecretsManager):
         headers = {"X-Vault-Token": self._token, "Accept": "application/json"}
         req = urllib.request.Request(url, headers=headers, method="GET")
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=10) as resp:
                 data = json.loads(resp.read().decode())
         except urllib.error.HTTPError:
             return {}
@@ -77,7 +82,7 @@ class VaultSecretsManager(SecretsManager):
         result: dict[str, str] = {}
         for k in keys:
             with contextlib.suppress(KeyError):
-                result[k] = self._read(f"{prefix}/{k}")
+                result[k] = self._read(f"{prefix.rstrip('/')}/{k}")
         return result
 
 

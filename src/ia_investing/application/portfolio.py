@@ -8,6 +8,7 @@ from uuid import UUID
 import cvxpy as cp
 import polars as pl
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.instrument_master import Listing
@@ -79,6 +80,7 @@ class BackendPortfolioOptimizationService:
         price_rows = (
             await self.session.execute(
                 sa.select(Listing.instrument_id, MarketBar.bar_at, MarketBar.close_price)
+                .distinct_on(Listing.instrument_id, MarketBar.bar_at)
                 .join(MarketBar, MarketBar.listing_id == Listing.id)
                 .where(
                     Listing.instrument_id.in_(investable),
@@ -86,7 +88,7 @@ class BackendPortfolioOptimizationService:
                     MarketBar.bar_at <= as_of,
                     MarketBar.knowledge_at <= as_of,
                 )
-                .order_by(MarketBar.bar_at)
+                .order_by(Listing.instrument_id, MarketBar.bar_at, MarketBar.knowledge_at.desc())
             )
         ).all()
         prices: dict[UUID, dict[datetime, Decimal]] = {instrument_id: {} for instrument_id in investable}
@@ -98,6 +100,8 @@ class BackendPortfolioOptimizationService:
         returns_data: dict[str, list[float]] = {}
         for instrument_id, series in prices.items():
             values = [series[bar_at] for bar_at in common_dates]
+            if any(v is None or v <= 0 for v in values):
+                continue
             returns_data[str(instrument_id)] = [
                 float(values[index] / values[index - 1] - 1) for index in range(1, len(values))
             ]
@@ -147,5 +151,20 @@ class BackendPortfolioOptimizationService:
             diagnostics=result.diagnostics,
         )
         self.session.add(run)
-        await self.session.flush()
+        try:
+            await self.session.flush()
+        except IntegrityError:
+            await self.session.rollback()
+            existing = (
+                await self.session.execute(
+                    sa.select(OptimizationRun).where(
+                        OptimizationRun.portfolio_id == portfolio.id,
+                        OptimizationRun.as_of == as_of,
+                        OptimizationRun.input_sha256 == input_sha256,
+                    )
+                )
+            ).scalar_one_or_none()
+            if existing is not None:
+                return existing
+            raise
         return run

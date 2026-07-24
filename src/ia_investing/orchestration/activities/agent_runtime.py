@@ -8,7 +8,6 @@ summary.
 
 from __future__ import annotations
 
-import os
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -54,9 +53,10 @@ def _provider() -> MockProvider | OpenAIAgentsProvider | GatewayProvider:
     if settings.ai.provider == "mock":
         return MockProvider()
     if settings.ai.provider == "openai":
-        os.environ["OPENAI_API_KEY"] = settings.ai.openai_api_key.get_secret_value()
-        os.environ["OPENAI_BASE_URL"] = settings.ai.openai_base_url
-        return OpenAIAgentsProvider()
+        return OpenAIAgentsProvider(
+            api_key=settings.ai.openai_api_key.get_secret_value(),
+            base_url=settings.ai.openai_base_url,
+        )
     if settings.ai.provider == "gateway":
         gw = settings.ai.gateway
         return create_gateway_provider(
@@ -109,9 +109,7 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
             operation.state = "running"
             operation.error_code = None
             operation.error_detail = None
-            await session.commit()
 
-        async with runtime.session() as session:
             service = AgentRuntimeService(session)
             run = await service.create_run(
                 organization_id=command.organization_id,
@@ -130,7 +128,7 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
             await session.commit()
 
         async with runtime.session() as session:
-            run = await AgentRuntimeService(session).get_run(run_id)  # type: ignore[assignment]
+            run = await AgentRuntimeService(session).get_run(run_id)
             if run is None:
                 raise RuntimeError("agent run disappeared after creation")
             if run.status == "failed" and run.error_code == "provider_transient":

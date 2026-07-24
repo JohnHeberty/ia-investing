@@ -6,7 +6,10 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
-REQUIRED_CAPABILITIES = frozenset({"filing", "news", "macro", "political", "critic", "research_coordinator"})
+REQUIRED_CAPABILITIES = frozenset({
+    "filing", "news", "macro", "political", "critic", "research_coordinator",
+    "company_source_discovery",
+})
 REQUIRED_ADVERSARIAL_TAGS = frozenset({"prompt_injection", "conflicting_evidence", "future_date"})
 
 

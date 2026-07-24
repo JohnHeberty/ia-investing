@@ -75,28 +75,34 @@ class MetricService:
         ).scalar_one_or_none()
         if definition is None:
             raise LookupError("metric definition not found")
-        rows = (
-            await self.session.execute(
-                sa.select(FinancialFact, TaxonomyAccount.canonical_code)
-                .join(TaxonomyAccount, TaxonomyAccount.id == FinancialFact.taxonomy_account_id)
-                .where(
-                    FinancialFact.issuer_id == issuer_id,
-                    FinancialFact.reporting_period_id == reporting_period_id,
-                    TaxonomyAccount.canonical_code.in_(definition.dependencies),
-                    FinancialFact.knowledge_at <= as_of,
-                    FinancialFact.valid_from <= as_of,
-                    sa.or_(FinancialFact.valid_to.is_(None), FinancialFact.valid_to > as_of),
+        deps = definition.dependencies
+        if not deps:
+            coverage = Decimal("0")
+            facts: dict[str, object] = {}
+            usable: dict[str, object] = {}
+        else:
+            rows = (
+                await self.session.execute(
+                    sa.select(FinancialFact, TaxonomyAccount.canonical_code)
+                    .join(TaxonomyAccount, TaxonomyAccount.id == FinancialFact.taxonomy_account_id)
+                    .where(
+                        FinancialFact.issuer_id == issuer_id,
+                        FinancialFact.reporting_period_id == reporting_period_id,
+                        TaxonomyAccount.canonical_code.in_(deps),
+                        FinancialFact.knowledge_at <= as_of,
+                        FinancialFact.valid_from <= as_of,
+                        sa.or_(FinancialFact.valid_to.is_(None), FinancialFact.valid_to > as_of),
+                    )
                 )
-            )
-        ).all()
-        facts = {code: fact for fact, code in rows}
-        usable = {
-            code: fact.value
-            for code, fact in facts.items()
-            if fact.value_status in {"reported", "calculated"} and fact.value is not None
-        }
-        coverage = Decimal(len(usable)) / Decimal(len(definition.dependencies))
-        if len(usable) != len(definition.dependencies):
+            ).all()
+            facts = {code: fact for fact, code in rows}
+            usable = {
+                code: fact.value
+                for code, fact in facts.items()
+                if fact.value_status in {"reported", "calculated"} and fact.value is not None
+            }
+            coverage = Decimal(len(usable)) / Decimal(len(deps))
+        if len(usable) != len(deps):
             value = None
             status = "missing"
         else:
@@ -127,7 +133,7 @@ class MetricService:
             )
             self.session.add(existing)
             await self.session.flush()
-            for code in definition.dependencies:
+            for code in deps:
                 if code in facts:
                     self.session.add(
                         MetricFactLineage(

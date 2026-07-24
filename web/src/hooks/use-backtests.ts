@@ -65,6 +65,7 @@ export function useBacktests() {
   const dataState: DataState = computeDataState(
     isLoading,
     isError,
+    null,
     runs.length > 0,
   );
 

@@ -77,6 +77,16 @@ class RiskSummary(ApiModel):
     stale_risk_snapshots: int = 0
 
 
+class CandidatePipelineSummary(ApiModel):
+    total: int = 0
+    awaiting_input: int = 0
+    in_committee: int = 0
+    approved: int = 0
+    rejected: int = 0
+    blocked: int = 0
+    funnel_by_status: dict[str, int] = Field(default_factory=dict)
+
+
 class MissionControlResponse(ApiModel):
     generated_at: datetime
     data_as_of: datetime | None
@@ -88,3 +98,4 @@ class MissionControlResponse(ApiModel):
     risk: RiskSummary
     pending_approvals: int
     critical_alerts: int
+    candidate_pipeline: CandidatePipelineSummary | None = None

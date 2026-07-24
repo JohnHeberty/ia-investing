@@ -62,6 +62,7 @@ export function useQualityIncidents() {
   const dataState: DataState = computeDataState(
     sourceHealthQuery.isLoading,
     sourceHealthQuery.isError,
+    null,
     sources.length > 0,
   );
 

@@ -76,10 +76,17 @@ export function useSSE(
         if (eventId && seenIdsRef.current.has(eventId)) return;
         if (eventId) seenIdsRef.current.add(eventId);
 
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(message.data);
+        } catch {
+          console.warn("[use-sse] malformed event data, skipping:", message.data);
+          return;
+        }
         onEventRef.current({
           id: eventId,
           type: message.type,
-          data: JSON.parse(message.data),
+          data: parsed,
         });
       };
 
