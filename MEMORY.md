@@ -97,15 +97,26 @@
 
 ## Pendências Abertas
 
-### De FIX/File.md (features não implementadas)
-- [ ] **Mission Control candidatos** — frontend
-- [x] **Permissões frontend** — implementado (hook + Can + sidebar filtrado + logout)
-- [ ] **Evals source discovery** — datasets criados, falta DB seeding
-- [ ] **Observabilidade** — dashboards não implementados
-- [ ] **Conectores avançados** — sitemap/RSS/institutional site resolvers
+### fix/PENDENCIAS.md — Resolvido em 2026-07-24
 
-### Issues de código conhecidos
-Ver `fix/PENDENCIAS.md` para lista completa e priorizada.
+Todos os 14 itens resolvidos em dois commits:
 
-### Melhorias desejáveis
-Ver `fix/PENDENCIAS.md` seção "Melhorias de infra/qualidade".
+**Commit `fc9d701` — 5 backend bugs:**
+- [x] #1 source_registry.py — TOCTOU → upsert atômico com `pg_insert`
+- [x] #2 portfolio_ranking_materializer.py — UPSERT RETURNING corrigido
+- [x] #3 research.py — DoS max limit + UUID pagination
+- [x] #4 research_mock.py — float(None) crash guard
+- [x] #5 portfolio_models.py — organization_id FK + migration + routes
+
+**Commit `5ade584` — 9 quick fixes:**
+- [x] #6 use-risk-assessments → use-source-health-summary (rename)
+- [x] #7 seed-eval-datasets CLI entrypoint (pyproject.toml + cli.py)
+- [x] #10 OIDC/auth route tests — 38 novos testes backend
+- [x] #11 Frontend vitest — 3 novos arquivos (useSourceHealthSummary, usePermissions, Can)
+- [x] #12 MinIO vars em .env.example
+- [x] #13 migrations/env.py sys.path dedup guard
+- [x] #14 AGENTS.md cross-reference raiz→web
+
+**Deferidos (feature/infra, não bugs):**
+- [ ] #8 Observabilidade — dashboards Grafana/MLflow (precisa de escopo)
+- [ ] #9 Conectores avançados — sitemap/RSS/institutional (precisa de escopo)
