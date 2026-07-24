@@ -33,6 +33,10 @@ History follows Conventional Commit-style subjects such as `feat:`, `test:`, and
 
 Store credentials only in `.env` or a secret manager. Treat financial documents and downloaded datasets as potentially sensitive; avoid committing generated data, tokens, or production identifiers.
 
+## Frontend Guidelines
+
+The Next.js frontend lives in `web/`. See [`web/AGENTS.md`](web/AGENTS.md) for design system tokens, component guidelines, accessibility requirements, and npm commands.
+
 ## Histórico de Sessão — Integração Candidate Intelligence (Jul/2026)
 
 ### O que foi feito

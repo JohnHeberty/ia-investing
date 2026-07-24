@@ -6,7 +6,9 @@ from pathlib import Path
 from alembic import context
 from sqlalchemy.ext.asyncio import create_async_engine
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+# Prefer alembic.ini prepend_sys_path; fallback for direct execution
+if not any("src" in p for p in sys.path):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from database.models import Base
 from ia_investing.settings import get_settings

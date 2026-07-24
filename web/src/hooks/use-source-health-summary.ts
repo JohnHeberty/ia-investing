@@ -7,7 +7,7 @@ import { institutionalApi, queryKeys } from "@/lib/api-client";
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
 
-export interface RiskAssessmentSummary {
+export interface SourceHealthSummary {
   snapshot_id: string;
   as_of: string;
   breaches: Array<{
@@ -24,8 +24,8 @@ export interface RiskAssessmentSummary {
   liquidity: Record<string, unknown>;
 }
 
-/** Fetch risk data. Uses source health as a proxy for risk status. */
-export function useRiskAssessments() {
+/** Fetch source health data and compute a summary for the risk dashboard. */
+export function useSourceHealthSummary() {
   const sourceHealthQuery = useQuery({
     queryKey: queryKeys.sourceHealth(),
     queryFn: async () => {
@@ -47,8 +47,7 @@ export function useRiskAssessments() {
   const healthyCount = sources.filter((s) => s.status === "healthy").length;
   const totalSources = sources.length;
 
-  // Build risk summary from source health data
-  const assessment: RiskAssessmentSummary = {
+  const assessment: SourceHealthSummary = {
     snapshot_id: "latest",
     as_of: new Date().toISOString(),
     breaches: [],

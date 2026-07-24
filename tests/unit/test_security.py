@@ -9,7 +9,15 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from apps.api.main import app
-from apps.api.security import AuthContext, get_auth_context, require_permission
+from apps.api.security import (
+    AuthContext,
+    create_session_token,
+    decode_session_token,
+    generate_csrf_token,
+    get_auth_context,
+    require_permission,
+    validate_csrf_token,
+)
 from ia_investing.application.security import (
     ActorContext,
     PolicyEngine,
@@ -325,3 +333,235 @@ async def test_enforce_function_smoke() -> None:
     assert not enforce("portfolio", "write", actor)
     assert enforce("portfolio", "read", actor, resource)
     assert not enforce("portfolio", "write", actor, resource)
+
+
+# ── Session token roundtrip ────────────────────────────────────────────
+
+
+def test_session_token_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SECURITY__SESSION_SECRET_KEY", "test-session-key-123")
+    get_settings.cache_clear()
+    try:
+        token = create_session_token(
+            subject="user-round",
+            organization_id=UUID("11111111-1111-1111-1111-111111111111"),
+            roles=frozenset({"admin"}),
+            team_ids=frozenset({UUID("22222222-2222-2222-2222-222222222222")}),
+            permissions=frozenset({"portfolio:read", "portfolio:write"}),
+            name="Round User",
+            email="round@test.com",
+        )
+        claims = decode_session_token(token)
+        assert claims is not None
+        assert claims["sub"] == "user-round"
+        assert "portfolio:read" in claims["permissions"]
+        assert "portfolio:write" in claims["permissions"]
+        assert "admin" in claims["roles"]
+    finally:
+        get_settings.cache_clear()
+
+
+def test_decode_invalid_token_returns_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SECURITY__SESSION_SECRET_KEY", "test-session-key-123")
+    get_settings.cache_clear()
+    try:
+        assert decode_session_token("not-a-valid-token") is None
+    finally:
+        get_settings.cache_clear()
+
+
+# ── CSRF token roundtrip ──────────────────────────────────────────────
+
+
+def test_csrf_token_roundtrip(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SECURITY__SESSION_SECRET_KEY", "test-session-key-123")
+    get_settings.cache_clear()
+    try:
+        token = generate_csrf_token("sid-abc-123")
+        assert validate_csrf_token(token, "sid-abc-123") is True
+    finally:
+        get_settings.cache_clear()
+
+
+def test_csrf_token_wrong_session_id_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SECURITY__SESSION_SECRET_KEY", "test-session-key-123")
+    get_settings.cache_clear()
+    try:
+        token = generate_csrf_token("sid-abc-123")
+        assert validate_csrf_token(token, "sid-wrong") is False
+    finally:
+        get_settings.cache_clear()
+
+
+def test_csrf_token_tampered_digest_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SECURITY__SESSION_SECRET_KEY", "test-session-key-123")
+    get_settings.cache_clear()
+    try:
+        tampered = "sid-abc-123:0000000000000000000000000000000000000000000000000000000000000000"
+        assert validate_csrf_token(tampered, "sid-abc-123") is False
+    finally:
+        get_settings.cache_clear()
+
+
+def test_csrf_token_malformed_returns_false() -> None:
+    assert validate_csrf_token("no-colon-here", "anything") is False
+    assert validate_csrf_token("", "anything") is False
+
+
+# ── Parse helpers ──────────────────────────────────────────────────────
+
+
+def test_parse_permissions_string_space_separated() -> None:
+    from apps.api.security import _parse_permissions
+
+    result = _parse_permissions({"permissions": "read write execute"})
+    assert result == frozenset({"read", "write", "execute"})
+
+
+def test_parse_permissions_string_comma_separated() -> None:
+    from apps.api.security import _parse_permissions
+
+    result = _parse_permissions({"permissions": "read,write,execute"})
+    assert result == frozenset({"read", "write", "execute"})
+
+
+def test_parse_permissions_list() -> None:
+    from apps.api.security import _parse_permissions
+
+    result = _parse_permissions({"permissions": ["read", "write"]})
+    assert result == frozenset({"read", "write"})
+
+
+def test_parse_permissions_scope_fallback() -> None:
+    from apps.api.security import _parse_permissions
+
+    result = _parse_permissions({"scope": "openid profile"})
+    assert result == frozenset({"openid", "profile"})
+
+
+def test_parse_permissions_empty() -> None:
+    from apps.api.security import _parse_permissions
+
+    assert _parse_permissions({}) == frozenset()
+    assert _parse_permissions({"permissions": 123}) == frozenset()
+
+
+def test_parse_roles_string() -> None:
+    from apps.api.security import _parse_roles
+
+    result = _parse_roles({"roles": "admin analyst"})
+    assert result == frozenset({"admin", "analyst"})
+
+
+def test_parse_roles_list() -> None:
+    from apps.api.security import _parse_roles
+
+    result = _parse_roles({"roles": ["admin", "analyst"]})
+    assert result == frozenset({"admin", "analyst"})
+
+
+def test_parse_roles_empty() -> None:
+    from apps.api.security import _parse_roles
+
+    assert _parse_roles({}) == frozenset()
+    assert _parse_roles({"roles": []}) == frozenset()
+
+
+# ── Dev header with organization ──────────────────────────────────────
+
+
+@pytest.mark.asyncio
+async def test_development_headers_with_org_and_teams(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
+    get_settings.cache_clear()
+    try:
+        team_id = uuid4()
+        org_id = uuid4()
+        context = await get_auth_context(
+            credentials=None,
+            dev_subject="dev@test.com",
+            dev_permissions="agent_runs:create",
+            dev_organization=org_id,
+            dev_teams=str(team_id),
+        )
+        assert context.subject == "dev@test.com"
+        assert context.organization_id == org_id
+        assert team_id in context.team_ids
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_production_with_no_oidc_returns_503(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APPLICATION__ENVIRONMENT", "production")
+    monkeypatch.delenv("SECURITY__OIDC_ENABLED", raising=False)
+    monkeypatch.setenv("SECURITY__OIDC_ISSUER", "https://idp.prod.com")
+    monkeypatch.setenv("SECURITY__OIDC_AUDIENCE", "prod-aud")
+    monkeypatch.setenv("SECURITY__OIDC_JWKS_URL", "https://idp.prod.com/jwks")
+    monkeypatch.setenv("STORAGE__ACCESS_KEY", "prod-key")
+    monkeypatch.setenv("STORAGE__SECRET_KEY", "prod-secret")
+    monkeypatch.setenv("DATABASE__URL", "postgresql+asyncpg://u:p@db.prod.com/prod")
+    monkeypatch.setenv("AI__PROVIDER", "openai")
+    monkeypatch.setenv("AI__OPENAI_API_KEY", "sk-prod")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await get_auth_context(
+                credentials=HTTPAuthorizationCredentials(scheme="Bearer", credentials="some.token"),
+            )
+        assert exc_info.value.status_code == 503
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_no_credentials_no_dev_header_returns_401() -> None:
+    with pytest.raises(HTTPException) as exc_info:
+        await get_auth_context(
+            credentials=None,
+            dev_subject=None,
+        )
+    assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_token_without_subject_returns_401(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await get_auth_context(
+                credentials=HTTPAuthorizationCredentials(
+                    scheme="Bearer",
+                    credentials="eyJhbGciOiJub25lIn0.eyJpc3MiOiJ0ZXN0In0.",
+                ),
+            )
+        assert exc_info.value.status_code == 401
+        assert "no subject" in exc_info.value.detail
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_token_with_invalid_org_returns_401(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
+    monkeypatch.setenv("SECURITY__OIDC_ENABLED", "true")
+    monkeypatch.setenv("SECURITY__OIDC_ISSUER", "https://issuer.example.com")
+    monkeypatch.setenv("SECURITY__OIDC_AUDIENCE", "test")
+    monkeypatch.setenv("SECURITY__OIDC_JWKS_URL", "https://issuer.example.com/jwks")
+    get_settings.cache_clear()
+    try:
+        with (
+            patch(
+                "apps.api.security._decode_oidc_token",
+                return_value={"sub": "user", "organization_id": "not-a-uuid"},
+            ),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await get_auth_context(
+                credentials=HTTPAuthorizationCredentials(scheme="Bearer", credentials="token"),
+            )
+        assert exc_info.value.status_code == 401
+        assert "organization" in exc_info.value.detail
+    finally:
+        get_settings.cache_clear()

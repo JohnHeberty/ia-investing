@@ -10,7 +10,7 @@ import {
   StaleWarning,
 } from "@/components/data-state-components";
 import { ScenarioWaterfall, type ScenarioEntry } from "@/components/decision-components";
-import { useRiskAssessments } from "@/hooks/use-risk-assessments";
+import { useSourceHealthSummary } from "@/hooks/use-source-health-summary";
 import { useUrlState, filterPresets } from "@/hooks/use-url-state";
 
 function RiskContent() {
@@ -24,7 +24,7 @@ function RiskContent() {
     isLoading,
     isError,
     dataState,
-  } = useRiskAssessments();
+  } = useSourceHealthSummary();
 
   if (isLoading) {
     return (
