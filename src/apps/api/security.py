@@ -271,11 +271,13 @@ def validate_csrf_token(token: str, expected_session_id: str) -> bool:
     if len(parts) != 2:
         return False
     session_id, digest = parts
-    if session_id != expected_session_id:
-        return False
     expected = hmac.new(
         _csrf_key(settings).encode(),
         session_id.encode(),
         hashlib.sha256,
     ).hexdigest()
-    return hmac.compare_digest(digest, expected)
+    if not hmac.compare_digest(digest, expected):
+        return False
+    if session_id != expected_session_id:
+        return False
+    return True

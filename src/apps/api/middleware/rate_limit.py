@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import logging
+import math
 import time
 from collections.abc import Awaitable, Callable
 from functools import wraps
@@ -22,15 +24,14 @@ class SlidingWindowCounter:
         self._max_requests = max_requests
         self._window_seconds = window_seconds
         self._lock = asyncio.Lock()
+        self._windows: dict[str, list[float]] = {}
 
     async def is_allowed(self, key: str) -> bool:
         now = time.monotonic()
         async with self._lock:
-            if not hasattr(self, "_windows"):
-                self._windows: dict[str, list[float]] = {}
             timestamps = self._windows.get(key, [])
             cutoff = now - self._window_seconds
-            timestamps = [ts for ts in timestamps if ts > cutoff]
+            timestamps = [ts for ts in timestamps if ts >= cutoff]
             if len(timestamps) >= self._max_requests:
                 self._windows[key] = timestamps
                 return False
@@ -41,10 +42,9 @@ class SlidingWindowCounter:
     async def retry_after(self, key: str) -> float:
         now = time.monotonic()
         async with self._lock:
-            if hasattr(self, "_windows"):
-                timestamps = self._windows.get(key, [])
-                if timestamps:
-                    return self._window_seconds - (now - timestamps[0])
+            timestamps = self._windows.get(key, [])
+            if timestamps:
+                return self._window_seconds - (now - timestamps[0])
             return 0.0
 
 
@@ -54,11 +54,19 @@ _api_limiter = SlidingWindowCounter(100, 60.0)
 
 
 def _get_client_ip(request: Request) -> str:
-    forwarded = request.headers.get("X-Forwarded-For")
-    if forwarded:
-        return forwarded.split(",")[0].strip()
     client = request.client
-    return client.host if client else "unknown"
+    direct_ip = client.host if client else None
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded and direct_ip:
+        try:
+            direct = ipaddress.ip_address(direct_ip)
+            if direct.is_private or direct.is_loopback:
+                ip = forwarded.split(",")[0].strip()
+                ipaddress.ip_address(ip)
+                return ip
+        except ValueError:
+            pass
+    return direct_ip or "unknown"
 
 
 def rate_limit(
@@ -75,7 +83,7 @@ def rate_limit(
             if request is not None:
                 key = f"{resource}:{_get_client_ip(request)}"
                 if not await limiter.is_allowed(key):
-                    retry = int(await limiter.retry_after(key))
+                    retry = math.ceil(await limiter.retry_after(key))
                     raise _rate_limit_exception(retry)
             return await handler(*args, **kwargs)
 
@@ -107,10 +115,10 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return _rate_limit_response()
 
         is_auth_path = path.startswith("/api/v1/auth") or path.startswith("/auth")
-        if is_auth_path and not await _auth_limiter.is_allowed(f"auth:{client_ip}"):
-            return _rate_limit_response()
-
-        if not await _api_limiter.is_allowed(f"api:{client_ip}"):
+        if is_auth_path:
+            if not await _auth_limiter.is_allowed(f"auth:{client_ip}"):
+                return _rate_limit_response()
+        elif not await _api_limiter.is_allowed(f"api:{client_ip}"):
             return _rate_limit_response()
 
         return await call_next(request)

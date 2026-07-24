@@ -26,9 +26,11 @@ class AuditService:
         changes: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> AuditLogEntry:
+        await self._session.flush()
         prev_hash = await self._get_latest_hash()
         now = datetime.now(UTC)
 
+        meta = metadata or {}
         raw = (
             str(prev_hash or "")
             + now.isoformat()
@@ -37,7 +39,7 @@ class AuditService:
             + resource_type
             + str(resource_id or "")
             + json.dumps(changes or {}, sort_keys=True)
-            + json.dumps(metadata or {}, sort_keys=True)
+            + json.dumps(meta, sort_keys=True)
         )
         entry_hash = sha256(raw.encode("utf-8")).hexdigest()
 
@@ -48,7 +50,7 @@ class AuditService:
             resource_type=resource_type,
             resource_id=resource_id,
             changes=changes,
-            metadata=metadata or {},
+            meta_data=meta,
             hash_prev=prev_hash,
             hash=entry_hash,
             timestamp=now,
@@ -61,7 +63,7 @@ class AuditService:
         result = await self._session.execute(
             sa.select(AuditLogEntry.hash)
             .where(AuditLogEntry.tenant_id == self._tenant_id)
-            .order_by(AuditLogEntry.timestamp.desc())
+            .order_by(AuditLogEntry.timestamp.desc(), AuditLogEntry.id.desc())
             .limit(1)
         )
         row = result.scalar_one_or_none()
@@ -118,7 +120,7 @@ class AuditService:
         stmt = (
             sa.select(AuditLogEntry)
             .where(AuditLogEntry.tenant_id == self._tenant_id)
-            .order_by(AuditLogEntry.timestamp.asc())
+            .order_by(AuditLogEntry.timestamp.asc(), AuditLogEntry.id.asc())
         )
         if from_id is not None:
             stmt = stmt.where(AuditLogEntry.id >= from_id)

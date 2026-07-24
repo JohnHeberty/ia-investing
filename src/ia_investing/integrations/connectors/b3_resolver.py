@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-from datetime import date as DateType
 from decimal import Decimal
 
 from sqlalchemy import select
 
-from ia_investing.database.models.instrument_master import Instrument, Listing
+from database.models.instrument_master import Instrument, Listing
 from ia_investing.integrations.connectors.models import B3ListingProfile
 from ia_investing.platform.database.runtime import DatabaseRuntime
 

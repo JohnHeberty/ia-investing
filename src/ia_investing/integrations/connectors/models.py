@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date as DateType
+from datetime import date
 from decimal import Decimal
 from typing import Literal
 
@@ -35,4 +35,4 @@ class B3ListingProfile(BaseModel):
     listing_status: Literal["active", "inactive", "suspended"] = "active"
     average_volume_30d: Decimal | None = None
     closing_price: Decimal | None = None
-    last_trade_date: DateType | None = None
+    last_trade_date: date | None = None

@@ -223,4 +223,3 @@ docs/books/*.pdf
 docs/books/*.epub
 FIX/
 .candidate-upgrade-backup/
-QUALITY/

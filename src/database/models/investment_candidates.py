@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
+from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -355,3 +357,27 @@ class CandidateEventRecord(Base):
             sa.desc("occurred_at"),
         ),
     )
+
+
+# --- Append-only audit protection -------------------------------------------
+
+def _reject_event_update(mapper: Any, connection: Any, target: CandidateEventRecord) -> None:
+    raise sa.exc.StatementError(
+        "UPDATE is not allowed on candidate_events (append-only audit log)",
+        "",
+        {},
+        None,
+    )
+
+
+def _reject_event_delete(mapper: Any, connection: Any, target: CandidateEventRecord) -> None:
+    raise sa.exc.StatementError(
+        "DELETE is not allowed on candidate_events (append-only audit log)",
+        "",
+        {},
+        None,
+    )
+
+
+event.listen(CandidateEventRecord, "before_update", _reject_event_update)
+event.listen(CandidateEventRecord, "before_delete", _reject_event_delete)

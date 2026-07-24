@@ -10,3 +10,4 @@ __pycache__
 .env
 docs
 tests
+node_modules

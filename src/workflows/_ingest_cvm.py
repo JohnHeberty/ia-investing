@@ -53,15 +53,12 @@ class IngestCVMWorkflow:
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
-        validation_results: list[ValidationResult] = []
-        for record in parsed_records:
-            checks = await workflow.execute_activity(
-                "run_accounting_validations",
-                args=[input.statement_type, record],
-                start_to_close_timeout=timedelta(seconds=30),
-                retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
-            )
-            validation_results.extend(checks)
+        validation_results: list[ValidationResult] = await workflow.execute_activity(
+            "run_accounting_validations_batch",
+            args=[input.statement_type, parsed_records],
+            start_to_close_timeout=timedelta(seconds=120),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
+        )
 
         output.validation_results = validation_results
 

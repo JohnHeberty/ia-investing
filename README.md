@@ -5,19 +5,18 @@ Plataforma de pesquisa financeira com IA para o mercado brasileiro.
 ## Arquitetura
 
 ```
-apps/
-├── api/          FastAPI REST API
-├── scheduler/    Agendamento de tarefas
-└── worker/       Workers assíncronos
-
-packages/
-├── agents/       Agentes OpenAI (filing_analyst, news_analyst, etc.)
-├── b3/           Conector B3 (COTAHIST)
-├── cvm/          Conector CVM (DFP, ITR, FCA, CAD)
-├── database/     SQLAlchemy async + modelos ORM
-├── domain/       Domínio de negócio
-├── portfolio/    Otimização com CVXPY
-└── workflows/    Temporal workflows
+src/
+├── apps/              FastAPI API, scheduler, workers (deployable entry points)
+├── connectors/        B3, CVM, IR, macro, news, policy connectors
+├── database/          SQLAlchemy async + ORM models + Alembic migrations
+├── ia_investing/      Core application: domain, orchestration, AI, integrations
+│   ├── ai/            Agent configuration, runner, provider
+│   ├── application/   Application services (instruments, source registry)
+│   ├── candidate_intelligence/  Candidate overlay: domain, bootstrap, contracts
+│   ├── integrations/  Production runtime, CVM/B3 resolvers, factory
+│   ├── orchestration/ Temporal activities, workflows, registry, queues
+│   └── platform/      Database runtime, safe HTTP client
+├── web/               Next.js frontend (independent package)
 ```
 
 ## Stack
@@ -57,8 +56,11 @@ uv run uvicorn apps.api.main:app --reload --app-dir src
 ruff check .
 
 # Type check
-mypy packages/ apps/
+mypy src
 
 # Testes
-pytest
+pytest tests/unit -q
+
+# Testes de integração (requer PostgreSQL)
+pytest tests/integration -q
 ```

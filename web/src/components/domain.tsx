@@ -48,7 +48,7 @@ export function Metric({
   );
 }
 export type DataState =
-  "empty" | "missing" | "stale" | "partial" | "quarantined" | "forbidden" | "error";
+  "empty" | "missing" | "ready" | "stale" | "partial" | "quarantined" | "forbidden" | "error";
 
 export function StatePanel({
   title,

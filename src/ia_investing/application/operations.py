@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
 from dataclasses import dataclass
@@ -55,7 +56,7 @@ class OperationService:
         self.session = session
         self.temporal_client = temporal_client
 
-    async def submit_agent_run(self, command: AgentRunCommand, idempotency_key: str) -> OperationAcceptedV1:
+    async def submit_agent_run(self, command: AgentRunCommand, idempotency_key: str, organization_id: UUID | None = None) -> OperationAcceptedV1:
         operation_type = "agent-run"
         payload = command.payload()
         request_hash = _request_hash(payload)
@@ -64,6 +65,7 @@ class OperationService:
                 select(Operation).where(
                     Operation.operation_type == operation_type,
                     Operation.idempotency_key == idempotency_key,
+                    Operation.organization_id == organization_id,
                 )
             )
         ).scalar_one_or_none()
@@ -75,6 +77,7 @@ class OperationService:
         operation_id = uuid4()
         operation = Operation(
             id=operation_id,
+            organization_id=organization_id,
             operation_type=operation_type,
             idempotency_key=idempotency_key,
             request_hash=request_hash,
@@ -96,14 +99,12 @@ class OperationService:
                 },
             )
         )
-        await self.session.commit()
-
         try:
             await self.temporal_client.start_workflow(
                 RunAgentWorkflow.run,
                 RunAgentInput(
                     operation_id=str(operation_id),
-                    organization_id=str(command.input_data.get("organization_id", "")),
+                    organization_id=str(organization_id) if organization_id else "",
                     capability=command.agent_name,
                     case_id=str(command.input_data["case_id"]) if command.input_data.get("case_id") else None,
                     input_payload=command.input_data,
@@ -115,16 +116,21 @@ class OperationService:
                 id=f"operation-{operation_id}",
                 task_queue=TASK_QUEUES[Capability.RESEARCH_AGENTS],
             )
-        except Exception:
+        except asyncio.CancelledError:
+            raise
+        except BaseException:
             operation.state = OperationState.FAILED
             operation.error_code = "workflow_start_failed"
             operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."
             await self.session.commit()
             raise
+
+        operation.state = OperationState.RUNNING
+        await self.session.commit()
         return OperationAcceptedV1(operation_id=operation_id)
 
     async def submit_portfolio_operation(
-        self, command: PortfolioOperationCommand, idempotency_key: str, actor_subject: str
+        self, command: PortfolioOperationCommand, idempotency_key: str, actor_subject: str, organization_id: UUID | None = None
     ) -> OperationAcceptedV1:
         request_hash = _request_hash(command.payload)
         existing = (
@@ -132,6 +138,7 @@ class OperationService:
                 select(Operation).where(
                     Operation.operation_type == command.operation_type,
                     Operation.idempotency_key == idempotency_key,
+                    Operation.organization_id == organization_id,
                 )
             )
         ).scalar_one_or_none()
@@ -143,6 +150,7 @@ class OperationService:
         operation_id = uuid4()
         operation = Operation(
             id=operation_id,
+            organization_id=organization_id,
             operation_type=command.operation_type,
             idempotency_key=idempotency_key,
             request_hash=request_hash,
@@ -163,7 +171,6 @@ class OperationService:
                 },
             )
         )
-        await self.session.commit()
 
         if command.workflow_class is not None and command.workflow_id is not None:
             try:
@@ -173,12 +180,17 @@ class OperationService:
                     id=command.workflow_id,
                     task_queue=TASK_QUEUES[command.task_queue],
                 )
-            except Exception:
+            except asyncio.CancelledError:
+                raise
+            except BaseException:
                 operation.state = OperationState.FAILED
                 operation.error_code = "workflow_start_failed"
                 operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."
                 await self.session.commit()
                 raise
+            operation.state = OperationState.RUNNING
+
+        await self.session.commit()
         return OperationAcceptedV1(operation_id=operation_id)
 
     async def get(self, operation_id: UUID) -> OperationStatusV1 | None:

@@ -13,7 +13,7 @@ with workflow.unsafe.imports_passed_through():
 @dataclass(slots=True)
 class ScreenFilters:
     min_market_cap: float = 0.0
-    max_market_cap: float = float("inf")
+    max_market_cap: float | None = None
     sectors_include: list[str] = field(default_factory=list)
     sectors_exclude: list[str] = field(default_factory=list)
     min_volume_avg: float = 0.0
