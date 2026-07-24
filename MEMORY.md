@@ -112,26 +112,30 @@
 - [ ] **portfolio.py** — optimize() sem with_for_update; close_price NULL causa TypeError; JOIN sem DISTINCT
 - [ ] **portfolio_ranking_materializer.py** — UPSERT com WHERE suprime RETURNING; validação [0,1] mascara bugs
 - [ ] **egress.py** — socket leak (sem context manager); blocking socket em async app; IPv4-only
-- [ ] **secrets_manager.py** — str() em dict retorna repr Python; urlopen sem timeout; sync HTTP em app async
-- [ ] **agent_runtime.py** — os.environ['OPENAI_API_KEY'] vaza chave; 3 sessions separadas p/ 1 unidade de trabalho
+- [x] **agent_runtime.py** — os.environ['OPENAI_API_KEY'] vaza chave; 4 sessions separadas p/ 1 unidade de trabalho ✅ (commit 9719188)
 - [ ] **research.py** — list_cases sem limit max (DoS); UUIDv4 pagination non-determinística
 - [ ] **portfolio_models.py** — Portfolio sem organization_id (sem tenant isolation)
 - [ ] **research_mock.py** — float(None) crash (linha 114)
-- [ ] **Frontend: hooks/use-quality-incidents.ts** — computeDataState arity (parâmetro booleano no lugar de string)
-- [ ] **Frontend: hooks/use-committee.ts** — computeDataState arity
-- [ ] **Frontend: hooks/use-audit.ts** — computeDataState arity
-- [ ] **Frontend: hooks/use-backtests.ts** — computeDataState arity
-- [ ] **Frontend: hooks/use-url-state.ts** — === reference equality para defaults array nunca limpa URL params
-- [ ] **Frontend: hooks/use-sse.ts** — JSON.parse sem try/catch quebra EventSource permanentemente
+- [x] **Frontend: hooks/use-quality-incidents.ts** — computeDataState arity ✅ (commit 9719188)
+- [x] **Frontend: hooks/use-committee.ts** — computeDataState arity + queryFn retorna [] vazio ✅ (commit 9719188)
+- [x] **Frontend: hooks/use-audit.ts** — computeDataState arity ✅ (commit 9719188)
+- [x] **Frontend: hooks/use-backtests.ts** — computeDataState arity ✅ (commit 9719188)
+- [x] **Frontend: hooks/use-url-state.ts** — reference equality para defaults array ✅ (commit 9719188)
+- [x] **Frontend: hooks/use-sse.ts** — JSON.parse sem try/catch ✅ (commit 9719188)
 - [ ] **Frontend: hooks/use-risk-assessments.ts** — dados sintéticos com nome enganoso
-- [ ] **Frontend: hooks/use-committee.ts** — queryFn retorna [] vazio fixo
-- [ ] **Frontend: hooks/use-mission-control.ts** — raw fetch() em vez de institutionalApi; hardcoded localhost:8000
-- [ ] **Frontend: app/login/page.tsx** — open redirect via return_to sem validação (parcial: server-side ok, client-side não)
-- [ ] **Frontend: app/opportunities/page.tsx** — crypto.randomUUID falha em HTTP
-- [ ] **Frontend: components/app-shell.tsx** — search/notification buttons sem onClick
-- [x] **Frontend: components/evidence-tags.tsx** — agora tem "use client" ✅
-- [x] **proxy.ts** — deletado (substituído por middleware.ts)
-- [x] **Frontend: components/app-shell.tsx** — search/notification buttons ainda sem onClick (cosmético, sem quebra)
+- [x] **Frontend: hooks/use-mission-control.ts** — hardcoded localhost:8000 ✅ (commit 9719188)
+- [x] **Frontend: app/login/page.tsx** — open redirect via return_to sem validação ✅ (commit 9719188)
+- [x] **Frontend: app/opportunities/page.tsx** — crypto.randomUUID sem fallback ✅ (commit 9719188)
+- [x] **Frontend: components/app-shell.tsx** — search/notification buttons sem type ✅ (commit 9719188)
+- [x] **Backend: metrics.py** — DivisionByZero + SQL IN() vazio ✅ (commit 9719188)
+- [x] **Backend: egress.py** — socket bloqueante + AF_INET hardcoded ✅ (commit 9719188)
+- [x] **Backend: secrets_manager.py** — str(dict) + urlopen sem timeout ✅ (commit 9719188)
+- [x] **Backend: operations.py** — crash window (workflow antes de commit) + TOCTOU ✅ (commit 9719188)
+- [x] **Backend: audit_service.py** — hash chain fork race ✅ (commit 9719188)
+- [x] **Backend: portfolio.py** — TOCTOU + NULL close_price + JOIN sem DISTINCT ✅ (commit 9719188)
+- [x] **Permissions frontend** — use-permissions hook + Can components + sidebar ✅ (commit 9719188)
+- [x] **Evals: company_source_discovery** — 6 cases + seed script + test suite ✅ (commit 9719188)
+- [x] **proxy.ts** — deletado (substituído por middleware.ts) ✅ (commit 9719188)
 
 ### Melhorias desejáveis
 - [ ] Testes de integração OIDC (zero cobertura)
