@@ -54,13 +54,34 @@ async def test_source_health_is_sanitized_and_marks_stale() -> None:
 async def test_register_source_creates_entities_and_audit() -> None:
     """register_source creates license + source + SLA + audit log."""
     mock_session = AsyncMock()
+    source_id = uuid4()
+    source_obj = SimpleNamespace(id=source_id, code="test-source")
+    license_obj = SimpleNamespace(id=uuid4(), code="TEST-LICENSE")
+
+    call_count = 0
 
     async def fake_execute(stmt):
-        class FakeResult:
-            def scalar_one_or_none(self):
-                return None
+        nonlocal call_count
+        call_count += 1
 
-        return FakeResult()
+        class FakeResult:
+            def __init__(self, val=None):
+                self._val = val
+
+            def scalar_one_or_none(self):
+                return self._val
+
+            def scalar_one(self):
+                return self._val
+
+        # Call 1: license INSERT (ON CONFLICT DO NOTHING) → None = no conflict, created
+        # Call 2: license SELECT → license_obj
+        # Call 3: source INSERT (ON CONFLICT DO NOTHING) → source_obj = created
+        if call_count == 1:
+            return FakeResult(None)
+        if call_count == 2:
+            return FakeResult(license_obj)
+        return FakeResult(source_obj)
 
     mock_session.execute.side_effect = fake_execute
     svc = SourceRegistryService(mock_session)
@@ -75,8 +96,8 @@ async def test_register_source_creates_entities_and_audit() -> None:
         freshness_grace_minutes=10,
         correlation_id=uuid4(),
     )
-    assert mock_session.add.call_count >= 4
-    assert mock_session.flush.await_count >= 3
+    assert mock_session.add.call_count >= 2
+    assert mock_session.flush.await_count >= 1
 
 
 @pytest.mark.asyncio

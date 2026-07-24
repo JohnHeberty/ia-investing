@@ -192,7 +192,6 @@ UPSERT_SQL = text(
         input_sha256 = EXCLUDED.input_sha256,
         input_payload = EXCLUDED.input_payload,
         computed_at = EXCLUDED.computed_at
-    WHERE portfolio_ranking_snapshots.input_sha256 IS DISTINCT FROM EXCLUDED.input_sha256
     RETURNING id
     """
 )

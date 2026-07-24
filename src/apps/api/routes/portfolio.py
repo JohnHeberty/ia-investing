@@ -42,6 +42,7 @@ class OptimizationRequest(BaseModel):
 async def create_portfolio(
     body: PortfolioCreate,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
+    auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
     svc = PaperPortfolioService(session)
@@ -51,23 +52,29 @@ async def create_portfolio(
         is_paper_trading=body.is_paper_trading,
         base_currency=body.base_currency,
         initial_capital=body.initial_capital,
+        organization_id=auth.organization_id,
     )
     return {k: d[k] for k in ("id", "name", "is_paper_trading", "base_currency")}
 
 
 @router.get("")
 async def list_portfolios(
+    auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[dict[str, Any]]:
-    return await PaperPortfolioService(session).list_all()
+    return await PaperPortfolioService(session).list_all(organization_id=auth.organization_id)
 
 
 @router.get("/{portfolio_id}")
 async def get_portfolio(
     portfolio_id: uuid.UUID,
+    auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
-    result = await PaperPortfolioService(session).get_with_positions(portfolio_id)
+    result = await PaperPortfolioService(session).get_with_positions(
+        portfolio_id,
+        organization_id=auth.organization_id,
+    )
     if result is None:
         raise HTTPException(status_code=404, detail="Portfolio not found")
     return result

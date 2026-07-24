@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 from typing import Literal
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.agents import AuditLog
@@ -47,18 +48,78 @@ class SourceRegistryService:
         schema_version: str = "1.0",
         credential_reference: str | None = None,
     ) -> DataSource:
-        existing_source = (
-            await self.session.execute(sa.select(DataSource).where(DataSource.code == code))
-        ).scalar_one_or_none()
-        if existing_source is not None:
-            existing_source.name = name
-            existing_source.schema_version = schema_version
-            existing_source.owner_role = owner_role
-            existing_source.rate_limit_per_minute = rate_limit_per_minute
-            existing_source.is_active = True
-            existing_source.credential_reference = credential_reference
+        license_stmt = (
+            pg_insert(SourceLicense)
+            .values(
+                id=uuid4(),
+                code=license_code,
+                name=license_name,
+                terms_url=terms_url or "",
+                permits_redistribution=False,
+                retention_days=365,
+            )
+            .on_conflict_do_nothing(index_elements=["code"])
+            .returning(SourceLicense.id)
+        )
+        await self.session.execute(license_stmt)
+
+        license_obj = (
+            await self.session.execute(sa.select(SourceLicense).where(SourceLicense.code == license_code))
+        ).scalar_one()
+
+        source_id = uuid4()
+        source_stmt = (
+            pg_insert(DataSource)
+            .values(
+                id=source_id,
+                code=code,
+                name=name,
+                schema_version=schema_version,
+                owner_role=owner_role,
+                base_url="",
+                rate_limit_per_minute=rate_limit_per_minute,
+                is_active=True,
+                license_id=license_obj.id,
+                credential_reference=credential_reference,
+            )
+            .on_conflict_do_nothing(index_elements=["code"])
+            .returning(DataSource)
+        )
+        source_result = await self.session.execute(source_stmt)
+        source = source_result.scalar_one_or_none()
+
+        if source is not None:
+            sla = SourceSLA(
+                source_id=source.id,
+                expected_frequency_minutes=expected_frequency_minutes,
+                freshness_grace_minutes=freshness_grace_minutes,
+            )
+            self.session.add(sla)
+            self.session.add(
+                AuditLog(
+                    actor_type="system",
+                    actor_id="source-registry",
+                    action="source.registered",
+                    entity_type="data_source",
+                    entity_id=source.id,
+                    correlation_id=correlation_id,
+                    details={"code": code, "owner_role": owner_role, "license": license_code},
+                )
+            )
+        else:
+            source = (
+                await self.session.execute(sa.select(DataSource).where(DataSource.code == code).with_for_update())
+            ).scalar_one()
+            source.name = name
+            source.schema_version = schema_version
+            source.owner_role = owner_role
+            source.rate_limit_per_minute = rate_limit_per_minute
+            source.is_active = True
+            source.credential_reference = credential_reference
             existing_sla = (
-                await self.session.execute(sa.select(SourceSLA).where(SourceSLA.source_id == existing_source.id))
+                await self.session.execute(
+                    sa.select(SourceSLA).where(SourceSLA.source_id == source.id).with_for_update()
+                )
             ).scalar_one_or_none()
             if existing_sla is not None:
                 existing_sla.expected_frequency_minutes = expected_frequency_minutes
@@ -69,59 +130,12 @@ class SourceRegistryService:
                     actor_id="source-registry",
                     action="source.updated",
                     entity_type="data_source",
-                    entity_id=existing_source.id,
+                    entity_id=source.id,
                     correlation_id=correlation_id,
                     details={"code": code, "owner_role": owner_role, "license": license_code},
                 )
             )
-            await self.session.flush()
-            return existing_source
 
-        license_obj = (
-            await self.session.execute(sa.select(SourceLicense).where(SourceLicense.code == license_code))
-        ).scalar_one_or_none()
-        if license_obj is None:
-            license_obj = SourceLicense(
-                code=license_code,
-                name=license_name,
-                terms_url=terms_url or "",
-                permits_redistribution=False,
-                retention_days=365,
-            )
-            self.session.add(license_obj)
-            await self.session.flush()
-
-        source = DataSource(
-            code=code,
-            name=name,
-            schema_version=schema_version,
-            owner_role=owner_role,
-            base_url="",
-            rate_limit_per_minute=rate_limit_per_minute,
-            is_active=True,
-            license_id=license_obj.id,
-            credential_reference=credential_reference,
-        )
-        self.session.add(source)
-        await self.session.flush()
-
-        sla = SourceSLA(
-            source_id=source.id,
-            expected_frequency_minutes=expected_frequency_minutes,
-            freshness_grace_minutes=freshness_grace_minutes,
-        )
-        self.session.add(sla)
-        self.session.add(
-            AuditLog(
-                actor_type="system",
-                actor_id="source-registry",
-                action="source.registered",
-                entity_type="data_source",
-                entity_id=source.id,
-                correlation_id=correlation_id,
-                details={"code": code, "owner_role": owner_role, "license": license_code},
-            )
-        )
         await self.session.flush()
         return source
 

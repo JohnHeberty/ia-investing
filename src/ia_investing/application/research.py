@@ -216,7 +216,8 @@ class ResearchCaseService:
     ) -> list[ResearchCase]:
         if as_of is not None and as_of.tzinfo is None:
             raise ValueError("as_of must include timezone information")
-        stmt = sa.select(ResearchCase).order_by(ResearchCase.id).limit(limit + 1)
+        capped_limit = min(limit, 100)
+        stmt = sa.select(ResearchCase).order_by(ResearchCase.id).limit(capped_limit + 1)
         if state is not None:
             stmt = stmt.where(ResearchCase.state == state)
         if as_of is not None:

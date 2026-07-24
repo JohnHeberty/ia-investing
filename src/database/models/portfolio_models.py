@@ -14,6 +14,11 @@ class Portfolio(Base):
     __tablename__ = "portfolios"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="SET NULL"),
+        index=True,
+        nullable=True,
+    )
     name: Mapped[str] = mapped_column(sa.String(200), nullable=False)
     description: Mapped[str] = mapped_column(sa.Text)
     is_paper_trading: Mapped[bool] = mapped_column(sa.Boolean, default=True)
@@ -22,6 +27,8 @@ class Portfolio(Base):
     initial_capital: Mapped[Decimal] = mapped_column(sa.Numeric(20, 4))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (sa.UniqueConstraint("organization_id", "name", name="uq_portfolios_org_name"),)
 
     def __repr__(self) -> str:
         return f"Portfolio(name={self.name!r}, is_paper_trading={self.is_paper_trading})"

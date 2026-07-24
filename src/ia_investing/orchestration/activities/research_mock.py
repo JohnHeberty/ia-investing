@@ -111,8 +111,10 @@ def fetch_b3_universe() -> list[dict[str, Any]]:
 @activity.defn(name="apply_screen_filters")
 def apply_screen_filters(universe: list[dict[str, Any]], filters: dict[str, Any]) -> list[dict[str, Any]]:
     with activity_span("apply_screen_filters"):
-        minimum = float(filters["min_market_cap"])
-        maximum = float(filters["max_market_cap"])
+        raw_min = filters.get("min_market_cap")
+        raw_max = filters.get("max_market_cap")
+        minimum = float(raw_min) if raw_min is not None else 0.0
+        maximum = float(raw_max) if raw_max is not None else float("inf")
         return [item for item in universe if minimum <= float(item["market_cap"]) <= maximum]
 
 

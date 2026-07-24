@@ -20,6 +20,7 @@ class PaperPortfolioService:
         is_paper_trading: bool = True,
         base_currency: str = "BRL",
         initial_capital: float | None = None,
+        organization_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
         portfolio = Portfolio(
             name=name,
@@ -27,19 +28,28 @@ class PaperPortfolioService:
             is_paper_trading=is_paper_trading,
             base_currency=base_currency,
             initial_capital=initial_capital,
+            organization_id=organization_id,
         )
         self._session.add(portfolio)
         await self._session.flush()
         return self._to_dict(portfolio)
 
-    async def list_all(self) -> list[dict[str, Any]]:
+    async def list_all(self, organization_id: uuid.UUID | None = None) -> list[dict[str, Any]]:
         stmt = sa.select(Portfolio).order_by(Portfolio.created_at.desc())
+        if organization_id is not None:
+            stmt = stmt.where(Portfolio.organization_id == organization_id)
         result = await self._session.execute(stmt)
         rows = result.scalars().all()
         return [self._to_dict(r) for r in rows]
 
-    async def get_with_positions(self, portfolio_id: uuid.UUID) -> dict[str, Any] | None:
+    async def get_with_positions(
+        self,
+        portfolio_id: uuid.UUID,
+        organization_id: uuid.UUID | None = None,
+    ) -> dict[str, Any] | None:
         stmt = sa.select(Portfolio).where(Portfolio.id == portfolio_id)
+        if organization_id is not None:
+            stmt = stmt.where(Portfolio.organization_id == organization_id)
         result = await self._session.execute(stmt)
         portfolio = result.scalar_one_or_none()
         if portfolio is None:
@@ -93,6 +103,7 @@ class PaperPortfolioService:
             "description": p.description,
             "is_paper_trading": p.is_paper_trading,
             "base_currency": p.base_currency,
+            "organization_id": str(p.organization_id) if p.organization_id else None,
         }
 
     @staticmethod
