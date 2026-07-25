@@ -1,3 +1,9 @@
+from ._candidate_checks import (
+    validate_candidate_agent_output,
+    validate_committee_decision_output,
+    validate_fundamental_analysis_output,
+    validate_risk_analysis_output,
+)
 from ._checks import (
     classify_content_source,
     enforce_budget,
@@ -32,7 +38,11 @@ __all__ = [
     "RunBudget",
     "classify_content_source",
     "enforce_budget",
+    "validate_candidate_agent_output",
+    "validate_committee_decision_output",
+    "validate_fundamental_analysis_output",
     "validate_input_with_source",
+    "validate_risk_analysis_output",
     "validate_specialist_output",
     "validate_untrusted_text",
 ]

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime
@@ -7,6 +8,10 @@ from typing import Any, Protocol
 from uuid import UUID
 
 from temporalio import activity
+
+from . import _telemetry
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,6 +154,10 @@ class CandidateActivityRuntime(Protocol):
         findings: ExplorationFindings,
     ) -> ExplorationWorkflowResult: ...
 
+    async def expire_stale_suggestions(self) -> int: ...
+
+    async def apply_restricted_list_block(self, restricted_instrument_ids: list[UUID]) -> int: ...
+
 
 @dataclass(slots=True)
 class CallbackCandidateActivityRuntime:
@@ -181,6 +190,8 @@ class CallbackCandidateActivityRuntime:
     screen_universe: Callable[[ExplorationWorkflowInput], Awaitable[ExplorationShortlist]]
     explore_shortlist: Callable[[ExplorationShortlist], Awaitable[ExplorationFindings]]
     persist_suggestions: Callable[[ExplorationFindings], Awaitable[ExplorationWorkflowResult]]
+    expire_suggestions: Callable[[], Awaitable[int]]
+    restrict_list: Callable[[list[UUID]], Awaitable[int]]
 
     async def resolve_candidate_identity(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         return await self.resolve_identity(command)
@@ -240,6 +251,12 @@ class CallbackCandidateActivityRuntime:
     ) -> ExplorationWorkflowResult:
         return await self.persist_suggestions(findings)
 
+    async def expire_stale_suggestions(self) -> int:
+        return await self.expire_suggestions()
+
+    async def apply_restricted_list_block(self, restricted_instrument_ids: list[UUID]) -> int:
+        return await self.restrict_list(restricted_instrument_ids)
+
 
 _RUNTIME: CandidateActivityRuntime | None = None
 
@@ -271,64 +288,111 @@ def _runtime() -> CandidateActivityRuntime:
 
 @activity.defn
 async def resolve_candidate_identity(command: CandidateWorkflowInput) -> CandidateCheckpoint:
-    return await _runtime().resolve_candidate_identity(command)
+    with _telemetry.activity_span("candidate.resolve_identity") as correlation_id:
+        logger.info(
+            "activity candidate.resolve_identity started candidate_id=%s correlation_id=%s",
+            command.candidate_id,
+            correlation_id,
+        )
+        result = await _runtime().resolve_candidate_identity(command)
+        logger.info(
+            "activity candidate.resolve_identity completed candidate_id=%s blocked=%s decision=%s",
+            command.candidate_id,
+            result.blocked,
+            result.decision,
+        )
+        return result
 
 
 @activity.defn
 async def discover_candidate_sources(command: CandidateWorkflowInput) -> SourceDiscoveryCheckpoint:
-    return await _runtime().discover_candidate_sources(command)
+    with _telemetry.activity_span("candidate.discover_sources") as correlation_id:
+        logger.info(
+            "activity candidate.discover_sources started candidate_id=%s correlation_id=%s",
+            command.candidate_id,
+            correlation_id,
+        )
+        return await _runtime().discover_candidate_sources(command)
 
 
 @activity.defn
 async def persist_candidate_sources_and_gaps(checkpoint: SourceDiscoveryCheckpoint) -> None:
-    await _runtime().persist_candidate_sources_and_gaps(checkpoint)
+    with _telemetry.activity_span("candidate.persist_sources") as correlation_id:
+        logger.info(
+            "activity candidate.persist_sources started candidate_id=%s correlation_id=%s",
+            checkpoint.command.candidate_id,
+            correlation_id,
+        )
+        await _runtime().persist_candidate_sources_and_gaps(checkpoint)
 
 
 @activity.defn
 async def validate_supplied_candidate_source(
     command: CandidateSourceValidationInput,
 ) -> CandidateSourceValidationResult:
-    return await _runtime().validate_supplied_candidate_source(command)
+    with _telemetry.activity_span("candidate.validate_source") as correlation_id:
+        logger.info(
+            "activity candidate.validate_source started candidate_id=%s source_id=%s correlation_id=%s",
+            command.candidate_id,
+            command.source_id,
+            correlation_id,
+        )
+        result = await _runtime().validate_supplied_candidate_source(command)
+        logger.info(
+            "activity candidate.validate_source completed candidate_id=%s status=%s official=%s",
+            command.candidate_id,
+            result.status,
+            result.official,
+        )
+        return result
 
 
 @activity.defn
 async def evaluate_candidate_readiness(command: CandidateWorkflowInput) -> CandidateCheckpoint:
-    return await _runtime().evaluate_candidate_readiness(command)
+    with _telemetry.activity_span("candidate.evaluate_readiness") as _:
+        return await _runtime().evaluate_candidate_readiness(command)
 
 
 @activity.defn
 async def validate_candidate_sources(command: CandidateWorkflowInput) -> CandidateCheckpoint:
-    return await _runtime().validate_candidate_sources(command)
+    with _telemetry.activity_span("candidate.validate_sources") as _:
+        return await _runtime().validate_candidate_sources(command)
 
 
 @activity.defn
 async def collect_candidate_documents(command: CandidateWorkflowInput) -> CandidateCheckpoint:
-    return await _runtime().collect_candidate_documents(command)
+    with _telemetry.activity_span("candidate.collect_documents") as _:
+        return await _runtime().collect_candidate_documents(command)
 
 
 @activity.defn
 async def ingest_candidate_financial_data(command: CandidateWorkflowInput) -> CandidateCheckpoint:
-    return await _runtime().ingest_candidate_financial_data(command)
+    with _telemetry.activity_span("candidate.ingest_financials") as _:
+        return await _runtime().ingest_candidate_financial_data(command)
 
 
 @activity.defn
 async def validate_candidate_financial_data(command: CandidateWorkflowInput) -> CandidateCheckpoint:
-    return await _runtime().validate_candidate_financial_data(command)
+    with _telemetry.activity_span("candidate.validate_financials") as _:
+        return await _runtime().validate_candidate_financial_data(command)
 
 
 @activity.defn
 async def run_candidate_fundamental_analysis(command: CandidateWorkflowInput) -> CandidateCheckpoint:
-    return await _runtime().run_candidate_fundamental_analysis(command)
+    with _telemetry.activity_span("candidate.fundamental_analysis") as _:
+        return await _runtime().run_candidate_fundamental_analysis(command)
 
 
 @activity.defn
 async def run_candidate_risk_analysis(command: CandidateWorkflowInput) -> CandidateCheckpoint:
-    return await _runtime().run_candidate_risk_analysis(command)
+    with _telemetry.activity_span("candidate.risk_analysis") as _:
+        return await _runtime().run_candidate_risk_analysis(command)
 
 
 @activity.defn
 async def create_committee_pack(command: CandidateWorkflowInput) -> CandidateCheckpoint:
-    return await _runtime().create_committee_pack(command)
+    with _telemetry.activity_span("candidate.committee_pack") as _:
+        return await _runtime().create_committee_pack(command)
 
 
 @activity.defn
@@ -336,22 +400,40 @@ async def complete_candidate_analysis_run(
     args: tuple[CandidateWorkflowInput, CandidateCheckpoint],
 ) -> CandidateWorkflowResult:
     command, checkpoint = args
-    return await _runtime().complete_candidate_analysis_run(command, checkpoint)
+    with _telemetry.activity_span("candidate.complete_run") as _:
+        return await _runtime().complete_candidate_analysis_run(command, checkpoint)
 
 
 @activity.defn
 async def screen_equity_universe(command: ExplorationWorkflowInput) -> ExplorationShortlist:
-    return await _runtime().screen_equity_universe(command)
+    with _telemetry.activity_span("candidate.screen_universe") as _:
+        return await _runtime().screen_equity_universe(command)
 
 
 @activity.defn
 async def run_equity_explorer_agent(shortlist: ExplorationShortlist) -> ExplorationFindings:
-    return await _runtime().run_equity_explorer_agent(shortlist)
+    with _telemetry.activity_span("candidate.explorer_agent") as _:
+        return await _runtime().run_equity_explorer_agent(shortlist)
 
 
 @activity.defn
 async def persist_exploration_suggestions(findings: ExplorationFindings) -> ExplorationWorkflowResult:
-    return await _runtime().persist_exploration_suggestions(findings)
+    with _telemetry.activity_span("candidate.persist_suggestions") as _:
+        return await _runtime().persist_exploration_suggestions(findings)
+
+
+@activity.defn
+async def expire_stale_suggestions() -> int:
+    with _telemetry.activity_span("candidate.expire_suggestions") as _:
+        return await _runtime().expire_stale_suggestions()
+
+
+@activity.defn
+async def apply_restricted_list_block(restricted_instrument_ids: list[str]) -> int:
+    with _telemetry.activity_span("candidate.restricted_list_block") as _:
+        from uuid import UUID
+
+        return await _runtime().apply_restricted_list_block([UUID(rid) for rid in restricted_instrument_ids])
 
 
 CANDIDATE_INTELLIGENCE_ACTIVITIES = (
@@ -371,4 +453,6 @@ CANDIDATE_INTELLIGENCE_ACTIVITIES = (
     screen_equity_universe,
     run_equity_explorer_agent,
     persist_exploration_suggestions,
+    expire_stale_suggestions,
+    apply_restricted_list_block,
 )

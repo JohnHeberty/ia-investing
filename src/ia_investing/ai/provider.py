@@ -25,6 +25,7 @@ class AgentProvider(Protocol):
         instructions: str,
         input_payload: dict[str, object],
         output_schema: dict[str, object],
+        metadata: dict[str, str] | None = None,
     ) -> ProviderResponse: ...
 
 
@@ -50,6 +51,7 @@ class MockProvider:
         instructions: str,
         input_payload: dict[str, object],
         output_schema: dict[str, object],
+        metadata: dict[str, str] | None = None,
     ) -> ProviderResponse:
         del output_schema
         key = self.request_key(model, instructions, input_payload)

@@ -36,4 +36,6 @@ async def create_runtime(db: DatabaseRuntime) -> CallbackCandidateActivityRuntim
         screen_universe=runtime.screen_equity_universe,
         explore_shortlist=runtime.run_equity_explorer_agent,
         persist_suggestions=runtime.persist_exploration_suggestions,
+        expire_suggestions=runtime.expire_stale_suggestions,
+        restrict_list=runtime.apply_restricted_list_block,
     )

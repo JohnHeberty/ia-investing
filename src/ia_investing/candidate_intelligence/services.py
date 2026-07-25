@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from dataclasses import replace
 from datetime import datetime
 from decimal import Decimal
@@ -26,6 +27,8 @@ from .models import (
 from .readiness import ReadinessEvaluator
 from .repositories import CandidateRepository, ExplorationRepository
 from .state_machine import require_transition
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowStarter(Protocol):
@@ -73,6 +76,13 @@ class CandidateService:
         request: CandidateCreateRequest,
         data_as_of: datetime,
     ) -> tuple[InvestmentCandidate, AnalysisRun, str]:
+        logger.info(
+            "creating manual candidate ticker=%s exchange=%s org_id=%s actor=%s",
+            request.ticker,
+            request.exchange,
+            organization_id,
+            actor_id,
+        )
         identity = CandidateIdentity(
             ticker=request.ticker,
             exchange=request.exchange,
@@ -129,6 +139,12 @@ class CandidateService:
         request: CandidateSourceCreateRequest,
         expected_version: int,
     ) -> InvestmentCandidate:
+        logger.info(
+            "adding user source candidate_id=%s kind=%s actor=%s",
+            candidate_id,
+            request.kind,
+            actor_id,
+        )
         candidate = await self.repository.get(candidate_id)
         source = CandidateSource.user_supplied(
             candidate_id=candidate.id,
@@ -204,6 +220,13 @@ class CandidateService:
         request: CandidateReanalysisRequest,
         expected_version: int,
     ) -> tuple[InvestmentCandidate, AnalysisRun, str]:
+        logger.info(
+            "reanalysis requested candidate_id=%s trigger=%s actor=%s allow_incomplete=%s",
+            candidate_id,
+            request.trigger,
+            actor_id,
+            request.allow_incomplete,
+        )
         candidate = await self.repository.get(candidate_id)
         readiness = self.readiness.evaluate(
             sources=candidate.sources,
@@ -266,6 +289,12 @@ class CandidateService:
         reason: str,
         expected_version: int,
     ) -> InvestmentCandidate:
+        logger.info(
+            "applying decision candidate_id=%s decision=%s reason=%s",
+            candidate_id,
+            decision,
+            reason,
+        )
         candidate = await self.repository.get(candidate_id)
         target_by_decision = {
             CandidateDecision.APPROVE: CandidateStatus.APPROVED,
@@ -326,6 +355,13 @@ class ExplorationService:
         maximum_suggestions: int,
         excluded_instrument_ids: tuple[UUID, ...] = (),
     ) -> tuple[ExplorationRun, str]:
+        logger.info(
+            "exploration run requested org_id=%s actor=%s strategies=%s max_suggestions=%d",
+            organization_id,
+            actor_id,
+            strategy_codes,
+            maximum_suggestions,
+        )
         run = ExplorationRun(
             id=uuid4(),
             organization_id=organization_id,
@@ -358,6 +394,7 @@ class ExplorationService:
         suggestion_id: UUID,
         actor_id: str,
     ) -> InvestmentCandidate:
+        logger.info("promoting suggestion suggestion_id=%s actor=%s", suggestion_id, actor_id)
         suggestion = await self.exploration_repository.get_suggestion(suggestion_id)
         if suggestion.status is not SuggestionStatus.NEW:
             raise ValueError("only new suggestions can be promoted")

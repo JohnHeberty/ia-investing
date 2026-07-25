@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
@@ -19,6 +21,8 @@ from .models import CandidateGap, CandidateSource, InvestmentCandidate, utcnow
 from .readiness import ReadinessEvaluator
 from .repositories import CandidateRepository
 from .state_machine import require_transition
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -188,10 +192,18 @@ class CandidateAnalysisOrchestrator:
         data_as_of: datetime,
         allow_incomplete: bool = False,
     ) -> CandidateWorkflowResult:
+        start = time.perf_counter()
+        logger.info("candidate workflow started candidate_id=%s data_as_of=%s", candidate_id, data_as_of)
         candidate = await self.repository.get(candidate_id)
         candidate = await self._move(candidate, CandidateStatus.IDENTITY_RESOLUTION)
 
         identity = await self.identity_resolver.resolve(candidate, data_as_of=data_as_of)
+        logger.info(
+            "identity resolved candidate_id=%s resolved=%s confidence=%s",
+            candidate_id,
+            identity.resolved,
+            identity.confidence,
+        )
         if not identity.resolved or identity.confidence < Decimal("0.80"):
             gap = CandidateGap(
                 id=uuid4(),
@@ -230,6 +242,12 @@ class CandidateAnalysisOrchestrator:
         candidate = await self._move(candidate, CandidateStatus.SOURCE_DISCOVERY)
 
         discovery = await self.source_discovery.discover(candidate, data_as_of=data_as_of)
+        logger.info(
+            "source discovery completed candidate_id=%s sources=%d gaps=%d",
+            candidate_id,
+            len(discovery.sources),
+            len(discovery.gaps),
+        )
         for finding in discovery.sources:
             source = CandidateSource(
                 id=uuid4(),
@@ -289,6 +307,13 @@ class CandidateAnalysisOrchestrator:
         candidate = await self._move(candidate, CandidateStatus.SOURCE_VALIDATION)
         candidate = await self._move(candidate, CandidateStatus.DOCUMENT_COLLECTION)
         collection = await self.document_collector.collect(candidate, data_as_of=data_as_of)
+        logger.info(
+            "document collection completed candidate_id=%s success=%s latest_period=%s documents=%d",
+            candidate_id,
+            collection.success,
+            collection.latest_period_found,
+            collection.document_count,
+        )
         if not collection.success or not collection.latest_period_found:
             candidate = candidate.with_gaps((*candidate.gaps, *collection.gaps))
             candidate = await self._persist(candidate)
@@ -297,6 +322,13 @@ class CandidateAnalysisOrchestrator:
 
         candidate = await self._move(candidate, CandidateStatus.DATA_QUALITY)
         quality = await self.data_validator.validate(candidate, collection, data_as_of=data_as_of)
+        logger.info(
+            "data quality check completed candidate_id=%s promotable=%s completeness=%s reconciliation=%s",
+            candidate_id,
+            quality.promotable,
+            quality.completeness_score,
+            quality.reconciliation_score,
+        )
         if not quality.promotable:
             gaps = tuple(
                 CandidateGap(
@@ -322,6 +354,13 @@ class CandidateAnalysisOrchestrator:
 
         candidate = await self._move(candidate, CandidateStatus.FUNDAMENTAL_ANALYSIS)
         research = await self.research_pipeline.analyze(candidate, data_as_of=data_as_of)
+        logger.info(
+            "research completed candidate_id=%s completed=%s coverage=%s recommendation=%s",
+            candidate_id,
+            research.completed,
+            research.evidence_coverage,
+            research.recommendation,
+        )
         if not research.completed or research.evidence_coverage < Decimal("0.90"):
             gap = CandidateGap(
                 id=uuid4(),
@@ -352,6 +391,13 @@ class CandidateAnalysisOrchestrator:
 
         candidate = await self._move(candidate, CandidateStatus.RISK_ANALYSIS)
         risk = await self.risk_pipeline.analyze(candidate, research, data_as_of=data_as_of)
+        logger.info(
+            "risk analysis completed candidate_id=%s completed=%s eligible=%s breaches=%d",
+            candidate_id,
+            risk.completed,
+            risk.eligible,
+            len(risk.hard_limit_breaches),
+        )
         if not risk.completed or not risk.eligible or risk.hard_limit_breaches:
             candidate = await self._move(candidate, CandidateStatus.REJECTED)
             return CandidateWorkflowResult(
@@ -369,6 +415,12 @@ class CandidateAnalysisOrchestrator:
             risk,
             data_as_of=data_as_of,
         )
+        logger.info(
+            "committee review completed candidate_id=%s decision=%s reason=%s",
+            candidate_id,
+            committee.decision,
+            committee.reason,
+        )
         target = {
             CandidateDecision.APPROVE: CandidateStatus.APPROVED,
             CandidateDecision.REJECT: CandidateStatus.REJECTED,
@@ -385,6 +437,14 @@ class CandidateAnalysisOrchestrator:
             lock_version=candidate.lock_version + 1,
         )
         candidate = await self._persist(candidate)
+        duration_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "candidate workflow completed candidate_id=%s decision=%s status=%s duration_ms=%.0f",
+            candidate_id,
+            committee.decision,
+            candidate.status,
+            duration_ms,
+        )
         return CandidateWorkflowResult(
             candidate_id=candidate.id,
             status=candidate.status,

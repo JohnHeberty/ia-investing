@@ -4,13 +4,14 @@ import base64
 import hashlib
 import json
 import secrets
+from typing import Any
 from uuid import UUID
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Response
-from jose import jwk, jwt
-from jose.constants import Algorithms
-from jose.exceptions import JWKError, JWTError
+from jose import jwk, jwt  # type: ignore[import-untyped]
+from jose.constants import Algorithms  # type: ignore[import-untyped]
+from jose.exceptions import JWKError, JWTError  # type: ignore[import-untyped]
 from pydantic import BaseModel
 
 from apps.api.security import (
@@ -101,10 +102,10 @@ async def _verify_jwt(id_token: str) -> dict[str, object]:
     if not kid:
         raise HTTPException(status_code=401, detail="JWT missing kid header")
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-        resp = await client.get(settings.oidc_jwks_url)
+        resp = await client.get(settings.oidc_jwks_url or "")
     if resp.is_error:
         raise HTTPException(status_code=503, detail="Failed to fetch JWKS")
-    jwks: dict = resp.json()
+    jwks: dict[str, Any] = resp.json()
     key_data = None
     for key in jwks.get("keys", []):
         if key.get("kid") == kid:
@@ -127,7 +128,7 @@ async def _verify_jwt(id_token: str) -> dict[str, object]:
         )
     except JWTError as exc:
         raise HTTPException(status_code=401, detail=f"JWT verification failed: {exc}") from exc
-    return claims
+    return dict(claims)
 
 
 @router.get("/authorize")
@@ -159,7 +160,7 @@ async def authorize(
 async def callback(
     code: str | None = None,
     state: str | None = None,
-    request: Request = None,
+    request: Request = None,  # type: ignore[assignment]
 ) -> dict[str, object]:
     if not code or not state:
         raise HTTPException(status_code=400, detail="Missing authorization code or state")
@@ -249,7 +250,7 @@ async def callback(
 @router.post("/login")
 async def login(
     body: LoginRequest | None = None,
-    response: Response = None,
+    response: Response = None,  # type: ignore[assignment]
 ) -> dict[str, str]:
     if body is None or not body.email or not body.password:
         raise HTTPException(status_code=422, detail="Email and password are required")

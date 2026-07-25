@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import ipaddress
+import logging
 import socket
+import time
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from types import MappingProxyType
 from urllib.parse import urljoin, urlsplit, urlunsplit
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 class UnsafeUrlError(ValueError):
@@ -40,6 +45,12 @@ class EgressPolicy:
         "text/xml",
     )
     user_agent: str = "IA-Investing-Source-Validator/1.0"
+    max_retries: int = 3
+    retry_base_delay: float = 0.5
+    retry_max_delay: float = 10.0
+    rate_limit_rps: float = 10.0
+    cache_ttl_seconds: float = 300.0
+    cache_max_entries: int = 256
 
     def __post_init__(self) -> None:
         if self.maximum_redirects < 0:
@@ -64,9 +75,65 @@ class ValidatedHttpResponse:
 
 
 @dataclass(slots=True)
+class _HostRateLimiter:
+    rps: float
+    _tokens: float = field(init=False)
+    _last_refill: float = field(init=False)
+
+    def __post_init__(self) -> None:
+        self._tokens = self.rps
+        self._last_refill = time.monotonic()
+
+    async def acquire(self) -> None:
+        now = time.monotonic()
+        elapsed = now - self._last_refill
+        self._tokens = min(self.rps, self._tokens + elapsed * self.rps)
+        self._last_refill = now
+        if self._tokens < 1.0:
+            wait = (1.0 - self._tokens) / self.rps
+            await asyncio.sleep(wait)
+            self._tokens = 0.0
+        else:
+            self._tokens -= 1.0
+
+
+@dataclass(slots=True)
+class _ResponseCache:
+    ttl: float
+    max_entries: int
+    _entries: dict[str, tuple[float, ValidatedHttpResponse]] = field(default_factory=dict, init=False)
+
+    def get(self, key: str) -> ValidatedHttpResponse | None:
+        entry = self._entries.get(key)
+        if entry is None:
+            return None
+        ts, resp = entry
+        if time.monotonic() - ts > self.ttl:
+            del self._entries[key]
+            return None
+        return resp
+
+    def put(self, key: str, response: ValidatedHttpResponse) -> None:
+        if len(self._entries) >= self.max_entries:
+            oldest_key = min(self._entries, key=lambda k: self._entries[k][0])
+            del self._entries[oldest_key]
+        self._entries[key] = (time.monotonic(), response)
+
+
+@dataclass(slots=True)
 class SafeHttpClient:
     policy: EgressPolicy
     _client: httpx.AsyncClient | None = field(default=None, init=False, repr=False)
+    _rate_limiters: dict[str, _HostRateLimiter] = field(default_factory=dict, init=False, repr=False)
+    _cache: _ResponseCache = field(init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self._cache = _ResponseCache(ttl=self.policy.cache_ttl_seconds, max_entries=self.policy.cache_max_entries)
+
+    def _get_rate_limiter(self, host: str) -> _HostRateLimiter:
+        if host not in self._rate_limiters:
+            self._rate_limiters[host] = _HostRateLimiter(rps=self.policy.rate_limit_rps)
+        return self._rate_limiters[host]
 
     async def __aenter__(self) -> SafeHttpClient:
         await self.open()
@@ -98,6 +165,47 @@ class SafeHttpClient:
         await self.open()
         assert self._client is not None
         requested_url = normalize_and_validate_url(url, self.policy)
+        parsed = urlsplit(requested_url)
+        host = parsed.hostname or ""
+
+        cache_key = hashlib.sha256(requested_url.encode()).hexdigest()
+        cached = self._cache.get(cache_key)
+        if cached is not None:
+            return cached
+
+        rate_limiter = self._get_rate_limiter(host)
+        last_exc: Exception | None = None
+
+        for attempt in range(1 + self.policy.max_retries):
+            if attempt > 0:
+                delay = min(
+                    self.policy.retry_base_delay * (2 ** (attempt - 1)),
+                    self.policy.retry_max_delay,
+                )
+                await asyncio.sleep(delay)
+
+            await rate_limiter.acquire()
+
+            try:
+                result = await self._do_get(requested_url)
+                self._cache.put(cache_key, result)
+                return result
+            except UnsafeUrlError:
+                raise
+            except Exception as exc:
+                last_exc = exc
+                logger.warning(
+                    "SafeHttpClient.get attempt %d/%d failed for %s: %s",
+                    attempt + 1,
+                    1 + self.policy.max_retries,
+                    requested_url,
+                    exc,
+                )
+
+        raise last_exc  # type: ignore[misc]
+
+    async def _do_get(self, requested_url: str) -> ValidatedHttpResponse:
+        assert self._client is not None
         current_url = requested_url
         redirect_chain: list[str] = []
         all_ips: set[str] = set()

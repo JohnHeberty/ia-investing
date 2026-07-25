@@ -40,6 +40,7 @@ class ChatCompletionRequest(BaseModel):
     temperature: float | None = None
     max_tokens: int | None = None
     stream: bool = False
+    metadata: dict[str, str] | None = None
 
 
 class ChatCompletionResponse(BaseModel):
@@ -117,6 +118,8 @@ class OpenAIGateway(AIGateway):
             kwargs["temperature"] = request.temperature
         if request.max_tokens is not None:
             kwargs["max_tokens"] = request.max_tokens
+        if request.metadata:
+            kwargs["extra_body"] = {"metadata": request.metadata}
 
         estimated = sum(max(len(m.content) // 4, 1) for m in request.messages)
         wait = await self.rate_limiter.acquire(estimated)
@@ -367,6 +370,7 @@ class GatewayProvider:
         instructions: str,
         input_payload: dict[str, object],
         output_schema: dict[str, object],
+        metadata: dict[str, str] | None = None,
     ) -> ProviderResponse:
         schema_text = json.dumps(output_schema, indent=2) if output_schema else ""
         base_system = instructions
@@ -396,7 +400,7 @@ class GatewayProvider:
             started = time.monotonic()
             try:
                 result = await self.gateway.chat_completion(
-                    ChatCompletionRequest(messages=messages, model=model),
+                    ChatCompletionRequest(messages=messages, model=model, metadata=metadata),
                 )
             except ProviderError as exc:
                 retryable = isinstance(exc, (ProviderTimeoutError, ProviderRateLimitError))

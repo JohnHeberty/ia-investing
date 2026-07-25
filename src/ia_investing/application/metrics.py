@@ -78,8 +78,8 @@ class MetricService:
         deps = definition.dependencies
         if not deps:
             coverage = Decimal("0")
-            facts: dict[str, object] = {}
-            usable: dict[str, object] = {}
+            facts: dict[str, FinancialFact] = {}
+            usable: dict[str, Decimal] = {}
         else:
             rows = (
                 await self.session.execute(

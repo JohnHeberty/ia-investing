@@ -53,7 +53,7 @@ class VaultSecretsManager(SecretsManager):
                 data = json.loads(resp.read().decode())
             secret_data = data.get("data", {}).get("data", {})
             if isinstance(secret_data, dict) and len(secret_data) == 1:
-                return next(iter(secret_data.values()))
+                return str(next(iter(secret_data.values())))
             if isinstance(secret_data, dict):
                 return json.dumps(secret_data)
             return str(secret_data)

@@ -19,6 +19,7 @@ from .guardrails import (
     GuardrailViolationError,
     RunBudget,
     enforce_budget,
+    validate_candidate_agent_output,
     validate_specialist_output,
     validate_untrusted_text,
 )
@@ -42,7 +43,7 @@ class AgentExecutionService:
         self.session = session
         self.provider = provider
 
-    async def execute(self, run_id: UUID) -> AgentRuntimeRun:
+    async def execute(self, run_id: UUID, metadata: dict[str, str] | None = None) -> AgentRuntimeRun:
         run = await self.session.get(AgentRuntimeRun, run_id, with_for_update=True)
         if run is None:
             raise LookupError("agent run not found")
@@ -108,6 +109,7 @@ class AgentExecutionService:
                         instructions=instructions,
                         input_payload=run.input_payload,
                         output_schema=schema.content,
+                        metadata=metadata,
                     )
                 provider_span.set_attributes(
                     {
@@ -185,6 +187,8 @@ class AgentExecutionService:
     ) -> dict[str, object]:
         if capability == "research_coordinator":
             return CoordinatorOutput.model_validate(payload).model_dump(mode="json")
+        if capability in {"fundamentalist_analyst", "risk_director", "investment_committee"}:
+            return validate_candidate_agent_output(capability, payload)
         if capability not in {"filing", "news", "macro", "political", "critic"}:
             raise GuardrailViolationError("unsupported_capability", "Capability has no output validator")
         evidence_ids: set[UUID] = set()

@@ -90,3 +90,56 @@ router_settings:
   timeout: 120
   allowed_fails: 3
   cooldown_time: 30
+
+# ── Virtual Keys (per-role access control) ──────────────────────────────
+# Keys are hashed by LiteLLM proxy; store the literal key in .env as
+# LITELLM_KEY_RESEARCH / LITELLM_KEY_COMMITTEE / LITELLM_KEY_DISCOVERY
+virtual_keys:
+  # Research agents — mid-tier models, moderate budget
+  - key_name: research-agent-key
+    key_value: os.environ/LITELLM_KEY_RESEARCH
+    models:
+      - research-standard
+      - qwen-plus
+      - qwen-turbo
+    max_budget: 50
+    budget_duration: 30d
+    metadata:
+      role: research-agents
+      team: ai-research
+
+  # Committee (high-stakes decisions) — top-tier models, higher budget
+  - key_name: committee-key
+    key_value: os.environ/LITELLM_KEY_COMMITTEE
+    models:
+      - committee-critical
+      - qwen
+      - claude-sonnet
+    max_budget: 80
+    budget_duration: 30d
+    metadata:
+      role: committee
+      team: governance
+
+  # Discovery / screening — cheapest models, low budget
+  - key_name: discovery-key
+    key_value: os.environ/LITELLM_KEY_DISCOVERY
+    models:
+      - discovery-fast
+      - qwen-turbo
+    max_budget: 20
+    budget_duration: 30d
+    metadata:
+      role: discovery
+      team: screening
+
+  # Full-access (admin / master) — all models, highest budget
+  - key_name: admin-key
+    key_value: os.environ/LITELLM_KEY_ADMIN
+    models:
+      - "*"
+    max_budget: 200
+    budget_duration: 30d
+    metadata:
+      role: admin
+      team: platform

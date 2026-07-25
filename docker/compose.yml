@@ -9,6 +9,11 @@ x-app-environment: &app-environment
   TEMPORAL__ADDRESS: temporal:7233
   TELEMETRY__OTLP_ENDPOINT: http://otel-collector:4317
   TELEMETRY__ENABLED: "true"
+  # LiteLLM virtual keys (per-role)
+  LITELLM_KEY_RESEARCH: ${LITELLM_KEY_RESEARCH:-sk-litellm-research}
+  LITELLM_KEY_COMMITTEE: ${LITELLM_KEY_COMMITTEE:-sk-litellm-committee}
+  LITELLM_KEY_DISCOVERY: ${LITELLM_KEY_DISCOVERY:-sk-litellm-discovery}
+  LITELLM_KEY_ADMIN: ${LITELLM_KEY_ADMIN:-sk-litellm-admin}
 
 x-app: &app
   build:
@@ -174,6 +179,8 @@ services:
       STORAGE__ENDPOINT: http://minio:9000
       TEMPORAL__ADDRESS: temporal:7233
       WORKER__CAPABILITY: data-ingestion
+      CANDIDATE__ENABLED: "true"
+      CANDIDATE__RUNTIME_FACTORY: ia_investing.integrations.candidate_runtime:create_runtime
     depends_on:
       migrate: {condition: service_completed_successfully}
       minio-init: {condition: service_completed_successfully}
@@ -196,6 +203,8 @@ services:
       AI__GATEWAY__BASE_URL: ${AI__GATEWAY__BASE_URL:-http://litellm:4000/v1}
       AI__GATEWAY__API_KEY: ${AI__GATEWAY__API_KEY:-sk-litellm-master}
       AI__GATEWAY__MODEL: ${AI__GATEWAY__MODEL:-qwen}
+      CANDIDATE__ENABLED: "true"
+      CANDIDATE__RUNTIME_FACTORY: ia_investing.integrations.candidate_runtime:create_runtime
       # Block direct egress — workers must go through LiteLLM gateway
       OPENAI_API_KEY: ""
       OPENAI_BASE_URL: ""
@@ -219,6 +228,8 @@ services:
       DATABASE__URL: postgresql+asyncpg://app:${APP_DB_PASSWORD:-app-local-only}@postgres:5432/stock_intelligence
       TEMPORAL__ADDRESS: temporal:7233
       WORKER__CAPABILITY: portfolio-risk
+      CANDIDATE__ENABLED: "true"
+      CANDIDATE__RUNTIME_FACTORY: ia_investing.integrations.candidate_runtime:create_runtime
     depends_on:
       migrate: {condition: service_completed_successfully}
       temporal: {condition: service_healthy}

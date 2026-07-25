@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+import time
 from dataclasses import dataclass, replace
 from datetime import datetime
 from decimal import Decimal
@@ -15,6 +17,8 @@ from .models import (
     utcnow,
 )
 from .repositories import CandidateRepository, ExplorationRepository
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +100,8 @@ class AutonomousExplorationOrchestrator:
         self.explorer_agent = explorer_agent
 
     async def run(self, run_id: UUID) -> ExplorerExecutionResult:
+        start = time.perf_counter()
+        logger.info("exploration run started run_id=%s", run_id)
         run = await self.exploration_repository.get_run(run_id)
         if run.status is not ExplorationRunStatus.QUEUED:
             raise ValueError("only queued exploration runs can start")
@@ -106,6 +112,7 @@ class AutonomousExplorationOrchestrator:
             organization_id=run.organization_id,
             data_as_of=run.data_as_of,
         )
+        logger.info("universe snapshot loaded run_id=%s universe_size=%d", run_id, len(universe))
         excluded = set(run.excluded_instrument_ids)
         eligible: list[UniverseSecurity] = []
         for security in universe:
@@ -130,6 +137,12 @@ class AutonomousExplorationOrchestrator:
             strategy_codes=run.strategy_codes,
             data_as_of=run.data_as_of,
         )
+        logger.info(
+            "universe screened run_id=%s eligible=%d screened=%d",
+            run_id,
+            len(eligible),
+            len(screened),
+        )
         bounded = tuple(
             sorted(screened, key=lambda item: item.quantitative_score, reverse=True)[
                 : max(run.maximum_suggestions * 5, run.maximum_suggestions)
@@ -139,6 +152,12 @@ class AutonomousExplorationOrchestrator:
             bounded,
             data_as_of=run.data_as_of,
             maximum_suggestions=run.maximum_suggestions,
+        )
+        logger.info(
+            "explorer agent completed run_id=%s findings=%d limitations=%d",
+            run_id,
+            len(agent_output.candidates),
+            len(agent_output.limitations),
         )
 
         screened_by_ticker = {(item.security.exchange.upper(), item.security.ticker.upper()): item for item in bounded}
@@ -216,6 +235,14 @@ class AutonomousExplorationOrchestrator:
             suggestions=tuple(suggestions),
         )
         await self.exploration_repository.save_run(run)
+        duration_ms = (time.perf_counter() - start) * 1000
+        logger.info(
+            "exploration run completed run_id=%s status=%s suggestions=%d duration_ms=%.0f",
+            run_id,
+            run.status,
+            len(run.suggestions),
+            duration_ms,
+        )
         return ExplorerExecutionResult(
             run_id=run.id,
             status=run.status,

@@ -7,7 +7,6 @@ from decimal import Decimal
 from sqlalchemy import select
 
 from connectors.b3._cotahist import get_cotahist_year
-from connectors.base import HttpClient
 from database.models.instrument_master import Instrument, Listing
 from ia_investing.integrations.connectors.models import B3ListingProfile
 from ia_investing.platform.database.runtime import DatabaseRuntime
@@ -16,9 +15,8 @@ logger = logging.getLogger(__name__)
 
 
 class B3Resolver:
-    def __init__(self, db: DatabaseRuntime, client: HttpClient | None = None) -> None:
+    def __init__(self, db: DatabaseRuntime) -> None:
         self._db = db
-        self._client = client or HttpClient(timeout=60.0)
 
     async def lookup_by_ticker(self, ticker: str) -> B3ListingProfile | None:
         async with self._db.session() as session:
@@ -54,7 +52,6 @@ class B3Resolver:
             trades = await get_cotahist_year(
                 year=now.year,
                 ticker=ticker.upper().strip(),
-                client=self._client,
             )
         except Exception as exc:
             logger.warning("COTAHIST fetch failed for %s: %s", ticker, exc)

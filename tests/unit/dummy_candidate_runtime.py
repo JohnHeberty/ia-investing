@@ -27,4 +27,6 @@ async def create_mock_runtime(*_args: object, **_kwargs: object) -> CallbackCand
         screen_universe=AsyncMock(),
         explore_shortlist=AsyncMock(),
         persist_suggestions=AsyncMock(),
+        expire_suggestions=AsyncMock(),
+        restrict_list=AsyncMock(),
     )

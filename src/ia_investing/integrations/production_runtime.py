@@ -5,8 +5,11 @@ import logging
 import uuid
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from typing import Any
+from uuid import UUID
 
 import sqlalchemy as sa
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from connectors.base import HttpClient
 from database.models.catalog import Issuer
@@ -27,6 +30,7 @@ from ia_investing.ai.gateway import create_gateway_provider
 from ia_investing.ai.provider import AgentProvider, MockProvider
 from ia_investing.application.agent_runtime import AgentRuntimeService
 from ia_investing.application.instruments import InstrumentMasterService
+from ia_investing.data.raw_zone import ImmutableObjectStore
 from ia_investing.integrations.connectors.b3_resolver import B3Resolver
 from ia_investing.integrations.connectors.cvm_resolver import CVMResolver
 from ia_investing.orchestration.activities.candidate_intelligence import (
@@ -46,6 +50,19 @@ from ia_investing.platform.http.safe_client import EgressPolicy, SafeHttpClient
 from ia_investing.settings import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_text_from_html(raw: bytes) -> str:
+    """Best-effort HTML-to-text extraction without external dependencies."""
+    import re
+
+    text = raw.decode("utf-8", errors="replace")
+    text = re.sub(r"<script[^>]*>.*?</script>", " ", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<style[^>]*>.*?</style>", " ", text, flags=re.DOTALL | re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"&[a-zA-Z]+;", " ", text)
+    text = re.sub(r"&#\d+;", " ", text)
+    return text.lower()
 
 
 def _provider_for_runner() -> AgentProvider:
@@ -71,10 +88,11 @@ async def _execute_governed_agent(
     db: DatabaseRuntime,
     capability: str,
     organization_id: uuid.UUID,
-    input_data: dict,
+    input_data: dict[str, Any],
     data_as_of: datetime,
     knowledge_cutoff: datetime,
     actor_id: str = "candidate_runtime",
+    agent_run_id: str | None = None,
 ) -> AgentResult:
     """Execute an agent through the governed runtime path (AgentRuntimeService + AgentExecutionService)."""
     async with db.session() as session:
@@ -96,7 +114,13 @@ async def _execute_governed_agent(
 
     async with db.session() as session:
         provider = _provider_for_runner()
-        executed = await AgentExecutionService(session, provider).execute(run_id)
+        metadata = {
+            "org_id": str(organization_id),
+            "workflow_id": f"candidate_{capability}",
+        }
+        if agent_run_id:
+            metadata["agent_run_id"] = agent_run_id
+        executed = await AgentExecutionService(session, provider).execute(run_id, metadata=metadata)
         await session.commit()
 
     if executed.status == "succeeded":
@@ -182,13 +206,15 @@ class ProductionCandidateRuntime:
         agent_runtime_service: object | None = None,
         cvm_resolver: CVMResolver | None = None,
         b3_resolver: B3Resolver | None = None,
+        object_store: ImmutableObjectStore | None = None,
     ) -> None:
         self._db = db
         self._http = http_client or SafeHttpClient(policy=EgressPolicy())
         self._client = HttpClient(timeout=60.0)
         self._agent_runtime_service = agent_runtime_service
         self._cvm = cvm_resolver or CVMResolver(self._http, self._client)
-        self._b3 = b3_resolver or B3Resolver(db, self._client)
+        self._b3 = b3_resolver or B3Resolver(db)
+        self._object_store = object_store
 
     # ------------------------------------------------------------------
     # Phase 1 — Identity Resolution
@@ -583,7 +609,22 @@ class ProductionCandidateRuntime:
                 reason=f"HTTP {response.status_code}",
             )
 
-        content = response.content.decode("utf-8", errors="replace").lower()
+        raw_content = response.content
+        raw_hash = hashlib.sha256(raw_content).hexdigest()
+
+        if self._object_store is not None:
+            try:
+                raw_key = f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}"
+                media_type = response.headers.get("content-type", "application/octet-stream")
+                await self._object_store.put_once(raw_key, raw_content, media_type, raw_hash)
+            except Exception as exc:
+                logger.warning("S3 raw store failed for source %s: %s", source.id, exc)
+
+        content_type = response.headers.get("content-type", "")
+        if "html" in content_type or "xml" in content_type:
+            content = _extract_text_from_html(raw_content)
+        else:
+            content = raw_content.decode("utf-8", errors="replace").lower()
         async with self._db.session() as session:
             candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
 
@@ -608,6 +649,8 @@ class ProductionCandidateRuntime:
                     "final_url": response.final_url,
                     "redirect_chain": list(response.redirect_chain),
                     "identity_signals": identity_signals,
+                    "raw_content_hash": raw_hash,
+                    "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
                 }
                 await session.commit()
                 return CandidateSourceValidationResult(
@@ -625,6 +668,8 @@ class ProductionCandidateRuntime:
                 "status_code": response.status_code,
                 "final_url": response.final_url,
                 "reason": "No identity signals found in page content",
+                "raw_content_hash": raw_hash,
+                "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
             }
             await session.commit()
 
@@ -665,12 +710,14 @@ class ProductionCandidateRuntime:
 
         collected = 0
         failed = 0
+        stored_to_s3 = 0
         for source in sources:
             if not source.url:
                 continue
             try:
                 response = await self._http.get(source.url)
-                content_hash = hashlib.sha256(response.content).hexdigest()
+                content = response.content
+                content_hash = hashlib.sha256(content).hexdigest()
                 async with self._db.session() as session:
                     session.add(
                         CandidateEventRecord(
@@ -686,13 +733,23 @@ class ProductionCandidateRuntime:
                                 "kind": source.kind,
                                 "url": source.url,
                                 "content_hash": content_hash,
-                                "content_length": len(response.content),
+                                "content_length": len(content),
                                 "status_code": response.status_code,
                             },
                         )
                     )
                     await session.commit()
                 collected += 1
+
+                if self._object_store is not None:
+                    try:
+                        storage_key = f"candidates/{command.candidate_id}/docs/{source.id}/{content_hash}"
+                        media_type = response.headers.get("content-type", "application/octet-stream")
+                        await self._object_store.put_once(storage_key, content, media_type, content_hash)
+                        stored_to_s3 += 1
+                    except Exception as exc:
+                        logger.warning("S3 put_once failed for source %s: %s", source.id, exc)
+
             except Exception as exc:
                 logger.warning("collect_document %s: %s", source.url, exc)
                 failed += 1
@@ -708,8 +765,8 @@ class ProductionCandidateRuntime:
         return _stage_passed(
             command,
             "document_collection",
-            reason=f"Downloaded {collected} document(s), {failed} failure(s).",
-            payload={"collected": collected, "failed": failed},
+            reason=f"Downloaded {collected} document(s), {stored_to_s3} stored to S3, {failed} failure(s).",
+            payload={"collected": collected, "stored_to_s3": stored_to_s3, "failed": failed},
         )
 
     # ------------------------------------------------------------------
@@ -720,7 +777,7 @@ class ProductionCandidateRuntime:
         from collections import defaultdict
         from datetime import date
 
-        from connectors.cvm._financials import StatementType, get_dfp, parse_value_status
+        from connectors.cvm._financials import FinancialEntry, StatementType, get_dfp, parse_value_status
         from database.models.data_foundation import DataSource, SourceObject, SourceObjectVersion
         from database.models.financial_facts import FinancialFact, ReportingPeriod
         from ia_investing.application.financial_facts import FinancialFactInput, FinancialFactRepository
@@ -747,7 +804,7 @@ class ProductionCandidateRuntime:
             now = _now()
 
             year = command.data_as_of.year
-            entries_by_stmt: dict[StatementType, list] = defaultdict(list)
+            entries_by_stmt: dict[StatementType, list[FinancialEntry]] = defaultdict(list)
             for y in (year, year - 1):
                 for stmt in (StatementType.DRE_CON, StatementType.BPA_CON, StatementType.BPP_CON):
                     try:
@@ -778,9 +835,9 @@ class ProductionCandidateRuntime:
                 session.add(ds)
                 await session.flush()
 
-            so_by_year: dict[int, object] = {}
-            sov_by_year: dict[int, object] = {}
-            rp_cache: dict[tuple, ReportingPeriod] = {}
+            so_by_year: dict[int, SourceObject] = {}
+            sov_by_year: dict[int, SourceObjectVersion] = {}
+            rp_cache: dict[tuple[UUID, date, date, str, str], ReportingPeriod] = {}
             repo = FinancialFactRepository(session)
             ingested = 0
 
@@ -1340,7 +1397,15 @@ class ProductionCandidateRuntime:
                 .over(partition_by=MarketQuote.listing_id, order_by=MarketQuote.quoted_at.desc())
                 .label("rn"),
             ).subquery()
-            latest_quote_filtered = sa.select(latest_quote_sq.c).where(latest_quote_sq.c.rn == 1).subquery()
+            latest_quote_filtered = (
+                sa.select(
+                    latest_quote_sq.c.listing_id,
+                    latest_quote_sq.c.bid_price,
+                    latest_quote_sq.c.ask_price,
+                )
+                .where(latest_quote_sq.c.rn == 1)
+                .subquery()
+            )
             stmt = stmt.join(
                 latest_quote_filtered,
                 latest_quote_filtered.c.listing_id == Listing.id,
@@ -1462,7 +1527,6 @@ class ProductionCandidateRuntime:
                     else security["issuer_id"]
                 )
 
-                # Guard: skip duplicate instrument_id for this organization
                 existing = (
                     await session.execute(
                         sa.select(ExplorationSuggestionRecord.id).where(
@@ -1479,7 +1543,11 @@ class ProductionCandidateRuntime:
                     )
                     continue
 
+                llm_score = float(suggestion.get("score", 0))
+                quant_score = await self._compute_quantitative_score(session, inst_uuid, issuer_uuid)
+
                 quantize_4 = Decimal("0.0001")
+                final_score = Decimal(str(round((llm_score * 0.4 + quant_score * 0.6), 4)))
                 record = ExplorationSuggestionRecord(
                     id=uuid.uuid4(),
                     exploration_run_id=run.id,
@@ -1489,13 +1557,14 @@ class ProductionCandidateRuntime:
                     ticker=str(suggestion.get("symbol", security.get("symbol", ""))),
                     exchange=str(security.get("exchange", "")),
                     status="new",
-                    quantitative_score=Decimal(str(suggestion.get("score", 0))).quantize(quantize_4),
+                    quantitative_score=final_score.quantize(quantize_4),
                     data_coverage_score=Decimal(str(suggestion.get("data_coverage", 0))).quantize(quantize_4),
                     source_discovery_score=Decimal(str(suggestion.get("source_discovery", 0))).quantize(quantize_4),
                     rationale=str(suggestion.get("rationale", "")),
                     signals=suggestion.get("signals", []),
                     risks=suggestion.get("risks", []),
                     source_snapshot=suggestion.get("source_snapshot", []),
+                    expires_at=_now() + timedelta(days=30),
                 )
                 session.add(record)
                 suggestions_persisted += 1
@@ -1514,9 +1583,122 @@ class ProductionCandidateRuntime:
             suggestion_count=suggestions_persisted,
         )
 
+    async def _compute_quantitative_score(self, session: AsyncSession, instrument_id: UUID, issuer_id: UUID) -> float:
+        """Compute a deterministic 0-1 score from available market + fundamental data."""
+        from database.models.financial_facts import FinancialFact
+
+        scores: list[float] = []
+
+        vol_row = (
+            await session.execute(
+                sa.select(sa.func.avg(MarketBar.volume)).where(
+                    MarketBar.listing_id == instrument_id,
+                    MarketBar.bar_at >= _now() - timedelta(days=30),
+                )
+            )
+        ).scalar()
+        if vol_row and vol_row > 0:
+            scores.append(min(float(vol_row) / 1_000_000, 1.0))
+        else:
+            scores.append(0.0)
+
+        spread_row = (
+            await session.execute(
+                sa.select(
+                    sa.func.abs(MarketQuote.ask_price - MarketQuote.bid_price)
+                    / sa.func.nullif(MarketQuote.bid_price, 0)
+                )
+                .where(
+                    MarketQuote.listing_id == instrument_id,
+                    MarketQuote.quoted_at >= _now() - timedelta(days=5),
+                )
+                .order_by(MarketQuote.quoted_at.desc())
+                .limit(1)
+            )
+        ).scalar()
+        if spread_row is not None:
+            scores.append(max(0.0, 1.0 - float(spread_row) * 10))
+        else:
+            scores.append(0.5)
+
+        fact_count = (
+            await session.execute(
+                sa.select(sa.func.count(FinancialFact.id)).where(FinancialFact.issuer_id == issuer_id)
+            )
+        ).scalar()
+        scores.append(min((fact_count or 0) / 100, 1.0))
+
+        source_count = (
+            await session.execute(
+                sa.select(sa.func.count(CandidateSourceRecord.id)).where(
+                    CandidateSourceRecord.candidate_id.in_(
+                        sa.select(InvestmentCandidateRecord.id).where(InvestmentCandidateRecord.issuer_id == issuer_id)
+                    )
+                )
+            )
+        ).scalar()
+        scores.append(min((source_count or 0) / 5, 1.0))
+
+        return sum(scores) / len(scores) if scores else 0.0
+
+    # ------------------------------------------------------------------
+    # Phase 8 — Suggestion Expiration & Restricted List
+    # ------------------------------------------------------------------
+
+    async def expire_stale_suggestions(self) -> int:
+        """Mark suggestions past their expiration date as expired. Returns count expired."""
+        async with self._db.session() as session:
+            now = _now()
+            result = await session.execute(
+                sa.update(ExplorationSuggestionRecord)
+                .where(
+                    ExplorationSuggestionRecord.status.in_(["new", "reviewed"]),
+                    ExplorationSuggestionRecord.expires_at.isnot(None),
+                    ExplorationSuggestionRecord.expires_at < now,
+                )
+                .values(status="expired")
+            )
+            await session.commit()
+            return int(result.rowcount)  # type: ignore[attr-defined]
+
+    async def apply_restricted_list_block(self, restricted_instrument_ids: list[UUID]) -> int:
+        """Mark suggestions for restricted instruments as blocked. Returns count blocked."""
+        if not restricted_instrument_ids:
+            return 0
+        async with self._db.session() as session:
+            result = await session.execute(
+                sa.update(ExplorationSuggestionRecord)
+                .where(
+                    ExplorationSuggestionRecord.instrument_id.in_(restricted_instrument_ids),
+                    ExplorationSuggestionRecord.status.in_(["new", "reviewed"]),
+                )
+                .values(status="blocked")
+            )
+            await session.commit()
+            return int(result.rowcount)  # type: ignore[attr-defined]
+
 
 async def create_production_runtime(db: DatabaseRuntime) -> ProductionCandidateRuntime:
-    from ia_investing.platform.http.safe_client import EgressPolicy
+    import boto3
 
+    from ia_investing.data.raw_zone import S3ImmutableObjectStore
+    from ia_investing.platform.http.safe_client import EgressPolicy
+    from ia_investing.settings import get_settings
+
+    settings = get_settings()
     http_client = SafeHttpClient(policy=EgressPolicy())
-    return ProductionCandidateRuntime(db=db, http_client=http_client)
+
+    object_store = None
+    try:
+        s3_client = boto3.client(
+            "s3",
+            endpoint_url=settings.storage.endpoint,
+            aws_access_key_id=settings.storage.access_key.get_secret_value(),
+            aws_secret_access_key=settings.storage.secret_key.get_secret_value(),
+            region_name="us-east-1",
+        )
+        object_store = S3ImmutableObjectStore(s3_client, settings.storage.bucket)
+    except Exception:
+        logger.warning("S3/MinIO not available; document storage will be hash-only (no S3 persistence)")
+
+    return ProductionCandidateRuntime(db=db, http_client=http_client, object_store=object_store)

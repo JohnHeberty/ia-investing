@@ -80,7 +80,7 @@ class BackendPortfolioOptimizationService:
         price_rows = (
             await self.session.execute(
                 sa.select(Listing.instrument_id, MarketBar.bar_at, MarketBar.close_price)
-                .distinct_on(Listing.instrument_id, MarketBar.bar_at)
+                .distinct_on(Listing.instrument_id, MarketBar.bar_at)  # type: ignore[attr-defined]
                 .join(MarketBar, MarketBar.listing_id == Listing.id)
                 .where(
                     Listing.instrument_id.in_(investable),

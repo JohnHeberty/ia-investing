@@ -1,3 +1,9 @@
+"""Legacy agent runner — internal use and tests only.
+
+Production code MUST use ``AgentExecutionService`` (``ai/execution.py``)
+which provides DB-backed persistence, guardrails, and budget enforcement.
+"""
+
 from __future__ import annotations
 
 import asyncio

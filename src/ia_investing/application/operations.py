@@ -118,7 +118,7 @@ class OperationService:
             if existing is not None:
                 if existing.request_hash != request_hash:
                     raise IdempotencyConflictError("idempotency key already used with a different request") from None
-                return OperationAcceptedV1(operation_id=existing.id, state=existing.state)
+                return OperationAcceptedV1(operation_id=existing.id, state=OperationState(existing.state))
             raise
         try:
             await self.temporal_client.start_workflow(
@@ -212,7 +212,7 @@ class OperationService:
             if existing is not None:
                 if existing.request_hash != request_hash:
                     raise IdempotencyConflictError("idempotency key already used with a different request") from None
-                return OperationAcceptedV1(operation_id=existing.id, state=existing.state)
+                return OperationAcceptedV1(operation_id=existing.id, state=OperationState(existing.state))
             raise
 
         if command.workflow_class is not None and command.workflow_id is not None:
