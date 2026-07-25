@@ -501,8 +501,9 @@ async def test_production_with_no_oidc_returns_503(monkeypatch: pytest.MonkeyPat
     monkeypatch.setenv("STORAGE__ACCESS_KEY", "prod-key")
     monkeypatch.setenv("STORAGE__SECRET_KEY", "prod-secret")
     monkeypatch.setenv("DATABASE__URL", "postgresql+asyncpg://u:p@db.prod.com/prod")
-    monkeypatch.setenv("AI__PROVIDER", "openai")
-    monkeypatch.setenv("AI__OPENAI_API_KEY", "sk-prod")
+    monkeypatch.setenv("AI__PROVIDER", "gateway")
+    monkeypatch.setenv("AI__GATEWAY__BASE_URL", "http://litellm:4000/v1")
+    monkeypatch.setenv("AI__GATEWAY__API_KEY", "sk-prod-gateway-key-12345")
     get_settings.cache_clear()
     try:
         with pytest.raises(HTTPException) as exc_info:

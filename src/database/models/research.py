@@ -16,6 +16,9 @@ class ResearchCase(Base):
     __tablename__ = "research_cases"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     case_type: Mapped[str] = mapped_column(sa.String(50))
     title: Mapped[str] = mapped_column(sa.String(300))
     priority: Mapped[str] = mapped_column(sa.String(20))
@@ -46,6 +49,9 @@ class ResearchQuestion(Base):
     __tablename__ = "research_questions"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     research_case_id: Mapped[UUID] = mapped_column(sa.ForeignKey("research_cases.id", ondelete="CASCADE"), index=True)
     question: Mapped[str] = mapped_column(sa.Text)
     is_required: Mapped[bool] = mapped_column(default=True)
@@ -64,6 +70,9 @@ class ResearchAssignment(Base):
     __tablename__ = "research_assignments"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     research_case_id: Mapped[UUID] = mapped_column(sa.ForeignKey("research_cases.id", ondelete="CASCADE"), index=True)
     assignee_type: Mapped[str] = mapped_column(sa.String(20))
     assignee_id: Mapped[str] = mapped_column(sa.String(255))
@@ -98,6 +107,9 @@ class ResearchEvidence(Base):
     __tablename__ = "research_evidence"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     research_case_id: Mapped[UUID] = mapped_column(sa.ForeignKey("research_cases.id", ondelete="CASCADE"), index=True)
     document_chunk_id: Mapped[UUID] = mapped_column(sa.ForeignKey("document_chunks.id", ondelete="RESTRICT"))
     source_object_version_id: Mapped[UUID] = mapped_column(
@@ -129,6 +141,9 @@ class ResearchClaim(Base):
     __tablename__ = "research_claims"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     research_case_id: Mapped[UUID] = mapped_column(sa.ForeignKey("research_cases.id", ondelete="CASCADE"), index=True)
     claim_type: Mapped[str] = mapped_column(sa.String(20))
     text: Mapped[str] = mapped_column(sa.Text)

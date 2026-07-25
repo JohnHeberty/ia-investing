@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from agents import Agent, Runner
+from agents.models.openai_chatcompletions import OpenAIChatCompletionsModel
 from opentelemetry import trace
 from opentelemetry.metrics import get_meter
 
@@ -91,11 +92,29 @@ class AgentRunner:
             self._system_prompt = _load_system_prompt(self.config.system_prompt_path)
         return self._system_prompt
 
+    def _build_model(self) -> str | OpenAIChatCompletionsModel:
+        provider = self.settings.ai.provider
+        if provider in ("gateway", "litellm"):
+            import openai
+
+            gw = self.settings.ai.gateway
+            client = openai.AsyncOpenAI(
+                api_key=gw.api_key.get_secret_value(),
+                base_url=gw.base_url,
+                timeout=gw.timeout,
+                max_retries=gw.max_retries,
+            )
+            return OpenAIChatCompletionsModel(
+                model=gw.model or self.config.model,
+                openai_client=client,
+            )
+        return self.config.model
+
     def _build_agent(self, tools: list[Any] | None = None) -> Agent[Any]:
         return Agent(
             name=self.config.name,
             instructions=self._load_prompt_if_needed(),
-            model=self.config.model,
+            model=self._build_model(),
             output_type=self._output_type,
             tools=tools or [],
         )

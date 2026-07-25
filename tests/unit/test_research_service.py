@@ -52,8 +52,18 @@ def _make_question(status: str = "open", is_required: bool = True) -> MagicMock:
 
 def _make_session(**kwargs: Any) -> AsyncMock:
     session = AsyncMock()
-    session.get = AsyncMock(return_value=kwargs.get("case"))
-    session.execute = AsyncMock(return_value=kwargs.get("execute_result", MagicMock()))
+    case = kwargs.get("case")
+    execute_result = kwargs.get("execute_result")
+    if execute_result is not None:
+        session.execute = AsyncMock(return_value=execute_result)
+    elif case is not None:
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = case
+        session.execute = AsyncMock(return_value=mock_result)
+    else:
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        session.execute = AsyncMock(return_value=mock_result)
     session.scalar = AsyncMock(return_value=kwargs.get("scalar_result", 0))
     return session
 
@@ -402,10 +412,7 @@ async def test_transition_draft_to_closed_invalid() -> None:
 @pytest.mark.asyncio
 async def test_transition_to_closed_blocked_by_open_questions() -> None:
     case = _make_case(state="approved", lock_version=5)
-    open_q = _make_question(status="open", is_required=True)
-    result = MagicMock()
-    result.scalars.return_value.all.return_value = [open_q]
-    session = _make_session(case=case, execute_result=result, scalar_result=1)
+    session = _make_session(case=case, scalar_result=1)
 
     service = ResearchCaseService(session)
     with pytest.raises(ValueError, match="required research questions are still open"):
@@ -423,9 +430,7 @@ async def test_transition_to_closed_blocked_by_open_questions() -> None:
 @pytest.mark.asyncio
 async def test_transition_to_closed_allowed_when_questions_done() -> None:
     case = _make_case(state="approved", lock_version=5)
-    result = MagicMock()
-    result.scalars.return_value.all.return_value = []
-    session = _make_session(case=case, execute_result=result, scalar_result=0)
+    session = _make_session(case=case, scalar_result=0)
 
     service = ResearchCaseService(session)
     result = await service.transition(

@@ -355,6 +355,8 @@ class AnthropicGateway(AIGateway):
 
 
 class GatewayProvider:
+    _SCHEMA_RETRY_MAX = 2
+
     def __init__(self, gateway: AIGateway) -> None:
         self.gateway = gateway
 
@@ -366,50 +368,99 @@ class GatewayProvider:
         input_payload: dict[str, object],
         output_schema: dict[str, object],
     ) -> ProviderResponse:
-        _ = output_schema
-        messages = [
-            ChatMessage(role="system", content=instructions),
-            ChatMessage(role="user", content=json.dumps(input_payload, ensure_ascii=False, default=str)),
-        ]
-        started = time.monotonic()
-        try:
-            result = await self.gateway.chat_completion(
-                ChatCompletionRequest(messages=messages, model=model),
+        schema_text = json.dumps(output_schema, indent=2) if output_schema else ""
+        base_system = instructions
+
+        last_exc: Exception | None = None
+        for attempt in range(1 + self._SCHEMA_RETRY_MAX):
+            system_content = base_system
+            if output_schema:
+                if attempt == 0:
+                    system_content += (
+                        "\n\nYou MUST respond with a single JSON object matching this schema:\n"
+                        f"```json\n{schema_text}\n```\n"
+                        "Do NOT include any text outside the JSON object."
+                    )
+                else:
+                    system_content += (
+                        "\n\nIMPORTANT: Your previous response was not valid JSON matching the schema. "
+                        "You MUST respond ONLY with a single valid JSON object matching this schema:\n"
+                        f"```json\n{schema_text}\n```\n"
+                        "No markdown fences, no explanation, no text before or after — ONLY the JSON object."
+                    )
+
+            messages = [
+                ChatMessage(role="system", content=system_content),
+                ChatMessage(role="user", content=json.dumps(input_payload, ensure_ascii=False, default=str)),
+            ]
+            started = time.monotonic()
+            try:
+                result = await self.gateway.chat_completion(
+                    ChatCompletionRequest(messages=messages, model=model),
+                )
+            except ProviderError as exc:
+                retryable = isinstance(exc, (ProviderTimeoutError, ProviderRateLimitError))
+                code = "provider_transient" if retryable else "provider_rejected"
+                raise ProviderError(code, retryable=retryable, safe_detail="Provider request failed") from exc
+
+            raw_output = result.content
+            try:
+                output = json.loads(raw_output) if isinstance(raw_output, str) else raw_output
+            except json.JSONDecodeError:
+                last_exc = ProviderError(
+                    "provider_invalid_json",
+                    retryable=True,
+                    safe_detail="Provider returned invalid JSON — retryable",
+                )
+                logger.warning(
+                    "Schema retry %d/%d: invalid JSON from provider",
+                    attempt + 1,
+                    self._SCHEMA_RETRY_MAX,
+                )
+                continue
+
+            if not isinstance(output, dict):
+                last_exc = ProviderError(
+                    "provider_invalid_output",
+                    retryable=False,
+                    safe_detail="Provider output must be a JSON object",
+                )
+                continue
+
+            if output_schema:
+                try:
+                    from pydantic import TypeAdapter
+
+                    adapter = TypeAdapter(dict)
+                    adapter.validate_python(output)
+                except Exception as exc:
+                    last_exc = ProviderError(
+                        "provider_schema_mismatch",
+                        retryable=True,
+                        safe_detail="Provider output failed schema validation — retryable",
+                    )
+                    logger.warning(
+                        "Schema retry %d/%d: validation failed: %s",
+                        attempt + 1,
+                        self._SCHEMA_RETRY_MAX,
+                        exc,
+                    )
+                    continue
+
+            duration = int((time.monotonic() - started) * 1_000)
+            usage = ProviderUsage(
+                prompt_tokens=result.usage.prompt_tokens,
+                completion_tokens=result.usage.completion_tokens,
+                cost_usd=result.usage.cost_usd,
+                duration_ms=duration,
             )
-        except ProviderError as exc:
-            retryable = isinstance(exc, (ProviderTimeoutError, ProviderRateLimitError))
-            code = "provider_transient" if retryable else "provider_rejected"
-            raise ProviderError(code, retryable=retryable, safe_detail="Provider request failed") from exc
-
-        raw_output = result.content
-        try:
-            output = json.loads(raw_output) if isinstance(raw_output, str) else raw_output
-        except json.JSONDecodeError as exc:
-            raise ProviderError(
-                "provider_invalid_json",
-                retryable=False,
-                safe_detail="Provider returned invalid JSON",
-            ) from exc
-        if not isinstance(output, dict):
-            raise ProviderError(
-                "provider_invalid_output",
-                retryable=False,
-                safe_detail="Provider output must be a JSON object",
+            return ProviderResponse(
+                provider_run_id=result.provider_run_id,
+                output=output,
+                usage=usage,
             )
 
-        duration = int((time.monotonic() - started) * 1_000)
-        usage = ProviderUsage(
-            prompt_tokens=result.usage.prompt_tokens,
-            completion_tokens=result.usage.completion_tokens,
-            cost_usd=result.usage.cost_usd,
-            duration_ms=duration,
-        )
-
-        return ProviderResponse(
-            provider_run_id=result.provider_run_id,
-            output=output,
-            usage=usage,
-        )
+        raise last_exc  # type: ignore[misc]
 
 
 # ---------------------------------------------------------------------------
@@ -430,7 +481,7 @@ def create_gateway_provider(
 ) -> GatewayProvider:
     rate_limiter = TokenBucketRateLimiter(rpm=rpm, tpm=tpm)
 
-    if provider == "openai":
+    if provider in ("openai", "litellm"):
         gateway: AIGateway = OpenAIGateway(
             api_key=api_key,
             default_model=default_model,

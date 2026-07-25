@@ -27,6 +27,7 @@ async def create_runtime(db: DatabaseRuntime) -> CallbackCandidateActivityRuntim
         evaluate_readiness=runtime.evaluate_candidate_readiness,
         validate_sources=runtime.validate_candidate_sources,
         collect_documents=runtime.collect_candidate_documents,
+        ingest_financials=runtime.ingest_candidate_financial_data,
         validate_financials=runtime.validate_candidate_financial_data,
         analyze_fundamentals=runtime.run_candidate_fundamental_analysis,
         analyze_risk=runtime.run_candidate_risk_analysis,

@@ -87,6 +87,7 @@ def _safe_return_to(url: str | None) -> str:
     if not url.startswith(("http:", "https:")):
         return "/"
     from urllib.parse import urlparse
+
     parsed = urlparse(url)
     if parsed.hostname not in ALLOWED_REDIRECT_HOSTS:
         return "/"
@@ -113,8 +114,8 @@ async def _verify_jwt(id_token: str) -> dict[str, object]:
         raise HTTPException(status_code=401, detail="No matching JWK found")
     try:
         rsa_key = jwk.construct(key_data, algorithm=Algorithms.RS256)
-    except JWKError:
-        raise HTTPException(status_code=401, detail="Invalid JWK")
+    except JWKError as err:
+        raise HTTPException(status_code=401, detail="Invalid JWK") from err
     try:
         claims = jwt.decode(
             id_token,
@@ -125,7 +126,7 @@ async def _verify_jwt(id_token: str) -> dict[str, object]:
             options={"verify_at_hash": False, "verify_nonce": False},
         )
     except JWTError as exc:
-        raise HTTPException(status_code=401, detail=f"JWT verification failed: {exc}")
+        raise HTTPException(status_code=401, detail=f"JWT verification failed: {exc}") from exc
     return claims
 
 
@@ -168,13 +169,15 @@ async def callback(
     settings = get_settings().security
     if not settings.oidc_token_url or not settings.oidc_client_id:
         raise HTTPException(status_code=503, detail="OIDC is not configured")
-    form = httpx.QueryParams({
-        "grant_type": "authorization_code",
-        "code": code,
-        "code_verifier": stored["verifier"],
-        "client_id": settings.oidc_client_id,
-        "redirect_uri": settings.oidc_redirect_uri,
-    })
+    form = httpx.QueryParams(
+        {
+            "grant_type": "authorization_code",
+            "code": code,
+            "code_verifier": stored["verifier"],
+            "client_id": settings.oidc_client_id,
+            "redirect_uri": settings.oidc_redirect_uri,
+        }
+    )
     if settings.oidc_client_secret:
         form = form.add("client_secret", settings.oidc_client_secret)
     async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
@@ -197,6 +200,7 @@ async def callback(
                 raise HTTPException(status_code=401, detail="OIDC nonce validation failed")
         else:
             import base64
+
             payload = id_token.split(".")[1]
             padded = payload + "=" * (4 - len(payload) % 4)
             try:
@@ -210,9 +214,7 @@ async def callback(
         roles_raw = claims.get("roles", [])
         roles = frozenset(str(r) for r in roles_raw) if isinstance(roles_raw, list) else frozenset()
         team_ids_raw = claims.get("team_ids", [])
-        team_ids = (
-            frozenset(UUID(str(t)) for t in team_ids_raw if t) if isinstance(team_ids_raw, list) else frozenset()
-        )
+        team_ids = frozenset(UUID(str(t)) for t in team_ids_raw if t) if isinstance(team_ids_raw, list) else frozenset()
         permissions_raw = claims.get("permissions", "")
         permissions = frozenset(str(permissions_raw).split()) if permissions_raw else frozenset()
         session_token = create_session_token(

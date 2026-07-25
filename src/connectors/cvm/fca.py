@@ -1,7 +1,8 @@
 """CVM FCA — Formulário Cadastral de Companhia Aberta.
 
 O ZIP anual do FCA carrega o registro estruturado da companhia: CNPJ, setor,
-ticker, DRI, auditor, endereco etc. Onze CSVs em um unico ZIP."""
+ticker, DRI, auditor, endereco etc. Onze CSVs em um unico ZIP.
+"""
 
 from __future__ import annotations
 

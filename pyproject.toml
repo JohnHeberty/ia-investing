@@ -93,16 +93,80 @@ target-version = "py312"
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "N", "W", "UP", "RUF", "B", "C4", "SIM"]
-ignore = ["B008"]
+select = [
+    "E", "F", "I", "N", "W", "UP", "RUF", "B", "C4", "SIM",
+    "S",    # flake8-bandit — security
+    "T20",  # flake8-print — print() em producao
+    "PT",   # flake8-pytest-style
+    "D",    # pydocstyle — docstrings
+    "ANN",  # flake8-annotations
+    "C90",  # mccabe complexity
+]
+ignore = [
+    "B008",
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",  # missing docstrings
+    "ANN101", "ANN102",  # deprecated annotations
+    "ANN401",  # Any type
+    "S101",  # assert in tests
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "D", "ANN", "PT", "T201", "S311", "S105", "S107"]
+"scripts/**/*.py" = ["D", "ANN", "T201", "S112", "C90", "PT"]
+"migrations/**/*.py" = ["D", "ANN"]
+"apps/**/*.py" = ["D", "ANN"]
+"src/ia_investing/application/secrets_manager.py" = ["S105", "S310"]
+"src/connectors/**/*.py" = ["S314"]
+"src/ia_investing/ai/guardrails/**/*.py" = ["S112"]
+"src/ia_investing/domain/paper_execution.py" = ["S311"]
+"src/ia_investing/integrations/production_runtime.py" = ["C901"]
+"src/ia_investing/domain/backtest.py" = ["C901"]
+"src/ia_investing/domain/portfolio_ranking.py" = ["C901"]
+"src/ia_investing/domain/readiness.py" = ["C901"]
+"src/portfolio/_optimizer.py" = ["C901"]
+"src/ia_investing/application/institutional_portfolio/*.py" = ["C901"]
+"src/ia_investing/application/paper_execution/_order.py" = ["C901"]
+"src/apps/api/routes/auth.py" = ["C901"]
+"src/apps/api/security.py" = ["C901"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 12
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 pythonpath = ["src"]
+addopts = "--tb=short -q"
 markers = [
     "integration: marks tests requiring running infrastructure (deselect with '-m not integration')",
 ]
+
+[tool.coverage.run]
+source = ["src"]
+branch = true
+omit = ["tests/*", "migrations/*", "scripts/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 70
+exclude_lines = [
+    "pragma: no cover",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.",
+    "@overload",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 [tool.mypy]
 python_version = "3.12"
@@ -116,3 +180,31 @@ enable_incomplete_feature = "NewGenericSyntax"
 [[tool.mypy.overrides]]
 module = "cvxpy.*"
 follow_imports = "skip"
+
+[[tool.mypy.overrides]]
+module = "temporalio.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "polars.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "boto3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "botocore.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "mlflow.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "pdfplumber.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "duckdb.*"
+ignore_missing_imports = true

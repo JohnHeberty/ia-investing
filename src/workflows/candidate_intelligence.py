@@ -20,6 +20,7 @@ with workflow.unsafe.imports_passed_through():
         create_committee_pack,
         discover_candidate_sources,
         evaluate_candidate_readiness,
+        ingest_candidate_financial_data,
         persist_candidate_sources_and_gaps,
         persist_exploration_suggestions,
         resolve_candidate_identity,
@@ -106,6 +107,16 @@ class CandidateAnalysisWorkflow:
         )
         if collection.blocked:
             return await self._complete(command, collection)
+
+        ingestion = await workflow.execute_activity(
+            ingest_candidate_financial_data,
+            command,
+            start_to_close_timeout=timedelta(hours=1),
+            heartbeat_timeout=timedelta(minutes=2),
+            retry_policy=NETWORK_RETRY,
+        )
+        if ingestion.blocked:
+            return await self._complete(command, ingestion)
 
         quality = await workflow.execute_activity(
             validate_candidate_financial_data,

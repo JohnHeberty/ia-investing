@@ -361,6 +361,7 @@ class CandidateEventRecord(Base):
 
 # --- Append-only audit protection -------------------------------------------
 
+
 def _reject_event_update(mapper: Any, connection: Any, target: CandidateEventRecord) -> None:
     raise sa.exc.StatementError(
         "UPDATE is not allowed on candidate_events (append-only audit log)",

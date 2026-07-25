@@ -1,0 +1,30 @@
+{
+  "$defs": {
+    "Risk": {
+      "properties": {
+        "description": {"title": "Description", "type": "string"},
+        "severity": {"enum": ["high", "medium", "low"], "title": "Severity", "type": "string"},
+        "probability": {"maximum": 1.0, "minimum": 0.0, "title": "Probability", "type": "number"},
+        "mitigation": {"title": "Mitigation", "type": "string"}
+      },
+      "required": ["description", "severity", "probability", "mitigation"],
+      "title": "Risk",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "overall_risk": {"enum": ["low", "medium", "high", "critical"], "title": "Overall Risk", "type": "string"},
+    "risk_score": {"maximum": 1.0, "minimum": 0.0, "title": "Risk Score", "type": "number"},
+    "top_risks": {"items": {"$ref": "#/$defs/Risk"}, "title": "Top Risks", "type": "array"},
+    "stress_test_results": {"additionalProperties": true, "title": "Stress Test Results", "type": "object"},
+    "max_drawdown_estimate": {"title": "Max Drawdown Estimate", "type": "number"},
+    "volatility_estimate": {"title": "Volatility Estimate", "type": "number"},
+    "concentration_risks": {"items": {"type": "string"}, "title": "Concentration Risks", "type": "array"}
+  },
+  "required": [
+    "overall_risk", "risk_score", "top_risks", "stress_test_results",
+    "max_drawdown_estimate", "volatility_estimate", "concentration_risks"
+  ],
+  "title": "RiskAssessment",
+  "type": "object"
+}

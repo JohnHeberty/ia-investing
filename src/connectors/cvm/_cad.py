@@ -1,6 +1,7 @@
 """CVM CAD — Cadastro de Companhias Abertas.
 
-Arquivo CSV simples com dados cadastrais atualizados."""
+Arquivo CSV simples com dados cadastrais atualizados.
+"""
 
 from __future__ import annotations
 

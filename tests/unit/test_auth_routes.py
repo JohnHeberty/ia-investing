@@ -88,12 +88,20 @@ class TestCallback:
         _oidc_states[state] = {"nonce": "test-nonce", "verifier": "test-verifier"}
 
         header = base64.urlsafe_b64encode(json.dumps({"alg": "RS256", "typ": "JWT"}).encode()).rstrip(b"=").decode()
-        payload = base64.urlsafe_b64encode(json.dumps({
-            "sub": "user-123",
-            "nonce": "test-nonce",
-            "name": "Test User",
-            "email": "test@example.com",
-        }).encode()).rstrip(b"=").decode()
+        payload = (
+            base64.urlsafe_b64encode(
+                json.dumps(
+                    {
+                        "sub": "user-123",
+                        "nonce": "test-nonce",
+                        "name": "Test User",
+                        "email": "test@example.com",
+                    }
+                ).encode()
+            )
+            .rstrip(b"=")
+            .decode()
+        )
         id_token = f"{header}.{payload}.fakesig"
 
         # Use MagicMock for .json() (sync) and is_error (property)

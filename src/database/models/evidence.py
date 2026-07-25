@@ -15,6 +15,9 @@ class DocumentChunk(Base):
     __tablename__ = "document_chunks"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     source_object_version_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("source_object_versions.id", ondelete="RESTRICT"), index=True
     )

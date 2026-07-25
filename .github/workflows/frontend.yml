@@ -1,0 +1,38 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [main]
+    paths: ["web/**"]
+  pull_request:
+    branches: [main]
+    paths: ["web/**"]
+
+concurrency:
+  group: frontend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Prettier check
+        run: npx prettier --check "src/**/*.{ts,tsx,css,json}"
+      - name: ESLint
+        run: npm run lint
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+      - name: Tests
+        run: npm run test -- --run

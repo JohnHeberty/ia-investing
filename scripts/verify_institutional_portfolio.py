@@ -87,7 +87,8 @@ async def verify() -> None:
             context=context,
         )
         await service.transition(portfolio.id, "researching", 1, "verification", context)
-        assert portfolio.state == "researching" and portfolio.lock_version == 2
+        assert portfolio.state == "researching"
+        assert portfolio.lock_version == 2
         issuer_id = await session.scalar(sa.select(Issuer.id).order_by(Issuer.id).limit(1))
         source_version_id = await session.scalar(
             sa.select(SourceObjectVersion.id).order_by(SourceObjectVersion.id).limit(1)

@@ -1,0 +1,12 @@
+{
+  "properties": {
+    "decision": {"enum": ["approve", "reject", "request_more_info"], "title": "Decision", "type": "string"},
+    "confidence": {"maximum": 1.0, "minimum": 0.0, "title": "Confidence", "type": "number"},
+    "reasoning_pt": {"title": "Reasoning Pt", "type": "string"},
+    "conditions": {"items": {"type": "string"}, "title": "Conditions", "type": "array"},
+    "dissenting_opinions": {"items": {"type": "string"}, "title": "Dissenting Opinions", "type": "array"}
+  },
+  "required": ["decision", "confidence", "reasoning_pt", "conditions", "dissenting_opinions"],
+  "title": "CommitteeDecision",
+  "type": "object"
+}

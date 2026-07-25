@@ -124,6 +124,8 @@ class CandidateActivityRuntime(Protocol):
 
     async def collect_candidate_documents(self, command: CandidateWorkflowInput) -> CandidateCheckpoint: ...
 
+    async def ingest_candidate_financial_data(self, command: CandidateWorkflowInput) -> CandidateCheckpoint: ...
+
     async def validate_candidate_financial_data(self, command: CandidateWorkflowInput) -> CandidateCheckpoint: ...
 
     async def run_candidate_fundamental_analysis(self, command: CandidateWorkflowInput) -> CandidateCheckpoint: ...
@@ -167,6 +169,7 @@ class CallbackCandidateActivityRuntime:
     evaluate_readiness: Callable[[CandidateWorkflowInput], Awaitable[CandidateCheckpoint]]
     validate_sources: Callable[[CandidateWorkflowInput], Awaitable[CandidateCheckpoint]]
     collect_documents: Callable[[CandidateWorkflowInput], Awaitable[CandidateCheckpoint]]
+    ingest_financials: Callable[[CandidateWorkflowInput], Awaitable[CandidateCheckpoint]]
     validate_financials: Callable[[CandidateWorkflowInput], Awaitable[CandidateCheckpoint]]
     analyze_fundamentals: Callable[[CandidateWorkflowInput], Awaitable[CandidateCheckpoint]]
     analyze_risk: Callable[[CandidateWorkflowInput], Awaitable[CandidateCheckpoint]]
@@ -202,6 +205,9 @@ class CallbackCandidateActivityRuntime:
 
     async def collect_candidate_documents(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         return await self.collect_documents(command)
+
+    async def ingest_candidate_financial_data(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
+        return await self.ingest_financials(command)
 
     async def validate_candidate_financial_data(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         return await self.validate_financials(command)
@@ -252,7 +258,6 @@ def reset_candidate_activity_runtime_for_tests() -> None:
 
 def candidate_activity_runtime_configured() -> bool:
     """Return whether the worker has a concrete candidate runtime installed."""
-
     return _RUNTIME is not None
 
 
@@ -299,6 +304,11 @@ async def validate_candidate_sources(command: CandidateWorkflowInput) -> Candida
 @activity.defn
 async def collect_candidate_documents(command: CandidateWorkflowInput) -> CandidateCheckpoint:
     return await _runtime().collect_candidate_documents(command)
+
+
+@activity.defn
+async def ingest_candidate_financial_data(command: CandidateWorkflowInput) -> CandidateCheckpoint:
+    return await _runtime().ingest_candidate_financial_data(command)
 
 
 @activity.defn
@@ -352,6 +362,7 @@ CANDIDATE_INTELLIGENCE_ACTIVITIES = (
     evaluate_candidate_readiness,
     validate_candidate_sources,
     collect_candidate_documents,
+    ingest_candidate_financial_data,
     validate_candidate_financial_data,
     run_candidate_fundamental_analysis,
     run_candidate_risk_analysis,

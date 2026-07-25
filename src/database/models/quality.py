@@ -15,6 +15,9 @@ class DataQualityCheck(Base):
     __tablename__ = "data_quality_checks"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     entity_type: Mapped[str | None] = mapped_column(sa.String(50))  # "financial_statement", "metric", "market_price"
     entity_id: Mapped[UUID | None] = mapped_column()
     check_name: Mapped[str | None] = mapped_column(sa.String(100))  # "balance_sheet_balances", "negative_revenue"
@@ -33,6 +36,9 @@ class DataRefreshLog(Base):
     __tablename__ = "data_refresh_log"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     source_name: Mapped[str | None] = mapped_column(sa.String(100))  # "CVM", "B3", "BCB"
     entity_type: Mapped[str | None] = mapped_column(sa.String(50))
 

@@ -50,9 +50,11 @@ async def main() -> None:
     async with session_scope() as session:
         second = await RawZoneService(session, store).register(changed)
 
-    assert repeated.version_id == first.version_id and not repeated.created
+    assert repeated.version_id == first.version_id
+    assert not repeated.created
     assert second.source_object_id == first.source_object_id
-    assert second.version_number == first.version_number + 1 and second.created
+    assert second.version_number == first.version_number + 1
+    assert second.created
     stored = client.head_object(Bucket=settings.storage.bucket, Key=first.storage_key)
     assert stored["Metadata"]["sha256"] == first.content_hash
     print(

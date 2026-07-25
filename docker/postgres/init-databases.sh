@@ -7,6 +7,7 @@ psql --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-SQL
   CREATE DATABASE temporal OWNER postgres;
   CREATE DATABASE temporal_visibility OWNER postgres;
   CREATE DATABASE mlflow OWNER postgres;
+  CREATE DATABASE litellm OWNER postgres;
 SQL
 
 psql --set=ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname stock_intelligence <<-SQL

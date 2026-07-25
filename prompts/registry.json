@@ -42,6 +42,27 @@
       "schema": {"path": "coordinator-output.schema.json", "sha256": "18d4e8016cb342c0bc27156e147b1e5bc6d06e4dc185a76cdadc4fc0805f3d02"},
       "model_profile": {"provider": "openai", "model": "gpt-4o", "temperature": 0.1},
       "tools": ["filing", "news", "macro", "political", "critic"]
+    },
+    {
+      "logical_id": "fundamentalist_analyst",
+      "prompt": {"path": "fundamentalist/system.md", "sha256": "d6b4f1e94afdc06f2d7bd8ebd2a290724ffad1784b160de2b807c23d19fc2d16"},
+      "schema": {"path": "fundamentalist-output.schema.json", "sha256": "3fb52b47fdcc125da08b092008f7f749b1cd4fbd0bbb090f15b596fd0335a6f2"},
+      "model_profile": {"provider": "openai", "model": "gpt-4o", "temperature": 0.2},
+      "tools": ["get_financial_metrics", "search_evidence", "calculate_valuation"]
+    },
+    {
+      "logical_id": "risk_director",
+      "prompt": {"path": "risk_director/system.md", "sha256": "cada8a74036631a024cc132ea0ab3a9c9d9b33390543208c089eda4049024da6"},
+      "schema": {"path": "risk-director-output.schema.json", "sha256": "fbe0e5b17084d8cf92d9980b411ce319ef2810b64c6f0e0cc3154c15f28b60f6"},
+      "model_profile": {"provider": "openai", "model": "gpt-4o", "temperature": 0.1},
+      "tools": ["get_financial_metrics", "search_evidence"]
+    },
+    {
+      "logical_id": "investment_committee",
+      "prompt": {"path": "committee/system.md", "sha256": "928d8da09998294d9c864c2c3daefdcaacf5a3b9ed78f84a118725d9d20187d5"},
+      "schema": {"path": "committee-output.schema.json", "sha256": "9475d095b2212e892cef4203f3bde65ecff1027e9fc769e2a99828703daff547"},
+      "model_profile": {"provider": "openai", "model": "o3-mini", "temperature": 0.1},
+      "tools": []
     }
   ]
 }

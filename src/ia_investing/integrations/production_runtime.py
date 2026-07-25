@@ -3,11 +3,12 @@ from __future__ import annotations
 import hashlib
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 import sqlalchemy as sa
 
+from connectors.base import HttpClient
 from database.models.catalog import Issuer
 from database.models.instrument_master import Instrument, Listing
 from database.models.investment_candidates import (
@@ -19,13 +20,12 @@ from database.models.investment_candidates import (
     ExplorationSuggestionRecord,
     InvestmentCandidateRecord,
 )
-from ia_investing.ai._config import (
-    FUNDAMENTALIST_ANALYST,
-    INVESTMENT_COMMITTEE,
-    RESEARCH_COORDINATOR,
-    RISK_DIRECTOR,
-)
-from ia_investing.ai._runner import AgentResult, AgentRunner
+from database.models.market_data import MarketBar, MarketQuote
+from ia_investing.ai._runner import AgentResult
+from ia_investing.ai.execution import AgentExecutionService
+from ia_investing.ai.gateway import create_gateway_provider
+from ia_investing.ai.provider import AgentProvider, MockProvider
+from ia_investing.application.agent_runtime import AgentRuntimeService
 from ia_investing.application.instruments import InstrumentMasterService
 from ia_investing.integrations.connectors.b3_resolver import B3Resolver
 from ia_investing.integrations.connectors.cvm_resolver import CVMResolver
@@ -43,8 +43,84 @@ from ia_investing.orchestration.activities.candidate_intelligence import (
 )
 from ia_investing.platform.database.runtime import DatabaseRuntime
 from ia_investing.platform.http.safe_client import EgressPolicy, SafeHttpClient
+from ia_investing.settings import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _provider_for_runner() -> AgentProvider:
+    settings = get_settings()
+    if settings.ai.provider == "mock":
+        return MockProvider()
+    if settings.ai.provider in ("gateway", "litellm"):
+        gw = settings.ai.gateway
+        return create_gateway_provider(
+            provider=gw.provider,
+            api_key=gw.api_key.get_secret_value(),
+            default_model=gw.model,
+            base_url=gw.base_url,
+            timeout=gw.timeout,
+            max_retries=gw.max_retries,
+            rpm=gw.rpm,
+            tpm=gw.tpm,
+        )
+    return MockProvider()
+
+
+async def _execute_governed_agent(
+    db: DatabaseRuntime,
+    capability: str,
+    organization_id: uuid.UUID,
+    input_data: dict,
+    data_as_of: datetime,
+    knowledge_cutoff: datetime,
+    actor_id: str = "candidate_runtime",
+) -> AgentResult:
+    """Execute an agent through the governed runtime path (AgentRuntimeService + AgentExecutionService)."""
+    async with db.session() as session:
+        service = AgentRuntimeService(session)
+        run = await service.create_run(
+            organization_id=organization_id,
+            capability=capability,
+            case_id=None,
+            input_payload=input_data,
+            data_as_of=data_as_of,
+            knowledge_cutoff=knowledge_cutoff,
+            actor_id=actor_id,
+            permissions=frozenset({"agent_runs:create"}),
+            workflow_id=f"candidate_{capability}",
+            idempotency_key=uuid.uuid4().hex,
+        )
+        run_id = run.id
+        await session.commit()
+
+    async with db.session() as session:
+        provider = _provider_for_runner()
+        executed = await AgentExecutionService(session, provider).execute(run_id)
+        await session.commit()
+
+    if executed.status == "succeeded":
+        return AgentResult(
+            agent_name=capability,
+            output_data=executed.output_payload,
+            model_used=str(executed.prompt_tokens) + "/" + str(executed.completion_tokens),
+            tokens_prompt=executed.prompt_tokens or 0,
+            tokens_completion=executed.completion_tokens or 0,
+            cost_usd=float(executed.cost_usd) if executed.cost_usd else 0.0,
+            duration_ms=executed.duration_ms or 0.0,
+            status="completed",
+        )
+    return AgentResult(
+        agent_name=capability,
+        output_data=None,
+        model_used="",
+        tokens_prompt=0,
+        tokens_completion=0,
+        cost_usd=0.0,
+        duration_ms=0.0,
+        status="failed",
+        error_message=executed.error_detail or executed.error_code or "unknown error",
+    )
 
 
 _STAGE_NAMES = (
@@ -109,9 +185,10 @@ class ProductionCandidateRuntime:
     ) -> None:
         self._db = db
         self._http = http_client or SafeHttpClient(policy=EgressPolicy())
+        self._client = HttpClient(timeout=60.0)
         self._agent_runtime_service = agent_runtime_service
-        self._cvm = cvm_resolver or CVMResolver(self._http)
-        self._b3 = b3_resolver or B3Resolver(db)
+        self._cvm = cvm_resolver or CVMResolver(self._http, self._client)
+        self._b3 = b3_resolver or B3Resolver(db, self._client)
 
     # ------------------------------------------------------------------
     # Phase 1 — Identity Resolution
@@ -244,6 +321,26 @@ class ProductionCandidateRuntime:
                                     "evidence": evidence,
                                 }
                             )
+
+                            securities = await self._cvm.lookup_securities_by_cnpj(issuer.cnpj)
+                            if securities:
+                                sources.append(
+                                    {
+                                        "kind": "cvm_filings",
+                                        "url": "",
+                                        "status": "verified",
+                                        "verification_method": "cvm_fca",
+                                        "confidence": 0.95,
+                                        "official": True,
+                                        "discovered_by": "system",
+                                        "evidence": {
+                                            "cnpj": issuer.cnpj,
+                                            "security_count": len(securities),
+                                            "tickers": [s.trading_code for s in securities if s.trading_code],
+                                        },
+                                    }
+                                )
+
                             if cvm_profile.website and all(
                                 s.get("kind") != "investor_relations" for s in sources if s.get("kind") != "cvm_profile"
                             ):
@@ -264,31 +361,50 @@ class ProductionCandidateRuntime:
                                     }
                                 )
 
-                listings = (
-                    (
-                        await session.execute(
-                            sa.select(Listing).where(
-                                Listing.instrument_id == candidate.instrument_id,
-                                Listing.valid_to.is_(None),
-                            )
+                    # RI portal from issuer record (best-effort)
+                    if issuer.website_ri_url and not any(s.get("kind") == "ri_portal" for s in sources):
+                        sources.append(
+                            {
+                                "kind": "ri_portal",
+                                "url": issuer.website_ri_url,
+                                "status": "unverified",
+                                "verification_method": "issuer_record",
+                                "confidence": 0.8,
+                                "official": True,
+                                "discovered_by": "system",
+                                "evidence": {
+                                    "issuer_id": str(issuer_id),
+                                    "source": "issuer_website_ri_url",
+                                    "website": issuer.website_ri_url,
+                                },
+                            }
                         )
-                    )
-                    .scalars()
-                    .all()
-                )
 
-                for listing in listings:
-                    exchange_label = listing.exchange_code or "UNKNOWN"
+            if candidate.ticker:
+                b3_profile = await self._b3.lookup_by_ticker(candidate.ticker)
+                if b3_profile is not None:
+                    b3_evidence: dict[str, object] = {
+                        "ticker": b3_profile.ticker,
+                        "exchange": b3_profile.exchange,
+                        "market_segment": b3_profile.market_segment or "",
+                        "listing_status": b3_profile.listing_status,
+                    }
+                    if b3_profile.closing_price is not None:
+                        b3_evidence["closing_price"] = str(b3_profile.closing_price)
+                    if b3_profile.average_volume_30d is not None:
+                        b3_evidence["average_volume_30d"] = str(b3_profile.average_volume_30d)
+                    if b3_profile.last_trade_date is not None:
+                        b3_evidence["last_trade_date"] = b3_profile.last_trade_date.isoformat()
                     sources.append(
                         {
-                            "kind": f"listing:{exchange_label}",
+                            "kind": "b3_listing",
                             "url": "",
                             "status": "verified",
-                            "verification_method": "database",
+                            "verification_method": "b3_cotahist",
                             "confidence": 1.0,
                             "official": True,
                             "discovered_by": "system",
-                            "evidence": {"listing_id": str(listing.id), "exchange": exchange_label},
+                            "evidence": b3_evidence,
                         }
                     )
 
@@ -302,7 +418,9 @@ class ProductionCandidateRuntime:
                     }
                 )
             else:
-                missing_ri = all(s.get("kind") != "investor_relations" for s in sources)
+                source_kinds = {s.get("kind") for s in sources}
+
+                missing_ri = "investor_relations" not in source_kinds
                 if missing_ri:
                     gaps.append(
                         {
@@ -312,6 +430,32 @@ class ProductionCandidateRuntime:
                             "level": "blocking",
                             "requested_user_action": "Provide the investor relations URL manually.",
                             "source_kind": "investor_relations",
+                        }
+                    )
+
+                missing_cvm_filings = "cvm_filings" not in source_kinds
+                if missing_cvm_filings:
+                    gaps.append(
+                        {
+                            "code": "cvm_filings",
+                            "title": "CVM regulatory filings not found",
+                            "description": "FCA/DFP/ITR data not available for this issuer.",
+                            "level": "blocking",
+                            "requested_user_action": "Verify CNPJ is correct and CVM data is accessible.",
+                            "source_kind": "cvm_filings",
+                        }
+                    )
+
+                missing_b3 = "b3_listing" not in source_kinds
+                if missing_b3:
+                    gaps.append(
+                        {
+                            "code": "b3_listing",
+                            "title": "B3 listing not found",
+                            "description": "Ticker not found in B3 COTAHIST or instrument master.",
+                            "level": "blocking",
+                            "requested_user_action": "Verify ticker is listed on B3.",
+                            "source_kind": "b3_listing",
                         }
                     )
 
@@ -569,6 +713,227 @@ class ProductionCandidateRuntime:
         )
 
     # ------------------------------------------------------------------
+    # Phase 4b — Financial Data Ingestion
+    # ------------------------------------------------------------------
+
+    async def ingest_candidate_financial_data(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
+        from collections import defaultdict
+        from datetime import date
+
+        from connectors.cvm._financials import StatementType, get_dfp, parse_value_status
+        from database.models.data_foundation import DataSource, SourceObject, SourceObjectVersion
+        from database.models.financial_facts import FinancialFact, ReportingPeriod
+        from ia_investing.application.financial_facts import FinancialFactInput, FinancialFactRepository
+
+        async with self._db.session() as session:
+            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            if candidate is None or candidate.issuer_id is None:
+                return _stage_blocked(
+                    command,
+                    "data_quality",
+                    "Issuer not resolved. Complete identity resolution first.",
+                    blocker_codes=("issuer_not_resolved",),
+                )
+            if not candidate.cnpj:
+                return _stage_blocked(
+                    command,
+                    "data_quality",
+                    "No CNPJ available for this candidate.",
+                    blocker_codes=("cnpj_missing",),
+                )
+
+            issuer_id = candidate.issuer_id
+            cnpj = candidate.cnpj
+            now = _now()
+
+            year = command.data_as_of.year
+            entries_by_stmt: dict[StatementType, list] = defaultdict(list)
+            for y in (year, year - 1):
+                for stmt in (StatementType.DRE_CON, StatementType.BPA_CON, StatementType.BPP_CON):
+                    try:
+                        result = await get_dfp(y, statement=stmt, cnpj=cnpj, client=self._client)
+                        entries_by_stmt[stmt].extend(result)
+                    except Exception as exc:
+                        logger.warning("DFP fetch failed for year=%d stmt=%s: %s", y, stmt.value, exc)
+
+            total_entries = sum(len(v) for v in entries_by_stmt.values())
+            if total_entries == 0:
+                return _stage_blocked(
+                    command,
+                    "data_quality",
+                    f"No DFP data found for CNPJ {cnpj}.",
+                    blocker_codes=("financial_facts_missing",),
+                )
+
+            ds_code = "cvm_dfp"
+            ds = (await session.execute(sa.select(DataSource).where(DataSource.code == ds_code))).scalar_one_or_none()
+            if ds is None:
+                ds = DataSource(
+                    code=ds_code,
+                    name="CVM DFP - Demonstrativos Financeiros Padronizados",
+                    base_url="https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/",
+                    owner_role="system",
+                    schema_version="v1",
+                )
+                session.add(ds)
+                await session.flush()
+
+            so_by_year: dict[int, object] = {}
+            sov_by_year: dict[int, object] = {}
+            rp_cache: dict[tuple, ReportingPeriod] = {}
+            repo = FinancialFactRepository(session)
+            ingested = 0
+
+            for stmt, entries in entries_by_stmt.items():
+                consolidation = "consolidated" if stmt.value.endswith("_con") else "individual"
+                statement_name = stmt.value.rsplit("_", 1)[0].upper()
+
+                for entry in entries:
+                    try:
+                        period_end = date.fromisoformat(entry.dt_referencia)
+                    except (ValueError, TypeError):
+                        continue
+                    if entry.dt_inicio_exercicio:
+                        try:
+                            period_start = date.fromisoformat(entry.dt_inicio_exercicio)
+                        except (ValueError, TypeError):
+                            period_start = date(period_end.year, 1, 1)
+                    else:
+                        period_start = date(period_end.year, 1, 1)
+
+                    rp_key = (issuer_id, period_start, period_end, "annual", consolidation)
+                    rp = rp_cache.get(rp_key)
+                    if rp is None:
+                        rp = (
+                            await session.execute(
+                                sa.select(ReportingPeriod).where(
+                                    ReportingPeriod.issuer_id == issuer_id,
+                                    ReportingPeriod.period_start == period_start,
+                                    ReportingPeriod.period_end == period_end,
+                                    ReportingPeriod.period_type == "annual",
+                                    ReportingPeriod.consolidation_scope == consolidation,
+                                )
+                            )
+                        ).scalar_one_or_none()
+                        if rp is None:
+                            rp = ReportingPeriod(
+                                issuer_id=issuer_id,
+                                period_start=period_start,
+                                period_end=period_end,
+                                fiscal_year=period_end.year,
+                                period_type="annual",
+                                consolidation_scope=consolidation,
+                            )
+                            session.add(rp)
+                            await session.flush()
+                        rp_cache[rp_key] = rp
+
+                    logical_uri = f"cvm://dfp/{period_end.year}/{cnpj}"
+                    so = so_by_year.get(period_end.year)
+                    if so is None:
+                        so = (
+                            await session.execute(
+                                sa.select(SourceObject).where(
+                                    SourceObject.source_id == ds.id,
+                                    SourceObject.logical_uri == logical_uri,
+                                )
+                            )
+                        ).scalar_one_or_none()
+                        if so is None:
+                            so = SourceObject(
+                                source_id=ds.id,
+                                logical_uri=logical_uri,
+                                object_type="cvm_dfp_zip",
+                            )
+                            session.add(so)
+                            await session.flush()
+                        so_by_year[period_end.year] = so
+
+                    sov = sov_by_year.get(period_end.year)
+                    if sov is None:
+                        synthetic_hash = hashlib.sha256(f"cvm_dfp_{cnpj}_{period_end.year}".encode()).hexdigest()
+                        storage_key = f"cvm/dfp/{period_end.year}/{cnpj}"
+                        sov = (
+                            await session.execute(
+                                sa.select(SourceObjectVersion).where(
+                                    SourceObjectVersion.source_object_id == so.id,
+                                    SourceObjectVersion.content_sha256 == synthetic_hash,
+                                )
+                            )
+                        ).scalar_one_or_none()
+                        if sov is None:
+                            sov = SourceObjectVersion(
+                                source_object_id=so.id,
+                                version_number=1,
+                                content_sha256=synthetic_hash,
+                                storage_key=storage_key,
+                                size_bytes=0,
+                                media_type="application/zip",
+                                discovered_at=now,
+                                ingested_at=now,
+                                parser_version="cvm-dfp-ingest-v1",
+                            )
+                            session.add(sov)
+                            await session.flush()
+                        sov_by_year[period_end.year] = sov
+
+                    value, value_status = parse_value_status(str(entry.valor))
+                    scale_factor = 1000 if entry.escala.upper() == "MIL" else 1
+
+                    try:
+                        await repo.revise(
+                            FinancialFactInput(
+                                issuer_id=issuer_id,
+                                reporting_period_id=rp.id,
+                                statement_type=statement_name,
+                                consolidation_scope=consolidation,
+                                original_account_code=entry.cod_conta,
+                                original_account_label=entry.desc_conta,
+                                taxonomy_account_id=None,
+                                value=value,
+                                currency_code="BRL",
+                                scale_factor=scale_factor,
+                                value_status=value_status,
+                                source_object_version_id=sov.id,
+                                parser_version="cvm-dfp-ingest-v1",
+                                mapping_rule_id=None,
+                                published_at=now,
+                                discovered_at=now,
+                                ingested_at=now,
+                                validated_at=now,
+                                knowledge_at=now,
+                            )
+                        )
+                        ingested += 1
+                    except Exception as exc:
+                        logger.debug("revise failed for account=%s: %s", entry.cod_conta, exc)
+
+            await session.commit()
+
+            count = (
+                await session.execute(
+                    sa.select(sa.func.count(FinancialFact.id)).where(
+                        FinancialFact.issuer_id == issuer_id,
+                    )
+                )
+            ).scalar()
+
+            if count and count > 0:
+                return _stage_passed(
+                    command,
+                    "data_quality",
+                    reason=f"Ingested {ingested} entries, {count} total facts for issuer.",
+                    payload={"fact_count": count, "ingested": ingested},
+                )
+
+            return _stage_blocked(
+                command,
+                "data_quality",
+                "Failed to ingest any financial facts from DFP data.",
+                blocker_codes=("financial_facts_missing",),
+            )
+
+    # ------------------------------------------------------------------
     # Phase 5 — Readiness, Validation, Analysis
     # ------------------------------------------------------------------
 
@@ -697,8 +1062,14 @@ class ProductionCandidateRuntime:
                 "issuer_id": str(candidate.issuer_id),
                 "data_as_of": command.data_as_of.isoformat(),
             }
-        runner = AgentRunner(FUNDAMENTALIST_ANALYST)
-        result: AgentResult = await runner.run(input_data)
+        result: AgentResult = await _execute_governed_agent(
+            self._db,
+            "fundamentalist_analyst",
+            command.organization_id,
+            input_data,
+            command.data_as_of,
+            command.data_as_of,
+        )
         if result.status != "completed":
             return _stage_blocked(
                 command,
@@ -751,8 +1122,14 @@ class ProductionCandidateRuntime:
                 "issuer_id": str(candidate.issuer_id),
                 "data_as_of": command.data_as_of.isoformat(),
             }
-        runner = AgentRunner(RISK_DIRECTOR)
-        result: AgentResult = await runner.run(input_data)
+        result: AgentResult = await _execute_governed_agent(
+            self._db,
+            "risk_director",
+            command.organization_id,
+            input_data,
+            command.data_as_of,
+            command.data_as_of,
+        )
         if result.status != "completed":
             return _stage_blocked(
                 command,
@@ -829,8 +1206,14 @@ class ProductionCandidateRuntime:
                     for e in events
                 ],
             }
-        runner = AgentRunner(INVESTMENT_COMMITTEE)
-        result: AgentResult = await runner.run(input_data)
+        result: AgentResult = await _execute_governed_agent(
+            self._db,
+            "investment_committee",
+            command.organization_id,
+            input_data,
+            command.data_as_of,
+            command.data_as_of,
+        )
         if result.status != "completed":
             return _stage_passed(
                 command,
@@ -906,30 +1289,76 @@ class ProductionCandidateRuntime:
     # ------------------------------------------------------------------
 
     async def screen_equity_universe(self, command: ExplorationWorkflowInput) -> ExplorationShortlist:
+        settings = get_settings().candidate_intelligence
+        cutoff_30d = _now() - timedelta(days=30)
+
         async with self._db.session() as session:
-            rows = (
-                await session.execute(
-                    sa.select(
-                        Instrument.id,
-                        Listing.ticker,
-                        Listing.exchange_code,
-                        Issuer.id,
-                        Issuer.name_pt,
-                    )
-                    .select_from(Instrument)
-                    .join(Issuer, Instrument.issuer_id == Issuer.id)
-                    .join(Listing, Listing.instrument_id == Instrument.id)
-                    .where(
-                        Instrument.is_active.is_(True),
-                        Listing.valid_to.is_(None),
-                        sa.or_(
-                            Listing.market_segment.is_(None),
-                            Listing.market_segment.notin_(("FRACIONARIO",)),
-                        ),
-                    )
-                    .distinct()
+            stmt = (
+                sa.select(
+                    Instrument.id,
+                    Listing.ticker,
+                    Listing.exchange_code,
+                    Issuer.id,
+                    Issuer.name_pt,
                 )
-            ).all()
+                .select_from(Instrument)
+                .join(Issuer, Instrument.issuer_id == Issuer.id)
+                .join(Listing, Listing.instrument_id == Instrument.id)
+                .where(
+                    Instrument.is_active.is_(True),
+                    Listing.valid_to.is_(None),
+                    sa.or_(
+                        Listing.market_segment.is_(None),
+                        Listing.market_segment.notin_(("FRACIONARIO",)),
+                    ),
+                )
+            )
+
+            # Subquery: average daily volume over last 30 days per listing
+            avg_volume_sq = (
+                sa.select(
+                    MarketBar.listing_id,
+                    sa.func.avg(MarketBar.volume).label("avg_vol_30d"),
+                )
+                .where(MarketBar.bar_at >= cutoff_30d)
+                .group_by(MarketBar.listing_id)
+                .subquery()
+            )
+            stmt = stmt.join(avg_volume_sq, avg_volume_sq.c.listing_id == Listing.id, isouter=True).where(
+                sa.or_(
+                    avg_volume_sq.c.avg_vol_30d.is_(None),
+                    avg_volume_sq.c.avg_vol_30d >= settings.min_avg_volume_30d,
+                )
+            )
+
+            # Subquery: latest spread per listing
+            latest_quote_sq = sa.select(
+                MarketQuote.listing_id,
+                MarketQuote.bid_price,
+                MarketQuote.ask_price,
+                sa.func.row_number()
+                .over(partition_by=MarketQuote.listing_id, order_by=MarketQuote.quoted_at.desc())
+                .label("rn"),
+            ).subquery()
+            latest_quote_filtered = sa.select(latest_quote_sq.c).where(latest_quote_sq.c.rn == 1).subquery()
+            stmt = stmt.join(
+                latest_quote_filtered,
+                latest_quote_filtered.c.listing_id == Listing.id,
+                isouter=True,
+            ).where(
+                sa.or_(
+                    latest_quote_filtered.c.bid_price.is_(None),
+                    latest_quote_filtered.c.ask_price.is_(None),
+                    sa.func.abs(
+                        (latest_quote_filtered.c.ask_price - latest_quote_filtered.c.bid_price)
+                        / sa.func.nullif(latest_quote_filtered.c.bid_price, 0)
+                    )
+                    <= settings.max_spread_pct,
+                )
+            )
+
+            stmt = stmt.distinct()
+            rows = (await session.execute(stmt)).all()
 
             securities = tuple(
                 {
@@ -964,8 +1393,14 @@ class ProductionCandidateRuntime:
                 for s in securities_sample
             ],
         }
-        runner = AgentRunner(RESEARCH_COORDINATOR)
-        result: AgentResult = await runner.run(input_data)
+        result: AgentResult = await _execute_governed_agent(
+            self._db,
+            "research_coordinator",
+            shortlist.command.organization_id,
+            input_data,
+            shortlist.command.data_as_of,
+            shortlist.command.data_as_of,
+        )
         if result.status != "completed" or not isinstance(result.output_data, dict):
             return ExplorationFindings(
                 shortlist=shortlist,
@@ -1026,6 +1461,24 @@ class ProductionCandidateRuntime:
                     if isinstance(security["issuer_id"], str)
                     else security["issuer_id"]
                 )
+
+                # Guard: skip duplicate instrument_id for this organization
+                existing = (
+                    await session.execute(
+                        sa.select(ExplorationSuggestionRecord.id).where(
+                            ExplorationSuggestionRecord.organization_id == run.organization_id,
+                            ExplorationSuggestionRecord.instrument_id == inst_uuid,
+                        )
+                    )
+                ).scalar_one_or_none()
+                if existing is not None:
+                    logger.debug(
+                        "Skipping duplicate suggestion instrument=%s org=%s",
+                        inst_id,
+                        run.organization_id,
+                    )
+                    continue
+
                 quantize_4 = Decimal("0.0001")
                 record = ExplorationSuggestionRecord(
                     id=uuid.uuid4(),

@@ -18,6 +18,7 @@ async def create_mock_runtime(*_args: object, **_kwargs: object) -> CallbackCand
         evaluate_readiness=AsyncMock(),
         validate_sources=AsyncMock(),
         collect_documents=AsyncMock(),
+        ingest_financials=AsyncMock(),
         validate_financials=AsyncMock(),
         analyze_fundamentals=AsyncMock(),
         analyze_risk=AsyncMock(),

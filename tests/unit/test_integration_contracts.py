@@ -296,7 +296,9 @@ async def test_research_case_transition_rejects_stale_etag() -> None:
     mock_case = MagicMock()
     mock_case.lock_version = 3
     mock_case.state = "draft"
-    mock_session.get = AsyncMock(return_value=mock_case)
+    mock_result = MagicMock()
+    mock_result.scalar_one_or_none.return_value = mock_case
+    mock_session.execute = AsyncMock(return_value=mock_result)
 
     service = ResearchCaseService(mock_session)
 

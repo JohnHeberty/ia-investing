@@ -13,6 +13,9 @@ class InvestmentThesis(Base):
     __tablename__ = "investment_theses"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     issuer_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("issuers.id", ondelete="CASCADE"),
         nullable=False,
@@ -37,6 +40,9 @@ class ThesisVersion(Base):
     __tablename__ = "thesis_versions"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     thesis_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("investment_theses.id", ondelete="CASCADE"),
         nullable=False,
@@ -61,6 +67,9 @@ class Recommendation(Base):
     __tablename__ = "recommendations"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     thesis_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("investment_theses.id", ondelete="CASCADE"),
         nullable=False,

@@ -45,12 +45,13 @@ class ThesisReviewResult:
 
 @workflow.defn
 class ThesisReviewWorkflow:
-    """Orchestrates a full thesis review: load context, run specialists, detect contradictions,
-    generate diff, pause for human approval, and activate/reject the version.
+    """Orchestrate a full thesis review.
 
-    This workflow NEVER mutates a thesis directly. It collects evidence and recommendations,
-    then pauses for human approval. The actual activation happens through ThesisService.activate()
-    called by the API after the human approves.
+    Load context, run specialists, detect contradictions, generate diff, pause
+    for human approval, and activate/reject the version. This workflow NEVER
+    mutates a thesis directly. It collects evidence and recommendations, then
+    pauses for human approval. The actual activation happens through
+    ThesisService.activate() called by the API after the human approves.
     """
 
     def __init__(self) -> None:

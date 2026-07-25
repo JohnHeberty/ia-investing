@@ -37,6 +37,9 @@ def test_registry_loads_all_runtime_capabilities() -> None:
         "political",
         "critic",
         "research_coordinator",
+        "fundamentalist_analyst",
+        "risk_director",
+        "investment_committee",
     }
 
 

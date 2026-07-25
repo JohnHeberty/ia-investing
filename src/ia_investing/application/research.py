@@ -71,8 +71,9 @@ def required_permission(current: str, target: str) -> str:
 
 
 class ResearchCaseService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, organization_id: UUID | None = None) -> None:
         self.session = session
+        self._organization_id = organization_id
 
     async def create(
         self,
@@ -108,6 +109,7 @@ class ResearchCaseService:
             idempotency_key=idempotency_key,
             request_hash=request_hash,
             lock_version=1,
+            organization_id=self._organization_id,
         )
         self.session.add(case)
         await self.session.flush()
@@ -155,7 +157,10 @@ class ResearchCaseService:
         correlation_id: UUID,
         reason: str,
     ) -> ResearchCase:
-        case = await self.session.get(ResearchCase, case_id, with_for_update=True)
+        stmt = sa.select(ResearchCase).where(ResearchCase.id == case_id).with_for_update()
+        if self._organization_id is not None:
+            stmt = stmt.where(ResearchCase.organization_id == self._organization_id)
+        case = (await self.session.execute(stmt)).scalar_one_or_none()
         if case is None:
             raise LookupError("research case not found")
         if case.lock_version != expected_version:
@@ -218,6 +223,8 @@ class ResearchCaseService:
             raise ValueError("as_of must include timezone information")
         capped_limit = min(limit, 100)
         stmt = sa.select(ResearchCase).order_by(ResearchCase.id).limit(capped_limit + 1)
+        if self._organization_id is not None:
+            stmt = stmt.where(ResearchCase.organization_id == self._organization_id)
         if state is not None:
             stmt = stmt.where(ResearchCase.state == state)
         if as_of is not None:
@@ -227,7 +234,10 @@ class ResearchCaseService:
         return list((await self.session.scalars(stmt)).all())
 
     async def get_case(self, case_id: UUID) -> ResearchCase | None:
-        return await self.session.get(ResearchCase, case_id)
+        stmt = sa.select(ResearchCase).where(ResearchCase.id == case_id)
+        if self._organization_id is not None:
+            stmt = stmt.where(ResearchCase.organization_id == self._organization_id)
+        return (await self.session.execute(stmt)).scalar_one_or_none()
 
 
 class ClaimService:

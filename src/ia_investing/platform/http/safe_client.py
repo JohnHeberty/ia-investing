@@ -72,7 +72,12 @@ class SafeHttpClient:
         await self.open()
         return self
 
-    async def __aexit__(self, exc_type, exc, traceback) -> None:  # type: ignore[no-untyped-def]
+    async def __aexit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: object,
+    ) -> None:
         await self.close()
 
     async def open(self) -> None:

@@ -23,7 +23,8 @@ Layout de campos:
 | 181-200| 20     | VOLTOT    | volume financeiro (centavos)             |
 | 237-248| 12     | CODISI    | ISIN                                     |
 
-URL: ``https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_A{year}.ZIP``"""
+URL: ``https://bvmf.bmfbovespa.com.br/InstDados/SerHist/COTAHIST_A{year}.ZIP``
+"""
 
 from __future__ import annotations
 
@@ -107,8 +108,8 @@ async def get_cotahist_csv(
     """Ler via CSV simplificado da B3 (formato mais leve).
 
     A B3 também publica versões em CSV para alguns períodos. Este endpoint
-    tenta o formato CSV antes de cair no ZIP fix-width."""
-
+    tenta o formato CSV antes de cair no ZIP fix-width.
+    """
     import csv as _csv
 
     from ..base import DEFAULT_TIMEOUT

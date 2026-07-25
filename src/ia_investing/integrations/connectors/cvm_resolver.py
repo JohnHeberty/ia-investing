@@ -3,18 +3,25 @@ from __future__ import annotations
 import csv
 import io
 import logging
+from datetime import UTC, datetime
 
+from connectors.base import HttpClient
+from connectors.cvm.fca import get_fca_valores_mobiliarios
 from ia_investing.integrations.connectors.models import CVMCompanyProfile, CVMSecurityProfile
 from ia_investing.platform.http.safe_client import SafeHttpClient, ValidatedHttpResponse
 
 logger = logging.getLogger(__name__)
 
 _CAD_CSV_URL = "https://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.csv"
+_CAD_CACHE_TTL_SECONDS = 3600
 
 
 class CVMResolver:
-    def __init__(self, http_client: SafeHttpClient) -> None:
+    def __init__(self, http_client: SafeHttpClient, client: HttpClient | None = None) -> None:
         self._http = http_client
+        self._client = client or HttpClient(timeout=60.0)
+        self._cad_cache: list[dict[str, str]] | None = None
+        self._cad_cache_at: float = 0.0
 
     async def lookup_by_cnpj(self, cnpj: str) -> CVMCompanyProfile | None:
         raw = await self._fetch_cad()
@@ -57,20 +64,48 @@ class CVMResolver:
         return None
 
     async def lookup_securities_by_cnpj(self, cnpj: str) -> list[CVMSecurityProfile]:
-        return []
+        try:
+            securities = await get_fca_valores_mobiliarios(
+                year=datetime.now(UTC).year,
+                cnpj=cnpj,
+                client=self._client,
+            )
+        except Exception as exc:
+            logger.warning("FCA securities fetch failed for CNPJ %s: %s", cnpj, exc)
+            return []
+
+        return [
+            CVMSecurityProfile(
+                cnpj=s.cnpj,
+                trading_code=s.codigo_negociacao or None,
+                market=s.mercado or None,
+                segment=s.segmento or None,
+                listing_start_date=s.dt_inicio_negociacao or None,
+                security_type=s.valor_mobiliario or "",
+            )
+            for s in securities
+        ]
 
     async def _fetch_cad(self) -> list[dict[str, str]] | None:
+        import time
+
+        now = time.monotonic()
+        if self._cad_cache is not None and (now - self._cad_cache_at) < _CAD_CACHE_TTL_SECONDS:
+            return self._cad_cache
+
         try:
             response: ValidatedHttpResponse = await self._http.get(_CAD_CSV_URL)
         except Exception as exc:
             logger.warning("CVM CAD fetch failed: %s", exc)
-            return None
+            return self._cad_cache
         if response.status_code >= 400:
             logger.warning("CVM CAD returned HTTP %s", response.status_code)
-            return None
+            return self._cad_cache
         try:
             text = response.content.decode("iso-8859-1")
         except UnicodeDecodeError:
             text = response.content.decode("utf-8", errors="replace")
         reader = csv.DictReader(io.StringIO(text), delimiter=";")
-        return list(reader)
+        self._cad_cache = list(reader)
+        self._cad_cache_at = now
+        return self._cad_cache

@@ -1,0 +1,92 @@
+model_list:
+  # ── Qwen models via OpenAI-compatible endpoint ──────────────────────
+  - model_name: qwen
+    litellm_params:
+      model: openai/qwen-max
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api_key: os.environ/QWEN_API_KEY
+  - model_name: qwen-plus
+    litellm_params:
+      model: openai/qwen-plus
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api_key: os.environ/QWEN_API_KEY
+  - model_name: qwen-turbo
+    litellm_params:
+      model: openai/qwen-turbo
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api_key: os.environ/QWEN_API_KEY
+
+  # ── Agent-tier aliases (cost-optimized routing) ─────────────────────
+  # research-standard: mid-tier model for bulk research agents
+  - model_name: research-standard
+    litellm_params:
+      model: openai/qwen-plus
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api_key: os.environ/QWEN_API_KEY
+  # committee-critical: top-tier model for high-stakes decisions
+  - model_name: committee-critical
+    litellm_params:
+      model: openai/qwen-max
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api_key: os.environ/QWEN_API_KEY
+  # discovery-fast: cheapest model for screening / exploration
+  - model_name: discovery-fast
+    litellm_params:
+      model: openai/qwen-turbo
+      api_base: https://dashscope.aliyuncs.com/compatible-mode/v1
+      api_key: os.environ/QWEN_API_KEY
+
+  # ── Anthropic Claude models ─────────────────────────────────────────
+  - model_name: claude-sonnet
+    litellm_params:
+      model: anthropic/claude-sonnet-4-20250514
+      api_key: os.environ/ANTHROPIC_API_KEY
+  - model_name: claude-haiku
+    litellm_params:
+      model: anthropic/claude-3-5-haiku-20241022
+      api_key: os.environ/ANTHROPIC_API_KEY
+
+  # ── OpenAI models (direct) ─────────────────────────────────────────
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/gpt-4o
+      api_key: os.environ/OPENAI_API_KEY
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: os.environ/OPENAI_API_KEY
+  - model_name: o3-mini
+    litellm_params:
+      model: openai/o3-mini
+      api_key: os.environ/OPENAI_API_KEY
+
+  # ── Embeddings ──────────────────────────────────────────────────────
+  - model_name: text-embedding-3-small
+    litellm_params:
+      model: openai/text-embedding-3-small
+      api_key: os.environ/OPENAI_API_KEY
+  - model_name: text-embedding-3-large
+    litellm_params:
+      model: openai/text-embedding-3-large
+      api_key: os.environ/OPENAI_API_KEY
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+litellm_settings:
+  # Drop unsupported params (e.g. response_format) to avoid 400s from providers
+  drop_params:
+    - response_format
+  num_retries: 3
+  request_timeout: 120
+  timeout: 120
+  # Budget controls — per-virtual-key spend caps
+  max_budget: 100  # USD per virtual key
+  budget_duration: 30d
+
+router_settings:
+  routing_strategy: simple-shuffle
+  num_retries: 2
+  timeout: 120
+  allowed_fails: 3
+  cooldown_time: 30

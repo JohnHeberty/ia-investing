@@ -26,9 +26,10 @@ class DuplicateVoteError(ValueError):
 
 
 class CommitteeService:
-    def __init__(self, session: AsyncSession, audit: AuditService) -> None:
+    def __init__(self, session: AsyncSession, audit: AuditService, organization_id: UUID | None = None) -> None:
         self._session = session
         self._audit = audit
+        self._organization_id = organization_id
 
     async def create_session(
         self,
@@ -45,6 +46,7 @@ class CommitteeService:
             agenda=agenda or {},
             state="scheduled",
             total_members=len(members),
+            organization_id=self._organization_id,
         )
         self._session.add(session)
         await self._session.flush()
@@ -65,7 +67,10 @@ class CommitteeService:
         actor_id: UUID | None = None,
         **kwargs: Any,
     ) -> CommitteeSession:
-        db_session = await self._session.get(CommitteeSession, session_id)
+        stmt = sa.select(CommitteeSession).where(CommitteeSession.id == session_id)
+        if self._organization_id is not None:
+            stmt = stmt.where(CommitteeSession.organization_id == self._organization_id)
+        db_session = (await self._session.execute(stmt)).scalar_one_or_none()
         if db_session is None:
             raise LookupError(f"Committee session {session_id} not found")
 
@@ -260,7 +265,10 @@ class CommitteeService:
         return result
 
     async def get_session(self, session_id: UUID) -> dict[str, Any]:
-        db_session = await self._session.get(CommitteeSession, session_id)
+        stmt = sa.select(CommitteeSession).where(CommitteeSession.id == session_id)
+        if self._organization_id is not None:
+            stmt = stmt.where(CommitteeSession.organization_id == self._organization_id)
+        db_session = (await self._session.execute(stmt)).scalar_one_or_none()
         if db_session is None:
             raise LookupError(f"Committee session {session_id} not found")
 
@@ -328,6 +336,8 @@ class CommitteeService:
             .where(CommitteeSession.state.in_(["scheduled", "in_session", "voting", "deliberating", "decided"]))
             .order_by(CommitteeSession.scheduled_at.asc())
         )
+        if self._organization_id is not None:
+            stmt = stmt.where(CommitteeSession.organization_id == self._organization_id)
         result = await self._session.execute(stmt)
         sessions = result.scalars().all()
         return [
@@ -350,6 +360,10 @@ class CommitteeService:
     ) -> tuple[list[CommitteeSession], int]:
         stmt = sa.select(CommitteeSession)
         count_stmt = sa.select(sa.func.count()).select_from(CommitteeSession)
+
+        if self._organization_id is not None:
+            stmt = stmt.where(CommitteeSession.organization_id == self._organization_id)
+            count_stmt = count_stmt.where(CommitteeSession.organization_id == self._organization_id)
 
         if state:
             stmt = stmt.where(CommitteeSession.state == state)

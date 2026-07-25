@@ -15,6 +15,9 @@ class ResearchAssessment(Base):
     __tablename__ = "research_assessments"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     research_case_id: Mapped[UUID] = mapped_column(sa.ForeignKey("research_cases.id", ondelete="CASCADE"), index=True)
     assessment_type: Mapped[str] = mapped_column(sa.String(50))
     author_type: Mapped[str] = mapped_column(sa.String(20))
@@ -38,6 +41,9 @@ class ReviewRequest(Base):
     __tablename__ = "review_requests"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     assessment_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("research_assessments.id", ondelete="CASCADE"), unique=True
     )
@@ -58,6 +64,9 @@ class ReviewDecision(Base):
     __tablename__ = "review_decisions"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     review_request_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("review_requests.id", ondelete="CASCADE"), unique=True
     )

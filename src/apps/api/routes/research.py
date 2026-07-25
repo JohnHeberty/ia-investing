@@ -36,6 +36,12 @@ from ia_investing.domain.valuation import DCFInput
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
 
 
+def _organization_id(auth: AuthContext) -> UUID:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
+    return auth.organization_id
+
+
 class CreateResearchCaseV1(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -396,7 +402,7 @@ async def list_cases(
     session: AsyncSession = Depends(get_async_session),
 ) -> list[ResearchCaseV1]:
     require_research_read(auth)
-    svc = ResearchCaseService(session)
+    svc = ResearchCaseService(session, organization_id=_organization_id(auth))
     try:
         rows = await svc.list_cases(state=state, as_of=as_of, after=after, limit=limit)
     except ValueError as exc:
@@ -415,7 +421,7 @@ async def get_case(
     session: AsyncSession = Depends(get_async_session),
 ) -> ResearchCaseV1:
     require_research_read(auth)
-    case = await ResearchCaseService(session).get_case(case_id)
+    case = await ResearchCaseService(session, organization_id=_organization_id(auth)).get_case(case_id)
     if case is None:
         raise HTTPException(status_code=404, detail="research case not found")
     return case_response(case, response)
@@ -431,7 +437,7 @@ async def create_case(
     session: AsyncSession = Depends(get_async_session),
 ) -> ResearchCaseV1:
     try:
-        case, created = await ResearchCaseService(session).create(
+        case, created = await ResearchCaseService(session, organization_id=_organization_id(auth)).create(
             CreateResearchCase(
                 case_type=body.case_type,
                 title=body.title,
@@ -465,7 +471,7 @@ async def transition_case(
     session: AsyncSession = Depends(get_async_session),
 ) -> ResearchCaseV1:
     try:
-        case = await ResearchCaseService(session).transition(
+        case = await ResearchCaseService(session, organization_id=_organization_id(auth)).transition(
             case_id,
             body.target,
             parse_etag(if_match),

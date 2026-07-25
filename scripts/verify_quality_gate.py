@@ -76,8 +76,10 @@ async def main() -> None:
             sa.select(sa.func.count(AuditLog.id)).where(AuditLog.correlation_id == correlation_id)
         )
 
-    assert not first.promotion_allowed and first.incident_id == repeated.incident_id
-    assert quarantine is not None and quarantine.status == "released"
+    assert not first.promotion_allowed
+    assert first.incident_id == repeated.incident_id
+    assert quarantine is not None
+    assert quarantine.status == "released"
     assert audit_count == 3
     print("quality-gate-ok blocked=true idempotent=true transition=resolved audit_events=3")
 

@@ -58,9 +58,7 @@ def _make_org(session: AsyncSession) -> Organization:
     return org
 
 
-def _make_candidate(
-    session: AsyncSession, org_id: UUID, **kw: object
-) -> InvestmentCandidateRecord:
+def _make_candidate(session: AsyncSession, org_id: UUID, **kw: object) -> InvestmentCandidateRecord:
     h = hashlib.sha256(uuid4().bytes).hexdigest()
     c = InvestmentCandidateRecord(
         id=uuid4(),
@@ -77,9 +75,7 @@ def _make_candidate(
     return c
 
 
-def _make_analysis_run(
-    session: AsyncSession, candidate_id: UUID
-) -> CandidateAnalysisRunRecord:
+def _make_analysis_run(session: AsyncSession, candidate_id: UUID) -> CandidateAnalysisRunRecord:
     r = CandidateAnalysisRunRecord(
         id=uuid4(),
         candidate_id=candidate_id,
@@ -97,13 +93,9 @@ def _make_analysis_run(
 def _make_issuer_instrument_listing(
     session: AsyncSession, *, ticker: str = "SCEN4"
 ) -> tuple[Issuer, Instrument, Listing]:
-    issuer = Issuer(
-        id=uuid4(), name_pt="Scenario Issuer S.A.", cnpj="99888777000199"
-    )
+    issuer = Issuer(id=uuid4(), name_pt="Scenario Issuer S.A.", cnpj="99888777000199")
     session.add(issuer)
-    instrument = Instrument(
-        id=uuid4(), issuer_id=issuer.id, instrument_type="common_share"
-    )
+    instrument = Instrument(id=uuid4(), issuer_id=issuer.id, instrument_type="common_share")
     session.add(instrument)
     listing = Listing(
         id=uuid4(),
@@ -175,31 +167,21 @@ async def test_scenario_a_full_flow(db_runtime: DatabaseRuntime) -> None:
         sources = (
             (
                 await session.execute(
-                    select(CandidateSourceRecord).where(
-                        CandidateSourceRecord.candidate_id == candidate_id
-                    )
+                    select(CandidateSourceRecord).where(CandidateSourceRecord.candidate_id == candidate_id)
                 )
             )
             .scalars()
             .all()
         )
         gaps = (
-            (
-                await session.execute(
-                    select(CandidateGapRecord).where(
-                        CandidateGapRecord.candidate_id == candidate_id
-                    )
-                )
-            )
+            (await session.execute(select(CandidateGapRecord).where(CandidateGapRecord.candidate_id == candidate_id)))
             .scalars()
             .all()
         )
         events = (
             (
                 await session.execute(
-                    select(CandidateEventRecord).where(
-                        CandidateEventRecord.candidate_id == candidate_id
-                    )
+                    select(CandidateEventRecord).where(CandidateEventRecord.candidate_id == candidate_id)
                 )
             )
             .scalars()
@@ -283,13 +265,7 @@ async def test_scenario_b_ri_missing_resolved(db_runtime: DatabaseRuntime) -> No
 
     async with db_runtime.session() as session:
         gaps = (
-            (
-                await session.execute(
-                    select(CandidateGapRecord).where(
-                        CandidateGapRecord.candidate_id == candidate.id
-                    )
-                )
-            )
+            (await session.execute(select(CandidateGapRecord).where(CandidateGapRecord.candidate_id == candidate.id)))
             .scalars()
             .all()
         )
@@ -309,9 +285,7 @@ async def test_scenario_b_ri_missing_resolved(db_runtime: DatabaseRuntime) -> No
             candidate_id=candidate.id,
             kind="investor_relations",
             url="https://ri.scenarioissuer.com.br",
-            normalized_url_hash=hashlib.sha256(
-                b"https://ri.scenarioissuer.com.br"
-            ).hexdigest(),
+            normalized_url_hash=hashlib.sha256(b"https://ri.scenarioissuer.com.br").hexdigest(),
             status="discovered",
             verification_method="user_supplied",
             confidence=Decimal("0.5"),
@@ -324,15 +298,11 @@ async def test_scenario_b_ri_missing_resolved(db_runtime: DatabaseRuntime) -> No
 
     # 5. Validate the URL — mock HTTP response with identity signals
     expected_content = (
-        b"<html><title>Scenario Issuer S.A. RI</title>"
-        b"<p>CNPJ: 99.888.777/0001-99</p>"
-        b"<p>SCEN4 na B3</p></html>"
+        b"<html><title>Scenario Issuer S.A. RI</title><p>CNPJ: 99.888.777/0001-99</p><p>SCEN4 na B3</p></html>"
     )
     runtime._http = cast(
         SafeHttpClient,
-        _mock_http_client(
-            status_code=200, content=expected_content, final_url="https://ri.scenarioissuer.com.br"
-        ),
+        _mock_http_client(status_code=200, content=expected_content, final_url="https://ri.scenarioissuer.com.br"),
     )
 
     validation_input = CandidateSourceValidationInput(
@@ -342,22 +312,14 @@ async def test_scenario_b_ri_missing_resolved(db_runtime: DatabaseRuntime) -> No
         correlation_id=uuid4(),
     )
     validation = await runtime.validate_supplied_candidate_source(validation_input)
-    assert validation.status == "verified", (
-        f"Expected verified, got {validation.status}: {validation.reason}"
-    )
+    assert validation.status == "verified", f"Expected verified, got {validation.status}: {validation.reason}"
     assert validation.official is True
 
     # 6. Gap should now be resolved
     async with db_runtime.session() as session:
         source_db = await session.get(CandidateSourceRecord, source_id)
         gaps = (
-            (
-                await session.execute(
-                    select(CandidateGapRecord).where(
-                        CandidateGapRecord.candidate_id == candidate.id
-                    )
-                )
-            )
+            (await session.execute(select(CandidateGapRecord).where(CandidateGapRecord.candidate_id == candidate.id)))
             .scalars()
             .all()
         )
@@ -371,9 +333,7 @@ async def test_scenario_b_ri_missing_resolved(db_runtime: DatabaseRuntime) -> No
 
     # 7. Readiness should now pass
     readiness = await runtime.evaluate_candidate_readiness(command)
-    assert readiness.blocked is False, (
-        f"Still blocked after resolving IR gap: {readiness.blocker_codes}"
-    )
+    assert readiness.blocked is False, f"Still blocked after resolving IR gap: {readiness.blocker_codes}"
 
 
 # ---------------------------------------------------------------------------
@@ -399,9 +359,7 @@ async def test_scenario_c_wrong_url_rejected(db_runtime: DatabaseRuntime) -> Non
             candidate_id=candidate.id,
             kind="investor_relations",
             url="https://ri.differentcompany.com.br",
-            normalized_url_hash=hashlib.sha256(
-                b"https://ri.differentcompany.com.br"
-            ).hexdigest(),
+            normalized_url_hash=hashlib.sha256(b"https://ri.differentcompany.com.br").hexdigest(),
             status="discovered",
             verification_method="user_supplied",
             confidence=Decimal("0.5"),
@@ -449,9 +407,7 @@ async def test_scenario_d_explorer_persists_suggestions(
 ) -> None:
     async with db_runtime.session() as session:
         org = _make_org(session)
-        _iss, instrument, _listing = _make_issuer_instrument_listing(
-            session, ticker="EXPL4"
-        )
+        _iss, instrument, _listing = _make_issuer_instrument_listing(session, ticker="EXPL4")
         await session.commit()
 
     runtime = ProductionCandidateRuntime(db=db_runtime)
@@ -493,14 +449,10 @@ async def test_scenario_d_explorer_persists_suggestions(
             "score": 0.85,
         },
     )
-    findings = ExplorationFindings(
-        shortlist=shortlist, suggestions=suggestion, limitations=()
-    )
+    findings = ExplorationFindings(shortlist=shortlist, suggestions=suggestion, limitations=())
 
     # 3. Persist suggestions
-    result: ExplorationWorkflowResult = (
-        await runtime.persist_exploration_suggestions(findings)
-    )
+    result: ExplorationWorkflowResult = await runtime.persist_exploration_suggestions(findings)
     assert result.status == "succeeded"
     assert result.suggestion_count >= 1
     assert result.universe_size == shortlist.universe_size
@@ -583,31 +535,21 @@ async def test_scenario_f_idempotency(db_runtime: DatabaseRuntime) -> None:
         sources = (
             (
                 await session.execute(
-                    select(CandidateSourceRecord).where(
-                        CandidateSourceRecord.candidate_id == candidate.id
-                    )
+                    select(CandidateSourceRecord).where(CandidateSourceRecord.candidate_id == candidate.id)
                 )
             )
             .scalars()
             .all()
         )
         gaps = (
-            (
-                await session.execute(
-                    select(CandidateGapRecord).where(
-                        CandidateGapRecord.candidate_id == candidate.id
-                    )
-                )
-            )
+            (await session.execute(select(CandidateGapRecord).where(CandidateGapRecord.candidate_id == candidate.id)))
             .scalars()
             .all()
         )
         events = (
             (
                 await session.execute(
-                    select(CandidateEventRecord).where(
-                        CandidateEventRecord.candidate_id == candidate.id
-                    )
+                    select(CandidateEventRecord).where(CandidateEventRecord.candidate_id == candidate.id)
                 )
             )
             .scalars()
@@ -618,9 +560,7 @@ async def test_scenario_f_idempotency(db_runtime: DatabaseRuntime) -> None:
     assert len(gaps) <= 1, f"Duplicate gaps detected: {len(gaps)}"
 
     source_events = [e for e in events if e.event_type == "sources_persisted"]
-    assert len(source_events) == 2, (
-        f"Expected exactly 2 source_persisted events, got {len(source_events)}"
-    )
+    assert len(source_events) == 2, f"Expected exactly 2 source_persisted events, got {len(source_events)}"
 
 
 # ---------------------------------------------------------------------------
@@ -628,9 +568,7 @@ async def test_scenario_f_idempotency(db_runtime: DatabaseRuntime) -> None:
 # ---------------------------------------------------------------------------
 
 
-def _mock_http_client(
-    *, status_code: int, content: bytes, final_url: str
-) -> object:
+def _mock_http_client(*, status_code: int, content: bytes, final_url: str) -> object:
     mock = AsyncMock(spec=SafeHttpClient)
     mock.get = AsyncMock(
         return_value=ValidatedHttpResponse(

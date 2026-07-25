@@ -33,80 +33,10 @@ NEWS_ANALYST = AgentConfig(
     "news_analyst/system.md",
     "schemas.NewsAnalysis",
 )
-MACRO_ANALYST = AgentConfig(
-    "macro_analyst",
-    "Analista Macro",
-    "gpt-4o",
-    0.2,
-    4096,
-    "macro/system.md",
-    "schemas.MacroAnalysis",
-)
-POLITICAL_ANALYST = AgentConfig(
-    "political_analyst",
-    "Analista Político",
-    "gpt-4o",
-    0.3,
-    4096,
-    "political/system.md",
-    "schemas.PoliticalAnalysis",
-)
-FUNDAMENTALIST_ANALYST = AgentConfig(
-    "fundamentalist_analyst",
-    "Analista Fundamentalista",
-    "gpt-4o",
-    0.2,
-    4096,
-    "fundamentalist/system.md",
-    "schemas.ThesisVerdict",
-)
-CRITIC_AGENT = AgentConfig(
-    "critic_agent",
-    "Agente Crítico",
-    "o3-mini",
-    0.5,
-    3072,
-    "critic/system.md",
-)
-RISK_DIRECTOR = AgentConfig(
-    "risk_director",
-    "Diretor de Risco",
-    "gpt-4o",
-    0.1,
-    3072,
-    "risk_director/system.md",
-    "schemas.RiskAssessment",
-)
-INVESTMENT_COMMITTEE = AgentConfig(
-    "investment_committee",
-    "Comitê de Investimento",
-    "o3-mini",
-    0.1,
-    2048,
-    "committee/system.md",
-    "schemas.CommitteeDecision",
-)
-RESEARCH_COORDINATOR = AgentConfig(
-    "research_coordinator",
-    "Coordenador de Pesquisa",
-    "gpt-4o",
-    0.4,
-    2048,
-    "coordinator/system.md",
-    "schemas.DiscoveryBrief",
-)
-
 ALL_AGENTS: dict[str, AgentConfig] = {
     config.name: config
     for config in (
         FILING_ANALYST,
         NEWS_ANALYST,
-        MACRO_ANALYST,
-        POLITICAL_ANALYST,
-        FUNDAMENTALIST_ANALYST,
-        CRITIC_AGENT,
-        RISK_DIRECTOR,
-        INVESTMENT_COMMITTEE,
-        RESEARCH_COORDINATOR,
     )
 }

@@ -5,7 +5,8 @@ A CVM publica tudo em paths previsíveis como:
 
 Mas os períodos disponíveis (anos ou carimbos YYYYMM) mudam com o tempo.
 Hard-coding ranges fica desatualizado; HTTP-HEAD para cada arquivo é desperdício.
-Então raspamos o HTML index do diretório pai uma vez por chamada e deixamos a listagem nos dizer o que existe."""
+Então raspamos o HTML index do diretório pai uma vez por chamada e deixamos a listagem nos dizer o que existe.
+"""
 
 from __future__ import annotations
 

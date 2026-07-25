@@ -25,17 +25,13 @@ async def main() -> None:
         capabilities = {
             row.logical_id: row.id
             for row in await session.execute(
-                sa.select(AgentCapability).where(
-                    AgentCapability.logical_id.in_(sorted(dataset_file.capabilities))
-                )
+                sa.select(AgentCapability).where(AgentCapability.logical_id.in_(sorted(dataset_file.capabilities)))
             )
         }
 
         missing = set(dataset_file.capabilities) - set(capabilities)
         if missing:
-            raise RuntimeError(
-                f"Capabilities not found in DB, create them first: {sorted(missing)}"
-            )
+            raise RuntimeError(f"Capabilities not found in DB, create them first: {sorted(missing)}")
 
         for capability, cases in dataset_file.capabilities.items():
             logical_id = _build_logical_id(capability, dataset_file.version)

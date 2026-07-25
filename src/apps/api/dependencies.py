@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import asyncio
 from typing import TYPE_CHECKING, Annotated
-from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
 from temporalio.contrib.opentelemetry import TracingInterceptor
@@ -50,17 +49,19 @@ async def get_audit_service(
     session: AsyncSession = Depends(get_async_session),
     auth: AuthContext = Depends(get_auth_context),
 ) -> AuditService:
-    tenant_id = auth.organization_id if auth.organization_id else UUID(int=0)
-    return AuditService(session, tenant_id)
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
+    return AuditService(session, auth.organization_id)
 
 
 async def get_committee_service(
     session: AsyncSession = Depends(get_async_session),
+    auth: AuthContext = Depends(get_auth_context),
     audit: AuditService = Depends(get_audit_service),
 ) -> CommitteeService:
     from ia_investing.application.committee_service import CommitteeService
 
-    return CommitteeService(session, audit)
+    return CommitteeService(session, audit, organization_id=auth.organization_id)
 
 
 async def get_execution_service(

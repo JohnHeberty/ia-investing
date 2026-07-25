@@ -30,7 +30,8 @@ async def verify() -> None:
             await session.execute(select(AgentCapability).where(AgentCapability.logical_id == "filing"))
         ).scalar_one()
         version = await session.get(AgentVersion, capability.active_version_id)
-        assert version is not None and version.status == "active"
+        assert version is not None
+        assert version.status == "active"
 
         now = datetime.now(UTC)
         service = AgentRuntimeService(session)
@@ -89,10 +90,12 @@ async def verify() -> None:
         assert run.agent_version_id == pinned_version_id
         prompt = await session.get(AgentArtifact, version.prompt_artifact_id)
         model = await session.get(AgentArtifact, version.model_artifact_id)
-        assert prompt is not None and model is not None
+        assert prompt is not None
+        assert model is not None
         instructions = prompt.content["text"]
         model_name = model.content["model"]
-        assert isinstance(instructions, str) and isinstance(model_name, str)
+        assert isinstance(instructions, str)
+        assert isinstance(model_name, str)
         key = MockProvider.request_key(model_name, instructions, run.input_payload)
         provider = MockProvider(
             {

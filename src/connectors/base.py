@@ -50,7 +50,7 @@ class HttpClient:
         timeout: float = 30.0,
         max_retries: int = 3,
         retry_delay: float = 1.0,
-    ):
+    ) -> None:
         if max_retries < 1:
             raise ValueError("max_retries must be >= 1")
         self.base_url = (base_url or "").rstrip("/")

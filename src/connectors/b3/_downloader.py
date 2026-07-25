@@ -24,7 +24,6 @@ async def _fetch(
     client: HttpClient | None = None,
 ) -> list[CotahistTrade]:
     """Download e parse do ZIP da B3 com filtros inline."""
-
     target_ticker = ticker.upper() if ticker else None
     code_set = {c.strip().upper() for c in market_codes} if market_codes else None
 

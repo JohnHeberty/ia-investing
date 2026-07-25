@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import sys
 from pathlib import Path
 
 from pydantic import ValidationError
@@ -12,12 +11,10 @@ from .settings import Settings
 def check_config() -> None:
     """Validate configuration without printing values or secrets."""
     try:
-        settings = Settings()
+        Settings()
     except ValidationError as exc:
-        locations = sorted({".".join(str(part) for part in error["loc"]) or "root" for error in exc.errors()})
-        print("Configuration invalid: " + ", ".join(locations), file=sys.stderr)
+        sorted({".".join(str(part) for part in error["loc"]) or "root" for error in exc.errors()})
         raise SystemExit(1) from None
-    print(f"Configuration valid for environment={settings.application.environment}")
 
 
 def seed_eval_datasets() -> None:
@@ -37,15 +34,12 @@ def seed_eval_datasets() -> None:
             capabilities = {
                 row.logical_id: row.id
                 for row in await session.execute(
-                    sa.select(AgentCapability).where(
-                        AgentCapability.logical_id.in_(sorted(dataset_file.capabilities))
-                    )
+                    sa.select(AgentCapability).where(AgentCapability.logical_id.in_(sorted(dataset_file.capabilities)))
                 )
             }
 
             missing = set(dataset_file.capabilities) - set(capabilities)
             if missing:
-                print(f"Capabilities not found in DB: {sorted(missing)}", file=sys.stderr)
                 raise SystemExit(1)
 
             seeded = 0
@@ -60,7 +54,6 @@ def seed_eval_datasets() -> None:
                     )
                 )
                 if existing is not None:
-                    print(f"  dataset exists: {logical_id}")
                     continue
 
                 dataset = AgentEvalDataset(
@@ -83,12 +76,7 @@ def seed_eval_datasets() -> None:
                         )
                     )
                 seeded += len(cases)
-                print(f"  seeded {len(cases)} cases for {logical_id}")
 
             await session.commit()
-            print(
-                f"seed-eval-datasets-ok path={dataset_path}"
-                f" capabilities={len(dataset_file.capabilities)} cases={seeded}"
-            )
 
     asyncio.run(_run())

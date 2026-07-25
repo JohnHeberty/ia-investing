@@ -13,6 +13,9 @@ class AgentDefinition(Base):
     __tablename__ = "agent_definitions"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     display_name_pt: Mapped[str] = mapped_column(sa.String(200))
 
@@ -30,6 +33,9 @@ class AgentRun(Base):
     __tablename__ = "agent_runs"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     agent_definition_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("agent_definitions.id", ondelete="CASCADE"),
         nullable=False,
@@ -57,6 +63,9 @@ class AgentToolCall(Base):
     __tablename__ = "agent_tool_calls"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     agent_run_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("agent_runs.id", ondelete="CASCADE"),
         nullable=False,

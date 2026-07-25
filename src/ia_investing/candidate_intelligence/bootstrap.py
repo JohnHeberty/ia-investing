@@ -38,7 +38,6 @@ async def configure_candidate_runtime_from_environment(
     The factory may be synchronous or asynchronous and must return an object that
     implements CandidateActivityRuntime.
     """
-
     if not candidate_intelligence_enabled():
         return False
     if candidate_activity_runtime_configured():

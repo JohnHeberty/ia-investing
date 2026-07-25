@@ -13,6 +13,9 @@ class CommitteeSession(Base):
     __tablename__ = "committee_sessions"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     thesis_ids: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=list)
     members: Mapped[dict[str, object]] = mapped_column(JSONB, nullable=False, default=list)
     scheduled_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
@@ -52,6 +55,9 @@ class CommitteeVote(Base):
     __tablename__ = "committee_votes"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     session_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("committee_sessions.id", ondelete="CASCADE"),
         nullable=False,
@@ -81,6 +87,9 @@ class CommitteeDecision(Base):
     __tablename__ = "committee_decisions"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     session_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("committee_sessions.id", ondelete="CASCADE"),
         nullable=False,

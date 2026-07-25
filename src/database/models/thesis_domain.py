@@ -16,6 +16,9 @@ class ResearchThesis(Base):
     __tablename__ = "research_theses"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     issuer_id: Mapped[UUID] = mapped_column(sa.ForeignKey("issuers.id", ondelete="RESTRICT"), index=True)
     instrument_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("instruments.id", ondelete="RESTRICT"))
     status: Mapped[str] = mapped_column(sa.String(20), default="draft")
@@ -33,6 +36,9 @@ class ResearchThesisVersion(Base):
     __tablename__ = "research_thesis_versions"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     thesis_id: Mapped[UUID] = mapped_column(sa.ForeignKey("research_theses.id", ondelete="CASCADE"), index=True)
     version_number: Mapped[int]
     parent_version_id: Mapped[UUID | None] = mapped_column(

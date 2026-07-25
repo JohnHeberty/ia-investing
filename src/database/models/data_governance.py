@@ -35,6 +35,9 @@ class QualityIncident(Base):
     __tablename__ = "quality_incidents"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )
     quality_rule_id: Mapped[UUID] = mapped_column(sa.ForeignKey("quality_rules.id", ondelete="RESTRICT"), index=True)
     source_object_version_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("source_object_versions.id", ondelete="RESTRICT"), index=True

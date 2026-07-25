@@ -1,6 +1,7 @@
 """Conector CVM — acesso unificado a dados da Comissão de Valores Mobiliários.
 
-Endpoints disponíveis: https://dados.cvm.gov.br/dados/"""
+Endpoints disponíveis: https://dados.cvm.gov.br/dados/
+"""
 
 from __future__ import annotations
 

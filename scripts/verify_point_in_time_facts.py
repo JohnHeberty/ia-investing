@@ -91,7 +91,9 @@ async def main() -> None:
             issuer_id, period_id, known_at_2 + timedelta(minutes=1)
         )
 
-    assert first.created and second.created and not repeated.created
+    assert first.created
+    assert second.created
+    assert not repeated.created
     assert before[0].value == Decimal("100.00000000")
     assert after[0].value == Decimal("125.00000000")
     assert before[0].id != after[0].id

@@ -1,7 +1,8 @@
 """CVM DFP (Demonstrativo Financeiro Padronizado) e ITR (Informações Trimestrais).
 
 DFP: demonstrativos anuais consolidados/desconsolidados.
-ITR: demonstrativos trimestrais."""
+ITR: demonstrativos trimestrais.
+"""
 
 from __future__ import annotations
 

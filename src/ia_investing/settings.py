@@ -60,10 +60,7 @@ class AIGatewaySettings(BaseModel):
 
 
 class AISettings(BaseModel):
-    provider: Literal["mock", "openai", "gateway"] = "mock"
-    openai_api_key: SecretStr = SecretStr("")
-    openai_base_url: str = "https://api.openai.com/v1"
-    litellm_gateway_url: str | None = None
+    provider: Literal["mock", "gateway", "litellm"] = "mock"
     gateway: AIGatewaySettings = Field(default_factory=AIGatewaySettings)
 
 
@@ -137,6 +134,16 @@ class CandidateSettings(BaseModel):
         return self
 
 
+class CandidateIntelligenceSettings(BaseModel):
+    """Universe screening and exploration thresholds for candidate intelligence."""
+
+    enabled: bool = True
+    min_avg_volume_30d: int = Field(default=100_000, ge=0, description="Minimum 30-day average volume")
+    min_market_cap_brl: float = Field(default=1_000_000_000, ge=0, description="Minimum market cap in BRL")
+    max_spread_pct: float = Field(default=0.05, ge=0, le=1, description="Maximum bid-ask spread as decimal")
+    exploration_shortlist_limit: int = Field(default=20, ge=1, le=500)
+
+
 class ApplicationSettings(BaseModel):
     environment: Literal["development", "test", "production"] = "development"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
@@ -149,7 +156,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
-        env_nested_max_split=1,
+        env_nested_max_split=3,
         extra="ignore",
     )
 
@@ -163,6 +170,7 @@ class Settings(BaseSettings):
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     application: ApplicationSettings = Field(default_factory=ApplicationSettings)
     candidate: CandidateSettings = Field(default_factory=CandidateSettings)
+    candidate_intelligence: CandidateIntelligenceSettings = Field(default_factory=CandidateIntelligenceSettings)
 
     @model_validator(mode="after")
     def validate_production(self) -> Settings:
@@ -179,8 +187,11 @@ class Settings(BaseSettings):
         missing = [name for name, value in required.items() if not value]
         if self.ai.provider == "mock":
             missing.append("AI__PROVIDER (mock is forbidden in production)")
-        if self.ai.provider == "openai" and not self.ai.openai_api_key.get_secret_value():
-            missing.append("AI__OPENAI_API_KEY")
+        if self.ai.provider in ("gateway", "litellm"):
+            if not self.ai.gateway.base_url:
+                missing.append("AI__GATEWAY__BASE_URL")
+            if not self.ai.gateway.api_key.get_secret_value():
+                missing.append("AI__GATEWAY__API_KEY")
         if "postgres:postgres@localhost" in self.database.url:
             missing.append("DATABASE__URL (must not use development credentials)")
         if missing:
