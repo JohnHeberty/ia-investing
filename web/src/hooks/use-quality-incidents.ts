@@ -2,9 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
-
 import type { DataState } from "@/components/domain";
+import { institutionalApi, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
 
 export interface QualityIncidentSummary {
@@ -20,64 +19,49 @@ export interface QualityIncidentSummary {
   waiver_expires_at: string | null;
 }
 
-/** Fetch quality incidents. Falls back to source health data if endpoint unavailable. */
 export function useQualityIncidents() {
-  const sourceHealthQuery = useQuery({
-    queryKey: queryKeys.sourceHealth(),
+  const query = useQuery({
+    queryKey: queryKeys.qualityIncidents(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/sources/health");
+      const { data, error } = await institutionalApi.GET("/api/v1/quality/incidents", {
+        params: { query: { limit: 250, offset: 0 } },
+      });
       if (error) throw error;
-      return data ?? [];
+      return data as { items?: Array<Record<string, unknown>> } | undefined;
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
-  const sources = Array.isArray(sourceHealthQuery.data)
-    ? (sourceHealthQuery.data as Array<Record<string, unknown>>)
-    : [];
-
-  // Derive quality metrics from source health data
-  const healthySources = sources.filter((s) => s.status === "healthy").length;
-  const staleSources = sources.filter((s) => s.status === "stale").length;
-  const neverSucceededSources = sources.filter((s) => s.status === "never_succeeded").length;
-  const totalSources = sources.length;
-
-  // Build synthetic incidents from source health data
-  const incidents: QualityIncidentSummary[] = sources
-    .filter((s) => s.status === "stale" || s.status === "never_succeeded")
-    .map((s) => ({
-      id: `src-${String(s.code ?? "")}`,
-      severity: s.status === "never_succeeded" ? "high" : "medium",
-      status: "open",
-      impact_summary: `Fonte ${String(s.name ?? s.code ?? "")} ${s.status === "stale" ? "desatualizada" : "nunca retornou sucesso"}`,
-      owner_role: String(s.owner_role ?? ""),
-      created_at: String(s.last_failure_at ?? new Date().toISOString()),
-      updated_at: String(s.last_failure_at ?? new Date().toISOString()),
-      resolution_notes: null,
-      waiver_reason: null,
-      waiver_expires_at: null,
-    }));
-
-  const dataState: DataState = computeDataState(
-    sourceHealthQuery.isLoading,
-    sourceHealthQuery.isError,
-    null,
-    sources.length > 0,
-  );
+  const raw = Array.isArray(query.data?.items) ? query.data.items : [];
+  const incidents: QualityIncidentSummary[] = raw.map((item) => ({
+    id: String(item.id ?? ""),
+    severity: String(item.severity ?? "unknown"),
+    status: String(item.status ?? "unknown"),
+    impact_summary: String(item.impact_summary ?? ""),
+    owner_role: String(item.owner_role ?? ""),
+    created_at: String(item.created_at ?? ""),
+    updated_at: String(item.updated_at ?? item.created_at ?? ""),
+    resolution_notes: item.resolution_notes ? String(item.resolution_notes) : null,
+    waiver_reason: item.waiver_reason ? String(item.waiver_reason) : null,
+    waiver_expires_at: item.waiver_expires_at ? String(item.waiver_expires_at) : null,
+  }));
+  const openIncidents = incidents.filter((incident) => ["open", "acknowledged"].includes(incident.status));
+  const dataState: DataState = computeDataState(query.isLoading, query.isError, null, incidents.length > 0);
 
   return {
     incidents,
-    sources,
-    healthySources,
-    staleSources,
-    neverSucceededSources,
-    totalSources,
-    isLoading: sourceHealthQuery.isLoading,
-    isError: sourceHealthQuery.isError,
-    error: sourceHealthQuery.error,
+    sources: [],
+    healthySources: 0,
+    staleSources: 0,
+    neverSucceededSources: 0,
+    totalSources: 0,
+    openIncidents,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
     dataState,
-    refetch: sourceHealthQuery.refetch,
+    refetch: query.refetch,
     count: incidents.length,
   };
 }

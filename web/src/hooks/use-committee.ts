@@ -2,9 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
-
 import type { DataState } from "@/components/domain";
+import { institutionalApi, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
 
 export interface CommitteeDecision {
@@ -23,114 +22,123 @@ export interface CommitteeDecision {
   conflictsDeclared: number;
 }
 
-/** Fetch committee data from decision-packs endpoint. Falls back to agent runs for derivation. */
+interface CommitteeSessionListItem {
+  id: string;
+  state: string;
+  scheduled_at?: string | null;
+  total_members: number;
+  present_members: number;
+  created_at?: string | null;
+}
+
+interface CommitteeSessionList {
+  items: CommitteeSessionListItem[];
+  total: number;
+}
+
+interface CommitteeSessionDetail extends CommitteeSessionListItem {
+  thesis_ids?: string[];
+  agenda?: Record<string, unknown>;
+  decision?: string | null;
+  rationale?: string | null;
+  published_at?: string | null;
+  votes_in_favor?: number;
+  votes_against?: number;
+  votes?: Array<Record<string, unknown>>;
+}
+
+function mapStatus(session: CommitteeSessionDetail): CommitteeDecision["status"] {
+  if (!["published", "archived"].includes(session.state)) return "pending";
+  const decision = (session.decision ?? "").toLowerCase();
+  if (decision.includes("condition")) return "conditional";
+  if (["approve", "approved", "add", "increase", "maintain"].includes(decision)) return "approved";
+  if (["reject", "rejected", "exit", "remove"].includes(decision)) return "rejected";
+  return "pending";
+}
+
+function proposalTitle(session: CommitteeSessionDetail): string {
+  const title = session.agenda?.title ?? session.agenda?.case_title ?? session.agenda?.proposal_title;
+  if (typeof title === "string" && title.trim()) return title;
+  const thesisCount = Array.isArray(session.thesis_ids) ? session.thesis_ids.length : 0;
+  return thesisCount > 0 ? `Comitê — ${thesisCount} tese${thesisCount === 1 ? "" : "s"}` : "Sessão do comitê";
+}
+
 export function useCommittee() {
-  const decisionPacksQuery = useQuery({
-    queryKey: queryKeys.decisionPacks(),
+  const sessionsQuery = useQuery({
+    queryKey: queryKeys.committeeSessions(),
     queryFn: async () => {
-      return [] as Array<Record<string, unknown>>;
-    },
-    enabled: false,
-    staleTime: 30_000,
-    refetchOnWindowFocus: false,
-  });
-
-  const agentRunsQuery = useQuery({
-    queryKey: queryKeys.agentRuns(),
-    queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/agents/runs");
+      const { data, error } = await institutionalApi.GET<CommitteeSessionList>("/api/v1/committee/sessions", {
+        params: { query: { limit: 50, offset: 0 } },
+      });
       if (error) throw error;
-      return data ?? [];
+      return data?.items ?? [];
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
-  const packs = Array.isArray(decisionPacksQuery.data)
-    ? (decisionPacksQuery.data as Array<Record<string, unknown>>)
-    : [];
+  const detailsQuery = useQuery({
+    queryKey: [...queryKeys.committeeSessions(), "details", sessionsQuery.data?.map((s) => s.id).join(",") ?? ""],
+    enabled: Boolean(sessionsQuery.data),
+    queryFn: async () => {
+      const sessions = sessionsQuery.data ?? [];
+      return Promise.all(
+        sessions.map(async (session) => {
+          const { data, error } = await institutionalApi.GET<CommitteeSessionDetail>(
+            "/api/v1/committee/sessions/{session_id}",
+            { params: { path: { session_id: session.id } } },
+          );
+          if (error) throw error;
+          return data ?? session;
+        }),
+      );
+    },
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
 
-  const runs = Array.isArray(agentRunsQuery.data)
-    ? (agentRunsQuery.data as Array<Record<string, unknown>>)
-    : [];
-
-  // Derive committee decisions from decision packs and agent runs
-  const decisions: CommitteeDecision[] = packs.map((p) => {
-    const votes = Array.isArray(p.votes) ? p.votes : [];
-    const approvedVotes = votes.filter(
-      (v: Record<string, unknown>) => v.decision === "approve",
-    ).length;
-    const conflicts = votes.filter(
-      (v: Record<string, unknown>) => v.conflict_declared === true,
-    ).length;
-
+  const sessions = detailsQuery.data ?? sessionsQuery.data ?? [];
+  const decisions: CommitteeDecision[] = sessions.map((session) => {
+    const agenda = session.agenda ?? {};
+    const conflicts = Array.isArray(agenda.conflicts) ? agenda.conflicts.length : 0;
+    const conditions = Array.isArray(agenda.conditions) ? agenda.conditions.map(String) : undefined;
     return {
-      id: String(p.id ?? ""),
-      title: String(p.title ?? p.case_title ?? "Decision pack"),
-      description: String(p.description ?? p.summary ?? ""),
-      status: (p.status as CommitteeDecision["status"]) ?? "pending",
-      requestedBy: String(p.requested_by ?? p.author ?? ""),
-      requestedAt: String(p.requested_at ?? p.created_at ?? ""),
-      decidedBy: p.decided_by ? String(p.decided_by) : undefined,
-      decidedAt: p.decided_at ? String(p.decided_at) : undefined,
-      reason: p.reason ? String(p.reason) : undefined,
-      conditions: Array.isArray(p.conditions)
-        ? p.conditions.map(String)
-        : undefined,
-      quorumRequired: typeof p.quorum_required === "number" ? p.quorum_required : 3,
-      quorumCurrent: approvedVotes,
+      id: session.id,
+      title: proposalTitle(session),
+      description:
+        typeof agenda.summary === "string"
+          ? agenda.summary
+          : "Decision pack com tese, valuation, risco, evidências e proposta.",
+      status: mapStatus(session),
+      requestedBy: typeof agenda.requested_by === "string" ? agenda.requested_by : "investment-research",
+      requestedAt: session.created_at ?? session.scheduled_at ?? "",
+      decidedAt: session.published_at ?? undefined,
+      reason: session.rationale ?? undefined,
+      conditions,
+      quorumRequired: Math.floor(session.total_members / 2) + 1,
+      quorumCurrent: session.present_members,
       conflictsDeclared: conflicts,
     };
   });
 
-  // If no decision packs, derive from recent agent runs awaiting approval
-  if (decisions.length === 0) {
-    const pendingRuns = runs.filter(
-      (r) => r.status === "awaiting_approval" || r.status === "pending_review",
-    );
-    for (const run of pendingRuns.slice(0, 5)) {
-      decisions.push({
-        id: String(run.id ?? ""),
-        title: `Agent run: ${String(run.agent_name ?? run.capability_id ?? "")}`,
-        description: String(run.error_detail ?? "Aguardando aprovação do comitê."),
-        status: "pending",
-        requestedBy: String(run.agent_name ?? "agent"),
-        requestedAt: String(run.created_at ?? ""),
-        quorumRequired: 3,
-        quorumCurrent: 0,
-        conflictsDeclared: 0,
-      });
-    }
-  }
-
-  const pendingDecisions = decisions.filter((d) => d.status === "pending");
+  const pendingDecisions = decisions.filter((decision) => decision.status === "pending");
   const approvedToday = decisions.filter(
-    (d) =>
-      d.status === "approved" &&
-      d.decidedAt &&
-      new Date(d.decidedAt).toDateString() === new Date().toDateString(),
+    (decision) =>
+      ["approved", "conditional"].includes(decision.status) &&
+      decision.decidedAt &&
+      new Date(decision.decidedAt).toDateString() === new Date().toDateString(),
   );
-  const totalConflicts = decisions.reduce((sum, d) => sum + d.conflictsDeclared, 0);
+  const totalConflicts = decisions.reduce((total, decision) => total + decision.conflictsDeclared, 0);
+  const quorumRequired = pendingDecisions.length
+    ? Math.max(...pendingDecisions.map((decision) => decision.quorumRequired))
+    : 0;
+  const quorumCurrent = pendingDecisions.length
+    ? Math.max(...pendingDecisions.map((decision) => decision.quorumCurrent))
+    : 0;
 
-  // Quorum: max quorum required across all pending decisions
-  const quorumRequired =
-    pendingDecisions.length > 0
-      ? Math.max(...pendingDecisions.map((d) => d.quorumRequired))
-      : 3;
-  const quorumCurrent =
-    pendingDecisions.length > 0
-      ? Math.max(...pendingDecisions.map((d) => d.quorumCurrent))
-      : 0;
-
-  const isLoading = decisionPacksQuery.isLoading || agentRunsQuery.isLoading;
-  const isError = decisionPacksQuery.isError || agentRunsQuery.isError;
-
-  const dataState: DataState = computeDataState(
-    isLoading,
-    isError,
-    null,
-    decisions.length > 0,
-  );
+  const isLoading = sessionsQuery.isLoading || detailsQuery.isLoading;
+  const isError = sessionsQuery.isError || detailsQuery.isError;
+  const dataState: DataState = computeDataState(isLoading, isError, null, decisions.length > 0);
 
   return {
     decisions,
@@ -141,11 +149,11 @@ export function useCommittee() {
     quorumCurrent,
     isLoading,
     isError,
-    error: decisionPacksQuery.error ?? agentRunsQuery.error,
+    error: sessionsQuery.error ?? detailsQuery.error,
     dataState,
-    refetch: () => {
-      decisionPacksQuery.refetch();
-      agentRunsQuery.refetch();
+    refetch: async () => {
+      await sessionsQuery.refetch();
+      await detailsQuery.refetch();
     },
     count: decisions.length,
   };

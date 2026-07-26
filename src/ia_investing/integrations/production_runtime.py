@@ -1688,17 +1688,13 @@ async def create_production_runtime(db: DatabaseRuntime) -> ProductionCandidateR
     settings = get_settings()
     http_client = SafeHttpClient(policy=EgressPolicy())
 
-    object_store = None
-    try:
-        s3_client = boto3.client(
-            "s3",
-            endpoint_url=settings.storage.endpoint,
-            aws_access_key_id=settings.storage.access_key.get_secret_value(),
-            aws_secret_access_key=settings.storage.secret_key.get_secret_value(),
-            region_name="us-east-1",
-        )
-        object_store = S3ImmutableObjectStore(s3_client, settings.storage.bucket)
-    except Exception:
-        logger.warning("S3/MinIO not available; document storage will be hash-only (no S3 persistence)")
+    s3_client = boto3.client(
+        "s3",
+        endpoint_url=settings.storage.endpoint,
+        aws_access_key_id=settings.storage.access_key.get_secret_value(),
+        aws_secret_access_key=settings.storage.secret_key.get_secret_value(),
+        region_name="us-east-1",
+    )
+    object_store = S3ImmutableObjectStore(s3_client, settings.storage.bucket)
 
     return ProductionCandidateRuntime(db=db, http_client=http_client, object_store=object_store)

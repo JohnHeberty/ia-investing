@@ -217,6 +217,7 @@ class TestCommitteeTenantIsolation:
         session_from_org_b.votes_in_favor = 0
         session_from_org_b.votes_against = 0
         session_from_org_b.agenda = {"proposals": []}
+        session_from_org_b.members = [{"member_id": "m1", "subject": "user1"}]
 
         db_session = AsyncMock()
         db_session.get = AsyncMock(return_value=session_from_org_b)

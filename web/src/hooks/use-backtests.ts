@@ -2,9 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
-
 import type { DataState } from "@/components/domain";
+import { institutionalApi, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
 
 export interface BacktestRun {
@@ -18,63 +17,47 @@ export interface BacktestRun {
   createdAt: string;
 }
 
-/** Fetch backtest runs from backtests endpoint. */
 export function useBacktests() {
   const query = useQuery({
     queryKey: queryKeys.backtests(),
     queryFn: async () => {
-      // Backtests list is not available as a GET endpoint; derive from source health
-      const { data: healthData } = await institutionalApi.GET("/api/v1/sources/health");
-      const sources = Array.isArray(healthData) ? (healthData as Array<Record<string, unknown>>) : [];
-
-      return { sources };
+      const { data, error } = await institutionalApi.GET("/api/v1/backtests", {
+        params: { query: { limit: 100, offset: 0 } },
+      });
+      if (error) throw error;
+      return data as { items?: Array<Record<string, unknown>> } | undefined;
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
-  const raw = query.data as { sources: Array<Record<string, unknown>>; data: unknown } | null;
+  const items = Array.isArray(query.data?.items) ? query.data.items : [];
+  const runs: BacktestRun[] = items.map((item) => {
+    const results = item.results && typeof item.results === "object" ? item.results as Record<string, unknown> : {};
+    const metrics = results.metrics && typeof results.metrics === "object" ? results.metrics as Record<string, unknown> : results;
+    const checks = results.validation && typeof results.validation === "object" ? results.validation as Record<string, unknown> : {};
+    return {
+      id: String(item.id ?? ""),
+      status: String(item.status ?? "unknown"),
+      strategy: String(item.strategy_name ?? "—"),
+      sharpeRatio: metrics.sharpe_ratio == null ? null : String(metrics.sharpe_ratio),
+      pitGate: checks.point_in_time_verified === true ? "100%" : checks.point_in_time_verified === false ? "falhou" : "—",
+      reproducibility: item.result_sha256 ? String(item.result_sha256).slice(0, 12) : "—",
+      totalCost: metrics.total_cost == null ? "—" : String(metrics.total_cost),
+      createdAt: String(item.created_at ?? ""),
+    };
+  });
 
-  // Derive backtest runs from available data
-  const runs: BacktestRun[] = [];
-  if (raw?.sources) {
-    // Create synthetic backtest summary from source health
-    const healthyCount = raw.sources.filter((s) => s.status === "healthy").length;
-    const totalCount = raw.sources.length;
-
-    runs.push({
-      id: "latest-summary",
-      status: totalCount > 0 ? "completed" : "no_data",
-      strategy: "Institutional composite",
-      sharpeRatio: null,
-      pitGate: totalCount > 0 ? "100%" : "—",
-      reproducibility: totalCount > 0 ? `${healthyCount}/${totalCount}` : "—",
-      totalCost: "—",
-      createdAt: new Date().toISOString(),
-    });
-  }
-
-  const completedRuns = runs.filter((r) => r.status === "completed").length;
-  const pitGatePass = runs.every(
-    (r) => r.pitGate === "100%" || r.pitGate === "—",
-  );
-
-  const isLoading = query.isLoading;
-  const isError = query.isError;
-
-  const dataState: DataState = computeDataState(
-    isLoading,
-    isError,
-    null,
-    runs.length > 0,
-  );
+  const completedRuns = runs.filter((run) => run.status === "succeeded").length;
+  const pitGatePass = runs.length > 0 && runs.every((run) => run.pitGate === "100%");
+  const dataState: DataState = computeDataState(query.isLoading, query.isError, null, runs.length > 0);
 
   return {
     runs,
     completedRuns,
     pitGatePass,
-    isLoading,
-    isError,
+    isLoading: query.isLoading,
+    isError: query.isError,
     error: query.error,
     dataState,
     refetch: query.refetch,

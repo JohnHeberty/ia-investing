@@ -7,7 +7,7 @@ import secrets
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 import jwt
 from fastapi import Depends, Header, HTTPException, Request
@@ -43,6 +43,13 @@ class AuthContext:
 
 
 Principal = AuthContext
+
+
+def actor_uuid(context: AuthContext) -> UUID:
+    try:
+        return UUID(context.subject)
+    except ValueError:
+        return uuid5(NAMESPACE_URL, context.subject)
 
 
 def _build_oidc_verifier(settings: Settings) -> PyJWKClient | None:

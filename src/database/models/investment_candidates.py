@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy import event
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ._utils import utcnow
@@ -326,6 +326,45 @@ class ExplorationSuggestionRecord(Base):
             "status <> 'dismissed' OR "
             "(dismissed_at IS NOT NULL AND dismissed_by IS NOT NULL AND dismissal_reason IS NOT NULL)",
             name="exploration_suggestion_dismissal_fields",
+        ),
+    )
+
+
+class RestrictedInstrumentRecord(Base):
+    __tablename__ = "restricted_instruments"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    organization_id: Mapped[UUID] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="CASCADE"),
+        index=True,
+    )
+    instrument_id: Mapped[UUID] = mapped_column(
+        sa.ForeignKey("instruments.id", ondelete="CASCADE"),
+        index=True,
+    )
+    reason: Mapped[str] = mapped_column(sa.Text)
+    active_from: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, index=True)
+    active_until: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), index=True)
+    created_by: Mapped[str] = mapped_column(sa.String(255))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+
+    __table_args__ = (
+        sa.CheckConstraint(
+            "active_until IS NULL OR active_until > active_from",
+            name="restricted_instrument_valid_window",
+        ),
+        ExcludeConstraint(
+            ("organization_id", "="),
+            ("instrument_id", "="),
+            (sa.text("tstzrange(active_from, active_until, '[)')"), "&&"),
+            name="ex_restricted_instruments_active_window",
+            using="gist",
+        ),
+        sa.Index(
+            "ix_restricted_instrument_org_window",
+            "organization_id",
+            "active_from",
+            "active_until",
         ),
     )
 

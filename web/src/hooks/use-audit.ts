@@ -2,9 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
-
 import type { DataState } from "@/components/domain";
+import { institutionalApi, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
 
 export interface AuditEvent {
@@ -18,89 +17,52 @@ export interface AuditEvent {
   integrity: "ok" | "mismatch";
 }
 
-/** Fetch audit trail data from agent runs and source health as proxy. */
 export function useAudit() {
-  const agentRunsQuery = useQuery({
-    queryKey: queryKeys.agentRuns(),
+  const logsQuery = useQuery({
+    queryKey: queryKeys.auditLogs(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/agents/runs");
+      const { data, error } = await institutionalApi.GET("/api/v1/audit/logs", {
+        params: { query: { limit: 250, offset: 0 } },
+      });
       if (error) throw error;
-      return data ?? [];
+      return data as { items?: Array<Record<string, unknown>> } | undefined;
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
-
-  const sourceHealthQuery = useQuery({
-    queryKey: queryKeys.sourceHealth(),
+  const integrityQuery = useQuery({
+    queryKey: ["audit-chain-verification"],
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/sources/health");
+      const { data, error } = await institutionalApi.GET("/api/v1/audit/verify");
       if (error) throw error;
-      return data ?? [];
+      return data as { tampered_entries?: Array<Record<string, unknown>>; verified?: boolean } | undefined;
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
-  const runs = Array.isArray(agentRunsQuery.data)
-    ? (agentRunsQuery.data as Array<Record<string, unknown>>)
-    : [];
-
-  const sources = Array.isArray(sourceHealthQuery.data)
-    ? (sourceHealthQuery.data as Array<Record<string, unknown>>)
-    : [];
-
-  // Build audit events from agent runs
-  const auditEvents: AuditEvent[] = runs.map((r) => ({
-    id: String(r.id ?? ""),
-    type: String(r.status ?? "unknown"),
-    actor: String(r.agent_name ?? r.capability_id ?? "agent"),
-    target: String(r.capability_id ?? ""),
-    version: String(r.trace_id ?? ""),
-    correlationId: String(r.trace_id ?? ""),
-    timestamp: String(r.created_at ?? ""),
-    integrity: "ok" as const,
+  const entries = Array.isArray(logsQuery.data?.items) ? logsQuery.data.items : [];
+  const tamperedIds = new Set(
+    (integrityQuery.data?.tampered_entries ?? []).map((item) => String(item.id ?? "")),
+  );
+  const auditEvents: AuditEvent[] = entries.map((entry) => ({
+    id: String(entry.id ?? ""),
+    type: String(entry.action ?? "unknown"),
+    actor: String(entry.actor_id ?? "system"),
+    target: `${String(entry.resource_type ?? "resource")}:${String(entry.resource_id ?? "")}`,
+    version: String(entry.hash ?? ""),
+    correlationId: String((entry.metadata as Record<string, unknown> | undefined)?.correlation_id ?? ""),
+    timestamp: String(entry.timestamp ?? entry.created_at ?? ""),
+    integrity: tamperedIds.has(String(entry.id ?? "")) ? "mismatch" : "ok",
   }));
 
-  // Add source health events
-  for (const s of sources) {
-    if (s.status === "stale" || s.status === "never_succeeded") {
-      auditEvents.push({
-        id: `src-${String(s.code ?? "")}`,
-        type: "source_health",
-        actor: String(s.provider ?? s.code ?? ""),
-        target: String(s.name ?? s.code ?? ""),
-        version: "",
-        correlationId: String(s.code ?? ""),
-        timestamp: String(s.last_failure_at ?? new Date().toISOString()),
-        integrity: s.status === "never_succeeded" ? "mismatch" : "ok",
-      });
-    }
-  }
-
-  // Sort by timestamp descending
-  auditEvents.sort(
-    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-  );
-
   const totalEvents = auditEvents.length;
-  const correlatedEvents = auditEvents.filter((e) => e.correlationId).length;
-  const overrides = auditEvents.filter(
-    (e) => e.type === "override" || e.type === "manual",
-  ).length;
-  const integrityFailures = auditEvents.filter(
-    (e) => e.integrity === "mismatch",
-  ).length;
-
-  const isLoading = agentRunsQuery.isLoading || sourceHealthQuery.isLoading;
-  const isError = agentRunsQuery.isError || sourceHealthQuery.isError;
-
-  const dataState: DataState = computeDataState(
-    isLoading,
-    isError,
-    null,
-    auditEvents.length > 0,
-  );
+  const correlatedEvents = auditEvents.filter((event) => event.correlationId).length;
+  const overrides = auditEvents.filter((event) => event.type.includes("override") || event.type.includes("waiv")).length;
+  const integrityFailures = auditEvents.filter((event) => event.integrity === "mismatch").length;
+  const isLoading = logsQuery.isLoading || integrityQuery.isLoading;
+  const isError = logsQuery.isError || integrityQuery.isError;
+  const dataState: DataState = computeDataState(isLoading, isError, null, auditEvents.length > 0);
 
   return {
     auditEvents,
@@ -111,11 +73,11 @@ export function useAudit() {
     integrityFailures,
     isLoading,
     isError,
-    error: agentRunsQuery.error ?? sourceHealthQuery.error,
+    error: logsQuery.error ?? integrityQuery.error,
     dataState,
     refetch: () => {
-      agentRunsQuery.refetch();
-      sourceHealthQuery.refetch();
+      void logsQuery.refetch();
+      void integrityQuery.refetch();
     },
   };
 }

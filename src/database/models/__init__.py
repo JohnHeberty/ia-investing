@@ -96,6 +96,7 @@ from .investment_candidates import (  # noqa: F401
     ExplorationRunRecord,
     ExplorationSuggestionRecord,
     InvestmentCandidateRecord,
+    RestrictedInstrumentRecord,
 )
 from .macro import MacroIndicator  # noqa: F401
 from .market_data import (  # noqa: F401

@@ -12,6 +12,15 @@ from ia_investing.application.audit_service import AuditService
 from ia_investing.domain.base_machine import InvalidTransitionError
 from ia_investing.domain.committee_machine import CommitteeMachineModel, create_committee_machine
 
+__all__ = [
+    "CommitteeService",
+    "ConflictOfInterestError",
+    "DuplicateVoteError",
+    "InvalidTransitionError",
+    "MajorityNotReachedError",
+    "QuorumNotMetError",
+]
+
 
 class QuorumNotMetError(ValueError):
     pass
@@ -22,6 +31,10 @@ class MajorityNotReachedError(ValueError):
 
 
 class DuplicateVoteError(ValueError):
+    pass
+
+
+class ConflictOfInterestError(PermissionError):
     pass
 
 
@@ -111,15 +124,21 @@ class CommitteeService:
     async def convene_session(
         self,
         session_id: UUID,
-        present_members: int | None = None,
+        present_member_ids: list[str] | None = None,
         actor_id: UUID | None = None,
     ) -> CommitteeSession:
         db_session = await self._session.get(CommitteeSession, session_id)
         if db_session is None:
             raise LookupError(f"Committee session {session_id} not found")
 
-        if present_members is not None:
-            db_session.present_members = present_members
+        if present_member_ids is not None:
+            members_raw: Any = db_session.members or []
+            members_list: list[dict[str, Any]] = members_raw if isinstance(members_raw, list) else []
+            registered_ids = {m.get("member_id") for m in members_list}
+            unknown = set(present_member_ids) - registered_ids
+            if unknown:
+                raise ValueError(f"Unknown members marked present: {sorted(unknown)}")
+            db_session.present_members = len(present_member_ids)
 
         result = await self._transition(session_id, "convene", actor_id=actor_id)
         result.convened_at = datetime.now(UTC)
@@ -153,6 +172,7 @@ class CommitteeService:
         vote: str,
         justification: str | None = None,
         actor_id: UUID | None = None,
+        actor_subject: str | None = None,
     ) -> CommitteeVote:
         db_session = await self._session.get(CommitteeSession, session_id)
         if db_session is None:
@@ -161,12 +181,27 @@ class CommitteeService:
         if db_session.state not in ("voting", "in_session"):
             raise InvalidTransitionError("Voting is not open for this session")
 
+        members_raw: Any = db_session.members or []
+        registered_members: list[dict[str, Any]] = members_raw if isinstance(members_raw, list) else []
+        member_entry = next((m for m in registered_members if m.get("member_id") == member_id), None)
+        if member_entry is None:
+            raise LookupError(f"Member {member_id} is not registered for this session")
+
+        member_subject = member_entry.get("subject")
+        if actor_subject and member_subject and actor_subject != member_subject:
+            raise ConflictOfInterestError(
+                f"Actor {actor_subject} cannot vote as member {member_id}; "
+                "votes must be cast using the actor's own committee membership"
+            )
+
         existing = await self._session.execute(
-            sa.select(CommitteeVote).where(
+            sa.select(CommitteeVote)
+            .where(
                 CommitteeVote.session_id == session_id,
                 CommitteeVote.member_id == member_id,
                 CommitteeVote.proposal_id == proposal_id,
             )
+            .with_for_update()
         )
         if existing.scalar_one_or_none() is not None:
             raise DuplicateVoteError(f"Member {member_id} already voted on proposal {proposal_id}")
@@ -224,6 +259,7 @@ class CommitteeService:
         decision: str,
         rationale: str | None = None,
         actor_id: UUID | None = None,
+        actor_subject: str | None = None,
     ) -> CommitteeSession:
         db_session = await self._session.get(CommitteeSession, session_id)
         if db_session is None:
