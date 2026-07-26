@@ -74,9 +74,8 @@ general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
 
 litellm_settings:
-  # Drop unsupported params (e.g. response_format) to avoid 400s from providers
-  drop_params:
-    - response_format
+  # response_format is NOT dropped globally — financial agents require strict JSON Schema.
+  # Models without JSON Schema support are reached via distinct aliases with capability routing.
   num_retries: 3
   request_timeout: 120
   timeout: 120
