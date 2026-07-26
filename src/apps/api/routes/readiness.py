@@ -1,24 +1,100 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
 from typing import Annotated
 from uuid import UUID, uuid4
 
+import httpx
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application.readiness import ReadinessService
 from ia_investing.domain.identity import InstitutionalAccessContext
+from ia_investing.settings import get_settings
 
 router = APIRouter(prefix="/api/v1/readiness", tags=["readiness"])
+
+HEALTH_TIMEOUT = httpx.Timeout(5.0)
+
+
+async def _check_database() -> str:
+    try:
+        from database.core import _get_engine
+
+        engine = _get_engine()
+        async with engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return "ok"
+    except Exception as exc:
+        raise RuntimeError(f"database: {exc}") from exc
+
+
+async def _check_minio() -> str:
+    settings = get_settings().storage
+    url = f"{settings.endpoint}/minio/health/live"
+    try:
+        async with httpx.AsyncClient(timeout=HEALTH_TIMEOUT) as client:
+            resp = await client.get(url)
+            if resp.is_error:
+                raise RuntimeError(f"minio: HTTP {resp.status_code}")
+        return "ok"
+    except Exception as exc:
+        raise RuntimeError(f"minio: {exc}") from exc
+
+
+async def _check_temporal() -> str:
+    settings = get_settings().temporal
+    host, port_str = settings.address.split(":", 1)
+    port = int(port_str)
+    try:
+        _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=3.0)
+        writer.close()
+        await writer.wait_closed()
+        return "ok"
+    except Exception as exc:
+        raise RuntimeError(f"temporal: {exc}") from exc
+
+
+async def _check_litellm() -> str:
+    settings = get_settings().ai
+    if settings.provider not in ("gateway", "litellm"):
+        return "skipped"
+    base_url = settings.gateway.base_url
+    if not base_url:
+        return "skipped"
+    health_url = base_url.rstrip("/").replace("/v1", "") + "/health"
+    try:
+        async with httpx.AsyncClient(timeout=HEALTH_TIMEOUT) as client:
+            resp = await client.get(health_url)
+            if resp.is_error:
+                raise RuntimeError(f"litellm: HTTP {resp.status_code}")
+        return "ok"
+    except Exception as exc:
+        raise RuntimeError(f"litellm: {exc}") from exc
 
 
 @router.get("")
 async def readiness_check() -> dict[str, object]:
-    return {"status": "ready", "version": "0.1.0"}
+    checks = {}
+    all_ok = True
+    for name, fn in [
+        ("database", _check_database),
+        ("minio", _check_minio),
+        ("temporal", _check_temporal),
+        ("litellm", _check_litellm),
+    ]:
+        try:
+            result = await fn()
+            checks[name] = result
+        except RuntimeError as exc:
+            checks[name] = str(exc)
+            all_ok = False
+    return {"status": "ready" if all_ok else "degraded", "version": "0.1.0", "checks": checks}
 
 
 def context_from(auth: AuthContext) -> InstitutionalAccessContext:

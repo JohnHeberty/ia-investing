@@ -41,7 +41,7 @@ class AuditLogEntry(Base):
         index=True,
     )
     actor_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
-    action: Mapped[str] = mapped_column(sa.String(30), nullable=False)
+    action: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     resource_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     resource_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
     changes: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
@@ -56,8 +56,7 @@ class AuditLogEntry(Base):
         sa.Index("ix_audit_log_actor", "actor_id"),
         sa.Index("ix_audit_log_resource", "resource_type", "resource_id"),
         sa.CheckConstraint(
-            "action IN ('create','update','delete','read','execute','approve',"
-            "'reject','login','logout','export','config_change')",
+            "action ~ '^[a-z][a-z0-9_.:-]{0,99}$'",
             name="ck_audit_log_action",
         ),
     )

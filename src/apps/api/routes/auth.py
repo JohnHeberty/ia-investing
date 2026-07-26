@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import json
 import secrets
 from typing import Any
 from uuid import UUID
@@ -195,19 +194,11 @@ async def callback(
     if not access_token or not isinstance(access_token, str):
         raise HTTPException(status_code=401, detail="OIDC token response missing access_token")
     if id_token and isinstance(id_token, str):
-        if settings.oidc_jwks_url:
-            claims = await _verify_jwt(id_token)
-            if claims.get("nonce") != stored["nonce"]:
-                raise HTTPException(status_code=401, detail="OIDC nonce validation failed")
-        else:
-            import base64
-
-            payload = id_token.split(".")[1]
-            padded = payload + "=" * (4 - len(payload) % 4)
-            try:
-                claims = json.loads(base64.urlsafe_b64decode(padded))
-            except (ValueError, json.JSONDecodeError):
-                claims = {}
+        if not settings.oidc_jwks_url:
+            raise HTTPException(status_code=503, detail="OIDC JWKS URL is required for token verification")
+        claims = await _verify_jwt(id_token)
+        if claims.get("nonce") != stored["nonce"]:
+            raise HTTPException(status_code=401, detail="OIDC nonce validation failed")
         subject = str(claims.get("sub", ""))
         name = str(claims.get("name", "")) or None
         org_id = claims.get("organization_id")
@@ -248,80 +239,11 @@ async def callback(
 
 
 @router.post("/login")
-async def login(
-    body: LoginRequest | None = None,
-    response: Response = None,  # type: ignore[assignment]
-) -> dict[str, str]:
-    if body is None or not body.email or not body.password:
-        raise HTTPException(status_code=422, detail="Email and password are required")
-    settings = get_settings().security
-    if settings.oidc_token_url and settings.oidc_client_id:
-        form = {
-            "grant_type": "password",
-            "username": body.email,
-            "password": body.password,
-            "client_id": settings.oidc_client_id,
-            "scope": settings.oidc_scope,
-        }
-        if settings.oidc_client_secret:
-            form["client_secret"] = settings.oidc_client_secret
-        async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-            resp = await client.post(
-                settings.oidc_token_url,
-                data=form,
-                headers={"Accept": "application/json"},
-            )
-        if resp.is_error:
-            raise HTTPException(status_code=401, detail="Invalid credentials")
-        token_data: dict[str, object] = resp.json()
-        id_token_str = token_data.get("id_token")
-        if id_token_str and isinstance(id_token_str, str):
-            if settings.oidc_jwks_url:
-                claims = await _verify_jwt(id_token_str)
-            else:
-                payload = id_token_str.split(".")[1]
-                padded = payload + "=" * (4 - len(payload) % 4)
-                try:
-                    claims = json.loads(base64.urlsafe_b64decode(padded))
-                except (ValueError, json.JSONDecodeError):
-                    claims = {}
-            subject = str(claims.get("sub", body.email))
-            name = str(claims.get("name", "")) or None
-            org_id = claims.get("organization_id")
-            organization_id = UUID(str(org_id)) if org_id else None
-            roles_raw = claims.get("roles", [])
-            roles = frozenset(str(r) for r in roles_raw) if isinstance(roles_raw, list) else frozenset()
-            team_ids_raw = claims.get("team_ids", [])
-            team_ids = (
-                frozenset(UUID(str(t)) for t in team_ids_raw if t) if isinstance(team_ids_raw, list) else frozenset()
-            )
-            permissions_raw = claims.get("permissions", "")
-            permissions = frozenset(str(permissions_raw).split()) if permissions_raw else frozenset()
-            session_token = create_session_token(
-                subject=subject,
-                organization_id=organization_id,
-                roles=roles,
-                team_ids=team_ids,
-                permissions=permissions,
-                name=name,
-                email=body.email,
-            )
-            if response is not None:
-                _set_session_cookie(response, session_token)
-                sid = decode_session_token(session_token)
-                if sid:
-                    csrf = generate_csrf_token(str(sid.get("sid", "")))
-                    response.set_cookie(
-                        key=CSRF_COOKIE_NAME,
-                        value=csrf,
-                        max_age=28_800,
-                        path="/",
-                        httponly=False,
-                        secure=_is_production(),
-                        samesite="strict",
-                    )
-            return {"status": "ok", "subject": subject}
-    raise HTTPException(status_code=503, detail="Direct login is not available")
+async def login() -> dict[str, str]:
+    raise HTTPException(
+        status_code=410,
+        detail="Password grant is disabled. Use the OIDC authorization-code flow with PKCE.",
+    )
 
 
 @router.post("/logout")

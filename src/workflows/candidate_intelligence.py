@@ -80,15 +80,6 @@ class CandidateAnalysisWorkflow:
             start_to_close_timeout=timedelta(minutes=2),
             retry_policy=FAST_RETRY,
         )
-        readiness = await workflow.execute_activity(
-            evaluate_candidate_readiness,
-            command,
-            start_to_close_timeout=timedelta(minutes=2),
-            retry_policy=FAST_RETRY,
-        )
-        if readiness.blocked and not command.allow_incomplete:
-            return await self._complete(command, readiness)
-
         source_validation = await workflow.execute_activity(
             validate_candidate_sources,
             command,
@@ -97,6 +88,15 @@ class CandidateAnalysisWorkflow:
         )
         if source_validation.blocked and not command.allow_incomplete:
             return await self._complete(command, source_validation)
+
+        readiness = await workflow.execute_activity(
+            evaluate_candidate_readiness,
+            command,
+            start_to_close_timeout=timedelta(minutes=2),
+            retry_policy=FAST_RETRY,
+        )
+        if readiness.blocked and not command.allow_incomplete:
+            return await self._complete(command, readiness)
 
         collection = await workflow.execute_activity(
             collect_candidate_documents,

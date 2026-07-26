@@ -239,19 +239,27 @@ class TestCallback:
 
     def test_valid_callback_exchanges_token(self, client, monkeypatch):
         _setup_oidc_env(monkeypatch)
+        monkeypatch.setenv("SECURITY__OIDC_JWKS_URL", "https://idp.example.com/jwks")
+        get_settings.cache_clear()
         state = "test-state-123"
         _oidc_states[state] = {"nonce": "test-nonce", "verifier": "test-verifier"}
-        id_token = _make_id_token(nonce="test-nonce")
 
         mock_post_resp = MagicMock()
         mock_post_resp.is_error = False
         mock_post_resp.json.return_value = {
             "access_token": "at_abc",
-            "id_token": id_token,
+            "id_token": "some.jwt.token",
         }
 
         try:
-            with patch("apps.api.routes.auth.httpx.AsyncClient") as mock_cls:
+            with (
+                patch("apps.api.routes.auth.httpx.AsyncClient") as mock_cls,
+                patch(
+                    "apps.api.routes.auth._verify_jwt",
+                    new_callable=AsyncMock,
+                    return_value={"nonce": "test-nonce", "sub": "user-123"},
+                ),
+            ):
                 mock_client = AsyncMock()
                 mock_client.post = AsyncMock(return_value=mock_post_resp)
                 mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -399,19 +407,27 @@ class TestCallback:
 
     def test_state_consumed_after_use(self, client, monkeypatch):
         _setup_oidc_env(monkeypatch)
+        monkeypatch.setenv("SECURITY__OIDC_JWKS_URL", "https://idp.example.com/jwks")
+        get_settings.cache_clear()
         state = "test-state-consume"
         _oidc_states[state] = {"nonce": "test-nonce", "verifier": "test-verifier"}
-        id_token = _make_id_token(nonce="test-nonce")
 
         mock_post_resp = MagicMock()
         mock_post_resp.is_error = False
         mock_post_resp.json.return_value = {
             "access_token": "at_abc",
-            "id_token": id_token,
+            "id_token": "some.jwt.token",
         }
 
         try:
-            with patch("apps.api.routes.auth.httpx.AsyncClient") as mock_cls:
+            with (
+                patch("apps.api.routes.auth.httpx.AsyncClient") as mock_cls,
+                patch(
+                    "apps.api.routes.auth._verify_jwt",
+                    new_callable=AsyncMock,
+                    return_value={"nonce": "test-nonce", "sub": "user-123"},
+                ),
+            ):
                 mock_client = AsyncMock()
                 mock_client.post = AsyncMock(return_value=mock_post_resp)
                 mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -438,126 +454,23 @@ class TestCallback:
 
 
 class TestLogin:
-    def test_missing_body_returns_422(self, client):
+    def test_login_returns_410_disabled(self, client):
         resp = client.post("/api/v1/auth/login")
-        assert resp.status_code == 422
+        assert resp.status_code == 410
+        assert "disabled" in resp.json()["detail"].lower()
 
-    def test_missing_email_returns_422(self, client):
-        resp = client.post("/api/v1/auth/login", json={"password": "pass"})
-        assert resp.status_code == 422
+    def test_login_with_body_returns_410(self, client):
+        resp = client.post("/api/v1/auth/login", json={"email": "a@b.com", "password": "pass"})
+        assert resp.status_code == 410
+        assert "disabled" in resp.json()["detail"].lower()
 
-    def test_missing_password_returns_422(self, client):
-        resp = client.post("/api/v1/auth/login", json={"email": "a@b.com"})
-        assert resp.status_code == 422
+    def test_login_with_empty_body_returns_410(self, client):
+        resp = client.post("/api/v1/auth/login", json={})
+        assert resp.status_code == 410
 
-    def test_empty_email_returns_422(self, client):
-        resp = client.post(
-            "/api/v1/auth/login",
-            json={"email": "", "password": "pass"},
-        )
-        assert resp.status_code == 422
-
-    def test_empty_password_returns_422(self, client):
-        resp = client.post(
-            "/api/v1/auth/login",
-            json={"email": "a@b.com", "password": ""},
-        )
-        assert resp.status_code == 422
-
-    def test_returns_503_when_oidc_not_configured(self, client, monkeypatch):
-        monkeypatch.delenv("SECURITY__OIDC_TOKEN_URL", raising=False)
-        monkeypatch.delenv("SECURITY__OIDC_CLIENT_ID", raising=False)
-        get_settings.cache_clear()
-        try:
-            resp = client.post(
-                "/api/v1/auth/login",
-                json={"email": "a@b.com", "password": "pass"},
-            )
-            assert resp.status_code == 503
-            assert "not available" in resp.json()["detail"]
-        finally:
-            get_settings.cache_clear()
-
-    def test_invalid_credentials_returns_401(self, client, monkeypatch):
-        _setup_oidc_env(monkeypatch)
-        mock_post_resp = MagicMock()
-        mock_post_resp.is_error = True
-        mock_post_resp.status_code = 401
-        try:
-            with patch("apps.api.routes.auth.httpx.AsyncClient") as mock_cls:
-                mock_client = AsyncMock()
-                mock_client.post = AsyncMock(return_value=mock_post_resp)
-                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-                mock_client.__aexit__ = AsyncMock(return_value=False)
-                mock_cls.return_value = mock_client
-
-                resp = client.post(
-                    "/api/v1/auth/login",
-                    json={"email": "bad@creds.com", "password": "wrong"},
-                )
-                assert resp.status_code == 401
-        finally:
-            get_settings.cache_clear()
-
-    def test_valid_login_returns_200(self, client, monkeypatch):
-        _setup_oidc_env(monkeypatch)
-        id_token = _make_id_token(sub="login-user")
-
-        mock_post_resp = MagicMock()
-        mock_post_resp.is_error = False
-        mock_post_resp.json.return_value = {
-            "access_token": "at_login",
-            "id_token": id_token,
-        }
-
-        try:
-            with patch("apps.api.routes.auth.httpx.AsyncClient") as mock_cls:
-                mock_client = AsyncMock()
-                mock_client.post = AsyncMock(return_value=mock_post_resp)
-                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-                mock_client.__aexit__ = AsyncMock(return_value=False)
-                mock_cls.return_value = mock_client
-
-                resp = client.post(
-                    "/api/v1/auth/login",
-                    json={"email": "good@creds.com", "password": "correct"},
-                )
-                assert resp.status_code == 200
-                data = resp.json()
-                assert data["status"] == "ok"
-                assert data["subject"] == "login-user"
-        finally:
-            get_settings.cache_clear()
-
-    def test_login_sets_session_cookie(self, client, monkeypatch):
-        _setup_oidc_env(monkeypatch)
-        id_token = _make_id_token(sub="cookie-user")
-
-        mock_post_resp = MagicMock()
-        mock_post_resp.is_error = False
-        mock_post_resp.json.return_value = {
-            "access_token": "at_cookie",
-            "id_token": id_token,
-        }
-
-        try:
-            with patch("apps.api.routes.auth.httpx.AsyncClient") as mock_cls:
-                mock_client = AsyncMock()
-                mock_client.post = AsyncMock(return_value=mock_post_resp)
-                mock_client.__aenter__ = AsyncMock(return_value=mock_client)
-                mock_client.__aexit__ = AsyncMock(return_value=False)
-                mock_cls.return_value = mock_client
-
-                resp = client.post(
-                    "/api/v1/auth/login",
-                    json={"email": "cookie@test.com", "password": "pass"},
-                )
-                assert resp.status_code == 200
-                cookies = {c.name: c.value for c in resp.cookies.jar}
-                assert "ia_session" in cookies
-                assert "ia_csrf_token" in cookies
-        finally:
-            get_settings.cache_clear()
+    def test_login_message_mentions_oidc(self, client):
+        resp = client.post("/api/v1/auth/login")
+        assert "PKCE" in resp.json()["detail"] or "OIDC" in resp.json()["detail"]
 
 
 # ── TestLogout ─────────────────────────────────────────────────────────

@@ -9,6 +9,8 @@ from collections.abc import AsyncIterator
 from decimal import Decimal
 from typing import Any, Literal
 
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import SchemaError, ValidationError
 from pydantic import BaseModel
 
 from ._pricing import estimate_cost
@@ -41,6 +43,7 @@ class ChatCompletionRequest(BaseModel):
     max_tokens: int | None = None
     stream: bool = False
     metadata: dict[str, str] | None = None
+    response_format: dict[str, object] | None = None
 
 
 class ChatCompletionResponse(BaseModel):
@@ -120,6 +123,8 @@ class OpenAIGateway(AIGateway):
             kwargs["max_tokens"] = request.max_tokens
         if request.metadata:
             kwargs["extra_body"] = {"metadata": request.metadata}
+        if request.response_format:
+            kwargs["response_format"] = request.response_format
 
         estimated = sum(max(len(m.content) // 4, 1) for m in request.messages)
         wait = await self.rate_limiter.acquire(estimated)
@@ -138,7 +143,7 @@ class OpenAIGateway(AIGateway):
         except self._openai.BadRequestError as exc:
             raise ProviderBadRequestError(str(exc)) from exc
         except self._openai.APIError as exc:
-            raise ProviderError("OpenAI API error", retryable=False, safe_detail="Provider request failed") from exc
+            raise ProviderError("openai_api_error", retryable=False, safe_detail="Provider request failed") from exc
 
         duration = int((time.monotonic() - started) * 1_000)
         choice = response.choices[0]
@@ -191,7 +196,7 @@ class OpenAIGateway(AIGateway):
         except self._openai.BadRequestError as exc:
             raise ProviderBadRequestError(str(exc)) from exc
         except self._openai.APIError as exc:
-            raise ProviderError("OpenAI API error", retryable=False, safe_detail="Provider request failed") from exc
+            raise ProviderError("openai_api_error", retryable=False, safe_detail="Provider request failed") from exc
 
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
         model = request.model or self.default_model
@@ -207,7 +212,7 @@ class OpenAIGateway(AIGateway):
         except self._openai.BadRequestError as exc:
             raise ProviderBadRequestError(str(exc)) from exc
         except self._openai.APIError as exc:
-            raise ProviderError("OpenAI API error", retryable=False, safe_detail="Provider request failed") from exc
+            raise ProviderError("openai_api_error", retryable=False, safe_detail="Provider request failed") from exc
 
         duration = int((time.monotonic() - started) * 1_000)
         embeddings = [item.embedding for item in response.data]
@@ -279,7 +284,7 @@ class AnthropicGateway(AIGateway):
         except self._anthropic.BadRequestError as exc:
             raise ProviderBadRequestError(str(exc)) from exc
         except self._anthropic.APIError as exc:
-            raise ProviderError("Anthropic API error", retryable=False, safe_detail="Provider request failed") from exc
+            raise ProviderError("anthropic_api_error", retryable=False, safe_detail="Provider request failed") from exc
 
         duration = int((time.monotonic() - started) * 1_000)
         content = "".join(block.text for block in response.content if hasattr(block, "text"))
@@ -327,7 +332,7 @@ class AnthropicGateway(AIGateway):
         except self._anthropic.BadRequestError as exc:
             raise ProviderBadRequestError(str(exc)) from exc
         except self._anthropic.APIError as exc:
-            raise ProviderError("Anthropic API error", retryable=False, safe_detail="Provider request failed") from exc
+            raise ProviderError("anthropic_api_error", retryable=False, safe_detail="Provider request failed") from exc
 
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
         raise NotImplementedError("Anthropic does not expose a public embedding API")
@@ -399,8 +404,23 @@ class GatewayProvider:
             ]
             started = time.monotonic()
             try:
+                response_format: dict[str, object] | None = None
+                if output_schema:
+                    response_format = {
+                        "type": "json_schema",
+                        "json_schema": {
+                            "name": "agent_output",
+                            "strict": True,
+                            "schema": output_schema,
+                        },
+                    }
                 result = await self.gateway.chat_completion(
-                    ChatCompletionRequest(messages=messages, model=model, metadata=metadata),
+                    ChatCompletionRequest(
+                        messages=messages,
+                        model=model,
+                        metadata=metadata,
+                        response_format=response_format,
+                    ),
                 )
             except ProviderError as exc:
                 retryable = isinstance(exc, (ProviderTimeoutError, ProviderRateLimitError))
@@ -433,21 +453,26 @@ class GatewayProvider:
 
             if output_schema:
                 try:
-                    from pydantic import TypeAdapter
-
-                    adapter = TypeAdapter(dict)
-                    adapter.validate_python(output)
-                except Exception as exc:
+                    Draft202012Validator.check_schema(output_schema)
+                    Draft202012Validator(output_schema).validate(output)
+                except SchemaError as exc:
+                    raise ProviderError(
+                        "invalid_output_schema",
+                        retryable=False,
+                        safe_detail="Configured output schema is invalid",
+                    ) from exc
+                except ValidationError as exc:
                     last_exc = ProviderError(
                         "provider_schema_mismatch",
                         retryable=True,
-                        safe_detail="Provider output failed schema validation — retryable",
+                        safe_detail="Provider output failed JSON Schema validation — retryable",
                     )
                     logger.warning(
-                        "Schema retry %d/%d: validation failed: %s",
+                        "Schema retry %d/%d: validation failed at %s: %s",
                         attempt + 1,
                         self._SCHEMA_RETRY_MAX,
-                        exc,
+                        list(exc.absolute_path),
+                        exc.message,
                     )
                     continue
 

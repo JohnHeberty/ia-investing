@@ -42,7 +42,14 @@ class TemporalSettings(BaseModel):
 class AIGatewaySettings(BaseModel):
     provider: Literal["openai", "anthropic"] = "openai"
     api_key: SecretStr = SecretStr("")
-    model: str = "gpt-4o"
+    research_api_key: SecretStr = SecretStr("")
+    committee_api_key: SecretStr = SecretStr("")
+    discovery_api_key: SecretStr = SecretStr("")
+    model: str = "research-standard"
+    research_model: str = "research-standard"
+    committee_model: str = "committee-critical"
+    discovery_model: str = "discovery-fast"
+    embedding_model: str = "embedding-default"
     timeout: float = Field(default=120.0, ge=1.0)
     max_retries: int = Field(default=3, ge=0, le=10)
     base_url: str | None = None
@@ -51,8 +58,13 @@ class AIGatewaySettings(BaseModel):
 
     @model_validator(mode="after")
     def validate_config(self) -> AIGatewaySettings:
-        raw = self.api_key.get_secret_value()
-        if raw and len(raw) < 8:
+        keys = (
+            self.api_key.get_secret_value(),
+            self.research_api_key.get_secret_value(),
+            self.committee_api_key.get_secret_value(),
+            self.discovery_api_key.get_secret_value(),
+        )
+        if any(raw and len(raw) < 8 for raw in keys):
             raise ValueError("AI gateway API key is too short")
         if self.provider == "anthropic" and self.model and "claude" not in self.model:
             raise ValueError("Anthropic models should contain 'claude'")
@@ -72,6 +84,7 @@ class TelemetrySettings(BaseModel):
 
 class SecuritySettings(BaseModel):
     oidc_enabled: bool = False
+    legacy_session_auth_enabled: bool = False
     oidc_issuer: str | None = None
     oidc_audience: str | None = None
     oidc_client_id: str | None = None
