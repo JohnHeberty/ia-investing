@@ -390,6 +390,7 @@ class CandidateEventRecord(Base):
 
     __table_args__ = (
         sa.CheckConstraint("aggregate_version > 0", name="candidate_event_positive_version"),
+        sa.UniqueConstraint("candidate_id", "aggregate_version", name="uq_candidate_event_candidate_version"),
         sa.Index(
             "ix_candidate_event_timeline",
             "candidate_id",

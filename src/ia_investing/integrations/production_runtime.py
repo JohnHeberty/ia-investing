@@ -29,6 +29,7 @@ from ia_investing.ai.execution import AgentExecutionService
 from ia_investing.ai.gateway import create_gateway_provider
 from ia_investing.ai.provider import AgentProvider, MockProvider
 from ia_investing.application.agent_runtime import AgentRuntimeService
+from ia_investing.application.candidate_repository import CandidateRepository
 from ia_investing.application.instruments import InstrumentMasterService
 from ia_investing.data.raw_zone import ImmutableObjectStore
 from ia_investing.integrations.connectors.b3_resolver import B3Resolver
@@ -45,6 +46,7 @@ from ia_investing.orchestration.activities.candidate_intelligence import (
     ExplorationWorkflowResult,
     SourceDiscoveryCheckpoint,
 )
+from ia_investing.orchestration.activities.gap_catalog import CANONICAL_GAP_CODES
 from ia_investing.platform.database.runtime import DatabaseRuntime
 from ia_investing.platform.http.safe_client import EgressPolicy, SafeHttpClient
 from ia_investing.settings import get_settings
@@ -463,7 +465,7 @@ class ProductionCandidateRuntime:
                 if missing_cvm_filings:
                     gaps.append(
                         {
-                            "code": "cvm_filings",
+                            "code": "cvm_filings_missing",
                             "title": "CVM regulatory filings not found",
                             "description": "FCA/DFP/ITR data not available for this issuer.",
                             "level": "blocking",
@@ -476,7 +478,7 @@ class ProductionCandidateRuntime:
                 if missing_b3:
                     gaps.append(
                         {
-                            "code": "b3_listing",
+                            "code": "b3_listing_missing",
                             "title": "B3 listing not found",
                             "description": "Ticker not found in B3 COTAHIST or instrument master.",
                             "level": "blocking",
@@ -577,16 +579,32 @@ class ProductionCandidateRuntime:
         self,
         command: CandidateSourceValidationInput,
     ) -> CandidateSourceValidationResult:
+        # P0-10: Single query joins candidate + source + organization.
+        # Rejects the source if it belongs to a different organization.
         async with self._db.session() as session:
-            source = await session.get(CandidateSourceRecord, command.source_id)
-            if source is None:
+            stmt = (
+                sa.select(InvestmentCandidateRecord, CandidateSourceRecord)
+                .join(
+                    CandidateSourceRecord,
+                    sa.and_(
+                        CandidateSourceRecord.candidate_id == InvestmentCandidateRecord.id,
+                        CandidateSourceRecord.id == command.source_id,
+                        CandidateSourceRecord.organization_id == command.organization_id,
+                    ),
+                )
+                .where(InvestmentCandidateRecord.id == command.candidate_id)
+            )
+            row = (await session.execute(stmt)).first()
+            if row is None:
                 return CandidateSourceValidationResult(
                     candidate_id=command.candidate_id,
                     source_id=command.source_id,
                     status="rejected",
                     official=False,
-                    reason="Source record not found.",
+                    reason="Source record not found or does not belong to this candidate/organization.",
                 )
+            candidate = row[0]
+            source = row[1]
 
         try:
             response = await self._http.get(source.url)
@@ -625,54 +643,33 @@ class ProductionCandidateRuntime:
             content = _extract_text_from_html(raw_content)
         else:
             content = raw_content.decode("utf-8", errors="replace").lower()
-        async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
 
-            identity_signals = []
-            if candidate is not None:
-                if candidate.legal_name and candidate.legal_name.lower() in content:
-                    identity_signals.append("legal_name")
-                if candidate.trading_name and candidate.trading_name.lower() in content:
-                    identity_signals.append("trading_name")
-                if candidate.cnpj and candidate.cnpj in content:
-                    identity_signals.append("cnpj")
-                if candidate.ticker and candidate.ticker.lower() in content:
-                    identity_signals.append("ticker")
+        # P0-09: Strong signal requirement.
+        # Ticker alone NEVER confirms officiality.
+        # Must have >= 2 strong signals OR 1 strong + ticker.
+        strong_signals = []
+        has_ticker = False
+        if candidate is not None:
+            if candidate.legal_name and candidate.legal_name.lower() in content:
+                strong_signals.append("legal_name")
+            if candidate.trading_name and candidate.trading_name.lower() in content:
+                strong_signals.append("trading_name")
+            if candidate.cnpj and candidate.cnpj in content:
+                strong_signals.append("cnpj")
+            if candidate.ticker and candidate.ticker.lower() in content:
+                has_ticker = True
 
-            if identity_signals:
-                source.official = True
-                source.status = "verified"
-                source.verified_at = _now()
-                source.last_checked_at = _now()
-                source.evidence = {
-                    "status_code": response.status_code,
-                    "final_url": response.final_url,
-                    "redirect_chain": list(response.redirect_chain),
-                    "identity_signals": identity_signals,
-                    "raw_content_hash": raw_hash,
-                    "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
-                }
-                await session.commit()
-                return CandidateSourceValidationResult(
-                    candidate_id=command.candidate_id,
-                    source_id=command.source_id,
-                    status="verified",
-                    official=True,
-                    reason=f"Verified: found identity signals {', '.join(identity_signals)}",
-                    resolved_gap_codes=(f"source_{source.kind}_missing",),
-                )
-
+        if not strong_signals and not has_ticker:
             source.status = "rejected"
             source.last_checked_at = _now()
             source.evidence = {
                 "status_code": response.status_code,
                 "final_url": response.final_url,
-                "reason": "No identity signals found in page content",
+                "reason": "No matching identity signals found in page content",
                 "raw_content_hash": raw_hash,
                 "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
             }
             await session.commit()
-
             return CandidateSourceValidationResult(
                 candidate_id=command.candidate_id,
                 source_id=command.source_id,
@@ -680,6 +677,57 @@ class ProductionCandidateRuntime:
                 official=False,
                 reason="No matching identity signals found. The page may belong to a different entity.",
             )
+
+        # P0-09: Strong signal requirement for official status.
+        official = False
+        if len(strong_signals) >= 2:
+            official = True
+        elif len(strong_signals) == 1 and has_ticker and strong_signals[0] in ("cnpj", "legal_name"):
+            official = True
+
+        if official:
+            source.official = True
+            source.status = "verified"
+            source.verified_at = _now()
+            source.last_checked_at = _now()
+            source.evidence = {
+                "status_code": response.status_code,
+                "final_url": response.final_url,
+                "redirect_chain": list(response.redirect_chain),
+                "identity_signals": strong_signals + (["ticker"] if has_ticker else []),
+                "raw_content_hash": raw_hash,
+                "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
+            }
+            await session.commit()
+            gap_codes = CANONICAL_GAP_CODES.get(source.kind, ())
+            return CandidateSourceValidationResult(
+                candidate_id=command.candidate_id,
+                source_id=command.source_id,
+                status="verified",
+                official=True,
+                reason=f"Verified: strong signals {', '.join(strong_signals)}"
+                + (" + ticker" if has_ticker else ""),
+                resolved_gap_codes=gap_codes,
+            )
+
+        source.status = "rejected"
+        source.last_checked_at = _now()
+        source.evidence = {
+            "status_code": response.status_code,
+            "final_url": response.final_url,
+            "reason": "Insufficient identity signals for official status (ticker alone is not enough)",
+            "raw_content_hash": raw_hash,
+            "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
+        }
+        await session.commit()
+
+        return CandidateSourceValidationResult(
+            candidate_id=command.candidate_id,
+            source_id=command.source_id,
+            status="rejected",
+            official=False,
+            reason="Insufficient identity signals for official status. Ticker alone is not enough to confirm officiality.",
+        )
 
     # ------------------------------------------------------------------
     # Phase 4 — Document Collection
@@ -1409,17 +1457,14 @@ class ProductionCandidateRuntime:
             stmt = stmt.join(
                 latest_quote_filtered,
                 latest_quote_filtered.c.listing_id == Listing.id,
-                isouter=True,
             ).where(
-                sa.or_(
-                    latest_quote_filtered.c.bid_price.is_(None),
-                    latest_quote_filtered.c.ask_price.is_(None),
-                    sa.func.abs(
-                        (latest_quote_filtered.c.ask_price - latest_quote_filtered.c.bid_price)
-                        / sa.func.nullif(latest_quote_filtered.c.bid_price, 0)
-                    )
-                    <= settings.max_spread_pct,
+                latest_quote_filtered.c.bid_price.isnot(None),
+                latest_quote_filtered.c.ask_price.isnot(None),
+                sa.func.abs(
+                    (latest_quote_filtered.c.ask_price - latest_quote_filtered.c.bid_price)
+                    / sa.func.nullif(latest_quote_filtered.c.bid_price, 0)
                 )
+                <= settings.max_spread_pct,
             )
 
             stmt = stmt.distinct()
@@ -1427,11 +1472,12 @@ class ProductionCandidateRuntime:
 
             securities = tuple(
                 {
-                    "instrument_id": str(row[0]),
-                    "symbol": str(row[1]),
-                    "exchange": str(row[2] or ""),
-                    "issuer_id": str(row[3]),
-                    "issuer_name": str(row[4]),
+                    "listing_id": str(row[0]),
+                    "instrument_id": str(row[1]),
+                    "symbol": str(row[2]),
+                    "exchange": str(row[3] or ""),
+                    "issuer_id": str(row[4]),
+                    "issuer_name": str(row[5]),
                 }
                 for row in rows
             )
@@ -1510,17 +1556,23 @@ class ProductionCandidateRuntime:
                     suggestion_count=0,
                 )
 
-            security_by_id = {s["instrument_id"]: s for s in findings.shortlist.securities}
+            security_by_listing_id = {s["listing_id"]: s for s in findings.shortlist.securities}
+            security_by_instrument_id = {s["instrument_id"]: s for s in findings.shortlist.securities}
 
             for suggestion in findings.suggestions:
                 inst_id = suggestion.get("instrument_id", "")
                 if not inst_id:
                     continue
-                security = security_by_id.get(inst_id)
+                security = security_by_instrument_id.get(inst_id)
                 if security is None:
                     continue
 
                 inst_uuid = uuid.UUID(inst_id) if isinstance(inst_id, str) else inst_id
+                listing_uuid = (
+                    uuid.UUID(security["listing_id"])
+                    if isinstance(security["listing_id"], str)
+                    else security["listing_id"]
+                )
                 issuer_uuid = (
                     uuid.UUID(security["issuer_id"])
                     if isinstance(security["issuer_id"], str)
@@ -1544,7 +1596,7 @@ class ProductionCandidateRuntime:
                     continue
 
                 llm_score = float(suggestion.get("score", 0))
-                quant_score = await self._compute_quantitative_score(session, inst_uuid, issuer_uuid)
+                quant_score = await self._compute_quantitative_score(session, listing_uuid, issuer_uuid)
 
                 quantize_4 = Decimal("0.0001")
                 final_score = Decimal(str(round((llm_score * 0.4 + quant_score * 0.6), 4)))
@@ -1583,7 +1635,9 @@ class ProductionCandidateRuntime:
             suggestion_count=suggestions_persisted,
         )
 
-    async def _compute_quantitative_score(self, session: AsyncSession, instrument_id: UUID, issuer_id: UUID) -> float:
+    async def _compute_quantitative_score(
+        self, session: AsyncSession, listing_id: UUID, issuer_id: UUID
+    ) -> float:
         """Compute a deterministic 0-1 score from available market + fundamental data."""
         from database.models.financial_facts import FinancialFact
 
@@ -1592,7 +1646,7 @@ class ProductionCandidateRuntime:
         vol_row = (
             await session.execute(
                 sa.select(sa.func.avg(MarketBar.volume)).where(
-                    MarketBar.listing_id == instrument_id,
+                    MarketBar.listing_id == listing_id,
                     MarketBar.bar_at >= _now() - timedelta(days=30),
                 )
             )
@@ -1609,7 +1663,7 @@ class ProductionCandidateRuntime:
                     / sa.func.nullif(MarketQuote.bid_price, 0)
                 )
                 .where(
-                    MarketQuote.listing_id == instrument_id,
+                    MarketQuote.listing_id == listing_id,
                     MarketQuote.quoted_at >= _now() - timedelta(days=5),
                 )
                 .order_by(MarketQuote.quoted_at.desc())
