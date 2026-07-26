@@ -63,6 +63,3 @@ async def apply_state_transition(
         )
 
         return machine.to_dict()  # type: ignore[no-any-return]
-
-
-STATE_MACHINE_ACTIVITIES = (apply_state_transition,)

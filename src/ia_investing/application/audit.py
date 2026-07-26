@@ -46,11 +46,3 @@ def emit_security_event(
     )
     _security_events.append(event)
     return event
-
-
-def get_security_events() -> list[SecurityEvent]:
-    return list(_security_events)
-
-
-def clear_security_events() -> None:
-    _security_events.clear()

@@ -7,7 +7,7 @@ import types
 import warnings
 from typing import Any
 
-__all__ = ["TRACKER", "LegacyBridge", "LegacyModuleError"]
+__all__ = ["LegacyBridge"]
 
 logger = logging.getLogger("ia_investing.legacy_bridge")
 
@@ -65,6 +65,3 @@ class LegacyBridge:
         bridge = LegacyBridge(module)
         sys.modules[module.__name__] = bridge  # type: ignore[assignment]
         return bridge
-
-
-TRACKER = _TRACKED_ACCESS

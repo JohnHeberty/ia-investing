@@ -7,9 +7,6 @@ Valuation, Market & Technical, Dividend e Macro.
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import Any
-
-import polars as pl
 
 from ._dividend import DIVIDEND_METRICS
 from ._helpers import _pct_change, _safe_div  # noqa: F401
@@ -89,51 +86,3 @@ def get_metric_names(pillar_name: str | None = None) -> list[str]:
         pillar = PILLARS.get(pillar_name, {})
         return list(pillar.keys())
     return [name for pillar in PILLARS.values() for name in pillar]
-
-
-def build_metrics_dataframe(
-    statements: list[dict[str, Any]],
-    market_snapshots: list[dict[str, Any]],
-) -> pl.DataFrame:
-    """Constrói um DataFrame Polars com todas as métricas calculadas.
-
-    Cada entrada de statements deve conter:
-        - period_end: data de referência do período
-        - line_items: dict[str, Any] com as contas normalizadas
-
-    Cada entrada de market_snapshots deve conter:
-        - period_end: data de referência
-        - data: dict[str, Any] com dados de mercado
-
-    Args:
-        statements: Lista de períodos com line_items.
-        market_snapshots: Lista de períodos com dados de mercado.
-
-    Returns:
-        DataFrame Polars com colunas period, pillar, metric, value.
-    """
-    records: list[dict[str, Any]] = []
-
-    market_map = {snap["period_end"]: snap["data"] for snap in market_snapshots}
-
-    for stmt in statements:
-        period = stmt["period_end"]
-        li = stmt["line_items"]
-        md = market_map.get(period, {})
-
-        for pillar_name, metrics in PILLARS.items():
-            for metric_name, fn in metrics.items():
-                value = fn(li, md)
-                records.append(
-                    {
-                        "period": period,
-                        "pillar": pillar_name,
-                        "metric": metric_name,
-                        "value": value,
-                    }
-                )
-
-    if not records:
-        return pl.DataFrame({"period": [], "pillar": [], "metric": [], "value": []})
-
-    return pl.DataFrame(records)

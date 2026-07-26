@@ -68,11 +68,3 @@ async def fail_operation(operation_id: str, error_code: str) -> None:
             error_code=error_code[:100],
             error_detail="Agent execution failed. Inspect correlated traces for details.",
         )
-
-
-OPERATION_ACTIVITIES = (
-    set_operation_running,
-    run_configured_agent,
-    complete_operation,
-    fail_operation,
-)

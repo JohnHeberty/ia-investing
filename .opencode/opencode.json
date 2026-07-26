@@ -32,7 +32,8 @@
         "@tarquinen/opencode-dcp",
         "opencode-websearch-cited",
         "opencode-mem",
-        "@ramtinj95/opencode-tokenscope"
+        "@ramtinj95/opencode-tokenscope",
+        "opencode-reflection"
     ],
     "compaction": {
         "auto": true,

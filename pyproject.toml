@@ -76,10 +76,6 @@ dev = [
     "pre-commit>=4.0",
 ]
 
-[project.scripts]
-check-config = "ia_investing.cli:check_config"
-seed-eval-datasets = "ia_investing.cli:seed_eval_datasets"
-
 [build-system]
 requires = ["setuptools>=75"]
 build-backend = "setuptools.build_meta"

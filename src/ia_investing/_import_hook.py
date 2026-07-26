@@ -8,8 +8,6 @@ import types
 import warnings
 from collections.abc import Sequence
 
-from ia_investing._legacy_bridge import LegacyBridge
-
 __all__ = ["LegacyImportGuard", "install_guard"]
 
 logger = logging.getLogger("ia_investing.import_hook")
@@ -73,9 +71,3 @@ class LegacyImportGuard:
 def install_guard() -> None:
     if not any(isinstance(hook, LegacyImportGuard) for hook in sys.meta_path):
         sys.meta_path.insert(0, LegacyImportGuard())
-
-
-def wrap_legacy_module(name: str) -> None:
-    if name in sys.modules and not isinstance(sys.modules[name], LegacyBridge):
-        module = sys.modules[name]
-        sys.modules[str(name)] = LegacyBridge(module)  # type: ignore[assignment]
