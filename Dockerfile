@@ -8,9 +8,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --frozen --no-dev --no-editable
+
 COPY src/ ./src/
 COPY prompts/ ./prompts/
-RUN uv sync --frozen --no-dev --no-editable
 
 FROM python:3.12.7-slim-bookworm AS runtime
 
@@ -34,4 +35,6 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 USER appuser
 EXPOSE 8000
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl --fail http://localhost:8000/healthz || exit 1
 CMD ["uvicorn", "apps.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
