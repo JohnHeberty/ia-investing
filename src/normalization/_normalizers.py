@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from connectors.cvm._financials import FinancialEntry, _parse_valor
+from connectors.cvm import FinancialEntry, _parse_valor
 
 from ._mappings import _DESCRIPTION_PATTERNS, CVM_ACCOUNT_MAP
 

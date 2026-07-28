@@ -54,7 +54,7 @@ class IngestCVMWorkflow:
         )
 
         validation_results: list[ValidationResult] = await workflow.execute_activity(
-            "run_accounting_validations_batch",
+            "run_accounting_validations",
             args=[input.statement_type, parsed_records],
             start_to_close_timeout=timedelta(seconds=120),
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,

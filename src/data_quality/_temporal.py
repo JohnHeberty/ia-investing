@@ -10,6 +10,7 @@ def check_temporal_consistency(
     time_series: list[dict[str, Any]],
     date_field: str,
     value_field: str,
+    max_gap_days: int = 90,
 ) -> list[ValidationResult]:
     if not time_series:
         return [
@@ -86,7 +87,7 @@ def check_temporal_consistency(
                 prev_d = _date.fromisoformat(prev_str) if isinstance(prev_str, str) else prev_str
                 curr_d = _date.fromisoformat(curr_str) if isinstance(curr_str, str) else curr_str
                 delta = (curr_d - prev_d).days
-                if delta > 90:
+                if delta > max_gap_days:
                     gaps.append({"from": prev_str, "to": curr_str, "gap_days": str(delta)})
             except (ValueError, TypeError):
                 pass

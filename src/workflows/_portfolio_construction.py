@@ -15,6 +15,7 @@ with workflow.unsafe.imports_passed_through():
         validate_committee_vote,
         validate_decision_inputs,
     )
+    from ia_investing.orchestration.policies import CPU_BOUND_RETRY_POLICY, DEFAULT_ACTIVITY_RETRY_POLICY
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +41,7 @@ class PipelineConfig:
 @dataclass(frozen=True, slots=True)
 class PortfolioConstructionInput:
     approval_timeout_seconds: int = 86_400
+    operation_id: str = ""
     # Pre-computed mode: provide decision_inputs directly (backward compatible)
     decision_inputs: PortfolioDecisionInputs | None = None
     # Pipeline mode: run eligibility→optimizer→constraints before committee review
@@ -65,11 +67,13 @@ class PortfolioConstructionWorkflow:
         self._pending_votes: list[CommitteeVote] = []
         self._state = "validating"
         self._proposed_by = ""
+        self._operation_id = ""
 
     @workflow.run
     async def run(self, command: PortfolioConstructionInput) -> PortfolioConstructionResult:
         if command.approval_timeout_seconds <= 0:
             raise ValueError("approval timeout must be positive")
+        self._operation_id = command.operation_id
 
         pipeline_summary: dict[str, object] = {}
 
@@ -122,6 +126,7 @@ class PortfolioConstructionWorkflow:
             "run_scorecard",
             args=[config.scorecard_metrics, config.scorecard_type, config.data_quality, config.thesis_freshness],
             start_to_close_timeout=timedelta(seconds=30),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
         summary["scorecard"] = scorecard_result
 
@@ -145,6 +150,7 @@ class PortfolioConstructionWorkflow:
             args=[config.portfolio_id, config.organization_id, config.as_of],
             start_to_close_timeout=timedelta(seconds=45),
             heartbeat_timeout=timedelta(seconds=30),
+            retry_policy=CPU_BOUND_RETRY_POLICY,
         )
         summary["optimization"] = opt_result
 
@@ -175,6 +181,7 @@ class PortfolioConstructionWorkflow:
                 config.max_cash_weight,
             ],
             start_to_close_timeout=timedelta(seconds=15),
+            retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
         summary["constraints"] = constraint_result
 
@@ -246,6 +253,12 @@ class PortfolioConstructionWorkflow:
     async def cancel(self) -> None:
         if self._state == "committee_review":
             self._state = "cancelled"
+            if self._operation_id:
+                await workflow.execute_activity(
+                    "cancel_operation",
+                    args=[self._operation_id, "Cancelled by user"],
+                    start_to_close_timeout=timedelta(seconds=10),
+                )
 
     @workflow.query
     def state(self) -> str:

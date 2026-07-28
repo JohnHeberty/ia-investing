@@ -7,6 +7,8 @@ from typing import Any
 
 from ._types import ParsedDocument
 
+_MAX_PDF_PAGES = 500
+
 
 def _sanitize_cell(cell: str | None) -> str:
     return cell if cell is not None else ""
@@ -26,8 +28,9 @@ def parse_pdf(file_path: str | Path) -> ParsedDocument:
     with pdfplumber.open(path) as pdf:
         metadata: dict[str, Any] = dict(pdf.metadata) if pdf.metadata else {}
         metadata["page_count"] = len(pdf.pages)
+        metadata["page_limit_enforced"] = len(pdf.pages) > _MAX_PDF_PAGES
 
-        for page in pdf.pages:
+        for page in pdf.pages[:_MAX_PDF_PAGES]:
             page_text = page.extract_text()
             if page_text:
                 all_text_parts.append(page_text)
@@ -51,7 +54,7 @@ def extract_tables(file_path: str | Path) -> list[list[list[str]]]:
     all_tables: list[list[list[str]]] = []
 
     with pdfplumber.open(path) as pdf:
-        for page in pdf.pages:
+        for page in pdf.pages[:_MAX_PDF_PAGES]:
             raw_tables = page.extract_tables()
             if raw_tables:
                 all_tables.extend(_sanitize_tables(raw_tables))

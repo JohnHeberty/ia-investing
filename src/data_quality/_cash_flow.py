@@ -51,7 +51,7 @@ def validate_cash_flow(line_items: dict[str, Any]) -> list[ValidationResult]:
     results.append(
         _make(
             "capex_sign_consistency",
-            capex <= 0,
+            capex <= 0 or (operating_cf > 0 and capex > 0),
             entity_type,
             entity_id,
             severity="warning",
