@@ -84,7 +84,7 @@ function PaperContent() {
 
       {dataState === "stale" && (
         <div style={{ marginBottom: 14 }}>
-          <StaleWarning lastUpdated={new Date().toISOString()} source="paper/trade-intents" />
+          <StaleWarning source="paper/trade-intents" />
         </div>
       )}
 

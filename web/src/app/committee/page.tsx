@@ -84,7 +84,7 @@ function CommitteeContent() {
 
       {dataState === "stale" && (
         <div style={{ marginBottom: 14 }}>
-          <StaleWarning lastUpdated={new Date().toISOString()} source="readiness/decision-packs" />
+          <StaleWarning source="readiness/decision-packs" />
         </div>
       )}
 

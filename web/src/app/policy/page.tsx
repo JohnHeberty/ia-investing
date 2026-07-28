@@ -85,7 +85,7 @@ function PolicyContent() {
 
       {dataState === "stale" && (
         <div style={{ marginBottom: 14 }}>
-          <StaleWarning lastUpdated={new Date().toISOString()} source="policy/events" />
+          <StaleWarning source="policy/events" />
         </div>
       )}
 

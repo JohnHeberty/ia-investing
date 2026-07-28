@@ -44,13 +44,21 @@ function pct(value: number): string {
 }
 
 function DriftBadge({ severity }: { severity: DriftItem["severity"] }) {
-  const colors: Record<string, string> = {
-    green: "bg-emerald-900/40 text-emerald-300 border-emerald-700",
-    yellow: "bg-amber-900/40 text-amber-200 border-amber-700",
-    red: "bg-red-900/40 text-red-200 border-red-700",
+  const colors: Record<string, React.CSSProperties> = {
+    green: { background: "var(--accent-soft)", color: "var(--accent)", borderColor: "var(--accent)" },
+    yellow: { background: "var(--amber)", color: "var(--bg)", borderColor: "var(--amber)" },
+    red: { background: "var(--red)", color: "#fff", borderColor: "var(--red)" },
   };
   return (
-    <span className={`rounded-full border px-2 py-0.5 text-xs ${colors[severity]}`}>
+    <span
+      style={{
+        borderRadius: 9999,
+        border: "1px solid",
+        padding: "1px 8px",
+        fontSize: 12,
+        ...colors[severity],
+      }}
+    >
       {severity === "green" ? "<1%" : severity === "yellow" ? "1-3%" : ">3%"}
     </span>
   );
@@ -59,11 +67,14 @@ function DriftBadge({ severity }: { severity: DriftItem["severity"] }) {
 function SideBadge({ side }: { side: "buy" | "sell" }) {
   return (
     <span
-      className={`rounded px-1.5 py-0.5 text-xs font-medium ${
-        side === "buy"
-          ? "bg-emerald-900/40 text-emerald-300"
-          : "bg-red-900/40 text-red-200"
-      }`}
+      style={{
+        borderRadius: 4,
+        padding: "1px 6px",
+        fontSize: 12,
+        fontWeight: 500,
+        background: side === "buy" ? "var(--accent-soft)" : "var(--red)",
+        color: side === "buy" ? "var(--accent)" : "#fff",
+      }}
     >
       {side.toUpperCase()}
     </span>
@@ -71,15 +82,22 @@ function SideBadge({ side }: { side: "buy" | "sell" }) {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    draft: "bg-slate-700 text-slate-200",
-    approved: "bg-blue-900/40 text-blue-200",
-    in_progress: "bg-amber-900/40 text-amber-200",
-    completed: "bg-emerald-900/40 text-emerald-300",
-    cancelled: "bg-red-900/40 text-red-200",
+  const styles: Record<string, React.CSSProperties> = {
+    draft: { background: "var(--surface-3)", color: "var(--muted)" },
+    approved: { background: "var(--blue)", color: "#fff" },
+    in_progress: { background: "var(--amber)", color: "var(--bg)" },
+    completed: { background: "var(--accent-soft)", color: "var(--accent)" },
+    cancelled: { background: "var(--red)", color: "#fff" },
   };
   return (
-    <span className={`rounded px-1.5 py-0.5 text-xs ${styles[status] || "bg-slate-700 text-slate-200"}`}>
+    <span
+      style={{
+        borderRadius: 4,
+        padding: "1px 6px",
+        fontSize: 12,
+        ...(styles[status] || { background: "var(--surface-3)", color: "var(--muted)" }),
+      }}
+    >
       {status.replaceAll("_", " ")}
     </span>
   );
@@ -88,11 +106,11 @@ function StatusBadge({ status }: { status: string }) {
 function LoadingSkeleton() {
   return (
     <div className="space-y-4 p-6">
-      <div className="h-8 w-64 animate-pulse rounded bg-slate-800" />
-      <div className="h-4 w-96 animate-pulse rounded bg-slate-800" />
+      <div style={{ height: 32, width: 256, borderRadius: 4, background: "var(--surface-3)", animation: "pulse 2s infinite" }} />
+      <div style={{ height: 16, width: 384, borderRadius: 4, background: "var(--surface-3)", animation: "pulse 2s infinite" }} />
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="h-48 animate-pulse rounded-xl border border-slate-800 bg-slate-900" />
-        <div className="h-48 animate-pulse rounded-xl border border-slate-800 bg-slate-900" />
+        <div style={{ height: 192, borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)" }} />
+        <div style={{ height: 192, borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)" }} />
       </div>
     </div>
   );
@@ -101,8 +119,18 @@ function LoadingSkeleton() {
 function ErrorState({ message }: { message: string }) {
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-semibold text-slate-100">Rebalanceamento</h1>
-      <div role="alert" className="mt-6 rounded-xl border border-red-900 bg-red-950/50 p-4 text-red-200">
+      <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text)" }}>Rebalanceamento</h1>
+      <div
+        role="alert"
+        style={{
+          marginTop: 24,
+          borderRadius: 10,
+          border: "1px solid var(--red)",
+          background: "var(--red)",
+          padding: 16,
+          color: "#fff",
+        }}
+      >
         {message}
       </div>
     </main>
@@ -135,12 +163,34 @@ function ProposeForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 rounded-xl border border-slate-700 bg-slate-900 p-5">
-      <h3 className="text-lg font-semibold text-slate-100">Nova proposta de rebalanceamento</h3>
+    <form
+      onSubmit={handleSubmit}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 16,
+        borderRadius: 10,
+        border: "1px solid var(--line)",
+        background: "var(--surface)",
+        padding: 20,
+      }}
+    >
+      <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>Nova proposta de rebalanceamento</h3>
       <div>
-        <label className="block text-sm text-slate-400">Target allocations (JSON)</label>
+        <label style={{ display: "block", fontSize: 14, color: "var(--muted)" }}>Target allocations (JSON)</label>
         <textarea
-          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 p-2 font-mono text-sm text-slate-100"
+          style={{
+            marginTop: 4,
+            width: "100%",
+            borderRadius: 8,
+            border: "1px solid var(--line)",
+            background: "var(--surface-2)",
+            padding: 8,
+            fontFamily: "var(--font-mono, monospace)",
+            fontSize: 14,
+            color: "var(--text)",
+            resize: "vertical",
+          }}
           rows={5}
           placeholder='{"AAPL": 0.25, "GOOGL": 0.15, "MSFT": 0.20}'
           value={targets}
@@ -148,28 +198,60 @@ function ProposeForm({
         />
       </div>
       <div>
-        <label className="block text-sm text-slate-400">Rationale</label>
+        <label style={{ display: "block", fontSize: 14, color: "var(--muted)" }}>Rationale</label>
         <textarea
-          className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 p-2 text-sm text-slate-100"
+          style={{
+            marginTop: 4,
+            width: "100%",
+            borderRadius: 8,
+            border: "1px solid var(--line)",
+            background: "var(--surface-2)",
+            padding: 8,
+            fontSize: 14,
+            color: "var(--text)",
+            resize: "vertical",
+          }}
           rows={3}
           value={rationale}
           onChange={(e) => setRationale(e.target.value)}
         />
       </div>
-      <div className="flex gap-3">
+      <div style={{ display: "flex", gap: 12 }}>
         <button
           type="submit"
           disabled={propose.isPending || !targets || !rationale}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+          style={{
+            borderRadius: 8,
+            background: "var(--accent)",
+            padding: "8px 16px",
+            fontSize: 14,
+            fontWeight: 500,
+            color: "var(--bg)",
+            border: "none",
+            cursor: "pointer",
+            opacity: propose.isPending || !targets || !rationale ? 0.5 : 1,
+          }}
         >
           {propose.isPending ? "Criando..." : "Propor rebalanceamento"}
         </button>
-        <button type="button" onClick={onClose} className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-300 hover:bg-slate-800">
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            borderRadius: 8,
+            border: "1px solid var(--line)",
+            padding: "8px 16px",
+            fontSize: 14,
+            color: "var(--muted)",
+            background: "none",
+            cursor: "pointer",
+          }}
+        >
           Cancelar
         </button>
       </div>
       {propose.isError && (
-        <p className="text-sm text-red-300">Erro: {propose.error.message}</p>
+        <p style={{ fontSize: 14, color: "var(--red)" }}>Erro: {propose.error.message}</p>
       )}
     </form>
   );
@@ -177,7 +259,7 @@ function ProposeForm({
 
 function DriftTable({ items }: { items: DriftItem[] }) {
   if (items.length === 0) {
-    return <p className="text-sm text-slate-400">Nenhum desvio detectado.</p>;
+    return <p style={{ fontSize: 14, color: "var(--muted)" }}>Nenhum desvio detectado.</p>;
   }
   return (
     <table className="table">
@@ -193,10 +275,10 @@ function DriftTable({ items }: { items: DriftItem[] }) {
       <tbody>
         {items.map((item) => (
           <tr key={item.ticker}>
-            <td className="font-medium text-slate-100">{item.ticker}</td>
+            <td style={{ fontWeight: 500, color: "var(--text)" }}>{item.ticker}</td>
             <td>{pct(item.current_weight)}</td>
             <td>{pct(item.target_weight)}</td>
-            <td className="font-mono">{pct(item.drift)}</td>
+            <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{pct(item.drift)}</td>
             <td><DriftBadge severity={item.severity} /></td>
           </tr>
         ))}
@@ -215,13 +297,13 @@ function TradesTable({
   onToggle: (id: string) => void;
 }) {
   if (trades.length === 0) {
-    return <p className="text-sm text-slate-400">Nenhuma trade calculada.</p>;
+    return <p style={{ fontSize: 14, color: "var(--muted)" }}>Nenhuma trade calculada.</p>;
   }
   return (
     <table className="table">
       <thead>
         <tr>
-          <th className="w-10" />
+          <th style={{ width: 40 }} />
           <th>Ordem</th>
           <th>Ticker</th>
           <th>Side</th>
@@ -240,20 +322,20 @@ function TradesTable({
                   type="checkbox"
                   checked={selected.has(trade.id)}
                   onChange={() => onToggle(trade.id)}
-                  className="h-4 w-4 accent-emerald-500"
+                  style={{ width: 16, height: 16, accentColor: "var(--accent)" }}
                 />
               )}
             </td>
-            <td className="text-center text-xs text-slate-500">{trade.execution_order}</td>
-            <td className="font-medium text-slate-100">{trade.ticker}</td>
+            <td style={{ textAlign: "center", fontSize: 12, color: "var(--muted-2)" }}>{trade.execution_order}</td>
+            <td style={{ fontWeight: 500, color: "var(--text)" }}>{trade.ticker}</td>
             <td><SideBadge side={trade.side} /></td>
             <td>
               {pct(trade.current_weight)} → {pct(trade.target_weight)}
             </td>
-            <td className={`font-mono ${trade.delta > 0 ? "text-emerald-300" : "text-red-200"}`}>
+            <td style={{ fontFamily: "var(--font-mono, monospace)", color: trade.delta > 0 ? "var(--accent)" : "var(--red)" }}>
               {trade.delta > 0 ? "+" : ""}{pct(trade.delta)}
             </td>
-            <td className="font-mono text-slate-100">{money.format(trade.estimated_value)}</td>
+            <td style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{money.format(trade.estimated_value)}</td>
             <td><StatusBadge status={trade.status} /></td>
           </tr>
         ))}
@@ -289,19 +371,22 @@ function ProposalDetail({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <button onClick={onBack} className="text-sm text-blue-400 hover:underline">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <button
+          onClick={onBack}
+          style={{ fontSize: 14, color: "var(--blue)", background: "none", border: "none", cursor: "pointer" }}
+        >
           &larr; Voltar para lista
         </button>
         <StatusBadge status={proposal.status} />
       </div>
 
-      <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-        <h2 className="text-lg font-semibold text-slate-100">
+      <div style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
           Proposta {proposal.id.slice(0, 8)}
         </h2>
-        <p className="mt-2 text-sm text-slate-400">{proposal.rationale}</p>
-        <div className="mt-4 flex flex-wrap gap-4 text-xs text-slate-500">
+        <p style={{ marginTop: 8, fontSize: 14, color: "var(--muted)" }}>{proposal.rationale}</p>
+        <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "var(--muted-2)" }}>
           <span>Criada por: {proposal.created_by}</span>
           <span>Em: {dateTime.format(new Date(proposal.created_at))}</span>
           {proposal.approved_by && <span>Aprovada por: {proposal.approved_by}</span>}
@@ -309,42 +394,41 @@ function ProposalDetail({
       </div>
 
       {proposal.drift_analysis && (
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-          <h3 className="mb-4 text-sm font-semibold text-slate-100">Análise de desvio</h3>
-          <div className="mb-4 flex gap-6 text-sm">
+        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
+          <h3 style={{ marginBottom: 16, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Análise de desvio</h3>
+          <div style={{ marginBottom: 16, display: "flex", gap: 24, fontSize: 14 }}>
             <div>
-              <span className="text-slate-400">Desvio máximo: </span>
-              <span className="font-mono text-slate-100">{pct(proposal.drift_analysis.max_drift)}</span>
+              <span style={{ color: "var(--muted)" }}>Desvio máximo: </span>
+              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{pct(proposal.drift_analysis.max_drift)}</span>
             </div>
             <div>
-              <span className="text-slate-400">Desvio total: </span>
-              <span className="font-mono text-slate-100">{pct(proposal.drift_analysis.total_drift)}</span>
+              <span style={{ color: "var(--muted)" }}>Desvio total: </span>
+              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{pct(proposal.drift_analysis.total_drift)}</span>
             </div>
           </div>
           <DriftTable items={proposal.drift_analysis.items} />
         </section>
       )}
 
-      <section className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-        <h3 className="mb-4 text-sm font-semibold text-slate-100">Trades</h3>
+      <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
+        <h3 style={{ marginBottom: 16, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Trades</h3>
         <TradesTable trades={proposal.trades} selected={selectedTrades} onToggle={toggleTrade} />
       </section>
 
       {proposal.execution_progress && (
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-          <h3 className="mb-4 text-sm font-semibold text-slate-100">Progresso</h3>
-          <div className="flex items-center gap-4">
-            <div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-800">
+        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
+          <h3 style={{ marginBottom: 16, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Progresso</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ height: 8, flex: 1, overflow: "hidden", borderRadius: 999, background: "var(--surface-3)" }}>
               <div
-                className="h-full rounded-full bg-emerald-500 transition-all"
-                style={{ width: `${proposal.execution_progress.percent_complete}%` }}
+                style={{ height: "100%", borderRadius: 999, background: "var(--accent)", transition: "all 0.3s", width: `${proposal.execution_progress.percent_complete}%` }}
               />
             </div>
-            <span className="text-sm text-slate-400">
+            <span style={{ fontSize: 14, color: "var(--muted)" }}>
               {proposal.execution_progress.executed}/{proposal.execution_progress.total}
             </span>
           </div>
-          <div className="mt-2 flex gap-4 text-xs text-slate-500">
+          <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 12, color: "var(--muted-2)" }}>
             <span>{proposal.execution_progress.executed} executadas</span>
             <span>{proposal.execution_progress.skipped} puladas</span>
             <span>{proposal.execution_progress.failed} falhas</span>
@@ -352,12 +436,22 @@ function ProposalDetail({
         </section>
       )}
 
-      <div className="flex flex-wrap gap-3">
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
         {canApprove && (
           <button
             onClick={() => approve.mutate({ proposalId: proposal.id })}
             disabled={approve.isPending}
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+            style={{
+              borderRadius: 8,
+              background: "var(--blue)",
+              padding: "8px 16px",
+              fontSize: 14,
+              fontWeight: 500,
+              color: "#fff",
+              border: "none",
+              cursor: "pointer",
+              opacity: approve.isPending ? 0.5 : 1,
+            }}
           >
             {approve.isPending ? "Aprovando..." : "Aprovar proposta"}
           </button>
@@ -371,7 +465,17 @@ function ProposalDetail({
               })
             }
             disabled={execute.isPending}
-            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 disabled:opacity-50"
+            style={{
+              borderRadius: 8,
+              background: "var(--accent)",
+              padding: "8px 16px",
+              fontSize: 14,
+              fontWeight: 500,
+              color: "var(--bg)",
+              border: "none",
+              cursor: "pointer",
+              opacity: execute.isPending ? 0.5 : 1,
+            }}
           >
             {execute.isPending ? "Executando..." : `Executar ${selectedTrades.size} trade(s)`}
           </button>
@@ -380,7 +484,16 @@ function ProposalDetail({
           <button
             onClick={() => complete.mutate({ proposalId: proposal.id })}
             disabled={complete.isPending}
-            className="rounded-lg border border-emerald-700 px-4 py-2 text-sm text-emerald-300 hover:bg-emerald-950"
+            style={{
+              borderRadius: 8,
+              border: "1px solid var(--accent)",
+              padding: "8px 16px",
+              fontSize: 14,
+              color: "var(--accent)",
+              background: "none",
+              cursor: "pointer",
+              opacity: complete.isPending ? 0.5 : 1,
+            }}
           >
             {complete.isPending ? "Finalizando..." : "Completar rebalanceamento"}
           </button>
@@ -389,7 +502,16 @@ function ProposalDetail({
           <button
             onClick={() => cancel.mutate({ proposalId: proposal.id, reason: "Cancelado pelo operador" })}
             disabled={cancel.isPending}
-            className="rounded-lg border border-red-800 px-4 py-2 text-sm text-red-300 hover:bg-red-950"
+            style={{
+              borderRadius: 8,
+              border: "1px solid var(--red)",
+              padding: "8px 16px",
+              fontSize: 14,
+              color: "var(--red)",
+              background: "none",
+              cursor: "pointer",
+              opacity: cancel.isPending ? 0.5 : 1,
+            }}
           >
             {cancel.isPending ? "Cancelando..." : "Cancelar proposta"}
           </button>
@@ -397,10 +519,16 @@ function ProposalDetail({
       </div>
 
       {approve.isError && (
-        <p className="text-sm text-red-300">Erro ao aprovar: {approve.error.message}</p>
+        <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao aprovar: {approve.error.message}</p>
       )}
       {execute.isError && (
-        <p className="text-sm text-red-300">Erro ao executar: {execute.error.message}</p>
+        <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao executar: {execute.error.message}</p>
+      )}
+      {complete.isError && (
+        <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao finalizar: {complete.error.message}</p>
+      )}
+      {cancel.isError && (
+        <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao cancelar: {cancel.error.message}</p>
       )}
     </div>
   );
@@ -408,17 +536,27 @@ function ProposalDetail({
 
 function Timeline({ items }: { items: RebalanceProposal[] }) {
   if (items.length === 0) {
-    return <p className="text-sm text-slate-400">Nenhum rebalanceamento anterior.</p>;
+    return <p style={{ fontSize: 14, color: "var(--muted)" }}>Nenhum rebalanceamento anterior.</p>;
   }
   return (
     <div className="space-y-3">
       {items.map((item) => (
-        <div key={item.id} className="flex items-center justify-between rounded-lg border border-slate-800 p-3">
+        <div
+          key={item.id}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            borderRadius: 8,
+            border: "1px solid var(--line)",
+            padding: 12,
+          }}
+        >
           <div>
-            <div className="text-sm font-medium text-slate-100">
+            <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>
               Proposta {item.id.slice(0, 8)}
             </div>
-            <div className="mt-1 text-xs text-slate-500">
+            <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted-2)" }}>
               {dateTime.format(new Date(item.created_at))}
             </div>
           </div>
@@ -451,8 +589,8 @@ export default function RebalancePage() {
     return (
       <main className="space-y-6 p-6">
         <header>
-          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Portfolio Intelligence</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-100">Rebalanceamento</h1>
+          <p style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.2em", color: "var(--muted-2)" }}>Portfolio Intelligence</p>
+          <h1 style={{ marginTop: 8, fontSize: 30, fontWeight: 600, color: "var(--text)" }}>Rebalanceamento</h1>
         </header>
         <ProposalDetail proposal={proposalDetailQuery.data} onBack={() => setSelectedProposalId(null)} />
       </main>
@@ -462,16 +600,23 @@ export default function RebalancePage() {
   return (
     <main className="space-y-8 p-6">
       <header>
-        <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Portfolio Intelligence</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-100">Rebalanceamento de carteiras</h1>
-        <p className="mt-2 max-w-3xl text-sm text-slate-400">
+        <p style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.2em", color: "var(--muted-2)" }}>Portfolio Intelligence</p>
+        <h1 style={{ marginTop: 8, fontSize: 30, fontWeight: 600, color: "var(--text)" }}>Rebalanceamento de carteiras</h1>
+        <p style={{ marginTop: 8, maxWidth: 768, fontSize: 14, color: "var(--muted)" }}>
           Monitore desvios de alocação, proponha e execute rebalanceamentos, e acompanhe o histórico.
         </p>
       </header>
 
-      <div className="flex flex-wrap items-center gap-4">
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16 }}>
         <select
-          className="rounded-lg border border-slate-700 bg-slate-950 px-4 py-2 text-sm text-slate-100"
+          style={{
+            borderRadius: 8,
+            border: "1px solid var(--line)",
+            background: "var(--surface)",
+            padding: "8px 16px",
+            fontSize: 14,
+            color: "var(--text)",
+          }}
           value={selectedPortfolioId}
           onChange={(e) => {
             setSelectedPortfolioId(e.target.value);
@@ -485,7 +630,16 @@ export default function RebalancePage() {
         </select>
         <button
           onClick={() => setShowProposeForm(true)}
-          className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+          style={{
+            borderRadius: 8,
+            background: "var(--accent)",
+            padding: "8px 16px",
+            fontSize: 14,
+            fontWeight: 500,
+            color: "var(--bg)",
+            border: "none",
+            cursor: "pointer",
+          }}
         >
           Propor rebalanceamento
         </button>
@@ -498,16 +652,16 @@ export default function RebalancePage() {
       )}
 
       {!isLoading && driftQuery.data && (
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Desvios atuais vs. alvo</h2>
-          <div className="mb-4 flex gap-6 text-sm">
+        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
+          <h2 style={{ marginBottom: 16, fontSize: 18, fontWeight: 600, color: "var(--text)" }}>Desvios atuais vs. alvo</h2>
+          <div style={{ marginBottom: 16, display: "flex", gap: 24, fontSize: 14 }}>
             <div>
-              <span className="text-slate-400">Desvio máximo: </span>
-              <span className="font-mono text-slate-100">{pct(driftQuery.data.max_drift)}</span>
+              <span style={{ color: "var(--muted)" }}>Desvio máximo: </span>
+              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{pct(driftQuery.data.max_drift)}</span>
             </div>
             <div>
-              <span className="text-slate-400">Desvio total: </span>
-              <span className="font-mono text-slate-100">{pct(driftQuery.data.total_drift)}</span>
+              <span style={{ color: "var(--muted)" }}>Desvio total: </span>
+              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{pct(driftQuery.data.total_drift)}</span>
             </div>
           </div>
           <DriftTable items={driftQuery.data.items} />
@@ -515,23 +669,35 @@ export default function RebalancePage() {
       )}
 
       {!isLoading && proposalsQuery.data && (
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Propostas</h2>
+        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
+          <h2 style={{ marginBottom: 16, fontSize: 18, fontWeight: 600, color: "var(--text)" }}>Propostas</h2>
           {proposalsQuery.data.length === 0 ? (
-            <p className="text-sm text-slate-400">Nenhuma proposta de rebalanceamento para esta carteira.</p>
+            <p style={{ fontSize: 14, color: "var(--muted)" }}>Nenhuma proposta de rebalanceamento para esta carteira.</p>
           ) : (
             <div className="space-y-2">
               {proposalsQuery.data.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setSelectedProposalId(p.id)}
-                  className="flex w-full items-center justify-between rounded-lg border border-slate-800 p-3 text-left hover:bg-slate-900"
+                  style={{
+                    display: "flex",
+                    width: "100%",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    borderRadius: 8,
+                    border: "1px solid var(--line)",
+                    padding: 12,
+                    textAlign: "left",
+                    background: "none",
+                    cursor: "pointer",
+                    color: "inherit",
+                  }}
                 >
                   <div>
-                    <div className="text-sm font-medium text-slate-100">
+                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>
                       Proposta {p.id.slice(0, 8)}
                     </div>
-                    <div className="mt-1 text-xs text-slate-500">
+                    <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted-2)" }}>
                       {p.rationale.slice(0, 100)}{p.rationale.length > 100 ? "..." : ""}
                     </div>
                   </div>
@@ -544,8 +710,8 @@ export default function RebalancePage() {
       )}
 
       {!isLoading && (
-        <section className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-          <h2 className="mb-4 text-lg font-semibold text-slate-100">Histórico de rebalanceamentos</h2>
+        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
+          <h2 style={{ marginBottom: 16, fontSize: 18, fontWeight: 600, color: "var(--text)" }}>Histórico de rebalanceamentos</h2>
           <Timeline items={historyQuery.data ?? []} />
         </section>
       )}

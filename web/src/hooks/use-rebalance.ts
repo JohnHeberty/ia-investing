@@ -74,7 +74,7 @@ export type RebalanceProposal = {
   };
 };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const organizationId = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
@@ -152,6 +152,9 @@ export function useProposeRebalance() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
     },
+    onError: (error: Error) => {
+      console.error("[rebalance] propose failed:", error.message);
+    },
   });
 }
 
@@ -173,6 +176,9 @@ export function useApproveRebalance() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
+    },
+    onError: (error: Error) => {
+      console.error("[rebalance] approve failed:", error.message);
     },
   });
 }
@@ -196,6 +202,9 @@ export function useExecuteTradeStep() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
     },
+    onError: (error: Error) => {
+      console.error("[rebalance] execute step failed:", error.message);
+    },
   });
 }
 
@@ -209,6 +218,9 @@ export function useCompleteRebalance() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
+    },
+    onError: (error: Error) => {
+      console.error("[rebalance] complete failed:", error.message);
     },
   });
 }
@@ -231,6 +243,9 @@ export function useCancelRebalance() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
+    },
+    onError: (error: Error) => {
+      console.error("[rebalance] cancel failed:", error.message);
     },
   });
 }

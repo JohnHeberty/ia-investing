@@ -402,7 +402,7 @@ function OpportunitiesContent() {
 
       {dataState === "stale" && (
         <div style={{ marginBottom: 14 }}>
-          <StaleWarning lastUpdated={new Date().toISOString()} source="research/cases" />
+          <StaleWarning source="research/cases" />
         </div>
       )}
 

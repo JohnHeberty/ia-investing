@@ -147,9 +147,10 @@ export function StaleWarning({
   lastUpdated,
   source,
 }: {
-  lastUpdated: string;
+  lastUpdated?: string;
   source?: string;
 }) {
+  if (!lastUpdated) return null;
   return (
     <div
       role="alert"

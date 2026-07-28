@@ -74,7 +74,13 @@ export function useSSE(
         if (cancelled) return;
         const eventId = message.lastEventId;
         if (eventId && seenIdsRef.current.has(eventId)) return;
-        if (eventId) seenIdsRef.current.add(eventId);
+        if (eventId) {
+          if (seenIdsRef.current.size >= 200) {
+            const first = seenIdsRef.current.values().next().value;
+            if (first) seenIdsRef.current.delete(first);
+          }
+          seenIdsRef.current.add(eventId);
+        }
 
         let parsed: unknown;
         try {

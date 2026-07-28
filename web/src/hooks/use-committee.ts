@@ -63,6 +63,34 @@ function proposalTitle(session: CommitteeSessionDetail): string {
   return thesisCount > 0 ? `Comitê — ${thesisCount} tese${thesisCount === 1 ? "" : "s"}` : "Sessão do comitê";
 }
 
+async function batchFetchDetails(
+  sessions: CommitteeSessionListItem[],
+  signal: AbortSignal,
+): Promise<CommitteeSessionDetail[]> {
+  const results: CommitteeSessionDetail[] = [];
+  const concurrency = 5;
+  for (let i = 0; i < sessions.length; i += concurrency) {
+    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
+    const batch = sessions.slice(i, i + concurrency);
+    const settled = await Promise.allSettled(
+      batch.map(async (session) => {
+        const { data, error } = await institutionalApi.GET<CommitteeSessionDetail>(
+          "/api/v1/committee/sessions/{session_id}",
+          { params: { path: { session_id: session.id }, signal } },
+        );
+        if (error) throw error;
+        return data ?? session;
+      }),
+    );
+    for (const result of settled) {
+      if (result.status === "fulfilled") {
+        results.push(result.value);
+      }
+    }
+  }
+  return results;
+}
+
 export function useCommittee() {
   const sessionsQuery = useQuery({
     queryKey: queryKeys.committeeSessions(),
@@ -80,18 +108,9 @@ export function useCommittee() {
   const detailsQuery = useQuery({
     queryKey: [...queryKeys.committeeSessions(), "details", sessionsQuery.data?.map((s) => s.id).join(",") ?? ""],
     enabled: Boolean(sessionsQuery.data),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const sessions = sessionsQuery.data ?? [];
-      return Promise.all(
-        sessions.map(async (session) => {
-          const { data, error } = await institutionalApi.GET<CommitteeSessionDetail>(
-            "/api/v1/committee/sessions/{session_id}",
-            { params: { path: { session_id: session.id } } },
-          );
-          if (error) throw error;
-          return data ?? session;
-        }),
-      );
+      return batchFetchDetails(sessions, signal);
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,

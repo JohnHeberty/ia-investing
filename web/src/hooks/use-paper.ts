@@ -70,6 +70,7 @@ export function usePaper() {
   const dataState: DataState = computeDataState(
     isLoading,
     isError,
+    null,
     intents.length > 0,
   );
 

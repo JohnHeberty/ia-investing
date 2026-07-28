@@ -88,7 +88,7 @@ function MacroContent() {
 
       {dataState === "stale" && (
         <div style={{ marginBottom: 14 }}>
-          <StaleWarning lastUpdated={new Date().toISOString()} source="sources/health" />
+          <StaleWarning source="sources/health" />
         </div>
       )}
 

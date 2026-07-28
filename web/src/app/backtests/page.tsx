@@ -80,7 +80,7 @@ function BacktestsContent() {
 
       {dataState === "stale" && (
         <div style={{ marginBottom: 14 }}>
-          <StaleWarning lastUpdated={new Date().toISOString()} source="backtests" />
+          <StaleWarning source="backtests" />
         </div>
       )}
 

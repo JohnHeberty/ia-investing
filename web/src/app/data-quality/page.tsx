@@ -89,15 +89,15 @@ function DataQualityContent() {
 
       {dataState === "stale" && (
         <div style={{ marginBottom: 14 }}>
-          <StaleWarning lastUpdated={new Date().toISOString()} source="sources/health" />
+          <StaleWarning source="sources/health" />
         </div>
       )}
 
       <section className="grid grid-4" aria-label="Métricas de qualidade">
         <Metric
           label="Fontes saudáveis"
-          value={`${healthySources}/${totalSources}`}
-          note="SLAs dentro da janela"
+          value={totalSources > 0 ? `${healthySources}/${totalSources}` : "\u2014"}
+          note={totalSources > 0 ? "SLAs dentro da janela" : "sem fontes registradas"}
         />
         <Metric
           label="Incidentes abertos"

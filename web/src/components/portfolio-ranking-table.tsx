@@ -21,9 +21,9 @@ function formatPercent(value: string | null): string {
 export function PortfolioRankingTable({ items }: { items: PortfolioRankItem[] }) {
   if (items.length === 0) {
     return (
-      <section className="rounded-xl border border-slate-800 bg-slate-950 p-6">
-        <h2 className="text-lg font-semibold text-slate-100">Top carteiras</h2>
-        <p className="mt-2 text-sm text-slate-400">
+      <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 24 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>Top carteiras</h2>
+        <p style={{ marginTop: 8, fontSize: 14, color: "var(--muted)" }}>
           Nenhuma carteira atende aos gates de ranking. Consulte &ldquo;Excluídas&rdquo; para ver NAV,
           backtest, risco, cobertura de tese ou confiança de dados pendentes.
         </p>
@@ -32,41 +32,41 @@ export function PortfolioRankingTable({ items }: { items: PortfolioRankItem[] })
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950">
-      <table className="min-w-full text-sm">
+    <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)" }}>
+      <table style={{ minWidth: "100%", fontSize: 14 }}>
         <caption className="sr-only">Ranking auditável de carteiras por coorte</caption>
-        <thead className="border-b border-slate-800 text-left text-xs uppercase tracking-wide text-slate-400">
+        <thead style={{ borderBottom: "1px solid var(--line)", textAlign: "left", fontSize: 12, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--muted)" }}>
           <tr>
-            <th className="px-4 py-3">Posição</th>
-            <th className="px-4 py-3">Carteira</th>
-            <th className="px-4 py-3">Coorte</th>
-            <th className="px-4 py-3 text-right">Score</th>
-            <th className="px-4 py-3 text-right">NAV</th>
-            <th className="px-4 py-3 text-right">Volatilidade</th>
-            <th className="px-4 py-3 text-right">Drawdown</th>
-            <th className="px-4 py-3 text-right">Teses</th>
-            <th className="px-4 py-3 text-right">Dados</th>
-            <th className="px-4 py-3">Estado</th>
+            <th style={{ padding: "12px 16px" }}>Posição</th>
+            <th style={{ padding: "12px 16px" }}>Carteira</th>
+            <th style={{ padding: "12px 16px" }}>Coorte</th>
+            <th style={{ padding: "12px 16px", textAlign: "right" }}>Score</th>
+            <th style={{ padding: "12px 16px", textAlign: "right" }}>NAV</th>
+            <th style={{ padding: "12px 16px", textAlign: "right" }}>Volatilidade</th>
+            <th style={{ padding: "12px 16px", textAlign: "right" }}>Drawdown</th>
+            <th style={{ padding: "12px 16px", textAlign: "right" }}>Teses</th>
+            <th style={{ padding: "12px 16px", textAlign: "right" }}>Dados</th>
+            <th style={{ padding: "12px 16px" }}>Estado</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-900">
+        <tbody style={{ color: "var(--muted)" }}>
           {items.map((item) => (
-            <tr key={item.portfolio_id} className="hover:bg-slate-900/60">
-              <td className="px-4 py-3 font-mono tabular-nums text-slate-300">#{item.rank ?? "–"}</td>
-              <td className="px-4 py-3">
-                <Link className="font-medium text-slate-100 hover:underline" href={`/portfolios/${item.portfolio_id}`}>
+            <tr key={item.portfolio_id} style={{ borderBottom: "1px solid var(--line-soft)" }}>
+              <td style={{ padding: "12px 16px", fontFamily: "var(--font-mono, monospace)", fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>#{item.rank ?? "–"}</td>
+              <td style={{ padding: "12px 16px" }}>
+                <Link style={{ fontWeight: 500, color: "var(--text)" }} href={`/portfolios/${item.portfolio_id}`}>
                   {item.name}
                 </Link>
-                <div className="text-xs text-slate-500">{item.environment.toUpperCase()}</div>
+                <div style={{ fontSize: 12, color: "var(--muted-2)" }}>{item.environment.toUpperCase()}</div>
               </td>
-              <td className="px-4 py-3 text-slate-300">
+              <td style={{ padding: "12px 16px", color: "var(--text)" }}>
                 <div>{item.category}</div>
-                <div className="text-xs text-slate-500">{item.benchmark} · {item.risk_class}</div>
+                <div style={{ fontSize: 12, color: "var(--muted-2)" }}>{item.benchmark} · {item.risk_class}</div>
               </td>
-              <td className="px-4 py-3 text-right font-mono tabular-nums text-slate-100">
+              <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "var(--font-mono, monospace)", fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>
                 {formatPercent(item.score)}
               </td>
-              <td className="px-4 py-3 text-right font-mono tabular-nums text-slate-300">
+              <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "var(--font-mono, monospace)", fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>
                 {item.nav === null
                   ? "Indisponível"
                   : new Intl.NumberFormat("pt-BR", {
@@ -75,20 +75,20 @@ export function PortfolioRankingTable({ items }: { items: PortfolioRankItem[] })
                       maximumFractionDigits: 0,
                     }).format(Number(item.nav))}
               </td>
-              <td className="px-4 py-3 text-right font-mono tabular-nums text-slate-300">
+              <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "var(--font-mono, monospace)", fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>
                 {formatPercent(item.volatility)}
               </td>
-              <td className="px-4 py-3 text-right font-mono tabular-nums text-slate-300">
+              <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "var(--font-mono, monospace)", fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>
                 {formatPercent(item.drawdown)}
               </td>
-              <td className="px-4 py-3 text-right font-mono tabular-nums text-slate-300">
+              <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "var(--font-mono, monospace)", fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>
                 {formatPercent(item.thesis_coverage)}
               </td>
-              <td className="px-4 py-3 text-right font-mono tabular-nums text-slate-300">
+              <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "var(--font-mono, monospace)", fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>
                 {formatPercent(item.data_confidence)}
               </td>
-              <td className="px-4 py-3">
-                <span className="rounded-full border border-slate-700 px-2 py-1 text-xs text-slate-300">
+              <td style={{ padding: "12px 16px" }}>
+                <span style={{ borderRadius: 999, border: "1px solid var(--line)", padding: "4px 8px", fontSize: 12, color: "var(--muted)" }}>
                   {item.stage}
                 </span>
               </td>

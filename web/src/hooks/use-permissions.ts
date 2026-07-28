@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
 import { useAuth } from "@/components/auth-provider";
 
 export interface Permissions {
@@ -22,14 +23,13 @@ function hasPermission(permissions: string[], permission: string): boolean {
 
 export function usePermissions(): Permissions {
   const { user } = useAuth();
-  const perms = user?.permissions ?? [];
+  const perms = useMemo(() => user?.permissions ?? [], [user?.permissions]);
 
-  return {
-    permissions: perms,
-    can: (permission) => hasPermission(perms, permission),
-    canAny: (...permsList) => permsList.some((p) => hasPermission(perms, p)),
-    canAll: (...permsList) => permsList.every((p) => hasPermission(perms, p)),
-    isAdmin: perms.includes("*") || (user?.roles ?? []).includes("admin"),
-    role: user?.roles?.[0] ?? null,
-  };
+  const can = useCallback((permission: string) => hasPermission(perms, permission), [perms]);
+  const canAny = useCallback((...permsList: string[]) => permsList.some((p) => hasPermission(perms, p)), [perms]);
+  const canAll = useCallback((...permsList: string[]) => permsList.every((p) => hasPermission(perms, p)), [perms]);
+  const isAdmin = useMemo(() => perms.includes("*") || (user?.roles ?? []).includes("admin"), [perms, user?.roles]);
+  const role = useMemo(() => user?.roles?.[0] ?? null, [user?.roles]);
+
+  return { permissions: perms, can, canAny, canAll, isAdmin, role };
 }

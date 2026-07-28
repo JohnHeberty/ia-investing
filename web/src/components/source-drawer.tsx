@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 
 export type SourceEntry = {
   id: string;
@@ -23,6 +23,18 @@ export function SourceDrawer({
   sources: SourceEntry[];
   title?: string;
 }) {
+  const drawerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handler);
+    drawerRef.current?.focus();
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, onClose]);
+
   if (!open) return null;
   return (
     <div
@@ -41,6 +53,8 @@ export function SourceDrawer({
       }}
     >
       <nav
+        ref={drawerRef}
+        tabIndex={-1}
         className="source-drawer"
         onClick={(e) => e.stopPropagation()}
         style={{

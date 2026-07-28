@@ -84,7 +84,7 @@ function AuditContent() {
 
       {dataState === "stale" && (
         <div style={{ marginBottom: 14 }}>
-          <StaleWarning lastUpdated={new Date().toISOString()} source="agents/runs" />
+          <StaleWarning source="agents/runs" />
         </div>
       )}
 

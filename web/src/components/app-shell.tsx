@@ -22,7 +22,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -82,14 +82,19 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
   );
 }
 
+function getInitialTheme(): string {
+  if (typeof window === "undefined") return "dark";
+  const stored = window.localStorage.getItem("ia-theme");
+  return stored === "light" || stored === "dark" ? stored : "dark";
+}
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { user, logout } = useAuth();
+  const [theme] = useState(getInitialTheme);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem("ia-theme");
-    const initial = stored === "light" || stored === "dark" ? stored : "dark";
-    document.documentElement.dataset.theme = initial;
-  }, []);
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   const toggleTheme = useCallback(() => {
     const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";

@@ -129,7 +129,7 @@ function AssetContent() {
       {isStale && (
         <div style={{ marginBottom: 14 }}>
           <StaleWarning
-            lastUpdated={instrument.valid_as_of || new Date().toISOString()}
+            lastUpdated={instrument.valid_as_of}
             source="instruments/resolve"
           />
         </div>
