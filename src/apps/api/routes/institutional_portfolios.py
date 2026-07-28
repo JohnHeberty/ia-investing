@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api._etag import parse_etag
 from apps.api.dependencies import get_operation_service
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
@@ -354,13 +355,6 @@ class BacktestRunV1(BaseModel):
 def set_etag(portfolio: ModelPortfolio, response: Response) -> ModelPortfolioV1:
     response.headers["ETag"] = f'"{portfolio.lock_version}"'
     return ModelPortfolioV1.model_validate(portfolio)
-
-
-def parse_etag(value: str) -> int:
-    try:
-        return int(value.strip().removeprefix("W/").strip('"'))
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="If-Match must contain a numeric portfolio version") from exc
 
 
 @router.post("/mandates", response_model=MandateV1, status_code=201)

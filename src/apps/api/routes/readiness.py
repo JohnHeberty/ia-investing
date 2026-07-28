@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api._errors import map_error
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application.readiness import ReadinessService
@@ -101,14 +102,6 @@ def context_from(auth: AuthContext) -> InstitutionalAccessContext:
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="institutional organization context is required")
     return InstitutionalAccessContext(auth.subject, auth.organization_id, auth.team_ids, auth.permissions, "paper")
-
-
-def map_error(exc: Exception) -> HTTPException:
-    if isinstance(exc, LookupError):
-        return HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, PermissionError):
-        return HTTPException(status_code=403, detail=str(exc))
-    return HTTPException(status_code=409, detail=str(exc))
 
 
 class RegisterEvidenceV1(BaseModel):

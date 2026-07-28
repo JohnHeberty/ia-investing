@@ -5,10 +5,11 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api._errors import map_error
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application.paper_execution import PaperExecutionService
@@ -258,14 +259,6 @@ class ChallengerV1(BaseModel):
     decided_at: datetime | None
 
 
-def map_error(exc: Exception) -> HTTPException:
-    if isinstance(exc, LookupError):
-        return HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, PermissionError):
-        return HTTPException(status_code=403, detail=str(exc))
-    return HTTPException(status_code=409, detail=str(exc))
-
-
 @router.post("/trade-intents", response_model=TradeIntentV1, status_code=201)
 async def create_trade_intent(
     body: CreateTradeIntentV1,
@@ -443,7 +436,7 @@ async def list_operational_alerts(
     severity: str | None = None,
     alert_type: str | None = None,
     portfolio_id: UUID | None = None,
-    limit: int = 50,
+    limit: int = Query(default=50, ge=1, le=500),
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[OperationalAlertV1]:
