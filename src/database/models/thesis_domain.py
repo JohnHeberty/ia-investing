@@ -25,6 +25,9 @@ class ResearchThesis(Base):
     lock_version: Mapped[int] = mapped_column(default=1)
     created_by: Mapped[str] = mapped_column(sa.String(255))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.CheckConstraint("status IN ('draft', 'active', 'stale', 'closed')", name="status_values"),
@@ -63,6 +66,9 @@ class ResearchThesisVersion(Base):
     approved_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     review_decision_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("review_decisions.id", ondelete="RESTRICT"))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("thesis_id", "version_number", name="uq_research_thesis_versions_number"),

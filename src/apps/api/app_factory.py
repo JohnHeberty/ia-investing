@@ -15,7 +15,6 @@ from apps.api.middleware.rate_limit import RateLimitExceededError, RateLimitMidd
 from apps.api.middleware.request_host_validator import RequestHostValidator
 from apps.api.middleware.security_headers import SecurityHeadersMiddleware
 from apps.api.routes.agent_runtime import router as agent_runtime_router
-from apps.api.routes.agents import router as agents_router
 from apps.api.routes.audit import router as audit_router
 from apps.api.routes.auth import router as auth_router
 from apps.api.routes.committee import router as committee_router
@@ -86,7 +85,6 @@ _AUTH_ROUTERS = [
     issuers_router,
     financials_router,
     portfolio_router,
-    agents_router,
     operations_router,
     sources_router,
     instruments_router,

@@ -25,6 +25,9 @@ class MacroIndicator(Base):
     published_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), index=True)
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     def __repr__(self) -> str:
         return f"MacroIndicator(indicator_name={self.indicator_name!r}, period_date={self.period_date!r})"

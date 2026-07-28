@@ -29,6 +29,9 @@ class ResearchAssessment(Base):
     data_as_of: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True))
     expires_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), index=True)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.CheckConstraint("author_type IN ('human', 'agent')", name="author_type_values"),

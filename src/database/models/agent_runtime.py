@@ -19,8 +19,13 @@ class AgentCapability(Base):
     logical_id: Mapped[str] = mapped_column(sa.String(100), unique=True)
     display_name: Mapped[str] = mapped_column(sa.String(200))
     description: Mapped[str] = mapped_column(sa.Text)
-    active_version_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("agent_versions.id", ondelete="SET NULL"), index=True)
+    active_version_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("agent_versions.id", ondelete="SET NULL"), index=True
+    )
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
 
 class AgentArtifact(Base):
@@ -35,6 +40,9 @@ class AgentArtifact(Base):
     source_path: Mapped[str | None] = mapped_column(sa.String(500))
     created_by: Mapped[str] = mapped_column(sa.String(255))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("logical_id", "kind", "version", name="uq_agent_artifacts_logical_kind_version"),
@@ -60,6 +68,9 @@ class AgentVersion(Base):
     status: Mapped[str] = mapped_column(sa.String(20), default="draft")
     created_by: Mapped[str] = mapped_column(sa.String(255))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("capability_id", "version", name="uq_agent_versions_capability_version"),
@@ -96,6 +107,9 @@ class AgentRuntimeRun(Base):
     started_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     finished_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("capability_id", "idempotency_key", name="uq_agent_runtime_runs_capability_idempotency"),
@@ -124,6 +138,9 @@ class AgentRuntimeToolCall(Base):
     duration_ms: Mapped[int | None] = mapped_column()
     cost_usd: Mapped[Decimal] = mapped_column(sa.Numeric(16, 8), default=0)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.CheckConstraint("arguments_sha256 ~ '^[0-9a-f]{64}$'", name="sha256_format"),
@@ -168,6 +185,9 @@ class AgentEvalDataset(Base):
     version: Mapped[int] = mapped_column()
     sha256: Mapped[str] = mapped_column(sa.String(64))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("logical_id", "version", name="uq_agent_eval_datasets_logical_version"),
@@ -199,6 +219,9 @@ class AgentEvalRun(Base):
     thresholds: Mapped[dict[str, object]] = mapped_column(JSONB)
     status: Mapped[str] = mapped_column(sa.String(20))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (sa.CheckConstraint("status IN ('running', 'passed', 'failed')", name="status_values"),)
 

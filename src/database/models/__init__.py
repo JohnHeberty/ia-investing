@@ -10,21 +10,8 @@ from .agent_runtime import (  # noqa: F401
     AgentRuntimeToolCall,
     AgentVersion,
 )
-from .agents import (  # noqa: F401
-    AgentAssessment,
-    AgentDefinition,
-    AgentRun,
-    AgentToolCall,
-    Approval,
-    AuditLog,
-    EvaluationResultRecord,
-    EvidenceItem,
-    ExecutionReconciliation,
-    InvestmentThesis,
-    Recommendation,
-    ThesisVersion,
-)
 from .audit import AuditLogEntry  # noqa: F401
+from .audit_models import AuditLog  # noqa: F401
 from .base import Base
 
 # Import all models so SQLAlchemy can discover them via Base.metadata
@@ -150,8 +137,6 @@ from .portfolio import (  # noqa: F401
     PortfolioConstraint,
     Position,
     PromptVersion,
-    ProposedTrade,
-    RebalanceProposal,
     RiskSnapshot,
     Scorecard,
     StructuredOutputSchema,

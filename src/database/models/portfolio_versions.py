@@ -29,6 +29,9 @@ class InstitutionalPortfolioVersion(Base):
     created_by: Mapped[str] = mapped_column(sa.String(255))
     approved_by: Mapped[str | None] = mapped_column(sa.String(255))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("portfolio_id", "version", name="uq_institutional_portfolio_versions_portfolio_version"),
@@ -111,6 +114,9 @@ class PortfolioLedgerEntry(Base):
     occurred_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), index=True)
     source_reference: Mapped[str] = mapped_column(sa.String(255))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("portfolio_id", "source_reference", name="uq_portfolio_ledger_entries_source"),
@@ -145,6 +151,9 @@ class NavPublication(Base):
     reconciled: Mapped[bool] = mapped_column(default=False)
     published_by: Mapped[str] = mapped_column(sa.String(255))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("portfolio_id", "as_of", "revision", name="uq_nav_publications_portfolio_asof_revision"),

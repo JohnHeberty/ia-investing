@@ -21,7 +21,12 @@ PORTFOLIO_TRANSITIONS: list[dict[str, Any]] = [
     {"trigger": "hold", "source": "monitoring", "dest": "compliance_hold"},
     {"trigger": "hold", "source": "rebalancing", "dest": "compliance_hold"},
     {"trigger": "hold", "source": "rebalancing_pending", "dest": "compliance_hold"},
-    {"trigger": "release", "source": "compliance_hold", "dest": "rebalancing_pending", "conditions": "_compliance_cleared"},
+    {
+        "trigger": "release",
+        "source": "compliance_hold",
+        "dest": "rebalancing_pending",
+        "conditions": "_compliance_cleared",
+    },
     {"trigger": "release", "source": "rebalancing_pending", "dest": "rebalancing"},
     {"trigger": "liquidate", "source": "monitoring", "dest": "liquidating"},
     {"trigger": "liquidate", "source": "compliance_hold", "dest": "liquidating"},

@@ -19,6 +19,9 @@ class LegalEntity(Base):
     country_code: Mapped[str] = mapped_column(sa.String(2))
     tax_identifier: Mapped[str] = mapped_column(sa.String(32))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("country_code", "tax_identifier", name="uq_legal_entities_country_tax_id"),
@@ -36,6 +39,9 @@ class Instrument(Base):
     currency_code: Mapped[str] = mapped_column(sa.String(3), default="BRL")
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.CheckConstraint(
@@ -57,6 +63,9 @@ class Listing(Base):
     valid_from: Mapped[date]
     valid_to: Mapped[date | None]
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.CheckConstraint("valid_to IS NULL OR valid_to > valid_from", name="valid_window"),

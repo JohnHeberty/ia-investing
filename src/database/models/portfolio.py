@@ -3,8 +3,6 @@ from .portfolio_models import (
     Portfolio,
     PortfolioConstraint,
     Position,
-    ProposedTrade,
-    RebalanceProposal,
     RiskSnapshot,
     Transaction,
 )
@@ -17,8 +15,6 @@ __all__ = [
     "PortfolioConstraint",
     "Position",
     "PromptVersion",
-    "ProposedTrade",
-    "RebalanceProposal",
     "RiskSnapshot",
     "Scorecard",
     "StructuredOutputSchema",

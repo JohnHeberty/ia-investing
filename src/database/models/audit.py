@@ -50,6 +50,9 @@ class AuditLogEntry(Base):
     hash: Mapped[str] = mapped_column(sa.String(64), nullable=False, unique=True)
     timestamp: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.Index("ix_audit_log_tenant_timestamp", "tenant_id", "timestamp"),

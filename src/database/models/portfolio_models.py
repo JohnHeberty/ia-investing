@@ -27,6 +27,9 @@ class Portfolio(Base):
     initial_capital: Mapped[Decimal] = mapped_column(sa.Numeric(20, 4))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (sa.UniqueConstraint("organization_id", "name", name="uq_portfolios_org_name"),)
 
@@ -54,6 +57,9 @@ class Position(Base):
 
     weight_pct: Mapped[float] = mapped_column(sa.Float)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     def __repr__(self) -> str:
         return f"Position(ticker_symbol={self.ticker_symbol!r}, quantity={self.quantity})"
@@ -78,6 +84,9 @@ class Transaction(Base):
     status: Mapped[str] = mapped_column(sa.String(20))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     def __repr__(self) -> str:
         return f"Transaction(side={self.side!r}, ticker_symbol={self.ticker_symbol!r}, status={self.status!r})"
@@ -97,6 +106,9 @@ class PortfolioConstraint(Base):
     limit_value: Mapped[float] = mapped_column(sa.Float)
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     def __repr__(self) -> str:
         return f"PortfolioConstraint(constraint_type={self.constraint_type!r}, target={self.target!r})"
@@ -121,50 +133,9 @@ class RiskSnapshot(Base):
     volatility_annualized: Mapped[Decimal] = mapped_column(sa.Numeric(10, 6))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     def __repr__(self) -> str:
         return f"RiskSnapshot(sharpe_ratio={self.sharpe_ratio}, max_drawdown_pct={self.max_drawdown_pct})"
-
-
-class RebalanceProposal(Base):
-    __tablename__ = "rebalance_proposals"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    portfolio_id: Mapped[UUID] = mapped_column(
-        sa.ForeignKey("portfolios.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-
-    current_allocation: Mapped[dict[str, object]] = mapped_column(JSONB)
-    proposed_allocation: Mapped[dict[str, object]] = mapped_column(JSONB)
-    rationale_pt: Mapped[str] = mapped_column(sa.Text)
-
-    expected_return_change: Mapped[float] = mapped_column(sa.Float)
-    risk_impact: Mapped[dict[str, object]] = mapped_column(JSONB())
-
-    status: Mapped[str] = mapped_column(sa.String(20), default="pending")
-    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-
-    def __repr__(self) -> str:
-        return f"RebalanceProposal(status={self.status!r})"
-
-
-class ProposedTrade(Base):
-    __tablename__ = "proposed_trades"
-
-    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    rebalance_proposal_id: Mapped[UUID] = mapped_column(
-        sa.ForeignKey("rebalance_proposals.id", ondelete="CASCADE"),
-        nullable=False,
-    )
-
-    ticker_symbol: Mapped[str] = mapped_column(sa.String(10))
-    side: Mapped[str] = mapped_column(sa.String(10))
-    quantity: Mapped[Decimal] = mapped_column(sa.Numeric(20, 4))
-    target_price: Mapped[Decimal] = mapped_column(sa.Numeric(14, 6))
-
-    rationale_pt: Mapped[str] = mapped_column(sa.Text)
-    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-
-    def __repr__(self) -> str:
-        return f"ProposedTrade(ticker_symbol={self.ticker_symbol!r}, side={self.side!r})"

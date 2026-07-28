@@ -19,6 +19,9 @@ class Organization(Base):
     display_name: Mapped[str] = mapped_column(sa.String(200))
     status: Mapped[str] = mapped_column(sa.String(20), default="active")
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.CheckConstraint(
@@ -38,6 +41,9 @@ class UserIdentity(Base):
     display_name: Mapped[str | None] = mapped_column(sa.String(200))
     status: Mapped[str] = mapped_column(sa.String(20), default="active")
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (sa.UniqueConstraint("oidc_issuer", "oidc_subject", name="uq_user_identities_issuer_subject"),)
 

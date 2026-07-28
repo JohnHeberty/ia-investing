@@ -1773,7 +1773,7 @@ class ProductionCandidateRuntime:
                     suggestion_count=0,
                 )
 
-            security_by_listing_id = {s["listing_id"]: s for s in findings.shortlist.securities}
+            {s["listing_id"]: s for s in findings.shortlist.securities}
             security_by_instrument_id = {s["instrument_id"]: s for s in findings.shortlist.securities}
 
             for suggestion in findings.suggestions:

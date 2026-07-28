@@ -78,6 +78,9 @@ class PolicyObject(Base):
     canonical_key: Mapped[str] = mapped_column(sa.String(300), unique=True)
     title: Mapped[str] = mapped_column(sa.Text)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
 
 class PolicyObjectVersion(Base):
@@ -229,6 +232,9 @@ class RegulatoryAction(Base):
         sa.ForeignKey("source_object_versions.id", ondelete="RESTRICT")
     )
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint("authority", "external_id", name="uq_regulatory_actions_authority_external"),

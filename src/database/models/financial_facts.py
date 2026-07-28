@@ -108,6 +108,9 @@ class FinancialFact(Base):
     valid_to: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     revision_number: Mapped[int]
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint(
@@ -152,6 +155,9 @@ class RestatementLog(Base):
     new_value_status: Mapped[str | None] = mapped_column(sa.String(20))
     revision_number: Mapped[int] = mapped_column(sa.Integer)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (sa.CheckConstraint("revision_number > 0", name="positive_revision_number"),)
 

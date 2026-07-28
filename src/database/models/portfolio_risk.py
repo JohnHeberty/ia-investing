@@ -45,6 +45,9 @@ class InstitutionalRiskSnapshot(Base):
     volatility: Mapped[Decimal | None] = mapped_column(sa.Numeric(10, 8))
     drawdown: Mapped[Decimal | None] = mapped_column(sa.Numeric(10, 8))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     __table_args__ = (
         sa.UniqueConstraint(

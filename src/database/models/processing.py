@@ -25,6 +25,9 @@ class DocumentProcessingLog(Base):
     duration_seconds: Mapped[float | None] = mapped_column(sa.Float)
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     def __repr__(self) -> str:
         return f"DocumentProcessingLog(step_name={self.step_name!r}, status={self.status!r})"
@@ -49,6 +52,9 @@ class DocumentDuplicate(Base):
     similarity_score: Mapped[float | None] = mapped_column(sa.Float)
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     def __repr__(self) -> str:
         return f"DocumentDuplicate(similarity_method={self.similarity_method!r})"
@@ -69,6 +75,9 @@ class DocumentEvent(Base):
     payload: Mapped[dict[str, object] | None] = mapped_column(JSONB)
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
+    )
 
     def __repr__(self) -> str:
         return f"DocumentEvent(event_type={self.event_type!r})"

@@ -81,7 +81,7 @@ class IntentService:
                 existing.order_type,
                 existing.limit_price,
             )
-            if not all(_cmp(a, e) for a, e in zip(actual, expected)):
+            if not all(_cmp(a, e) for a, e in zip(actual, expected, strict=False)):
                 raise ValueError("idempotency key was used with a different paper intent")
             return existing, False
         intent = TradeIntent(

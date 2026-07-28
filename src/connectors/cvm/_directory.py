@@ -10,7 +10,6 @@ Então raspamos o HTML index do diretório pai uma vez por chamada e deixamos a 
 
 from __future__ import annotations
 
-import asyncio
 import re
 import time
 
