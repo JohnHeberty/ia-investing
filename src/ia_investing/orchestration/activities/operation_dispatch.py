@@ -10,7 +10,7 @@ from temporalio import activity
 from temporalio.client import Client
 from temporalio.exceptions import ApplicationError, WorkflowAlreadyStartedError
 
-from database.models.operations import Operation, OperationDispatchOutbox
+from database.models.operations import Operation, OperationDispatchDeadLetter, OperationDispatchOutbox
 from ia_investing.platform.database import DatabaseRuntime
 from ia_investing.settings import get_settings
 from workflows._run_agent import RunAgentInput, RunAgentWorkflow
@@ -66,8 +66,18 @@ async def dispatch_pending_operations(raw_input: dict[str, Any] | None = None) -
             for outbox in rows:
                 operation = await session.get(Operation, outbox.operation_id)
                 if operation is None or operation.organization_id != outbox.organization_id:
-                    outbox.state = "failed"
+                    outbox.state = "dead_letter"
                     outbox.last_error = "operation_missing_or_tenant_mismatch"
+                    session.add(
+                        OperationDispatchDeadLetter(
+                            outbox_id=outbox.id,
+                            organization_id=outbox.organization_id,
+                            operation_id=outbox.operation_id,
+                            topic=outbox.topic,
+                            attempts=outbox.attempts,
+                            last_error="operation_missing_or_tenant_mismatch",
+                        )
+                    )
                     failed += 1
                     continue
                 if operation.state in {"succeeded", "failed", "cancelled"}:
@@ -76,11 +86,22 @@ async def dispatch_pending_operations(raw_input: dict[str, Any] | None = None) -
                     dispatched += 1
                     continue
                 if outbox.topic != "agent-run" or operation.operation_type != "agent-run":
-                    outbox.state = "failed"
+                    outbox.state = "dead_letter"
                     outbox.last_error = "unsupported_operation_topic"
                     operation.state = "failed"
                     operation.error_code = "unsupported_operation_topic"
                     operation.error_detail = "No dispatcher is registered for this operation topic"
+                    session.add(
+                        OperationDispatchDeadLetter(
+                            outbox_id=outbox.id,
+                            organization_id=outbox.organization_id,
+                            operation_id=outbox.operation_id,
+                            topic=outbox.topic,
+                            attempts=outbox.attempts,
+                            last_error="unsupported_operation_topic",
+                            payload_snapshot=operation.request_data,
+                        )
+                    )
                     failed += 1
                     continue
 
@@ -106,21 +127,43 @@ async def dispatch_pending_operations(raw_input: dict[str, Any] | None = None) -
                 except WorkflowAlreadyStartedError:
                     pass
                 except (KeyError, TypeError, ValueError) as exc:
-                    outbox.state = "failed"
+                    outbox.state = "dead_letter"
                     outbox.last_error = f"invalid_operation_payload:{type(exc).__name__}"
                     operation.state = "failed"
                     operation.error_code = "invalid_operation_payload"
                     operation.error_detail = "The durable operation payload failed validation"
+                    session.add(
+                        OperationDispatchDeadLetter(
+                            outbox_id=outbox.id,
+                            organization_id=outbox.organization_id,
+                            operation_id=outbox.operation_id,
+                            topic=outbox.topic,
+                            attempts=outbox.attempts,
+                            last_error=outbox.last_error,
+                            payload_snapshot=operation.request_data,
+                        )
+                    )
                     failed += 1
                     continue
                 except Exception as exc:
                     outbox.attempts += 1
                     outbox.last_error = type(exc).__name__[:200]
                     if outbox.attempts >= _MAX_ATTEMPTS:
-                        outbox.state = "failed"
+                        outbox.state = "dead_letter"
                         operation.state = "failed"
                         operation.error_code = "workflow_dispatch_exhausted"
                         operation.error_detail = "Temporal dispatch retries were exhausted"
+                        session.add(
+                            OperationDispatchDeadLetter(
+                                outbox_id=outbox.id,
+                                organization_id=outbox.organization_id,
+                                operation_id=outbox.operation_id,
+                                topic=outbox.topic,
+                                attempts=outbox.attempts,
+                                last_error=outbox.last_error,
+                                payload_snapshot=operation.request_data,
+                            )
+                        )
                         failed += 1
                     else:
                         outbox.next_attempt_at = now + _retry_delay(outbox.attempts)

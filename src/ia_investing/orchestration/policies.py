@@ -17,3 +17,11 @@ EXTERNAL_IO_RETRY_POLICY = RetryPolicy(
     maximum_attempts=6,
     non_retryable_error_types=["DataValidationError", "LicensePolicyError", "ConfigurationError"],
 )
+
+CPU_BOUND_RETRY_POLICY = RetryPolicy(
+    initial_interval=timedelta(seconds=2),
+    backoff_coefficient=2.0,
+    maximum_interval=timedelta(seconds=30),
+    maximum_attempts=3,
+    non_retryable_error_types=["DataValidationError", "ConfigurationError"],
+)

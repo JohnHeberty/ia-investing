@@ -8,6 +8,7 @@ summary.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime
 from typing import Any
@@ -132,9 +133,8 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
                     idempotency_key=command.idempotency_key,
                 )
                 run_id = run.id
-                await session.commit()
+                await session.flush()
 
-            async with runtime.session() as session:
                 fetched = await AgentRuntimeService(session).get_run(run_id)
                 if fetched is None:
                     raise RuntimeError("agent run disappeared after creation")
@@ -202,6 +202,19 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
                 )
                 return result
         except ApplicationError:
+            raise
+        except asyncio.CancelledError:
+            logger.warning(
+                "activity agent.create_and_execute cancelled capability=%s",
+                command.capability,
+            )
+            async with runtime.session() as session:
+                operation = await session.get(Operation, operation_id)
+                if operation is not None and operation.organization_id == command.organization_id:
+                    operation.state = "cancelled"
+                    operation.error_code = "workflow_cancelled"
+                    operation.error_detail = "Operation was cancelled"
+                    await session.commit()
             raise
         except Exception as exc:
             logger.warning(

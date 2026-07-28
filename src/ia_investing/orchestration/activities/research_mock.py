@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import Any
 from uuid import NAMESPACE_URL, uuid5
 
@@ -114,7 +115,7 @@ def apply_screen_filters(universe: list[dict[str, Any]], filters: dict[str, Any]
         raw_min = filters.get("min_market_cap")
         raw_max = filters.get("max_market_cap")
         minimum = float(raw_min) if raw_min is not None else 0.0
-        maximum = float(raw_max) if raw_max is not None else float("inf")
+        maximum = float(raw_max) if raw_max is not None else math.inf
         return [item for item in universe if minimum <= float(item["market_cap"]) <= maximum]
 
 

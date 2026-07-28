@@ -7,6 +7,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from temporalio import activity
 from temporalio.client import Client
 from temporalio.exceptions import ApplicationError, WorkflowAlreadyStartedError
@@ -75,7 +76,7 @@ async def _dispatch_event(client: Client, event: DomainOutboxEvent) -> None:
         return
 
     if event.event_type == "candidate.source.validation.requested":
-        command = CandidateSourceValidationInput(  # type: ignore[assignment]
+        validation_command = CandidateSourceValidationInput(
             candidate_id=_uuid(payload, "candidate_id"),
             source_id=_uuid(payload, "source_id"),
             organization_id=_uuid(payload, "organization_id"),
@@ -83,16 +84,16 @@ async def _dispatch_event(client: Client, event: DomainOutboxEvent) -> None:
         )
         await client.start_workflow(
             CandidateSourceValidationWorkflow.run,
-            command,
-            id=f"candidate-source-validation-{command.source_id}",  # type: ignore[attr-defined]
+            validation_command,
+            id=f"candidate-source-validation-{validation_command.source_id}",
             task_queue="research-agents",
-        )  # type: ignore[misc]
+        )
         return
 
     if event.event_type == "equity.exploration.requested":
         run_id = _uuid(payload, "exploration_run_id")
         organization_id = _uuid(payload, "organization_id")
-        command = ExplorationWorkflowInput(  # type: ignore[assignment]
+        exploration_command = ExplorationWorkflowInput(
             exploration_run_id=run_id,
             organization_id=organization_id,
             data_as_of=_datetime(payload, "data_as_of"),
@@ -100,10 +101,10 @@ async def _dispatch_event(client: Client, event: DomainOutboxEvent) -> None:
         )
         await client.start_workflow(
             AutonomousEquityExplorationWorkflow.run,
-            command,
+            exploration_command,
             id=f"equity-exploration-{run_id}",
             task_queue="research-agents",
-        )  # type: ignore[misc]
+        )
         return
 
     raise ValueError(f"unsupported candidate event type {event.event_type!r}")
@@ -207,10 +208,12 @@ async def create_scheduled_exploration_run(raw_command: dict[str, Any]) -> dict[
     try:
         async with runtime.session() as session:
             existing = await session.scalar(
-                select(ExplorationRunRecord).where(
+                select(ExplorationRunRecord)
+                .where(
                     ExplorationRunRecord.organization_id == organization_id,
                     ExplorationRunRecord.workflow_id == workflow_id,
                 )
+                .with_for_update()
             )
             if existing is not None:
                 run_id = existing.id
@@ -234,7 +237,20 @@ async def create_scheduled_exploration_run(raw_command: dict[str, Any]) -> dict[
                         eligible_size=0,
                     )
                 )
-                await session.commit()
+                try:
+                    await session.commit()
+                except IntegrityError:
+                    await session.rollback()
+                    existing = await session.scalar(
+                        select(ExplorationRunRecord).where(
+                            ExplorationRunRecord.organization_id == organization_id,
+                            ExplorationRunRecord.workflow_id == workflow_id,
+                        )
+                    )
+                    if existing is None:
+                        raise
+                    run_id = existing.id
+                    now = existing.data_as_of
     finally:
         await runtime.dispose()
     return {

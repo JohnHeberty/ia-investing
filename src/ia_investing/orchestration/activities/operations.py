@@ -5,6 +5,7 @@ from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio import activity
 from temporalio.exceptions import ApplicationError
 
@@ -14,16 +15,28 @@ from ia_investing.ai import ALL_AGENTS
 from ia_investing.orchestration.activities._telemetry import activity_span
 
 
-async def _set_state(operation_id: str, **values: Any) -> None:
+async def _set_state(
+    operation_id: str,
+    *,
+    session: AsyncSession | None = None,
+    **values: Any,
+) -> None:
     try:
         operation_uuid = UUID(operation_id)
     except ValueError as exc:
         raise ApplicationError("invalid operation ID", type="DataValidationError", non_retryable=True) from exc
     values["updated_at"] = datetime.now(UTC)
-    async with session_scope() as session:
-        result = await session.execute(update(Operation).where(Operation.id == operation_uuid).values(**values))
+
+    async def _execute(sess: AsyncSession) -> None:
+        result = await sess.execute(update(Operation).where(Operation.id == operation_uuid).values(**values))
         if result.rowcount != 1:  # type: ignore[attr-defined]
             raise ApplicationError("operation not found", type="DataValidationError", non_retryable=True)
+
+    if session is not None:
+        await _execute(session)
+    else:
+        async with session_scope() as new_session:
+            await _execute(new_session)
 
 
 @activity.defn(name="set_operation_running")
@@ -68,3 +81,23 @@ async def fail_operation(operation_id: str, error_code: str) -> None:
             error_code=error_code[:100],
             error_detail="Agent execution failed. Inspect correlated traces for details.",
         )
+
+
+@activity.defn(name="cancel_operation")
+async def cancel_operation(operation_id: str, reason: str = "cancelled") -> None:
+    with activity_span("cancel_operation"):
+        await _set_state(
+            operation_id,
+            state="cancelled",
+            error_code="workflow_cancelled",
+            error_detail=reason[:200],
+        )
+
+
+OPERATION_ACTIVITIES = (
+    set_operation_running,
+    run_configured_agent,
+    complete_operation,
+    fail_operation,
+    cancel_operation,
+)
