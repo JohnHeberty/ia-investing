@@ -90,26 +90,6 @@
             "url": "https://mcp.context7.com/mcp",
             "enabled": true,
             "timeout": 30000
-        },
-        "serena": {
-            "type": "local",
-            "command": [
-                "docker",
-                "run",
-                "--rm",
-                "-i",
-                "--network",
-                "host",
-                "-v",
-                "/root/ia-investing:/workspace:rw",
-                "-v",
-                "/root/.serena/:/root/.serena/",
-                "ghcr.io/oraios/serena:latest",
-                "serena",
-                "start-mcp-server"
-            ],
-            "enabled": true,
-            "timeout": 60000
         }
     },
     "skills": {

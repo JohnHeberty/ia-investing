@@ -57,13 +57,13 @@ def upgrade() -> None:
         "restricted_instruments",
         ["organization_id", "active_from", "active_until"],
     )
-    op.create_exclude_constraint(
-        "ex_restricted_instruments_active_window",
-        "restricted_instruments",
-        ("organization_id", "="),
-        ("instrument_id", "="),
-        (sa.text("tstzrange(active_from, active_until, '[)')"), "&&"),
-        using="gist",
+    op.execute(
+        "ALTER TABLE restricted_instruments "
+        "ADD CONSTRAINT ex_restricted_instruments_active_window "
+        "EXCLUDE USING gist "
+        "(organization_id WITH =, instrument_id WITH =, "
+        "tstzrange(active_from, active_until, '[)') WITH &&) "
+        "WHERE (active_until IS NULL OR active_until > active_from)"
     )
 
 

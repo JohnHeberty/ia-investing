@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
+  python-static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,53 +19,39 @@ jobs:
         with:
           version: "0.5"
       - run: uv sync --all-extras
-      - name: Ruff check
-        run: uv run ruff check .
-      - name: Ruff format check
-        run: uv run ruff format --check .
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run mypy src
+      - run: uv run python -m compileall -q src
 
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v4
-        with:
-          version: "0.5"
-      - run: uv sync --all-extras
-      - name: Mypy
-        run: uv run mypy src
-
-  test:
+  python-tests:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg17
         env:
           POSTGRES_USER: ia_investing
           POSTGRES_PASSWORD: ia_investing
           POSTGRES_DB: ia_investing_test
         ports: ["5432:5432"]
         options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
+          --health-cmd "pg_isready -U ia_investing"
+          --health-interval 5s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 20
     env:
-      DATABASE_URL: postgresql+asyncpg://ia_investing:ia_investing@localhost:5432/ia_investing_test
+      DATABASE__URL: postgresql+asyncpg://ia_investing:ia_investing@localhost:5432/ia_investing_test
+      APPLICATION__ENVIRONMENT: test
       AI__PROVIDER: mock
-      ENVIRONMENT: test
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v4
         with:
           version: "0.5"
       - run: uv sync --all-extras
-      - name: Run migrations
-        run: uv run alembic upgrade head
-        env:
-          DATABASE_URL: postgresql+asyncpg://ia_investing:ia_investing@localhost:5432/ia_investing_test
-      - name: Unit tests
-        run: uv run pytest tests/unit/ -q --tb=short
+      - run: uv run alembic upgrade head
+      - run: uv run alembic check
+      - run: uv run pytest tests/unit tests/architecture tests/integration -q --tb=short --maxfail=1
       - name: Tests with coverage
         run: uv run pytest tests/ --cov=src --cov-report=term-missing --cov-report=xml -q --tb=short
       - name: Upload coverage
@@ -74,3 +60,75 @@ jobs:
         with:
           name: coverage-report
           path: coverage.xml
+
+  migration-roundtrip:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: migrations_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE__URL: postgresql+asyncpg://postgres:postgres@localhost:5432/migrations_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.5"
+      - run: uv sync --all-extras
+      - run: uv run alembic upgrade head
+      - run: uv run alembic downgrade -1
+      - run: uv run alembic upgrade head
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run test --if-present
+      - run: npm run build
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "0.5"
+      - run: uv sync --all-extras
+      - run: uv run pip-audit
+      - run: uv run bandit -r src -x tests
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release-gate:
+    if: always()
+    runs-on: ubuntu-latest
+    needs: [python-static, python-tests, migration-roundtrip, frontend, security]
+    steps:
+      - name: Require all gates
+        run: |
+          test "${{ needs.python-static.result }}" = success
+          test "${{ needs.python-tests.result }}" = success
+          test "${{ needs.migration-roundtrip.result }}" = success
+          test "${{ needs.frontend.result }}" = success
+          test "${{ needs.security.result }}" = success

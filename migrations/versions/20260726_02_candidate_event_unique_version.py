@@ -1,4 +1,4 @@
-"""Add unique constraint on candidate_event_records(candidate_id, aggregate_version).
+"""Add unique constraint on candidate_events(candidate_id, aggregate_version).
 
 Revision ID: 20260726_02
 Revises: 20260726_01
@@ -22,7 +22,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.create_unique_constraint(
         "uq_candidate_event_candidate_version",
-        "candidate_event_records",
+        "candidate_events",
         ["candidate_id", "aggregate_version"],
     )
 
@@ -30,6 +30,6 @@ def upgrade() -> None:
 def downgrade() -> None:
     op.drop_constraint(
         "uq_candidate_event_candidate_version",
-        "candidate_event_records",
+        "candidate_events",
         type_="unique",
     )
