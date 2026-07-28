@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from sqlalchemy import text
 
 from connectors.base import HttpClient
-from database.core import get_async_session
+from database.core import session_scope
 from ia_investing.settings import get_settings
 
 router = APIRouter(prefix="/api/v1/health", tags=["health"])
@@ -17,7 +17,7 @@ async def deep_health() -> dict[str, Any]:
     checks: dict[str, str] = {}
 
     try:
-        async for session in get_async_session():
+        async with session_scope() as session:
             await session.execute(text("SELECT 1"))
             checks["database"] = "ok"
     except Exception as exc:

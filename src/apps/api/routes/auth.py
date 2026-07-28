@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import logging
 import secrets
 from typing import Any
 from uuid import UUID
@@ -22,6 +23,8 @@ from apps.api.security import (
     generate_csrf_token,
 )
 from ia_investing.settings import get_settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -126,7 +129,8 @@ async def _verify_jwt(id_token: str) -> dict[str, object]:
             options={"verify_at_hash": False, "verify_nonce": False},
         )
     except JWTError as exc:
-        raise HTTPException(status_code=401, detail=f"JWT verification failed: {exc}") from exc
+        logger.warning("JWT verification failed: %s", exc)
+        raise HTTPException(status_code=401, detail="JWT verification failed") from exc
     return dict(claims)
 
 

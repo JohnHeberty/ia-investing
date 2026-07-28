@@ -66,7 +66,8 @@ async def _decode_oidc_token(
         raise HTTPException(status_code=503, detail="OIDC is not configured")
     if verifier is None:
         verifier = _build_oidc_verifier(get_settings())
-    assert verifier is not None
+    if verifier is None:
+        raise HTTPException(status_code=503, detail="OIDC verifier could not be initialized")
     signing_key = await asyncio.to_thread(verifier.get_signing_key_from_jwt, token)
     return jwt.decode(
         token,
@@ -115,7 +116,7 @@ async def get_auth_context(
                 verifier = request.app.state.oidc_verifier
             if settings.security.oidc_enabled:
                 claims = await _decode_oidc_token(credentials.credentials, verifier)
-            elif settings.application.environment != "production":
+            elif settings.application.environment != "production" and settings.security.dev_jwt_skip_verify:
                 claims = jwt.decode(
                     credentials.credentials,
                     options={"verify_signature": False},
@@ -264,7 +265,7 @@ def _session_from_request(request: Request) -> dict[str, object] | None:
 
 def generate_csrf_token(session_id: str) -> str:
     settings = get_settings()
-    digest = hmac.new(
+    digest = hmac.HMAC(
         _csrf_key(settings).encode(),
         session_id.encode(),
         hashlib.sha256,
@@ -278,11 +279,11 @@ def validate_csrf_token(token: str, expected_session_id: str) -> bool:
     if len(parts) != 2:
         return False
     session_id, digest = parts
-    expected = hmac.new(
+    expected = hmac.HMAC(
         _csrf_key(settings).encode(),
         session_id.encode(),
         hashlib.sha256,
     ).hexdigest()
     if not hmac.compare_digest(digest, expected):
         return False
-    return session_id == expected_session_id
+    return hmac.compare_digest(session_id, expected_session_id)

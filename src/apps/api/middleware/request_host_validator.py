@@ -51,15 +51,19 @@ class RequestHostValidator(BaseHTTPMiddleware):
         settings = get_settings()
         allowed_hosts = set(settings.security.ssrf_allowed_internal_hosts)
 
-        response = await call_next(request)
-
         request_host = request.url.hostname
         if request_host and _is_private_ip(request_host) and not _is_host_allowed(request_host, allowed_hosts):
             emit_security_event(
                 "private_request_host_detected",
-                detail=f"Request to private IP: {request_host}",
+                detail=f"Request to private IP blocked: {request_host}",
                 source_ip=request.client.host if request.client else "unknown",
             )
-            logger.warning("Request to private IP detected (post-hoc): %s", request_host)
+            logger.warning("Request to private IP blocked: %s", request_host)
+            from starlette.responses import JSONResponse
 
-        return response
+            return JSONResponse(
+                status_code=400,
+                content={"detail": "Request to private/internal host is not allowed"},
+            )
+
+        return await call_next(request)

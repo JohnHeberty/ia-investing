@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.security import require_permission
 from database.core import get_async_session
 from ia_investing.application.agent_queries import AgentRunQueryService
 
@@ -19,6 +20,7 @@ async def list_agent_runs(
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
     session: AsyncSession = Depends(get_async_session),
+    _auth: None = Depends(require_permission("agent_runs:read")),
 ) -> list[dict[str, Any]]:
     return await AgentRunQueryService(session).list_runs(
         agent_name=agent_name, status=status, offset=offset, limit=limit
@@ -29,6 +31,7 @@ async def list_agent_runs(
 async def get_agent_run(
     run_id: uuid.UUID,
     session: AsyncSession = Depends(get_async_session),
+    _auth: None = Depends(require_permission("agent_runs:read")),
 ) -> dict[str, Any]:
     row = await AgentRunQueryService(session).get_run(run_id)
     if row is None:

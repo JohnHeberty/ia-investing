@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api._etag import parse_etag
 from apps.api.security import AuthContext, get_auth_context, require_permission
 from database.core import get_async_session
 from database.models.research import ResearchCase
@@ -373,14 +374,6 @@ class ValuationRunV1(BaseModel):
         )
 
 
-def parse_etag(value: str) -> int:
-    normalized = value.strip().removeprefix("W/").strip('"')
-    try:
-        return int(normalized)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="If-Match must contain a numeric case version") from exc
-
-
 def case_response(case: ResearchCase, response: Response) -> ResearchCaseV1:
     response.headers["ETag"] = f'"{case.lock_version}"'
     return ResearchCaseV1.model_validate(case)
@@ -404,11 +397,11 @@ async def list_cases(
     require_research_read(auth)
     svc = ResearchCaseService(session, organization_id=_organization_id(auth))
     try:
-        rows = await svc.list_cases(state=state, as_of=as_of, after=after, limit=limit)
+        rows = await svc.list_cases(state=state, as_of=as_of, after=after, limit=limit + 1)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if len(rows) > limit:
-        response.headers["X-Next-Cursor"] = str(rows[limit - 1].id)
+        response.headers["X-Next-Cursor"] = str(rows[limit].id)
         rows = rows[:limit]
     return [ResearchCaseV1.model_validate(item) for item in rows]
 

@@ -19,6 +19,7 @@ from temporalio.client import (
     ScheduleState,
 )
 
+from apps.api._etag import parse_etag
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application.investment_candidates import (
@@ -274,14 +275,6 @@ def exploration_detail_response(detail: ExplorationDetail) -> ExplorationDetailV
     )
 
 
-def parse_etag(value: str) -> int:
-    normalized = value.strip().removeprefix("W/").strip('"')
-    try:
-        return int(normalized)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail="If-Match must contain a numeric candidate version") from exc
-
-
 def organization_id(auth: AuthContext) -> UUID:
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="organization context is required")
@@ -370,12 +363,12 @@ async def list_candidates(
             permissions=auth.permissions,
             status=status,
             after=after,
-            limit=limit,
+            limit=limit + 1,
         )
     except PermissionError as exc:
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     if len(rows) > limit:
-        response.headers["X-Next-Cursor"] = str(rows[limit - 1].id)
+        response.headers["X-Next-Cursor"] = str(rows[limit].id)
         rows = rows[:limit]
     return [CandidateV1.model_validate(item) for item in rows]
 

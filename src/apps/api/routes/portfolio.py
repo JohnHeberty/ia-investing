@@ -54,7 +54,7 @@ async def create_portfolio(
         initial_capital=body.initial_capital,
         organization_id=auth.organization_id,
     )
-    return {k: d[k] for k in ("id", "name", "is_paper_trading", "base_currency")}
+    return {k: d.get(k) for k in ("id", "name", "is_paper_trading", "base_currency")}
 
 
 @router.get("")
@@ -62,6 +62,8 @@ async def list_portfolios(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[dict[str, Any]]:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
     return await PaperPortfolioService(session).list_all(organization_id=auth.organization_id)
 
 
@@ -85,8 +87,11 @@ async def add_position(
     portfolio_id: uuid.UUID,
     body: PositionCreate,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
+    auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> dict[str, Any]:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
     try:
         return await PaperPortfolioService(session).add_position(
             portfolio_id=portfolio_id,
@@ -95,6 +100,7 @@ async def add_position(
             avg_cost_per_share=body.avg_cost_per_share,
             issuer_id=body.issuer_id,
             current_price=body.current_price,
+            organization_id=auth.organization_id,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc

@@ -10,7 +10,8 @@ from fastapi import APIRouter, Depends, FastAPI, Request, Response
 
 from apps.api.auth import get_current_user
 from apps.api.errors import install_problem_handlers
-from apps.api.middleware.rate_limit import RateLimitMiddleware
+from apps.api.middleware.audit_context import AuditContextMiddleware
+from apps.api.middleware.rate_limit import RateLimitExceededError, RateLimitMiddleware
 from apps.api.middleware.request_host_validator import RequestHostValidator
 from apps.api.middleware.security_headers import SecurityHeadersMiddleware
 from apps.api.routes.agent_runtime import router as agent_runtime_router
@@ -188,6 +189,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     install_problem_handlers(app)
 
+    @app.exception_handler(RateLimitExceededError)
+    async def _rate_limit_handler(request: Request, exc: RateLimitExceededError) -> Response:
+        from starlette.responses import JSONResponse
+
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Too many requests. Please try again later."},
+            headers={"Retry-After": str(exc.retry_after)},
+        )
+
+    app.add_middleware(AuditContextMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestHostValidator)
     app.add_middleware(RateLimitMiddleware)
