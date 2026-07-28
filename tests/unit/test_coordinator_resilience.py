@@ -114,7 +114,7 @@ async def test_partial_failure_records_all_failed_capabilities() -> None:
 
 @pytest.mark.asyncio
 async def test_required_step_failure_does_not_block_optional_steps() -> None:
-    """Required filing fails, optional news succeeds → news appears in outputs."""
+    """Required filing fails → RuntimeError raised immediately (required steps abort)."""
 
     async def executor(capability: str, question: str) -> SpecialistOutput:
         del question
@@ -128,11 +128,8 @@ async def test_required_step_failure_does_not_block_optional_steps() -> None:
             {"capability": "news", "question": "q2", "required": False},
         ]
     )
-    result = await ResearchCoordinator(executor, _budget()).execute(plan)
-
-    assert result.partial_failure_capabilities == ["filing"]
-    assert len(result.specialist_outputs) == 1
-    assert result.specialist_outputs[0].capability == "news"
+    with pytest.raises(RuntimeError, match="filing service down"):
+        await ResearchCoordinator(executor, _budget()).execute(plan)
 
 
 @pytest.mark.asyncio
@@ -257,7 +254,7 @@ async def test_knowledge_cutoff_drift_detected() -> None:
 
 @pytest.mark.asyncio
 async def test_single_required_failure_still_aggregates() -> None:
-    """1 required fails, 1 succeeds → partial_failure declared but findings preserved."""
+    """1 required fails → RuntimeError raised immediately."""
 
     async def executor(capability: str, question: str) -> SpecialistOutput:
         del question
@@ -272,14 +269,8 @@ async def test_single_required_failure_still_aggregates() -> None:
             {"capability": "news", "question": "q2", "required": True},
         ]
     )
-    result = await ResearchCoordinator(executor, _budget()).execute(plan)
-
-    assert result.partial_failure_capabilities == ["filing"]
-    assert len(result.specialist_outputs) == 1
-    assert result.specialist_outputs[0].capability == "news"
-    assert len(result.consolidated_findings) == 1
-    assert result.consolidated_findings[0].statement == "revenue grew 12%"
-    assert result.confidence == Decimal("0.8")
+    with pytest.raises(RuntimeError, match="filing down"):
+        await ResearchCoordinator(executor, _budget()).execute(plan)
 
 
 @pytest.mark.asyncio

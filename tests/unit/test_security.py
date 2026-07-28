@@ -302,6 +302,7 @@ class TestPolicyEngine:
 async def test_development_mode_with_oidc_disabled(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
     monkeypatch.setenv("SECURITY__OIDC_ENABLED", "false")
+    monkeypatch.setenv("SECURITY__DEV_JWT_SKIP_VERIFY", "true")
     get_settings.cache_clear()
     try:
         context = await get_auth_context(
@@ -494,7 +495,7 @@ async def test_development_headers_with_org_and_teams(monkeypatch: pytest.Monkey
 @pytest.mark.asyncio
 async def test_production_with_no_oidc_returns_503(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APPLICATION__ENVIRONMENT", "production")
-    monkeypatch.delenv("SECURITY__OIDC_ENABLED", raising=False)
+    monkeypatch.setenv("SECURITY__OIDC_ENABLED", "false")
     monkeypatch.setenv("SECURITY__OIDC_ISSUER", "https://idp.prod.com")
     monkeypatch.setenv("SECURITY__OIDC_AUDIENCE", "prod-aud")
     monkeypatch.setenv("SECURITY__OIDC_JWKS_URL", "https://idp.prod.com/jwks")
@@ -528,6 +529,8 @@ async def test_no_credentials_no_dev_header_returns_401() -> None:
 @pytest.mark.asyncio
 async def test_token_without_subject_returns_401(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
+    monkeypatch.setenv("SECURITY__OIDC_ENABLED", "false")
+    monkeypatch.setenv("SECURITY__DEV_JWT_SKIP_VERIFY", "true")
     get_settings.cache_clear()
     try:
         with pytest.raises(HTTPException) as exc_info:

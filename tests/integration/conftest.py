@@ -66,24 +66,14 @@ pytestmark = [
 
 
 # ---------------------------------------------------------------------------
-# Session-scoped engine
+# Function-scoped engine to avoid event loop conflicts
 # ---------------------------------------------------------------------------
 
-_engine = None
 
-
-def _get_engine():
-    global _engine
-    if _engine is None:
-        _engine = create_async_engine(DB_URL, pool_size=5, max_overflow=5)
-    return _engine
-
-
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture
 async def engine():
-    eng = _get_engine()
+    eng = create_async_engine(DB_URL, pool_size=2, max_overflow=2, echo=True, pool_pre_ping=True)
     yield eng
-    await eng.dispose()
 
 
 @pytest_asyncio.fixture

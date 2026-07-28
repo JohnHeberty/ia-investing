@@ -7,6 +7,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from apps.api.main import app
+from ia_investing.settings import get_settings
 
 
 def _auth_header(permissions: str = "") -> dict[str, str]:
@@ -23,8 +24,15 @@ def _etag_header(version: int = 1) -> dict[str, str]:
 
 
 @pytest.fixture
-def client():
-    return TestClient(app, raise_server_exceptions=False)
+def client(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
+    monkeypatch.setenv("SECURITY__OIDC_ENABLED", "false")
+    monkeypatch.setenv("SECURITY__DEV_JWT_SKIP_VERIFY", "true")
+    get_settings.cache_clear()
+    try:
+        return TestClient(app, raise_server_exceptions=False)
+    finally:
+        get_settings.cache_clear()
 
 
 class TestResearchAuth:

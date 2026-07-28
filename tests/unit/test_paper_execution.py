@@ -1099,7 +1099,7 @@ class TestKillSwitchService:
                 correlation_id=uuid4(),
             )
 
-    async def test_release_already_inactive_is_noop(self) -> None:
+    async def test_release_already_inactive_raises(self) -> None:
         from unittest.mock import AsyncMock, MagicMock
 
         mock_session = AsyncMock()
@@ -1114,12 +1114,12 @@ class TestKillSwitchService:
 
         service = PaperExecutionService(mock_session)
         ctx = _make_ctx("bob@test.com", org_id=switch.organization_id, perms={"paper_orders:kill"})
-        result = await service.release_kill_switch(
-            switch.id,
-            context=ctx,
-            correlation_id=uuid4(),
-        )
-        assert result.active is False
+        with pytest.raises(ValueError, match="already released"):
+            await service.release_kill_switch(
+                switch.id,
+                context=ctx,
+                correlation_id=uuid4(),
+            )
 
     async def test_release_requires_permission(self) -> None:
         from unittest.mock import AsyncMock

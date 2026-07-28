@@ -18,6 +18,7 @@ def runtime():
 def command():
     return MagicMock(
         candidate_id=uuid4(),
+        organization_id=uuid4(),
         data_as_of=date(2025, 12, 31),
         correlation_id="test-correlation",
     )
@@ -38,43 +39,60 @@ def _mock_db_session(session: AsyncMock | None = None):
 class TestIngestFinancialData:
     @pytest.mark.asyncio
     async def test_returns_blocked_when_candidate_not_found(self, runtime, command):
-        session = AsyncMock()
-        session.get = AsyncMock(return_value=None)
-        runtime._db = _mock_db_session(session)
+        runtime._db = _mock_db_session()
+        mock_repo = MagicMock()
+        mock_repo.get_candidate = AsyncMock(return_value=None)
 
-        result = await runtime.ingest_candidate_financial_data(command)
+        with patch(
+            "ia_investing.integrations.production_runtime.CandidateRepository",
+            return_value=mock_repo,
+        ):
+            result = await runtime.ingest_candidate_financial_data(command)
 
         assert result.blocked is True
         assert "issuer_not_resolved" in result.blocker_codes
 
     @pytest.mark.asyncio
     async def test_returns_blocked_when_no_cnpj(self, runtime, command):
+        runtime._db = _mock_db_session()
         candidate = MagicMock()
         candidate.issuer_id = uuid4()
         candidate.cnpj = None
-        session = AsyncMock()
-        session.get = AsyncMock(return_value=candidate)
-        runtime._db = _mock_db_session(session)
 
-        result = await runtime.ingest_candidate_financial_data(command)
+        mock_repo = MagicMock()
+        mock_repo.get_candidate = AsyncMock(return_value=candidate)
+
+        with patch(
+            "ia_investing.integrations.production_runtime.CandidateRepository",
+            return_value=mock_repo,
+        ):
+            result = await runtime.ingest_candidate_financial_data(command)
 
         assert result.blocked is True
         assert "cnpj_missing" in result.blocker_codes
 
     @pytest.mark.asyncio
     async def test_returns_blocked_when_no_dfp_data_found(self, runtime, command):
+        runtime._db = _mock_db_session()
         candidate = MagicMock()
         candidate.issuer_id = uuid4()
         candidate.cnpj = "12.345.678/0001-90"
-        session = AsyncMock()
-        session.get = AsyncMock(return_value=candidate)
-        runtime._db = _mock_db_session(session)
+
+        mock_repo = MagicMock()
+        mock_repo.get_candidate = AsyncMock(return_value=candidate)
+
         runtime._client = AsyncMock()
 
-        with patch(
-            "connectors.cvm._financials.get_dfp",
-            new_callable=AsyncMock,
-            return_value=[],
+        with (
+            patch(
+                "ia_investing.integrations.production_runtime.CandidateRepository",
+                return_value=mock_repo,
+            ),
+            patch(
+                "connectors.cvm._financials.get_dfp",
+                new_callable=AsyncMock,
+                return_value=[],
+            ),
         ):
             result = await runtime.ingest_candidate_financial_data(command)
 

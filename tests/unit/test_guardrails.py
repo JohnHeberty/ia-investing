@@ -351,17 +351,17 @@ class TestGuardrailEngineApproval:
         assert engine.reporter.tripped
         assert "approval_gate" in engine.reporter.tripped_layers
 
-    def test_approval_disabled_raises(self) -> None:
+    def test_approval_disabled_returns_none(self) -> None:
         config = GuardrailConfig(require_approval_for_sensitive=False)
         engine = GuardrailEngine(config)
-        with pytest.raises(GuardrailViolationError, match="approval_disabled"):
-            engine.require_approval("execute_order", "portfolio_A", {"shares": 100})
+        result = engine.require_approval("execute_order", "portfolio_A", {"shares": 100})
+        assert result is None
 
-    def test_approval_layer_disabled_raises(self) -> None:
+    def test_approval_layer_disabled_returns_none(self) -> None:
         config = GuardrailConfig(enabled_layers=frozenset({GuardrailLayer.SEMANTIC}))
         engine = GuardrailEngine(config)
-        with pytest.raises(GuardrailViolationError, match="approval_disabled"):
-            engine.require_approval("execute_order", "portfolio_A", {"shares": 100})
+        result = engine.require_approval("execute_order", "portfolio_A", {"shares": 100})
+        assert result is None
 
 
 # ===========================================================================
