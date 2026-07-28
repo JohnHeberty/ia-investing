@@ -48,13 +48,17 @@ async def create_execution(
     _auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
 ) -> dict[str, Any]:
+    try:
+        actor_id = UUID(_auth.subject) if _auth.subject else None
+    except (ValueError, AttributeError):
+        actor_id = None
     execution = await service.create_execution(
         order_id=body.order_id,
         portfolio_id=body.portfolio_id,
         action=body.action,
         quantity=body.quantity,
         price_limit=body.price_limit,
-        actor_id=UUID(_auth.subject) if _auth.subject else None,
+        actor_id=actor_id,
     )
     return {
         "id": str(execution.id),
@@ -122,9 +126,13 @@ async def validate_execution(
     service: ExecutionService = Depends(get_execution_service),
 ) -> dict[str, Any]:
     try:
+        actor_id = UUID(_auth.subject) if _auth.subject else None
+    except (ValueError, AttributeError):
+        actor_id = None
+    try:
         execution = await service.validate_execution(
             execution_id=execution_id,
-            actor_id=UUID(_auth.subject) if _auth.subject else None,
+            actor_id=actor_id,
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc
@@ -138,9 +146,13 @@ async def queue_execution(
     service: ExecutionService = Depends(get_execution_service),
 ) -> dict[str, Any]:
     try:
+        actor_id = UUID(_auth.subject) if _auth.subject else None
+    except (ValueError, AttributeError):
+        actor_id = None
+    try:
         execution = await service.queue_execution(
             execution_id=execution_id,
-            actor_id=UUID(_auth.subject) if _auth.subject else None,
+            actor_id=actor_id,
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc
@@ -154,9 +166,13 @@ async def dispatch_execution(
     service: ExecutionService = Depends(get_execution_service),
 ) -> dict[str, Any]:
     try:
+        actor_id = UUID(_auth.subject) if _auth.subject else None
+    except (ValueError, AttributeError):
+        actor_id = None
+    try:
         execution = await service.dispatch_execution(
             execution_id=execution_id,
-            actor_id=UUID(_auth.subject) if _auth.subject else None,
+            actor_id=actor_id,
         )
     except (LookupError, InvalidTransitionError, InsufficientBalanceError) as exc:
         status = 404 if isinstance(exc, LookupError) else 409
@@ -176,11 +192,15 @@ async def confirm_execution(
     service: ExecutionService = Depends(get_execution_service),
 ) -> dict[str, Any]:
     try:
+        actor_id = UUID(_auth.subject) if _auth.subject else None
+    except (ValueError, AttributeError):
+        actor_id = None
+    try:
         execution = await service.confirm_execution(
             execution_id=execution_id,
             filled_quantity=body.filled_quantity,
             avg_price=body.avg_price,
-            actor_id=UUID(_auth.subject) if _auth.subject else None,
+            actor_id=actor_id,
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc
@@ -200,10 +220,14 @@ async def fail_execution(
     service: ExecutionService = Depends(get_execution_service),
 ) -> dict[str, Any]:
     try:
+        actor_id = UUID(_auth.subject) if _auth.subject else None
+    except (ValueError, AttributeError):
+        actor_id = None
+    try:
         execution = await service.fail_execution(
             execution_id=execution_id,
             reason=body.reason,
-            actor_id=UUID(_auth.subject) if _auth.subject else None,
+            actor_id=actor_id,
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc
@@ -217,9 +241,13 @@ async def settle_execution(
     service: ExecutionService = Depends(get_execution_service),
 ) -> dict[str, Any]:
     try:
+        actor_id = UUID(_auth.subject) if _auth.subject else None
+    except (ValueError, AttributeError):
+        actor_id = None
+    try:
         execution = await service.settle_execution(
             execution_id=execution_id,
-            actor_id=UUID(_auth.subject) if _auth.subject else None,
+            actor_id=actor_id,
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc

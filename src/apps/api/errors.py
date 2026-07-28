@@ -40,5 +40,10 @@ def install_problem_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        del exc
-        return _response(request, 422, "Request validation failed.")
+        details = []
+        for error in exc.errors():
+            loc = " → ".join(str(loc_item) for loc_item in error.get("loc", []))
+            msg = error.get("msg", "Invalid value")
+            details.append(f"{loc}: {msg}")
+        detail = "; ".join(details) if details else "Request validation failed."
+        return _response(request, 422, detail)

@@ -111,6 +111,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         client_ip = _get_client_ip(request)
         path = request.url.path
 
+        if path.startswith("/api/v1/health") or path.startswith("/api/v1/readiness") or path == "/healthz":
+            return await call_next(request)
+
         if not await _global_limiter.is_allowed(f"global:{client_ip}"):
             return _rate_limit_response()
 

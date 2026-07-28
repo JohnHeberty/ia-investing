@@ -6,6 +6,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api.security import require_permission
 from database.core import get_async_session
 from ia_investing.application.financial_statements import FinancialStatementService
 
@@ -19,6 +20,7 @@ async def get_metrics(
     period: str | None = Query(None, description="YYYY-MM-DD"),
     offset: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=500),
+    _auth: None = Depends(require_permission("financials:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[dict[str, Any]]:
     return await FinancialStatementService(session).list_metrics(
@@ -36,6 +38,7 @@ async def get_statements(
     statement_type: str | None = Query(None, description="DRE, BALANCE_SHEET, CASH_FLOW"),
     offset: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
+    _auth: None = Depends(require_permission("financials:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[dict[str, Any]]:
     return await FinancialStatementService(session).list_statements(

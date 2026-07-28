@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict
 from temporalio.client import Client
 
+from apps.api.dependencies import get_temporal_client
 from apps.api.security import AuthContext, require_permission
-from ia_investing.settings import get_settings
 
 router = APIRouter(prefix="/api/v1/schedules", tags=["schedules"])
 
@@ -46,14 +46,6 @@ class ScheduleActionResponseV1(BaseModel):
     schedule_id: str
     paused: bool
     message: str
-
-
-async def _get_temporal_client() -> Client:
-    settings = get_settings()
-    return await Client.connect(
-        settings.temporal.address,
-        namespace=settings.temporal.namespace,
-    )
 
 
 def _parse_schedule_description(description: Any) -> dict[str, Any]:
@@ -119,8 +111,8 @@ def _parse_schedule_description(description: Any) -> dict[str, Any]:
 @router.get("", response_model=list[ScheduleSummaryV1])
 async def list_schedules(
     _auth: AuthContext = Depends(require_permission("schedules:read")),
+    client: Client = Depends(get_temporal_client),
 ) -> list[ScheduleSummaryV1]:
-    client = await _get_temporal_client()
     schedules: list[ScheduleSummaryV1] = []
     async for description in client.list_schedules():  # type: ignore[attr-defined]
         data = _parse_schedule_description(description)
@@ -141,8 +133,8 @@ async def list_schedules(
 async def get_schedule(
     schedule_id: str,
     _auth: AuthContext = Depends(require_permission("schedules:read")),
+    client: Client = Depends(get_temporal_client),
 ) -> ScheduleDetailV1:
-    client = await _get_temporal_client()
     try:
         description = await client.describe_schedule(schedule_id)  # type: ignore[attr-defined]
     except Exception as exc:
@@ -156,8 +148,8 @@ async def pause_schedule(
     schedule_id: str,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=200)],
     _auth: AuthContext = Depends(require_permission("schedules:manage")),
+    client: Client = Depends(get_temporal_client),
 ) -> ScheduleActionResponseV1:
-    client = await _get_temporal_client()
     try:
         handle = client.get_schedule_handle(schedule_id)
         await handle.pause()
@@ -175,8 +167,8 @@ async def resume_schedule(
     schedule_id: str,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=200)],
     _auth: AuthContext = Depends(require_permission("schedules:manage")),
+    client: Client = Depends(get_temporal_client),
 ) -> ScheduleActionResponseV1:
-    client = await _get_temporal_client()
     try:
         handle = client.get_schedule_handle(schedule_id)
         await handle.unpause()

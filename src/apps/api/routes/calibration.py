@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, ConfigDict, Field
 
 from apps.api.security import AuthContext, require_permission
 from ia_investing.application.calibration_engine import CalibrationEngine
@@ -72,11 +73,12 @@ async def get_reliability(
     return engine.generate_reliability_data(comp)
 
 
-class OverrideRequest:
-    def __init__(self, component: str, reason: str, duration_hours: int = 24) -> None:
-        self.component = component
-        self.reason = reason
-        self.duration_hours = duration_hours
+class OverrideRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    component: str = Field(min_length=1, max_length=100)
+    reason: str = Field(min_length=1, max_length=500)
+    duration_hours: int = Field(default=24, ge=1, le=168)
 
 
 @router.post("/override")

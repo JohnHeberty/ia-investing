@@ -14,7 +14,7 @@ from sqlalchemy.exc import IntegrityError
 from temporalio.client import Client
 from temporalio.exceptions import WorkflowAlreadyStartedError
 
-from apps.api.dependencies import SessionDep
+from apps.api.dependencies import SessionDep, get_temporal_client
 from apps.api.security import Principal, require_permission
 from database.models.agents import AuditLog
 from database.models.operations import Operation, OperationDispatchOutbox
@@ -132,8 +132,8 @@ async def start_agent_run(
     session: SessionDep,
     principal: Annotated[Principal, Depends(require_permission("agent:run"))],
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=200)],
+    temporal: Client = Depends(get_temporal_client),
 ) -> OperationAccepted:
-    temporal: Client | None = request.app.state.temporal
     organization_id = organization_uuid(principal)
     request_data = {
         "organization_id": str(organization_id),
@@ -252,7 +252,6 @@ async def start_agent_run(
         except WorkflowAlreadyStartedError:
             await _mark_dispatched(session, outbox)
         except Exception:
-            await session.rollback()
             logger.exception("immediate Temporal dispatch failed; operation remains queued")
 
     return OperationAccepted(

@@ -10,7 +10,7 @@ from opentelemetry import trace
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.api.security import AuthContext, get_auth_context, require_permission
+from apps.api.security import AuthContext, require_permission
 from database.core import get_async_session
 from ia_investing.application.agent_runtime import AgentRuntimeService
 
@@ -120,12 +120,10 @@ async def create_agent_run(
 @router.get("/{run_id}", response_model=AgentRunV1)
 async def get_agent_run(
     run_id: UUID,
-    auth: AuthContext = Depends(get_auth_context),
+    auth: AuthContext = Depends(require_permission("agent_runs:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> AgentRunV1:
-    if "agent_runs:read" not in auth.permissions:
-        raise HTTPException(status_code=403, detail="Permission denied")
-    run = await AgentRuntimeService(session).get_run(run_id)
+    run = await AgentRuntimeService(session).get_run(run_id, organization_id=auth.organization_id)
     if run is None:
         raise HTTPException(status_code=404, detail="agent run not found")
     return AgentRunV1.model_validate(run)
@@ -136,7 +134,7 @@ async def decide_agent_approval(
     approval_id: UUID,
     body: ApprovalDecisionV1,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
-    auth: AuthContext = Depends(get_auth_context),
+    auth: AuthContext = Depends(require_permission("agent_approvals:decide")),
     correlation_id: UUID | None = Header(default=None, alias="X-Correlation-ID"),
     session: AsyncSession = Depends(get_async_session),
 ) -> ApprovalV1:
@@ -148,6 +146,7 @@ async def decide_agent_approval(
             permissions=auth.permissions,
             reason=body.reason,
             correlation_id=correlation_id or uuid4(),
+            organization_id=auth.organization_id,
         )
     except LookupError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
