@@ -20,7 +20,7 @@ RISK_TRANSITIONS: list[dict[str, Any]] = [
     {"trigger": "mitigate", "source": "breached", "dest": "monitoring"},
     {"trigger": "resolve", "source": "monitoring", "dest": "normal"},
     {"trigger": "resolve", "source": "escalated", "dest": "resolved"},
-    {"trigger": "resolve", "source": "breached", "dest": "resolved"},
+    {"trigger": "resolve", "source": "breached", "dest": "normal"},
 ]
 
 

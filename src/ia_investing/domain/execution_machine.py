@@ -19,6 +19,7 @@ EXECUTION_TRANSITIONS: list[dict[str, Any]] = [
     {"trigger": "queue", "source": "validated", "dest": "queued"},
     {"trigger": "dispatch", "source": "queued", "dest": "dispatched", "conditions": "_sufficient_balance"},
     {"trigger": "confirm", "source": "dispatched", "dest": "confirmed"},
+    {"trigger": "fail", "source": "pending", "dest": "failed"},
     {"trigger": "fail", "source": "dispatched", "dest": "failed"},
     {"trigger": "fail", "source": "queued", "dest": "failed"},
     {"trigger": "fail", "source": "validated", "dest": "failed"},

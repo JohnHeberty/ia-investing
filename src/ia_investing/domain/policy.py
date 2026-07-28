@@ -5,7 +5,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 
 POLICY_STAGE_TRANSITIONS: dict[str, frozenset[str]] = {
@@ -267,7 +267,7 @@ def compute_versioned_features(
         "sector_exposures": list({s for t in themes for s in t.sector_exposures}),
         "deadline_count": len(deadlines),
         "nearest_deadline": min(
-            (d.due_date for d in deadlines if d.due_date > datetime.now(d.due_date.tzinfo or None)),
+            (d.due_date for d in deadlines if d.due_date > datetime.now(UTC)),
             default=None,
         ),
         "base_rate": str(base_rate),

@@ -19,6 +19,7 @@ THESIS_TRANSITIONS: list[dict[str, Any]] = [
     {"trigger": "approve", "source": "under_review", "dest": "approved", "conditions": "_can_approve"},
     {"trigger": "reject", "source": "under_review", "dest": "draft"},
     {"trigger": "activate", "source": "approved", "dest": "active"},
+    {"trigger": "reactivate", "source": "monitoring", "dest": "active"},
     {"trigger": "escalate", "source": "active", "dest": "monitoring"},
     {"trigger": "complete", "source": "active", "dest": "completed"},
     {"trigger": "complete", "source": "monitoring", "dest": "completed"},

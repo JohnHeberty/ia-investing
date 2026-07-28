@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from threading import Lock
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -75,7 +74,6 @@ class BaseStateMachine:
         initial: str,
     ) -> None:
         self._model = model
-        self._lock = Lock()
         self._transitions_meta = list(transitions)
 
         persisted_state = model.state

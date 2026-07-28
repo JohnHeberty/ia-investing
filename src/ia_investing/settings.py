@@ -85,6 +85,10 @@ class TelemetrySettings(BaseModel):
 class SecuritySettings(BaseModel):
     oidc_enabled: bool = False
     legacy_session_auth_enabled: bool = False
+    dev_jwt_skip_verify: bool = Field(
+        default=False,
+        description="Allow JWT signature bypass in non-production environments. Never enable in production.",
+    )
     oidc_issuer: str | None = None
     oidc_audience: str | None = None
     oidc_client_id: str | None = None

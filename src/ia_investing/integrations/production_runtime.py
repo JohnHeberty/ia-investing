@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import contextlib
+import dataclasses
 import hashlib
 import logging
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 from uuid import UUID
@@ -13,13 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from connectors.base import HttpClient
 from database.models.catalog import Issuer
+from database.models.committee import CommitteeDecision, CommitteeSession, CommitteeVote
 from database.models.instrument_master import Instrument, Listing
 from database.models.investment_candidates import (
-    CandidateAnalysisRunRecord,
     CandidateEventRecord,
     CandidateGapRecord,
     CandidateSourceRecord,
-    ExplorationRunRecord,
     ExplorationSuggestionRecord,
     InvestmentCandidateRecord,
 )
@@ -199,6 +200,55 @@ def _now() -> datetime:
     return datetime.now(UTC)
 
 
+_DECISION_FINAL = frozenset({"approve", "approve_with_conditions", "reject", "deferred", "defer"})
+_DECISION_APPROVED = frozenset({"approve", "approve_with_conditions"})
+
+
+@dataclasses.dataclass(frozen=True, slots=True)
+class _ResolvedDecision:
+    run_decision: str
+    candidate_status: str | None
+    final_decision: str | None
+    final_decision_reason: str | None
+    approved_eligible: bool | None
+
+
+def _resolve_run_decision(
+    checkpoint: CandidateCheckpoint,
+    payload: dict[str, Any],
+) -> _ResolvedDecision:
+    cp_decision = str(checkpoint.decision or "").lower()
+    pl_decision = str(payload.get("decision", "")).lower()
+
+    if checkpoint.blocked:
+        return _ResolvedDecision(
+            run_decision=cp_decision or "blocked",
+            candidate_status="blocked",
+            final_decision=None,
+            final_decision_reason=checkpoint.reason,
+            approved_eligible=None,
+        )
+
+    for decision in (cp_decision, pl_decision):
+        if decision in _DECISION_FINAL:
+            approved = decision in _DECISION_APPROVED
+            return _ResolvedDecision(
+                run_decision=decision,
+                candidate_status="approved" if approved else "rejected",
+                final_decision=decision,
+                final_decision_reason=checkpoint.reason,
+                approved_eligible=approved,
+            )
+
+    return _ResolvedDecision(
+        run_decision=cp_decision or "completed",
+        candidate_status=None,
+        final_decision=None,
+        final_decision_reason=checkpoint.reason,
+        approved_eligible=None,
+    )
+
+
 class ProductionCandidateRuntime:
     def __init__(
         self,
@@ -224,7 +274,8 @@ class ProductionCandidateRuntime:
 
     async def resolve_candidate_identity(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            candidate = await repo.get_candidate(command.candidate_id)
             if candidate is None:
                 return _stage_blocked(
                     command,
@@ -293,7 +344,8 @@ class ProductionCandidateRuntime:
 
     async def discover_candidate_sources(self, command: CandidateWorkflowInput) -> SourceDiscoveryCheckpoint:
         async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            candidate = await repo.get_candidate(command.candidate_id)
             if candidate is None:
                 return SourceDiscoveryCheckpoint(
                     command=command,
@@ -395,7 +447,7 @@ class ProductionCandidateRuntime:
                             {
                                 "kind": "ri_portal",
                                 "url": issuer.website_ri_url,
-                                "status": "unverified",
+                                "status": "discovered",
                                 "verification_method": "issuer_record",
                                 "confidence": 0.8,
                                 "official": True,
@@ -499,7 +551,8 @@ class ProductionCandidateRuntime:
 
     async def persist_candidate_sources_and_gaps(self, checkpoint: SourceDiscoveryCheckpoint) -> None:
         async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, checkpoint.command.candidate_id)
+            repo = CandidateRepository(session, checkpoint.command.organization_id)
+            candidate = await repo.get_candidate(checkpoint.command.candidate_id)
             if candidate is None:
                 logger.warning("persist_sources: candidate %s not found", checkpoint.command.candidate_id)
                 return
@@ -516,13 +569,16 @@ class ProductionCandidateRuntime:
                 ).scalar_one_or_none()
                 if existing is not None:
                     continue
+                status = str(src.get("status", "discovered"))
+                verified_at = _now() if status == "verified" else None
                 session.add(
                     CandidateSourceRecord(
                         candidate_id=candidate.id,
                         kind=str(src["kind"]),
                         url=str(src.get("url", "")),
                         normalized_url_hash=hashlib.sha256(str(src.get("url", "")).encode()).hexdigest(),
-                        status=str(src.get("status", "discovered")),
+                        status=status,
+                        verified_at=verified_at,
                         verification_method=str(src.get("verification_method", "system")),
                         confidence=float(src.get("confidence", 0.5)),
                         official=bool(src.get("official", False)),
@@ -579,155 +635,155 @@ class ProductionCandidateRuntime:
         self,
         command: CandidateSourceValidationInput,
     ) -> CandidateSourceValidationResult:
-        # P0-10: Single query joins candidate + source + organization.
-        # Rejects the source if it belongs to a different organization.
+        # P0-10: Verify source belongs to candidate (which has organization_id).
         async with self._db.session() as session:
-            stmt = (
-                sa.select(InvestmentCandidateRecord, CandidateSourceRecord)
-                .join(
-                    CandidateSourceRecord,
-                    sa.and_(
-                        CandidateSourceRecord.candidate_id == InvestmentCandidateRecord.id,
-                        CandidateSourceRecord.id == command.source_id,
-                        CandidateSourceRecord.organization_id == command.organization_id,
-                    ),
-                )
-                .where(InvestmentCandidateRecord.id == command.candidate_id)
-            )
-            row = (await session.execute(stmt)).first()
-            if row is None:
+            repo = CandidateRepository(session, command.organization_id)
+            candidate = await repo.get_candidate(command.candidate_id)
+            if candidate is None or candidate.organization_id != command.organization_id:
                 return CandidateSourceValidationResult(
                     candidate_id=command.candidate_id,
                     source_id=command.source_id,
                     status="rejected",
                     official=False,
-                    reason="Source record not found or does not belong to this candidate/organization.",
+                    reason="Candidate not found or does not belong to this organization.",
                 )
-            candidate = row[0]
-            source = row[1]
 
-        try:
-            response = await self._http.get(source.url)
-        except Exception as exc:
-            logger.warning("validate_source %s: %s", source.url, exc)
-            return CandidateSourceValidationResult(
-                candidate_id=command.candidate_id,
-                source_id=command.source_id,
-                status="unreachable",
-                official=False,
-                reason=f"Failed to fetch URL: {exc}",
-            )
+            source = await repo.get_source(command.candidate_id, command.source_id)
+            if source is None or source.candidate_id != candidate.id:
+                return CandidateSourceValidationResult(
+                    candidate_id=command.candidate_id,
+                    source_id=command.source_id,
+                    status="rejected",
+                    official=False,
+                    reason="Source record not found or does not belong to this candidate.",
+                )
 
-        if response.status_code >= 400:
-            return CandidateSourceValidationResult(
-                candidate_id=command.candidate_id,
-                source_id=command.source_id,
-                status="unreachable",
-                official=False,
-                reason=f"HTTP {response.status_code}",
-            )
-
-        raw_content = response.content
-        raw_hash = hashlib.sha256(raw_content).hexdigest()
-
-        if self._object_store is not None:
             try:
-                raw_key = f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}"
-                media_type = response.headers.get("content-type", "application/octet-stream")
-                await self._object_store.put_once(raw_key, raw_content, media_type, raw_hash)
+                response = await self._http.get(source.url)
             except Exception as exc:
-                logger.warning("S3 raw store failed for source %s: %s", source.id, exc)
+                logger.warning("validate_source %s: %s", source.url, exc)
+                return CandidateSourceValidationResult(
+                    candidate_id=command.candidate_id,
+                    source_id=command.source_id,
+                    status="unreachable",
+                    official=False,
+                    reason=f"Failed to fetch URL: {exc}",
+                )
 
-        content_type = response.headers.get("content-type", "")
-        if "html" in content_type or "xml" in content_type:
-            content = _extract_text_from_html(raw_content)
-        else:
-            content = raw_content.decode("utf-8", errors="replace").lower()
+            if response.status_code >= 400:
+                return CandidateSourceValidationResult(
+                    candidate_id=command.candidate_id,
+                    source_id=command.source_id,
+                    status="unreachable",
+                    official=False,
+                    reason=f"HTTP {response.status_code}",
+                )
 
-        # P0-09: Strong signal requirement.
-        # Ticker alone NEVER confirms officiality.
-        # Must have >= 2 strong signals OR 1 strong + ticker.
-        strong_signals = []
-        has_ticker = False
-        if candidate is not None:
-            if candidate.legal_name and candidate.legal_name.lower() in content:
-                strong_signals.append("legal_name")
-            if candidate.trading_name and candidate.trading_name.lower() in content:
-                strong_signals.append("trading_name")
-            if candidate.cnpj and candidate.cnpj in content:
-                strong_signals.append("cnpj")
-            if candidate.ticker and candidate.ticker.lower() in content:
-                has_ticker = True
+            raw_content = response.content
+            raw_hash = hashlib.sha256(raw_content).hexdigest()
 
-        if not strong_signals and not has_ticker:
+            if self._object_store is not None:
+                try:
+                    raw_key = f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}"
+                    media_type = response.headers.get("content-type", "application/octet-stream")
+                    await self._object_store.put_once(raw_key, raw_content, media_type, raw_hash)
+                except Exception as exc:
+                    logger.warning("S3 raw store failed for source %s: %s", source.id, exc)
+
+            content_type = response.headers.get("content-type", "")
+            if "html" in content_type or "xml" in content_type:
+                content = _extract_text_from_html(raw_content)
+            else:
+                content = raw_content.decode("utf-8", errors="replace").lower()
+
+            # P0-09: Strong signal requirement.
+            # Ticker alone NEVER confirms officiality.
+            # Must have >= 2 strong signals OR 1 strong + ticker.
+            strong_signals = []
+            has_ticker = False
+            if candidate is not None:
+                if candidate.legal_name and candidate.legal_name.lower() in content:
+                    strong_signals.append("legal_name")
+                if candidate.trading_name and candidate.trading_name.lower() in content:
+                    strong_signals.append("trading_name")
+                if candidate.cnpj and candidate.cnpj in content:
+                    strong_signals.append("cnpj")
+                if candidate.ticker and candidate.ticker.lower() in content:
+                    has_ticker = True
+
+            if not strong_signals and not has_ticker:
+                source.status = "rejected"
+                source.last_checked_at = _now()
+                source.evidence = {
+                    "status_code": response.status_code,
+                    "final_url": response.final_url,
+                    "reason": "No matching identity signals found in page content",
+                    "raw_content_hash": raw_hash,
+                    "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
+                }
+                await session.commit()
+                return CandidateSourceValidationResult(
+                    candidate_id=command.candidate_id,
+                    source_id=command.source_id,
+                    status="rejected",
+                    official=False,
+                    reason="No matching identity signals found. The page may belong to a different entity.",
+                )
+
+            # P0-09: Strong signal requirement for official status.
+            official = (
+                len(strong_signals) >= 2
+                or (
+                    len(strong_signals) == 1
+                    and has_ticker
+                    and strong_signals[0] in ("cnpj", "legal_name")
+                )
+            )
+
+            if official:
+                source.official = True
+                source.status = "verified"
+                source.verified_at = _now()
+                source.last_checked_at = _now()
+                source.evidence = {
+                    "status_code": response.status_code,
+                    "final_url": response.final_url,
+                    "redirect_chain": list(response.redirect_chain),
+                    "identity_signals": strong_signals + (["ticker"] if has_ticker else []),
+                    "raw_content_hash": raw_hash,
+                    "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
+                }
+                await session.commit()
+                gap_codes = CANONICAL_GAP_CODES.get(source.kind, ())
+                return CandidateSourceValidationResult(
+                    candidate_id=command.candidate_id,
+                    source_id=command.source_id,
+                    status="verified",
+                    official=True,
+                    reason=f"Verified: strong signals {', '.join(strong_signals)}"
+                    + (" + ticker" if has_ticker else ""),
+                    resolved_gap_codes=gap_codes,
+                )
+
             source.status = "rejected"
             source.last_checked_at = _now()
             source.evidence = {
                 "status_code": response.status_code,
                 "final_url": response.final_url,
-                "reason": "No matching identity signals found in page content",
+                "reason": "Insufficient identity signals for official status (ticker alone is not enough)",
                 "raw_content_hash": raw_hash,
                 "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
             }
             await session.commit()
+
             return CandidateSourceValidationResult(
                 candidate_id=command.candidate_id,
                 source_id=command.source_id,
                 status="rejected",
                 official=False,
-                reason="No matching identity signals found. The page may belong to a different entity.",
+                reason="Insufficient identity signals for official status. "
+                "Ticker alone is not enough to confirm officiality.",
             )
-
-        # P0-09: Strong signal requirement for official status.
-        official = False
-        if len(strong_signals) >= 2:
-            official = True
-        elif len(strong_signals) == 1 and has_ticker and strong_signals[0] in ("cnpj", "legal_name"):
-            official = True
-
-        if official:
-            source.official = True
-            source.status = "verified"
-            source.verified_at = _now()
-            source.last_checked_at = _now()
-            source.evidence = {
-                "status_code": response.status_code,
-                "final_url": response.final_url,
-                "redirect_chain": list(response.redirect_chain),
-                "identity_signals": strong_signals + (["ticker"] if has_ticker else []),
-                "raw_content_hash": raw_hash,
-                "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
-            }
-            await session.commit()
-            gap_codes = CANONICAL_GAP_CODES.get(source.kind, ())
-            return CandidateSourceValidationResult(
-                candidate_id=command.candidate_id,
-                source_id=command.source_id,
-                status="verified",
-                official=True,
-                reason=f"Verified: strong signals {', '.join(strong_signals)}"
-                + (" + ticker" if has_ticker else ""),
-                resolved_gap_codes=gap_codes,
-            )
-
-        source.status = "rejected"
-        source.last_checked_at = _now()
-        source.evidence = {
-            "status_code": response.status_code,
-            "final_url": response.final_url,
-            "reason": "Insufficient identity signals for official status (ticker alone is not enough)",
-            "raw_content_hash": raw_hash,
-            "raw_storage_key": f"candidates/{command.candidate_id}/raw/{source.id}/{raw_hash}",
-        }
-        await session.commit()
-
-        return CandidateSourceValidationResult(
-            candidate_id=command.candidate_id,
-            source_id=command.source_id,
-            status="rejected",
-            official=False,
-            reason="Insufficient identity signals for official status. Ticker alone is not enough to confirm officiality.",
-        )
 
     # ------------------------------------------------------------------
     # Phase 4 — Document Collection
@@ -748,6 +804,28 @@ class ProductionCandidateRuntime:
                 .all()
             )
 
+            candidate = (
+                (
+                    await session.execute(
+                        sa.select(InvestmentCandidateRecord).where(
+                            InvestmentCandidateRecord.id == command.candidate_id,
+                        )
+                    )
+                )
+                .scalars()
+                .one_or_none()
+            )
+
+            if not candidate:
+                return _stage_blocked(
+                    command,
+                    "document_collection",
+                    f"Candidate {command.candidate_id} not found.",
+                    blocker_codes=("candidate_not_found",),
+                )
+
+            start_version = candidate.lock_version
+
         if not sources:
             return _stage_blocked(
                 command,
@@ -759,6 +837,7 @@ class ProductionCandidateRuntime:
         collected = 0
         failed = 0
         stored_to_s3 = 0
+        version = start_version
         for source in sources:
             if not source.url:
                 continue
@@ -775,7 +854,7 @@ class ProductionCandidateRuntime:
                             actor_type="system",
                             actor_id="candidate_runtime",
                             occurred_at=_now(),
-                            aggregate_version=1,
+                            aggregate_version=version,
                             payload={
                                 "source_id": str(source.id),
                                 "kind": source.kind,
@@ -786,6 +865,7 @@ class ProductionCandidateRuntime:
                             },
                         )
                     )
+                    version += 1
                     await session.commit()
                 collected += 1
 
@@ -810,6 +890,17 @@ class ProductionCandidateRuntime:
                 blocker_codes=("document_download_failed",),
             )
 
+        async with self._db.session() as session:
+            await session.execute(
+                sa.update(InvestmentCandidateRecord)
+                .where(
+                    InvestmentCandidateRecord.id == command.candidate_id,
+                    InvestmentCandidateRecord.lock_version == start_version,
+                )
+                .values(lock_version=start_version + collected)
+            )
+            await session.commit()
+
         return _stage_passed(
             command,
             "document_collection",
@@ -823,7 +914,6 @@ class ProductionCandidateRuntime:
 
     async def ingest_candidate_financial_data(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         from collections import defaultdict
-        from datetime import date
 
         from connectors.cvm._financials import FinancialEntry, StatementType, get_dfp, parse_value_status
         from database.models.data_foundation import DataSource, SourceObject, SourceObjectVersion
@@ -831,7 +921,8 @@ class ProductionCandidateRuntime:
         from ia_investing.application.financial_facts import FinancialFactInput, FinancialFactRepository
 
         async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            candidate = await repo.get_candidate(command.candidate_id)
             if candidate is None or candidate.issuer_id is None:
                 return _stage_blocked(
                     command,
@@ -886,7 +977,7 @@ class ProductionCandidateRuntime:
             so_by_year: dict[int, SourceObject] = {}
             sov_by_year: dict[int, SourceObjectVersion] = {}
             rp_cache: dict[tuple[UUID, date, date, str, str], ReportingPeriod] = {}
-            repo = FinancialFactRepository(session)
+            fact_repo = FinancialFactRepository(session)
             ingested = 0
 
             for stmt, entries in entries_by_stmt.items():
@@ -986,7 +1077,7 @@ class ProductionCandidateRuntime:
                     scale_factor = 1000 if entry.escala.upper() == "MIL" else 1
 
                     try:
-                        await repo.revise(
+                        await fact_repo.revise(
                             FinancialFactInput(
                                 issuer_id=issuer_id,
                                 reporting_period_id=rp.id,
@@ -1044,7 +1135,8 @@ class ProductionCandidateRuntime:
 
     async def evaluate_candidate_readiness(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            candidate = await repo.get_candidate(command.candidate_id)
             if candidate is None:
                 return _stage_blocked(
                     command,
@@ -1117,7 +1209,8 @@ class ProductionCandidateRuntime:
 
     async def validate_candidate_financial_data(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            candidate = await repo.get_candidate(command.candidate_id)
             if candidate is None or candidate.issuer_id is None:
                 return _stage_blocked(
                     command,
@@ -1153,7 +1246,8 @@ class ProductionCandidateRuntime:
 
     async def run_candidate_fundamental_analysis(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            candidate = await repo.get_candidate(command.candidate_id)
             if candidate is None or candidate.issuer_id is None:
                 return _stage_blocked(
                     command,
@@ -1183,7 +1277,8 @@ class ProductionCandidateRuntime:
                 blocker_codes=("fundamental_analysis_failed",),
             )
         async with self._db.session() as session:
-            c = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            c = await repo.get_candidate(command.candidate_id)
             if c is not None:
                 session.add(
                     CandidateEventRecord(
@@ -1213,7 +1308,8 @@ class ProductionCandidateRuntime:
 
     async def run_candidate_risk_analysis(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            candidate = await repo.get_candidate(command.candidate_id)
             if candidate is None or candidate.issuer_id is None:
                 return _stage_blocked(
                     command,
@@ -1243,7 +1339,8 @@ class ProductionCandidateRuntime:
                 blocker_codes=("risk_analysis_failed",),
             )
         async with self._db.session() as session:
-            c = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            c = await repo.get_candidate(command.candidate_id)
             if c is not None:
                 session.add(
                     CandidateEventRecord(
@@ -1273,7 +1370,8 @@ class ProductionCandidateRuntime:
 
     async def create_committee_pack(self, command: CandidateWorkflowInput) -> CandidateCheckpoint:
         async with self._db.session() as session:
-            candidate = await session.get(InvestmentCandidateRecord, command.candidate_id)
+            repo = CandidateRepository(session, command.organization_id)
+            candidate = await repo.get_candidate(command.candidate_id)
             if candidate is None or candidate.issuer_id is None:
                 return _stage_blocked(
                     command,
@@ -1320,40 +1418,138 @@ class ProductionCandidateRuntime:
             command.data_as_of,
         )
         if result.status != "completed":
-            return _stage_passed(
+            return _stage_blocked(
                 command,
                 "committee_review",
-                reason=(
-                    f"Committee agent had no AI provider; pack created without machine decision. {result.error_message}"
-                ),
-                payload={"ai_unavailable": True},
+                f"Committee agent unavailable: {result.error_message or 'no AI provider'}. Requires human review.",
+                blocker_codes=("committee_ai_unavailable",),
             )
-        async with self._db.session() as session:
-            c = await session.get(InvestmentCandidateRecord, command.candidate_id)
+        if not isinstance(result.output_data, dict):
+            return _stage_blocked(
+                command,
+                "committee_review",
+                "Committee agent returned no decision payload. Requires human review.",
+                blocker_codes=("committee_no_decision",),
+            )
+        decision_output: dict[str, Any] = result.output_data
+        decision_value = str(decision_output.get("decision", decision_output.get("action", ""))).lower()
+        if not decision_value:
+            return _stage_blocked(
+                command,
+                "committee_review",
+                "Committee agent returned empty decision. Requires human review.",
+                blocker_codes=("committee_no_decision",),
+            )
+        committee_decision_id = await self._create_institutional_committee_decision(
+            session=session,
+            candidate=candidate,
+            command=command,
+            decision=decision_value,
+            rationale=str(decision_output.get("rationale", decision_output.get("reason", ""))),
+            model_used=result.model_used,
+        )
+        async with self._db.session() as db_session:
+            repo = CandidateRepository(db_session, command.organization_id)
+            c = await repo.get_candidate(command.candidate_id)
             if c is not None:
-                session.add(
+                db_session.add(
                     CandidateEventRecord(
                         candidate_id=c.id,
                         organization_id=c.organization_id,
-                        event_type="committee_pack_created",
+                        event_type="committee_decision_recorded",
                         actor_type="system",
                         actor_id="candidate_runtime",
                         occurred_at=_now(),
                         aggregate_version=c.lock_version,
                         payload={
                             "model_used": result.model_used,
-                            "decision": result.output_data if isinstance(result.output_data, dict) else {},
+                            "decision": decision_value,
+                            "committee_decision_id": str(committee_decision_id),
                         },
                     )
                 )
                 c.lock_version += 1
-                await session.commit()
+                await db_session.commit()
         return _stage_passed(
             command,
             "committee_review",
-            reason=f"Committee pack created via {result.model_used}",
-            payload={"model_used": result.model_used},
+            reason=f"Committee decision recorded: {decision_value} via {result.model_used}",
+            payload={
+                "model_used": result.model_used,
+                "decision": decision_value,
+                "committee_decision_id": str(committee_decision_id),
+            },
         )
+
+    async def _create_institutional_committee_decision(
+        self,
+        session: AsyncSession,
+        candidate: InvestmentCandidateRecord,
+        command: CandidateWorkflowInput,
+        decision: str,
+        rationale: str,
+        model_used: str,
+    ) -> UUID:
+        now = _now()
+        session_id = uuid.uuid4()
+        committee_members: list[dict[str, Any]] = [
+            {"member_id": "agent_committee", "subject": model_used, "role": "analyst", "conflicts": []},
+        ]
+        committee_session = CommitteeSession(
+            id=session_id,
+            organization_id=candidate.organization_id,
+            thesis_ids=[f"candidate-{candidate.id}"],
+            members=committee_members,
+            scheduled_at=now,
+            agenda={
+                "proposer": "candidate_runtime",
+                "candidate_id": str(candidate.id),
+                "ticker": candidate.ticker,
+                "model_used": model_used,
+            },
+            state="scheduled",
+            total_members=1,
+            present_members=1,
+            votes_in_favor=1 if decision in ("approve", "approve_with_conditions") else 0,
+            votes_against=1 if decision == "reject" else 0,
+            members_notified=True,
+            decision=decision,
+            rationale=rationale,
+            published_at=now,
+            created_at=now,
+            updated_at=now,
+        )
+        session.add(committee_session)
+        await session.flush()
+        decision_record = CommitteeDecision(
+            id=uuid.uuid4(),
+            organization_id=candidate.organization_id,
+            session_id=session_id,
+            decision=decision,
+            rationale=rationale,
+            votes_summary={
+                "in_favor": 1 if decision in ("approve", "approve_with_conditions") else 0,
+                "against": 1 if decision == "reject" else 0,
+                "abstain": 0,
+                "total": 1,
+            },
+            published_at=now,
+            created_at=now,
+        )
+        session.add(decision_record)
+        vote_record = CommitteeVote(
+            id=uuid.uuid4(),
+            organization_id=candidate.organization_id,
+            session_id=session_id,
+            member_id="agent_committee",
+            proposal_id="candidate_proposal",
+            vote="in_favor" if decision in ("approve", "approve_with_conditions") else "against",
+            justification=rationale,
+            created_at=now,
+        )
+        session.add(vote_record)
+        await session.flush()
+        return decision_record.id
 
     # ------------------------------------------------------------------
     # Phase 6 — Final Completion
@@ -1364,14 +1560,34 @@ class ProductionCandidateRuntime:
         command: CandidateWorkflowInput,
         checkpoint: CandidateCheckpoint,
     ) -> CandidateWorkflowResult:
+        checkpoint_payload: dict[str, Any] = checkpoint.payload or {}
+        committee_decision_id_str = checkpoint_payload.get("committee_decision_id")
+        resolved = _resolve_run_decision(checkpoint, checkpoint_payload)
+
         async with self._db.session() as session:
-            run = await session.get(CandidateAnalysisRunRecord, command.analysis_run_id)
+            repo = CandidateRepository(session, command.organization_id)
+            run = await repo.get_analysis_run(command.candidate_id, command.analysis_run_id)
             if run is not None:
                 run.completed_at = _now()
                 run.status = "blocked" if checkpoint.blocked else "succeeded"
-                run.decision = "pending"
+                run.decision = resolved.run_decision
                 run.blocker_codes = list(checkpoint.blocker_codes)
                 run.summary = checkpoint.reason
+                if committee_decision_id_str:
+                    with contextlib.suppress(ValueError, AttributeError):
+                        run.committee_decision_id = uuid.UUID(committee_decision_id_str)
+                await session.commit()
+
+            candidate = await repo.get_candidate(command.candidate_id)
+            if candidate is not None:
+                if resolved.candidate_status:
+                    candidate.status = resolved.candidate_status
+                if resolved.final_decision:
+                    candidate.final_decision = resolved.final_decision
+                if resolved.final_decision_reason:
+                    candidate.final_decision_reason = resolved.final_decision_reason
+                if resolved.approved_eligible is not None:
+                    candidate.approved_portfolio_eligible = resolved.approved_eligible
                 await session.commit()
 
         logger.info(
@@ -1546,7 +1762,8 @@ class ProductionCandidateRuntime:
     async def persist_exploration_suggestions(self, findings: ExplorationFindings) -> ExplorationWorkflowResult:
         suggestions_persisted = 0
         async with self._db.session() as session:
-            run = await session.get(ExplorationRunRecord, findings.shortlist.command.exploration_run_id)
+            repo = CandidateRepository(session, findings.shortlist.command.organization_id)
+            run = await repo.get_exploration_run(findings.shortlist.command.exploration_run_id)
             if run is None:
                 return ExplorationWorkflowResult(
                     exploration_run_id=findings.shortlist.command.exploration_run_id,
