@@ -12,7 +12,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (!request.cookies.has("ia_session")) {
+  if (!request.cookies.has("ia_access_token")) {
     const login = new URL("/login", request.url);
     login.searchParams.set("return_to", pathname);
     return NextResponse.redirect(login);

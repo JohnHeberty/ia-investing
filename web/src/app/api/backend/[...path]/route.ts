@@ -40,9 +40,26 @@ async function proxy(request: NextRequest, context: RouteContext) {
     }
   }
   const outgoingHeaders = new Headers(response.headers);
-  outgoingHeaders.delete("set-cookie");
   outgoingHeaders.delete("transfer-encoding");
-  return new NextResponse(response.body, { status: response.status, headers: outgoingHeaders });
+
+  const setCookies = response.headers.getSetCookie();
+  const res = new NextResponse(response.body, { status: response.status, headers: outgoingHeaders });
+
+  for (const raw of setCookies) {
+    const name = raw.split("=")[0].trim();
+    if (name === "ia_csrf_token") {
+      const value = raw.split(";")[0].split("=").slice(1).join("=");
+      res.cookies.set("ia_csrf_token", value, {
+        path: "/",
+        httpOnly: false,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 28_800,
+      });
+    }
+  }
+
+  return res;
 }
 
 export const GET = proxy;
