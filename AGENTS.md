@@ -31,7 +31,7 @@ History follows Conventional Commit-style subjects such as `feat:`, `test:`, and
 
 ## Security & Configuration
 
-Store credentials only in `.env` or a secret manager. Treat financial documents and downloaded datasets as potentially sensitive; avoid committing generated data, tokens, or production identifiers.
+Store credentials only in `.env` or a secret manager. Treat financial documents and downloaded datasets as potentially sensitive; avoid committing generated data, tokens, or production identifiers. Temporal and Postgres connections require TLS in production; never disable certificate verification.
 
 ## Frontend Guidelines
 
@@ -74,9 +74,15 @@ Integramos um overlay externo de ~9k linhas (47 arquivos) chamado **Candidate In
 ### Limitação conhecida
 Testes de integração asyncpg falham no Windows com `ConnectionResetError: [WinError 64]` — pré-existente.
 
+## Context Management
+
+- Use `compress` tool after every 3 function calls to keep context efficient
+- Compress when a section is genuinely closed (research concluded, implementation finished, exploration exhausted)
+- DO NOT compress if raw context is still relevant for edits or precise references
+
 ## Session Memory
 
-This project maintains a `MEMORY.md` file at the project root.
+This project maintains a `MEMORY.md`e project root.
 - Read it at session start to understand context and pending items.
 - Update it at session end with what was done, what worked, and what failed.
 - Keep only the last ~24h of session history (prune older entries).
