@@ -24,7 +24,7 @@ class DataQualityCheck(Base):
     passed: Mapped[bool] = mapped_column(sa.Boolean, nullable=False)
     details: Mapped[dict[str, object] | None] = mapped_column(JSONB)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"DataQualityCheck(check_name={self.check_name!r}, passed={self.passed})"

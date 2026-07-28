@@ -24,7 +24,7 @@ class DocumentProcessingLog(Base):
     error_message: Mapped[str | None] = mapped_column(sa.Text)
     duration_seconds: Mapped[float | None] = mapped_column(sa.Float)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"DocumentProcessingLog(step_name={self.step_name!r}, status={self.status!r})"
@@ -48,7 +48,7 @@ class DocumentDuplicate(Base):
     similarity_method: Mapped[str | None] = mapped_column(sa.String(50))  # "sha256", "fuzzy_title"
     similarity_score: Mapped[float | None] = mapped_column(sa.Float)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"DocumentDuplicate(similarity_method={self.similarity_method!r})"
@@ -68,7 +68,7 @@ class DocumentEvent(Base):
 
     payload: Mapped[dict[str, object] | None] = mapped_column(JSONB)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"DocumentEvent(event_type={self.event_type!r})"

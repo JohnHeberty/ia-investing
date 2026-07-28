@@ -19,7 +19,7 @@ class AgentCapability(Base):
     logical_id: Mapped[str] = mapped_column(sa.String(100), unique=True)
     display_name: Mapped[str] = mapped_column(sa.String(200))
     description: Mapped[str] = mapped_column(sa.Text)
-    active_version_id: Mapped[UUID | None] = mapped_column(index=True)
+    active_version_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("agent_versions.id", ondelete="SET NULL"), index=True)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
 

@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy import event
 from sqlalchemy.dialects.postgresql import JSONB, ExcludeConstraint
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ._utils import utcnow
 from .base import Base
@@ -43,7 +43,6 @@ class InvestmentCandidateRecord(Base):
         sa.ForeignKey(
             "exploration_suggestions.id",
             ondelete="SET NULL",
-            use_alter=True,
             name="fk_investment_candidates_exploration_suggestion",
         ),
         index=True,
@@ -98,6 +97,33 @@ class InvestmentCandidateRecord(Base):
         ),
     )
 
+    # Explicit relationships for flush order resolution
+    analysis_runs: Mapped[list[CandidateAnalysisRunRecord]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    candidate_sources: Mapped[list[CandidateSourceRecord]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    candidate_gaps: Mapped[list[CandidateGapRecord]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    candidate_events: Mapped[list[CandidateEventRecord]] = relationship(
+        back_populates="candidate",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    exploration_suggestion: Mapped[ExplorationSuggestionRecord | None] = relationship(
+        foreign_keys=[exploration_suggestion_id],
+        back_populates="promoted_candidate",
+        lazy="selectin",
+    )
+
 
 class CandidateSourceRecord(Base):
     __tablename__ = "candidate_sources"
@@ -107,6 +133,7 @@ class CandidateSourceRecord(Base):
         sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"),
         index=True,
     )
+    candidate: Mapped[InvestmentCandidateRecord] = relationship(back_populates="candidate_sources")
     kind: Mapped[str] = mapped_column(sa.String(40), index=True)
     url: Mapped[str] = mapped_column(sa.Text)
     normalized_url_hash: Mapped[str] = mapped_column(sa.String(64))
@@ -152,6 +179,7 @@ class CandidateGapRecord(Base):
         sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"),
         index=True,
     )
+    candidate: Mapped[InvestmentCandidateRecord] = relationship(back_populates="candidate_gaps")
     code: Mapped[str] = mapped_column(sa.String(100), index=True)
     title: Mapped[str] = mapped_column(sa.String(500))
     description: Mapped[str] = mapped_column(sa.Text)
@@ -189,6 +217,7 @@ class CandidateAnalysisRunRecord(Base):
         sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"),
         index=True,
     )
+    candidate: Mapped[InvestmentCandidateRecord] = relationship(back_populates="analysis_runs")
     run_number: Mapped[int]
     trigger: Mapped[str] = mapped_column(sa.String(30))
     status: Mapped[str] = mapped_column(sa.String(20), index=True)
@@ -294,17 +323,17 @@ class ExplorationSuggestionRecord(Base):
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), index=True)
     promoted_candidate_id: Mapped[UUID | None] = mapped_column(
-        sa.ForeignKey(
-            "investment_candidates.id",
-            ondelete="SET NULL",
-            use_alter=True,
-            name="fk_exploration_suggestions_promoted_candidate",
-        ),
         index=True,
     )
     dismissed_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     dismissed_by: Mapped[str | None] = mapped_column(sa.String(255))
     dismissal_reason: Mapped[str | None] = mapped_column(sa.Text)
+
+    promoted_candidate: Mapped[InvestmentCandidateRecord | None] = relationship(
+        foreign_keys=[promoted_candidate_id],
+        back_populates="exploration_suggestion",
+        lazy="selectin",
+    )
 
     __table_args__ = (
         sa.UniqueConstraint(
@@ -377,6 +406,7 @@ class CandidateEventRecord(Base):
         sa.ForeignKey("investment_candidates.id", ondelete="CASCADE"),
         index=True,
     )
+    candidate: Mapped[InvestmentCandidateRecord] = relationship(back_populates="candidate_events")
     organization_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("organizations.id", ondelete="CASCADE"),
         index=True,

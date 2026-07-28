@@ -131,6 +131,7 @@ class FinancialFact(Base):
         sa.CheckConstraint("revision_number > 0", name="positive_revision"),
         sa.CheckConstraint("valid_to IS NULL OR valid_to > valid_from", name="valid_window"),
         sa.CheckConstraint("currency_code ~ '^[A-Z]{3}$'", name="currency_code_format"),
+        sa.Index("ix_financial_facts_issuer_knowledge_at", "issuer_id", knowledge_at.desc()),
     )
 
 

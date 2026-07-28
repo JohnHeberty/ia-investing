@@ -60,6 +60,7 @@ from .financial_facts import (  # noqa: F401
     MetricFactLineage,
     MetricObservation,
     ReportingPeriod,
+    RestatementLog,
     TaxonomyAccount,
 )
 from .financials import (  # noqa: F401
@@ -209,6 +210,7 @@ from .research import (  # noqa: F401
     ResearchQuestion,
 )
 from .review import ResearchAssessment, ReviewDecision, ReviewRequest  # noqa: F401
+from .system_prompts import SystemPrompt  # noqa: F401
 from .thesis_domain import (  # noqa: F401
     ResearchThesis,
     ResearchThesisVersion,

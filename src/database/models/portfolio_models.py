@@ -42,8 +42,9 @@ class Position(Base):
         sa.ForeignKey("portfolios.id", ondelete="CASCADE"),
         nullable=False,
     )
-    issuer_id: Mapped[UUID] = mapped_column(
+    issuer_id: Mapped[UUID | None] = mapped_column(
         sa.ForeignKey("issuers.id", ondelete="SET NULL"),
+        nullable=True,
     )
 
     ticker_symbol: Mapped[str] = mapped_column(sa.String(10))
@@ -115,9 +116,9 @@ class RiskSnapshot(Base):
     sector_concentration: Mapped[dict[str, object]] = mapped_column(JSONB)
     top_risks: Mapped[dict[str, object]] = mapped_column(JSONB)
 
-    sharpe_ratio: Mapped[float] = mapped_column(sa.Float)
-    max_drawdown_pct: Mapped[float] = mapped_column(sa.Float)
-    volatility_annualized: Mapped[float] = mapped_column(sa.Float)
+    sharpe_ratio: Mapped[Decimal] = mapped_column(sa.Numeric(10, 6))
+    max_drawdown_pct: Mapped[Decimal] = mapped_column(sa.Numeric(10, 6))
+    volatility_annualized: Mapped[Decimal] = mapped_column(sa.Numeric(10, 6))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 

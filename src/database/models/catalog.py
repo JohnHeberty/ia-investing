@@ -17,7 +17,7 @@ class Sector(Base):
     name_pt: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     name_en: Mapped[str | None] = mapped_column(sa.String(100))
     code_anbima: Mapped[str | None] = mapped_column(sa.String(20))
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     industries = sa.orm.relationship("Industry", back_populates="sector")
 
@@ -35,7 +35,7 @@ class Industry(Base):
         sa.ForeignKey("sectors.id", ondelete="CASCADE"),
         nullable=False,
     )
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     sector = sa.orm.relationship("Sector", back_populates="industries")
     issuers = sa.orm.relationship("Issuer", back_populates="industry")
@@ -57,7 +57,7 @@ class Issuer(Base):
     website_ri_url: Mapped[str | None] = mapped_column(sa.Text)
     is_active: Mapped[bool | None] = mapped_column(sa.Boolean, default=True)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime | None] = mapped_column(
         sa.DateTime(timezone=True),
         default=utcnow,
@@ -84,7 +84,7 @@ class Ticker(Base):
     listing_date: Mapped[date | None] = mapped_column(sa.Date)
     delisting_date: Mapped[date | None] = mapped_column(sa.Date, index=True)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     issuer = sa.orm.relationship("Issuer", back_populates="tickers")
 
@@ -113,7 +113,7 @@ class MarketPrice(Base):
     num_trades: Mapped[int | None] = mapped_column(sa.Integer)
 
     source: Mapped[str | None] = mapped_column(sa.String(50))  # "B3", "Yahoo Finance"
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     __table_args__ = (
         sa.Index("ix_market_prices_ticker_id", "ticker_id"),
@@ -136,7 +136,7 @@ class Embedding(Base):
     vector: Mapped[list[float] | None] = mapped_column(Vector(1536))
     __table_args__ = (sa.Index("ix_embeddings_entity_id", "entity_id"),)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Embedding(content_type={self.content_type!r}, entity_id={self.entity_id!r})"

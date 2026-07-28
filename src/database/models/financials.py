@@ -40,7 +40,7 @@ class FinancialStatement(Base):
     is_audited: Mapped[bool | None] = mapped_column(sa.Boolean, default=False)
     restatement_flag: Mapped[bool | None] = mapped_column(sa.Boolean, default=False)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     __table_args__ = (
         sa.UniqueConstraint(
@@ -89,7 +89,7 @@ class FinancialMetric(Base):
     )
     calculation_method: Mapped[dict[str, object] | None] = mapped_column(JSONB)  # Fórmula aplicada para auditoria
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     __table_args__ = (
         sa.Index("ix_financial_metrics_issuer_metric_period", "issuer_id", "metric_name", "reporting_period_end"),
@@ -125,7 +125,7 @@ class Dividend(Base):
 
     source_url: Mapped[str | None] = mapped_column(sa.Text)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return (
@@ -154,7 +154,7 @@ class ShareStatistics(Base):
 
     source_url: Mapped[str | None] = mapped_column(sa.Text)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"ShareStatistics(issuer_id={self.issuer_id!r}, as_of_date={self.as_of_date!r})"

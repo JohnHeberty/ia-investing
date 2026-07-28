@@ -41,7 +41,7 @@ class RawDocument(Base):
     parser_version: Mapped[str | None] = mapped_column(sa.String(50))
     license_policy: Mapped[str | None] = mapped_column(sa.Text)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"RawDocument(document_type={self.document_type!r}, sha256_hash={self.sha256_hash!r})"
@@ -72,7 +72,7 @@ class DocumentMetadata(Base):
     is_validated: Mapped[bool | None] = mapped_column(sa.Boolean, default=False)
     validation_notes: Mapped[str | None] = mapped_column(sa.Text)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"DocumentMetadata(title={self.title!r}, is_validated={self.is_validated})"
@@ -99,7 +99,7 @@ class Document(Base):
 
     canonical_data: Mapped[dict[str, object] | None] = mapped_column(JSONB)  # Dados canônicos validados e normalizados
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Document(document_type={self.document_type!r}, reporting_period_end={self.reporting_period_end!r})"

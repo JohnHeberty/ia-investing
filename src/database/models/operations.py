@@ -19,9 +19,10 @@ class Operation(Base):
     __tablename__ = "operations"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    organization_id: Mapped[UUID | None] = mapped_column(
+    organization_id: Mapped[UUID] = mapped_column(
         sa.ForeignKey("organizations.id", ondelete="RESTRICT"),
         index=True,
+        nullable=False,
     )
     operation_type: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     idempotency_key: Mapped[str] = mapped_column(sa.String(200), nullable=False)
@@ -91,7 +92,7 @@ class OperationDispatchOutbox(Base):
 
     __table_args__ = (
         sa.CheckConstraint(
-            "state IN ('pending', 'dispatched', 'failed')",
+            "state IN ('pending', 'dispatched', 'failed', 'dead_letter')",
             name="operation_dispatch_outbox_state",
         ),
         sa.CheckConstraint("attempts >= 0", name="operation_dispatch_outbox_attempts_nonnegative"),
@@ -102,3 +103,30 @@ class OperationDispatchOutbox(Base):
             postgresql_where=sa.text("state = 'pending'"),
         ),
     )
+
+
+class OperationDispatchDeadLetter(Base):
+    """Archived outbox rows that exhausted all dispatch retries."""
+
+    __tablename__ = "operation_dispatch_dead_letter"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    outbox_id: Mapped[UUID] = mapped_column(
+        sa.ForeignKey("operation_dispatch_outbox.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+    )
+    organization_id: Mapped[UUID] = mapped_column(
+        sa.ForeignKey("organizations.id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    operation_id: Mapped[UUID] = mapped_column(
+        sa.ForeignKey("operations.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    topic: Mapped[str] = mapped_column(sa.String(100), nullable=False)
+    attempts: Mapped[int] = mapped_column(sa.Integer, nullable=False)
+    last_error: Mapped[str | None] = mapped_column(sa.String(200))
+    payload_snapshot: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)

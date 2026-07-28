@@ -22,7 +22,7 @@ class UniverseFilter(Base):
     )  # Critérios de filtro: min_market_cap, sectors_include...
     is_active: Mapped[bool | None] = mapped_column(sa.Boolean, default=True)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"UniverseFilter(name={self.name!r}, is_active={self.is_active})"

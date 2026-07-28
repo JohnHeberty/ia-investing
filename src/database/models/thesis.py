@@ -30,7 +30,7 @@ class InvestmentThesis(Base):
     invalidation_criteria: Mapped[dict[str, object] | None] = mapped_column(JSONB)
 
     review_deadline: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"InvestmentThesis(status={self.status!r}, summary_pt={self.summary_pt!r})"
@@ -56,8 +56,8 @@ class ThesisVersion(Base):
     risks: Mapped[dict[str, object] | None] = mapped_column(JSONB)
     invalidation_criteria: Mapped[dict[str, object] | None] = mapped_column(JSONB)
 
-    agent_run_id: Mapped[UUID | None] = mapped_column()
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    agent_run_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("agent_runtime_runs.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"ThesisVersion(version_number={self.version_number}, change_summary={self.change_summary!r})"
@@ -88,7 +88,7 @@ class Recommendation(Base):
     review_deadline: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     invalidation_triggers: Mapped[dict[str, object] | None] = mapped_column(JSONB)
 
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"Recommendation(action={self.action!r}, confidence={self.confidence})"

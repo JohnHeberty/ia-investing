@@ -19,7 +19,10 @@ class AgentDefinition(Base):
     name: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     display_name_pt: Mapped[str] = mapped_column(sa.String(200))
 
-    system_prompt_id: Mapped[UUID] = mapped_column()
+    system_prompt_id: Mapped[UUID] = mapped_column(
+        sa.ForeignKey("system_prompts.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
     model_config: Mapped[dict[str, object]] = mapped_column(JSONB)
 
     is_active: Mapped[bool] = mapped_column(sa.Boolean, default=True)

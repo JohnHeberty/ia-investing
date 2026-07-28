@@ -54,6 +54,7 @@ class MarketBar(Base):
         sa.UniqueConstraint("listing_id", "interval", "bar_at", "knowledge_at", name="uq_market_bars_pit"),
         sa.CheckConstraint("high_price >= low_price", name="valid_high_low"),
         sa.CheckConstraint("volume >= 0", name="nonnegative_volume"),
+        sa.Index("ix_market_bars_listing_bar_at", "listing_id", bar_at.desc()),
     )
 
 

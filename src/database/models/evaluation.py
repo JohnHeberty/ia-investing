@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
@@ -23,11 +24,11 @@ class Scorecard(Base):
     scorecard_type: Mapped[str] = mapped_column(sa.String(50))
     as_of_date: Mapped[date] = mapped_column(sa.Date, index=True)
 
-    quality_score: Mapped[float] = mapped_column(sa.Float)
-    growth_score: Mapped[float] = mapped_column(sa.Float)
-    leverage_score: Mapped[float] = mapped_column(sa.Float)
-    valuation_score: Mapped[float] = mapped_column(sa.Float)
-    overall_score: Mapped[float] = mapped_column(sa.Float)
+    quality_score: Mapped[Decimal] = mapped_column(sa.Numeric(6, 4))
+    growth_score: Mapped[Decimal] = mapped_column(sa.Numeric(6, 4))
+    leverage_score: Mapped[Decimal] = mapped_column(sa.Numeric(6, 4))
+    valuation_score: Mapped[Decimal] = mapped_column(sa.Numeric(6, 4))
+    overall_score: Mapped[Decimal] = mapped_column(sa.Numeric(6, 4))
 
     veto_conditions_triggered: Mapped[dict[str, object]] = mapped_column(JSONB)
 
@@ -48,15 +49,15 @@ class BacktestResult(Base):
     start_date: Mapped[date] = mapped_column(sa.Date)
     end_date: Mapped[date] = mapped_column(sa.Date)
 
-    cagr_pct: Mapped[float] = mapped_column(sa.Float)
-    sharpe_ratio: Mapped[float] = mapped_column(sa.Float)
-    sortino_ratio: Mapped[float] = mapped_column(sa.Float)
-    calmar_ratio: Mapped[float] = mapped_column(sa.Float)
-    max_drawdown_pct: Mapped[float] = mapped_column(sa.Float)
-    win_rate_pct: Mapped[float] = mapped_column(sa.Float)
+    cagr_pct: Mapped[Decimal] = mapped_column(sa.Numeric(8, 4))
+    sharpe_ratio: Mapped[Decimal] = mapped_column(sa.Numeric(8, 4))
+    sortino_ratio: Mapped[Decimal] = mapped_column(sa.Numeric(8, 4))
+    calmar_ratio: Mapped[Decimal] = mapped_column(sa.Numeric(8, 4))
+    max_drawdown_pct: Mapped[Decimal] = mapped_column(sa.Numeric(8, 4))
+    win_rate_pct: Mapped[Decimal] = mapped_column(sa.Numeric(8, 4))
 
     benchmark_name: Mapped[str] = mapped_column(sa.String(100))
-    benchmark_cagr_pct: Mapped[float] = mapped_column(sa.Float)
+    benchmark_cagr_pct: Mapped[Decimal] = mapped_column(sa.Numeric(8, 4))
 
     details: Mapped[dict[str, object]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)

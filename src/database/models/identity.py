@@ -20,6 +20,13 @@ class Organization(Base):
     status: Mapped[str] = mapped_column(sa.String(20), default="active")
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
+    __table_args__ = (
+        sa.CheckConstraint(
+            "status IN ('active', 'suspended', 'deleted')",
+            name="ck_organizations_status",
+        ),
+    )
+
 
 class UserIdentity(Base):
     __tablename__ = "user_identities"

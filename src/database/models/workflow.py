@@ -23,7 +23,7 @@ class PromptVersion(Base):
     structured_output_schema_id: Mapped[UUID | None] = mapped_column()
 
     is_active: Mapped[bool | None] = mapped_column(sa.Boolean, default=False)
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"PromptVersion(agent_name={self.agent_name!r}, version_number={self.version_number})"
@@ -60,7 +60,7 @@ class StructuredOutputSchema(Base):
     json_schema: Mapped[dict[str, object] | None] = mapped_column(JSONB)  # Schema JSON completo
 
     is_active: Mapped[bool | None] = mapped_column(sa.Boolean, default=True)
-    created_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     def __repr__(self) -> str:
         return f"StructuredOutputSchema(name={self.name!r}, version_number={self.version_number})"
