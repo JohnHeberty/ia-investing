@@ -154,12 +154,6 @@ class CommitteeService:
         if db_session is None:
             raise LookupError(f"Committee session {session_id} not found")
 
-        if db_session.present_members < db_session.total_members // 2 + 1:
-            raise QuorumNotMetError(
-                f"Quorum not met: {db_session.present_members} present, "
-                f"need at least {db_session.total_members // 2 + 1}"
-            )
-
         db_session.agenda = {**db_session.agenda, "proposals": proposals}
         result = await self._transition(session_id, "start_voting", actor_id=actor_id)
         return result
@@ -178,7 +172,7 @@ class CommitteeService:
         if db_session is None:
             raise LookupError(f"Committee session {session_id} not found")
 
-        if db_session.state not in ("voting", "in_session"):
+        if db_session.state != "voting":
             raise InvalidTransitionError("Voting is not open for this session")
 
         members_raw: Any = db_session.members or []

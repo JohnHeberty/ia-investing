@@ -141,7 +141,10 @@ class RebalanceService:
         if proposal.status != "draft":
             raise ValueError(f"Cannot approve proposal with status '{proposal.status}'")
 
-        machine = self._get_portfolio_machine(proposal.portfolio_id)
+        portfolio = await self._load_portfolio(proposal.portfolio_id)
+        state = portfolio.state if portfolio else "monitoring"
+        nav = float(portfolio.nav) if portfolio and portfolio.nav else 0.0
+        machine = create_portfolio_machine(PortfolioMachineModel(state=state, nav=nav, compliance_passed=True))
         machine.approve_rebalance()
         await self._update_portfolio_state(proposal.portfolio_id, machine.model.state)
 
@@ -161,7 +164,10 @@ class RebalanceService:
             raise ValueError(f"Cannot execute trades on proposal with status '{proposal.status}'")
 
         if proposal.status == "approved":
-            machine = self._get_portfolio_machine(proposal.portfolio_id)
+            portfolio = await self._load_portfolio(proposal.portfolio_id)
+            state = portfolio.state if portfolio else "monitoring"
+            nav = float(portfolio.nav) if portfolio and portfolio.nav else 0.0
+            machine = create_portfolio_machine(PortfolioMachineModel(state=state, nav=nav, compliance_passed=True))
             machine.approve_rebalance()
             await self._update_portfolio_state(proposal.portfolio_id, "rebalancing")
             proposal.status = "in_progress"
@@ -188,7 +194,10 @@ class RebalanceService:
         if proposal.status not in ("approved", "in_progress"):
             raise ValueError(f"Cannot complete proposal with status '{proposal.status}'")
 
-        machine = self._get_portfolio_machine(proposal.portfolio_id)
+        portfolio = await self._load_portfolio(proposal.portfolio_id)
+        state = portfolio.state if portfolio else "monitoring"
+        nav = float(portfolio.nav) if portfolio and portfolio.nav else 0.0
+        machine = create_portfolio_machine(PortfolioMachineModel(state=state, nav=nav, compliance_passed=True))
         machine.approve_rebalance()
         await self._update_portfolio_state(proposal.portfolio_id, "monitoring")
 
@@ -418,6 +427,9 @@ class RebalanceService:
         return create_portfolio_machine(
             PortfolioMachineModel(state="monitoring", nav=1_000_000.0, compliance_passed=True)
         )
+
+    async def _load_portfolio(self, portfolio_id: uuid.UUID) -> ModelPortfolio | None:
+        return await self._session.get(ModelPortfolio, portfolio_id)
 
     async def _update_portfolio_state(self, portfolio_id: uuid.UUID, state: str) -> None:
         stmt = sa.update(ModelPortfolio).where(ModelPortfolio.id == portfolio_id).values(state=state)

@@ -5,6 +5,7 @@ from decimal import Decimal
 from uuid import UUID
 
 import sqlalchemy as sa
+from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.instrument_master import Listing
@@ -59,6 +60,54 @@ class RiskService:
                 )
             ).all()
         )
+        if not position_rows:
+            raise ValueError("no positions to assess risk for")
+        instrument_ids = tuple(p.instrument_id for p in position_rows)
+
+        ranked = (
+            sa.select(
+                Listing.instrument_id,
+                MarketBar.id,
+                MarketBar.bar_at,
+                MarketBar.knowledge_at,
+                MarketBar.close_price,
+                MarketBar.volume,
+                func.row_number()
+                .over(
+                    partition_by=Listing.instrument_id,
+                    order_by=[MarketBar.bar_at.desc(), MarketBar.knowledge_at.desc()],
+                )
+                .label("rn"),
+            )
+            .join(Listing, Listing.id == MarketBar.listing_id)
+            .where(
+                Listing.instrument_id.in_(instrument_ids),
+                Listing.valid_from <= as_of.date(),
+                sa.or_(Listing.valid_to.is_(None), Listing.valid_to > as_of.date()),
+                MarketBar.bar_at <= as_of,
+                MarketBar.knowledge_at <= as_of,
+            )
+        ).subquery()
+
+        all_bars = list(
+            (
+                await self.session.execute(
+                    sa.select(ranked).where(ranked.c.rn <= 253).order_by(ranked.c.instrument_id, ranked.c.rn)
+                )
+            ).all()
+        )
+        bars_by_instrument: dict[UUID, list[dict[str, object]]] = {}
+        for row in all_bars:
+            bars_by_instrument.setdefault(row.instrument_id, []).append(
+                {
+                    "id": row.id,
+                    "bar_at": row.bar_at,
+                    "knowledge_at": row.knowledge_at,
+                    "close_price": row.close_price,
+                    "volume": row.volume,
+                }
+            )
+
         position_values: dict[str, Decimal] = {}
         average_daily_values: dict[str, Decimal] = {}
         return_series: dict[str, list[Decimal]] = {}
@@ -66,41 +115,25 @@ class RiskService:
         if max_price_age_hours <= 0:
             raise ValueError("risk policy max_price_age_hours must be positive")
         for position in position_rows:
-            bars = list(
-                (
-                    await self.session.scalars(
-                        sa.select(MarketBar)
-                        .join(Listing, Listing.id == MarketBar.listing_id)
-                        .where(
-                            Listing.instrument_id == position.instrument_id,
-                            Listing.valid_from <= as_of.date(),
-                            sa.or_(Listing.valid_to.is_(None), Listing.valid_to > as_of.date()),
-                            MarketBar.bar_at <= as_of,
-                            MarketBar.knowledge_at <= as_of,
-                        )
-                        .order_by(MarketBar.bar_at.desc(), MarketBar.knowledge_at.desc())
-                        .limit(253)
-                    )
-                ).all()
-            )
-            latest_by_bar: dict[datetime, MarketBar] = {}
-            for bar in bars:
-                latest_by_bar.setdefault(bar.bar_at, bar)
-            bars = sorted(latest_by_bar.values(), key=lambda item: item.bar_at)
+            bars_data = bars_by_instrument.get(position.instrument_id, [])
+            latest_by_bar: dict[datetime, dict[str, object]] = {}
+            for bar in bars_data:
+                latest_by_bar.setdefault(bar["bar_at"], bar)
+            bars = sorted(latest_by_bar.values(), key=lambda item: item["bar_at"])
             if len(bars) < 2:
                 raise ValueError(f"risk history is missing for instrument {position.instrument_id}")
-            price_age_hours = Decimal(str((as_of - bars[-1].bar_at).total_seconds())) / Decimal(3600)
+            price_age_hours = Decimal(str((as_of - bars[-1]["bar_at"]).total_seconds())) / Decimal(3600)
             if price_age_hours > max_price_age_hours:
                 raise ValueError(f"risk price is stale for instrument {position.instrument_id}")
             instrument_key = str(position.instrument_id)
-            position_values[instrument_key] = position.quantity * bars[-1].close_price
+            position_values[instrument_key] = position.quantity * bars[-1]["close_price"]
             average_daily_values[instrument_key] = sum(
-                (bar.close_price * Decimal(bar.volume) for bar in bars), start=Decimal(0)
+                (bar["close_price"] * Decimal(bar["volume"]) for bar in bars), start=Decimal(0)
             ) / Decimal(len(bars))
             return_series[instrument_key] = [
-                bars[index].close_price / bars[index - 1].close_price - Decimal(1)
+                bars[index]["close_price"] / bars[index - 1]["close_price"] - Decimal(1)
                 for index in range(1, len(bars))
-                if bars[index - 1].close_price > 0
+                if bars[index - 1]["close_price"] > 0
             ]
         cash_value = (
             await self.session.scalar(

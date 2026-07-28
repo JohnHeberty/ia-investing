@@ -115,6 +115,7 @@ class OrderService:
                         MarketBar.knowledge_at <= MarketBar.bar_at,
                     )
                     .order_by(MarketBar.bar_at, MarketBar.knowledge_at)
+                    .limit(1000)
                 )
             )
             .scalars()

@@ -127,11 +127,13 @@ class BackendPortfolioOptimizationService:
         input_sha256 = canonical_hash(input_payload)
         existing = (
             await self.session.execute(
-                sa.select(OptimizationRun).where(
+                sa.select(OptimizationRun)
+                .where(
                     OptimizationRun.portfolio_id == portfolio.id,
                     OptimizationRun.as_of == as_of,
                     OptimizationRun.input_sha256 == input_sha256,
                 )
+                .with_for_update()
             )
         ).scalar_one_or_none()
         if existing is not None:

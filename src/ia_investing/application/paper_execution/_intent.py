@@ -67,6 +67,11 @@ class IntentService:
             )
         ).scalar_one_or_none()
         if existing is not None:
+            def _cmp(a: object, b: object) -> bool:
+                if isinstance(a, Decimal) and isinstance(b, Decimal):
+                    return a.normalize() == b.normalize()
+                return a == b
+
             expected = (portfolio_version_id, instrument_id, side, quantity, order_type, limit_price)
             actual = (
                 existing.portfolio_version_id,
@@ -76,7 +81,7 @@ class IntentService:
                 existing.order_type,
                 existing.limit_price,
             )
-            if actual != expected:
+            if not all(_cmp(a, e) for a, e in zip(actual, expected)):
                 raise ValueError("idempotency key was used with a different paper intent")
             return existing, False
         intent = TradeIntent(

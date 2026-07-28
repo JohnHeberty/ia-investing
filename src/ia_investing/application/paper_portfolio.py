@@ -34,10 +34,12 @@ class PaperPortfolioService:
         await self._session.flush()
         return self._to_dict(portfolio)
 
-    async def list_all(self, organization_id: uuid.UUID | None = None) -> list[dict[str, Any]]:
-        stmt = sa.select(Portfolio).order_by(Portfolio.created_at.desc())
-        if organization_id is not None:
-            stmt = stmt.where(Portfolio.organization_id == organization_id)
+    async def list_all(self, organization_id: uuid.UUID) -> list[dict[str, Any]]:
+        stmt = (
+            sa.select(Portfolio)
+            .where(Portfolio.organization_id == organization_id)
+            .order_by(Portfolio.created_at.desc())
+        )
         result = await self._session.execute(stmt)
         rows = result.scalars().all()
         return [self._to_dict(r) for r in rows]

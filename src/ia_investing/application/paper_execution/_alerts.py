@@ -158,19 +158,20 @@ class AlertService:
         switch = await self.session.get(PaperKillSwitch, switch_id, with_for_update=True)
         if switch is None or switch.organization_id != context.organization_id:
             raise LookupError("paper kill switch not found")
-        if switch.active:
-            ensure_four_eyes(switch.activated_by, context.subject)
-            switch.active = False
-            switch.released_by = context.subject
-            switch.released_at = datetime.now(UTC)
-            audit_entity(
-                self.session,
-                "paper_kill_switch.release",
-                "paper_kill_switch",
-                switch.id,
-                context.subject,
-                context.organization_id,
-                correlation_id,
-                {"activated_by": switch.activated_by},
-            )
+        if not switch.active:
+            raise ValueError("kill switch is already released")
+        ensure_four_eyes(switch.activated_by, context.subject)
+        switch.active = False
+        switch.released_by = context.subject
+        switch.released_at = datetime.now(UTC)
+        audit_entity(
+            self.session,
+            "paper_kill_switch.release",
+            "paper_kill_switch",
+            switch.id,
+            context.subject,
+            context.organization_id,
+            correlation_id,
+            {"activated_by": switch.activated_by},
+        )
         return switch

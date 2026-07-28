@@ -38,7 +38,7 @@ class EvaluationService:
     ) -> PaperPostMortem:
         if "postmortem:write" not in context.permissions:
             raise PermissionError("permission required: postmortem:write")
-        portfolio = await self.session.get(ModelPortfolio, portfolio_id)
+        portfolio = await self.session.get(ModelPortfolio, portfolio_id, with_for_update=True)
         if portfolio is None or portfolio.organization_id != context.organization_id:
             raise LookupError("portfolio not found")
         if period_start.tzinfo is None or period_end.tzinfo is None or period_end <= period_start:
@@ -206,14 +206,8 @@ class EvaluationService:
                         "evaluation_id": str(row.id),
                         "promoted_from_version": challenger_latest.version,
                     },
-                    decision={
-                        "decided_by": context.subject,
-                        "decided_at": datetime.now(UTC).isoformat(),
-                        "reason": "challenger_promotion",
-                    },
-                    status="approved",
+                    status="proposed",
                     created_by=context.subject,
-                    approved_by=context.subject,
                 )
                 self.session.add(new_version)
                 await self.session.flush()

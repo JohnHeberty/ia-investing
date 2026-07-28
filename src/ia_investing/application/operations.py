@@ -4,6 +4,7 @@ import asyncio
 import hashlib
 import json
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -13,13 +14,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
 
 from database.models.agents import AuditLog
-from database.models.operations import Operation
+from database.models.operations import Operation, OperationDispatchOutbox
 from ia_investing.contracts.v1 import OperationAcceptedV1, OperationState, OperationStatusV1
 from ia_investing.orchestration.queues import TASK_QUEUES, Capability
-from workflows import (
-    RunAgentInput,
-    RunAgentWorkflow,
-)
 
 
 class IdempotencyConflictError(ValueError):
@@ -61,15 +58,24 @@ class OperationService:
         self, command: AgentRunCommand, idempotency_key: str, organization_id: UUID | None = None
     ) -> OperationAcceptedV1:
         operation_type = "agent-run"
-        payload = command.payload()
-        request_hash = _request_hash(payload)
+        request_data: dict[str, object] = {
+            "capability": command.agent_name,
+            "input_payload": command.input_data,
+            "data_as_of": command.input_data.get("data_as_of", ""),
+            "knowledge_cutoff": command.input_data.get("knowledge_cutoff", ""),
+            "case_id": str(command.input_data["case_id"]) if command.input_data.get("case_id") else None,
+            "requested_by": command.actor_subject,
+        }
+        request_hash = _request_hash(request_data)
         existing = (
             await self.session.execute(
-                select(Operation).where(
+                select(Operation)
+                .where(
                     Operation.operation_type == operation_type,
                     Operation.idempotency_key == idempotency_key,
                     Operation.organization_id == organization_id,
                 )
+                .with_for_update()
             )
         ).scalar_one_or_none()
         if existing is not None:
@@ -85,9 +91,19 @@ class OperationService:
             idempotency_key=idempotency_key,
             request_hash=request_hash,
             state=OperationState.PENDING,
-            request_data=payload,
+            request_data=request_data,
+        )
+        outbox = OperationDispatchOutbox(
+            id=uuid4(),
+            organization_id=organization_id,
+            operation_id=operation_id,
+            topic="agent-run",
+            state="pending",
+            attempts=0,
+            next_attempt_at=datetime.now(UTC),
         )
         self.session.add(operation)
+        self.session.add(outbox)
         self.session.add(
             AuditLog(
                 actor_type="human",
@@ -120,34 +136,6 @@ class OperationService:
                     raise IdempotencyConflictError("idempotency key already used with a different request") from None
                 return OperationAcceptedV1(operation_id=existing.id, state=OperationState(existing.state))
             raise
-        try:
-            await self.temporal_client.start_workflow(
-                RunAgentWorkflow.run,
-                RunAgentInput(
-                    operation_id=str(operation_id),
-                    organization_id=str(organization_id) if organization_id else "",
-                    capability=command.agent_name,
-                    case_id=str(command.input_data["case_id"]) if command.input_data.get("case_id") else None,
-                    input_payload=command.input_data,
-                    data_as_of=str(command.input_data.get("data_as_of", "")),
-                    knowledge_cutoff=str(command.input_data.get("knowledge_cutoff", "")),
-                    requested_by=command.actor_subject,
-                    idempotency_key=idempotency_key,
-                ),
-                id=f"operation-{operation_id}",
-                task_queue=TASK_QUEUES[Capability.RESEARCH_AGENTS],
-            )
-        except asyncio.CancelledError:
-            raise
-        except BaseException:
-            operation.state = OperationState.FAILED
-            operation.error_code = "workflow_start_failed"
-            operation.error_detail = "Workflow could not be started. Retry with the same idempotency key."
-            await self.session.commit()
-            raise
-
-        operation.state = OperationState.RUNNING
-        await self.session.commit()
         return OperationAcceptedV1(operation_id=operation_id)
 
     async def submit_portfolio_operation(

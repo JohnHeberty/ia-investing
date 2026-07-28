@@ -144,6 +144,7 @@ class ExecutionService:
         result.dispatched_at = datetime.now(UTC)
 
         # write to operation dispatch outbox for broker/exchange
+        # TODO: organization_id should come from execution context, not nil UUID sentinel
         outbox = OperationDispatchOutbox(
             organization_id=UUID(int=0),
             operation_id=execution_id,

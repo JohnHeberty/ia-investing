@@ -55,11 +55,13 @@ class AgentRuntimeService:
         if idempotency_key is not None:
             existing = (
                 await self.session.execute(
-                    select(AgentRuntimeRun).where(
+                    select(AgentRuntimeRun)
+                    .where(
                         AgentRuntimeRun.organization_id == organization_id,
                         AgentRuntimeRun.capability_id == definition.id,
                         AgentRuntimeRun.idempotency_key == idempotency_key,
                     )
+                    .with_for_update()
                 )
             ).scalar_one_or_none()
             if existing is not None:
@@ -209,12 +211,17 @@ class AgentRuntimeService:
         permissions: frozenset[str],
         reason: str,
         correlation_id: UUID,
+        organization_id: UUID | None = None,
     ) -> AgentApprovalRequest:
         if "agent_approvals:decide" not in permissions:
             raise PermissionError("permission required: agent_approvals:decide")
         approval = await self.session.get(AgentApprovalRequest, approval_id, with_for_update=True)
         if approval is None:
             raise LookupError("approval request not found")
+        if organization_id is not None:
+            run_check = await self.session.get(AgentRuntimeRun, approval.run_id)
+            if run_check is not None and run_check.organization_id != organization_id:
+                raise PermissionError("approval request does not belong to your organization")
         if approval.status != "pending":
             raise ValueError("approval request was already decided")
         now = datetime.now(UTC)
@@ -257,8 +264,13 @@ class AgentRuntimeService:
         await self.session.flush()
         return approval
 
-    async def get_run(self, run_id: UUID) -> AgentRuntimeRun | None:
-        return await self.session.get(AgentRuntimeRun, run_id)
+    async def get_run(self, run_id: UUID, organization_id: UUID | None = None) -> AgentRuntimeRun | None:
+        import sqlalchemy as sa
+
+        stmt = sa.select(AgentRuntimeRun).where(AgentRuntimeRun.id == run_id)
+        if organization_id is not None:
+            stmt = stmt.where(AgentRuntimeRun.organization_id == organization_id)
+        return (await self.session.execute(stmt)).scalar_one_or_none()
 
     async def promote(
         self,
