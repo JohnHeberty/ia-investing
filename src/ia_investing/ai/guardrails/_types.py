@@ -17,8 +17,23 @@ _INJECTION_PATTERNS = (
     re.compile(r"ignore (all|any|the) previous instructions", re.IGNORECASE),
     re.compile(r"reveal (the )?(system prompt|secret|credential)", re.IGNORECASE),
     re.compile(r"execute (shell|sql|command)", re.IGNORECASE),
+    re.compile(r"""<script[\s>]""", re.IGNORECASE),
+    re.compile(r"""onerror\s*=|onload\s*=|onclick\s*=""", re.IGNORECASE),
+    re.compile(r"""javascript\s*:""", re.IGNORECASE),
+    re.compile(r"""DROP\s+(TABLE|DATABASE|SCHEMA)""", re.IGNORECASE),
+    re.compile(r"""UNION\s+SELECT""", re.IGNORECASE),
+    re.compile(r"""OR\s+['\"]?\d+['"]?\s*=\s*['\"]?\d+['"]?""", re.IGNORECASE),
 )
-_PII_PATTERN = re.compile(r"\b\d{3}\.\d{3}\.\d{3}-\d{2}\b")
+_PII_PATTERN = re.compile(
+    r"\b\d{3}\.\d{3}\.\d{3}-\d{2}\b"  # CPF: XXX.XXX.XXX-XX
+    r"|\b\d{2}\.\d{3}\.\d{3}/\d{4}-\d{2}\b"  # CNPJ: XX.XXX.XXX/XXXX-XX
+    r"|\b\d{11}\b"  # CPF without punctuation (11 digits)
+    r"|\b\d{14}\b"  # CNPJ without punctuation (14 digits)
+    r"|\b\d{3}-\d{2}-\d{4}\b"  # US SSN: XXX-XX-XXXX
+    r"|\b(?:\d[ -]*?){13,19}\b"  # Credit card numbers (13-19 digits with optional separators)
+    r"|\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"  # Email addresses
+    r"|\b\d{2}\.\d{3}\.\d{3}-[0-9A-Za-z]\b"  # RG (Brazilian ID): XX.XXX.XXX-D
+)
 
 _SUSPICIOUS_IMPERATIVES = re.compile(
     r"(?i)\b(ignore|disregard|forget|override|replace|bypass|skip|inject|pretend)\b",

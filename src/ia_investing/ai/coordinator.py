@@ -30,7 +30,7 @@ class ResearchCoordinator:
             except Exception:
                 failures.append(step.capability)
                 if step.required:
-                    continue
+                    raise
             else:
                 if output.capability != step.capability or output.knowledge_cutoff != plan.knowledge_cutoff:
                     raise ValueError("specialist changed its pinned capability or knowledge cutoff")

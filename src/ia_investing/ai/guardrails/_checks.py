@@ -155,8 +155,7 @@ def validate_input_with_source(
     if source == ContentSource.TRUSTED_INTERNAL:
         return
     if config is None or config.enable_semantic_scan:
-        _check_obfuscated_content(text, violations=violations)
-        _check_multi_lang_injection(text, violations=violations)
+        _check_semantic_content(text, config=config or GuardrailConfig(), violations=violations)
 
 
 def validate_untrusted_text(text: str) -> None:

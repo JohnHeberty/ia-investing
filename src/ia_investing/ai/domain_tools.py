@@ -22,6 +22,17 @@ from .tools import (
 )
 
 
+def _safe_decimal(value: object) -> Decimal:
+    if isinstance(value, (int, float)):
+        return Decimal(str(value))
+    if isinstance(value, Decimal):
+        return value
+    raw = str(value).strip()
+    if not raw or raw.upper() in {"N/A", "NA", "-", "NULL", "NONE"}:
+        raise ValueError(f"non-numeric value: {value!r}")
+    return Decimal(raw)
+
+
 def build_read_only_tool_registry(session: AsyncSession) -> ToolRegistry:
     registry = ToolRegistry()
 
@@ -80,7 +91,7 @@ def build_read_only_tool_registry(session: AsyncSession) -> ToolRegistry:
                         ResearchEvidence.valid_until.is_(None),
                         ResearchEvidence.valid_until > request.knowledge_cutoff,
                     ),
-                    DocumentChunk.text.ilike(f"%{query}%"),
+                    DocumentChunk.text.ilike(f"%{query.replace('%', '%%').replace('_', '\\_')}%"),
                 )
                 .order_by(ResearchEvidence.quality_score.desc(), DocumentChunk.ordinal)
                 .limit(request.limit)
@@ -110,15 +121,17 @@ def build_read_only_tool_registry(session: AsyncSession) -> ToolRegistry:
         cash_flows = assumptions["free_cash_flows"]
         if not isinstance(cash_flows, list):
             raise ValueError("free_cash_flows must be a list")
-        result = discounted_cash_flow(
-            DCFInput(
-                free_cash_flows=tuple(Decimal(str(value)) for value in cash_flows),
-                discount_rate=Decimal(str(assumptions["discount_rate"])),
-                terminal_growth=Decimal(str(assumptions["terminal_growth"])),
-                net_debt=Decimal(str(assumptions["net_debt"])),
-                shares_outstanding=Decimal(str(assumptions["shares_outstanding"])),
+        try:
+            dcf_input = DCFInput(
+                free_cash_flows=tuple(_safe_decimal(value) for value in cash_flows),
+                discount_rate=_safe_decimal(assumptions["discount_rate"]),
+                terminal_growth=_safe_decimal(assumptions["terminal_growth"]),
+                net_debt=_safe_decimal(assumptions["net_debt"]),
+                shares_outstanding=_safe_decimal(assumptions["shares_outstanding"]),
             )
-        )
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"invalid valuation input: {exc}") from exc
+        result = discounted_cash_flow(dcf_input)
         return ValuationOutput(
             results=[
                 {

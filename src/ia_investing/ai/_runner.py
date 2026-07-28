@@ -87,9 +87,16 @@ def _extract_usage(result: Any) -> tuple[int, int]:
 
 
 class AgentRunner:
+    _SUPPORTED_PROVIDERS = frozenset({"gateway", "litellm", "openai"})
+
     def __init__(self, config: AgentConfig, settings: Settings | None = None) -> None:
         self.config = config
         self.settings = settings or get_settings()
+        provider = self.settings.ai.provider
+        if provider not in self._SUPPORTED_PROVIDERS:
+            raise ValueError(
+                f"Unsupported AI provider '{provider}'. Supported: {', '.join(sorted(self._SUPPORTED_PROVIDERS))}"
+            )
         self._system_prompt: str | None = None
         self._output_type = _resolve_output_type(config.structured_output_type)
 
@@ -131,7 +138,11 @@ class AgentRunner:
         if context:
             parts.append(json.dumps({"context": context}, ensure_ascii=False, default=str))
         parts.append(json.dumps(input_data, ensure_ascii=False, default=str))
-        return "\n\n".join(parts)
+        formatted = "\n\n".join(parts)
+        max_input_chars = 100_000
+        if len(formatted) > max_input_chars:
+            raise ValueError(f"Input too large: {len(formatted)} chars exceeds limit of {max_input_chars}")
+        return formatted
 
     async def run(self, input_data: dict[str, Any], context: dict[str, Any] | None = None) -> AgentResult:
         return await self._execute(self._build_agent(), input_data, context)
@@ -204,6 +215,24 @@ class AgentRunner:
                     elapsed_ms,
                     "completed",
                 )
+        except asyncio.CancelledError:
+            elapsed_ms = (time.monotonic() - start) * 1000
+            if span is not None:
+                span.set_status(trace.StatusCode.ERROR, "cancelled")
+            attrs = {"agent.name": self.config.name, "agent.model": self.config.model}
+            _runner_counter.add(1, {**attrs, "agent.status": "cancelled"})
+            _runner_duration_histogram.record(elapsed_ms, attrs)
+            logger.warning("Agent %s cancelled", self.config.name)
+            return AgentResult(
+                self.config.name,
+                None,
+                self.config.model,
+                0,
+                0,
+                0.0,
+                elapsed_ms,
+                "cancelled",
+            )
         except Exception as exc:
             elapsed_ms = (time.monotonic() - start) * 1000
             if span is not None:

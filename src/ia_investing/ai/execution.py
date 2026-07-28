@@ -150,7 +150,6 @@ class AgentExecutionService:
         run.completion_tokens = response.usage.completion_tokens
         run.cost_usd = response.usage.cost_usd
         run.duration_ms = response.usage.duration_ms
-        run.evidence_coverage = Decimal(1)
         run.status = "succeeded"
         run.finished_at = datetime.now(UTC)
         await self.session.flush()

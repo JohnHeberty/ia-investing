@@ -77,8 +77,6 @@ class AIGateway(ABC):
 
     async def stream_chat_completion(self, request: ChatCompletionRequest) -> AsyncIterator[str]:
         raise NotImplementedError("Streaming is not supported by this gateway implementation")
-        if False:
-            yield ""
 
     @abstractmethod
     async def embed(self, request: EmbeddingRequest) -> EmbeddingResponse: ...

@@ -154,12 +154,12 @@ class GuardrailEngine:
         tool_name: str,
         scope: str,
         impact: dict[str, object],
-    ) -> ApprovalRequest:
+    ) -> ApprovalRequest | None:
         if (
             GuardrailLayer.APPROVAL_GATE not in self.config.enabled_layers
             or not self.config.require_approval_for_sensitive
         ):
-            raise GuardrailViolationError("approval_disabled", "Approval gate is not enabled")
+            return None
         request = self.approval_store.request(tool_name, scope, impact)
         self.reporter.record(
             GuardrailViolation(

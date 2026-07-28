@@ -35,10 +35,8 @@ class TokenBucketRateLimiter:
 
     @property
     def rpm_used(self) -> int:
-        self._evict()
         return len(self._requests)
 
     @property
     def tpm_used(self) -> int:
-        self._evict()
         return sum(t for _, t in self._requests)
