@@ -1,14 +1,25 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ChangeEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createCandidate } from "@/lib/candidate-api";
 import styles from "./candidate-intelligence.module.css";
+
+function formatCNPJ(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 14);
+  return digits
+    .replace(/^(\d{2})(\d)/, "$1.$2")
+    .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1/$2")
+    .replace(/(\d{4})(\d)/, "$1-$2");
+}
 
 export function CandidateCreateForm({ onClose }: { onClose?: () => void }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const [cnpj, setCnpj] = useState("");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -20,7 +31,7 @@ export function CandidateCreateForm({ onClose }: { onClose?: () => void }) {
         ticker: String(form.get("ticker") ?? ""),
         exchange: String(form.get("exchange") ?? "B3"),
         legal_name: String(form.get("legal_name") ?? "") || undefined,
-        cnpj: String(form.get("cnpj") ?? "") || undefined,
+        cnpj: cnpj.replace(/\D/g, "") || undefined,
         cvm_code: String(form.get("cvm_code") ?? "") || undefined,
         rationale: String(form.get("rationale") ?? "") || undefined,
       });
@@ -40,7 +51,7 @@ export function CandidateCreateForm({ onClose }: { onClose?: () => void }) {
         <div className={styles.field}><label htmlFor="ticker">Ticker *</label><input id="ticker" name="ticker" required maxLength={24} placeholder="WEGE3" autoCapitalize="characters" /></div>
         <div className={styles.field}><label htmlFor="exchange">Bolsa *</label><input id="exchange" name="exchange" required defaultValue="B3" maxLength={20} /></div>
         <div className={styles.field}><label htmlFor="legal_name">Razão social</label><input id="legal_name" name="legal_name" maxLength={300} /></div>
-        <div className={styles.field}><label htmlFor="cnpj">CNPJ</label><input id="cnpj" name="cnpj" maxLength={32} /></div>
+        <div className={styles.field}><label htmlFor="cnpj">CNPJ</label><input id="cnpj" name="cnpj" maxLength={18} value={cnpj} onChange={(e: ChangeEvent<HTMLInputElement>) => setCnpj(formatCNPJ(e.target.value))} placeholder="00.000.000/0000-00" /></div>
         <div className={styles.field}><label htmlFor="cvm_code">Código CVM</label><input id="cvm_code" name="cvm_code" maxLength={32} /></div>
         <div className={`${styles.field} ${styles.full}`}><label htmlFor="rationale">Por que investigar</label><textarea id="rationale" name="rationale" maxLength={4000} placeholder="Hipótese inicial, evento observado ou motivo da indicação." /></div>
       </div>
