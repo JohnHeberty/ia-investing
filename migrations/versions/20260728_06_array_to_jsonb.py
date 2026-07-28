@@ -18,21 +18,26 @@ depends_on: str | None = None
 
 
 def upgrade() -> None:
-    op.alter_column(
-        "document_chunks",
-        "section_path",
-        existing_type=sa.ARRAY(sa.Text),
-        type_=sa.JSON,
-        server_default="[]",
-        existing_server_default="{}",
+    conn = op.get_bind()
+    # Check if table exists and has section_path column
+    result = conn.execute(
+        sa.text(
+            "SELECT EXISTS ("
+            "  SELECT 1 FROM information_schema.columns "
+            "  WHERE table_name = 'document_chunks' AND column_name = 'section_path'"
+            ")"
+        )
+    )
+    if not result.scalar():
+        return
+    op.execute(
+        "ALTER TABLE document_chunks ALTER COLUMN section_path "
+        "TYPE json USING section_path::text::json"
     )
 
 
 def downgrade() -> None:
-    op.alter_column(
-        "document_chunks",
-        "section_path",
-        existing_type=sa.JSON,
-        type_=sa.ARRAY(sa.Text),
-        server_default="{}",
+    op.execute(
+        "ALTER TABLE document_chunks ALTER COLUMN section_path "
+        "TYPE text[] USING section_path::text[]"
     )

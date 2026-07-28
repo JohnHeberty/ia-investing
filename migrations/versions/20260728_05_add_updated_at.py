@@ -136,7 +136,32 @@ TABLES = [
 
 
 def upgrade() -> None:
+    conn = op.get_bind()
     for table in TABLES:
+        # Check if table exists
+        result = conn.execute(
+            sa.text(
+                "SELECT EXISTS ("
+                "  SELECT 1 FROM information_schema.tables "
+                "  WHERE table_name = :table"
+                ")"
+            ),
+            {"table": table},
+        )
+        if not result.scalar():
+            continue
+        # Check if column already exists
+        result = conn.execute(
+            sa.text(
+                "SELECT EXISTS ("
+                "  SELECT 1 FROM information_schema.columns "
+                "  WHERE table_name = :table AND column_name = 'updated_at'"
+                ")"
+            ),
+            {"table": table},
+        )
+        if result.scalar():
+            continue
         op.add_column(
             table,
             sa.Column(

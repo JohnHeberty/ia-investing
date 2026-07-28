@@ -77,11 +77,18 @@ def upgrade() -> None:
     op.execute("ALTER TABLE risk_snapshots ALTER COLUMN volatility_annualized TYPE NUMERIC(10,6) USING volatility_annualized::numeric(10,6)")
 
     # --- R6-H1: Expand outbox state constraint ---
-    op.execute("ALTER TABLE operation_dispatch_outbox DROP CONSTRAINT operation_dispatch_outbox_state")
-    op.create_check_constraint(
-        "operation_dispatch_outbox_state",
-        "operation_dispatch_outbox",
-        sa.text("state IN ('pending', 'dispatched', 'failed', 'dead_letter')"),
+    # Drop all possible constraint name variants
+    op.execute(
+        "DO $$ BEGIN "
+        "  ALTER TABLE operation_dispatch_outbox DROP CONSTRAINT IF EXISTS operation_dispatch_outbox_state;"
+        "  ALTER TABLE operation_dispatch_outbox DROP CONSTRAINT IF EXISTS ck_operation_dispatch_outbox_operation_dispatch_outbox_state;"
+        "EXCEPTION WHEN undefined_object THEN NULL; "
+        "END $$"
+    )
+    op.execute(
+        "ALTER TABLE operation_dispatch_outbox "
+        "ADD CONSTRAINT operation_dispatch_outbox_state "
+        "CHECK (state IN ('pending', 'dispatched', 'failed', 'dead_letter'))"
     )
 
     # --- R6-H1: Create dead letter table ---
@@ -111,11 +118,17 @@ def downgrade() -> None:
     op.drop_table("operation_dispatch_dead_letter")
 
     # --- Restore outbox state constraint ---
-    op.execute("ALTER TABLE operation_dispatch_outbox DROP CONSTRAINT operation_dispatch_outbox_state")
-    op.create_check_constraint(
-        "operation_dispatch_outbox_state",
-        "operation_dispatch_outbox",
-        sa.text("state IN ('pending', 'dispatched', 'failed')"),
+    op.execute(
+        "DO $$ BEGIN "
+        "  ALTER TABLE operation_dispatch_outbox DROP CONSTRAINT IF EXISTS operation_dispatch_outbox_state;"
+        "  ALTER TABLE operation_dispatch_outbox DROP CONSTRAINT IF EXISTS ck_operation_dispatch_outbox_operation_dispatch_outbox_state;"
+        "EXCEPTION WHEN undefined_object THEN NULL; "
+        "END $$"
+    )
+    op.execute(
+        "ALTER TABLE operation_dispatch_outbox "
+        "ADD CONSTRAINT operation_dispatch_outbox_state "
+        "CHECK (state IN ('pending', 'dispatched', 'failed'))"
     )
 
     # --- Revert risk_snapshots Float→Numeric ---

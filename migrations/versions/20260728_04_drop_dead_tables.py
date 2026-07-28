@@ -9,7 +9,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision: str = "20260728_04"
-down_revision: str | None = "20260728_03"
+down_revision: str | None = "20260728_merge"
 branch_labels: str | None = None
 depends_on: str | None = None
 
@@ -38,7 +38,7 @@ DEAD_TABLES = [
 
 def upgrade() -> None:
     for table in DEAD_TABLES:
-        op.drop_table(table)
+        op.execute(f"DROP TABLE IF EXISTS {table} CASCADE")  # noqa: S608
 
 
 def downgrade() -> None:
