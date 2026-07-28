@@ -116,7 +116,8 @@ def _parse(rows: list[dict[str, str]], cnpj_filter: str | None) -> list[Financia
             continue
 
         raw_valor = (r.get("VL_CONTA") or "").strip()
-        valor = _parse_valor(raw_valor)
+        valor_decimal, _status = parse_value_status(raw_valor)
+        valor = float(valor_decimal) if valor_decimal is not None else 0.0
 
         raw_versao = (r.get("VERSAO") or "").strip()
         try:
@@ -187,12 +188,13 @@ async def get_dfp_all(
     cnpj: str | None = None,
     client: HttpClient | None = None,
 ) -> dict[StatementType, list[FinancialEntry]]:
-    """Buscar todos os demonstrativos do DFP de um ano."""
-    results: dict[StatementType, list[FinancialEntry]] = {}
-    for stmt in StatementType:
+    """Buscar todos os demonstrativos do DFP de um ano (parallel fetch)."""
+    import asyncio
+
+    async def _fetch(stmt: StatementType) -> tuple[StatementType, list[FinancialEntry]]:
         logger.info("Fetching %s for year %d", stmt.value, year)
         entries = await get_dfp(year, statement=stmt, cnpj=cnpj, client=client)
-        if entries:
-            results[stmt] = entries
+        return stmt, entries
 
-    return results
+    results_list = await asyncio.gather(*[_fetch(stmt) for stmt in StatementType])
+    return {stmt: entries for stmt, entries in results_list if entries}

@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from ._cad import get_companies, get_company_by_cnpj
 from ._directory import latest_period, list_files, list_periods
-from ._financials import FinancialEntry, StatementType, get_dfp, get_dfp_all, get_itr
+from ._financials import FinancialEntry, StatementType, _parse_valor, get_dfp, get_dfp_all, get_itr
 from .fca import (
     FCAGeneral,
     FCAInvestorRelations,
@@ -23,6 +23,7 @@ __all__ = [
     "FCASecurity",
     "FinancialEntry",
     "StatementType",
+    "_parse_valor",
     "get_companies",
     "get_company_by_cnpj",
     "get_dfp",

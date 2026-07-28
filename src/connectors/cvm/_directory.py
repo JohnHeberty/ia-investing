@@ -19,14 +19,18 @@ from ..base import DEFAULT_TIMEOUT, HttpClient
 _CACHE: dict[str, tuple[float, list[str]]] = {}
 _CACHE_TTL = 3600.0  # 1 hour
 _CACHE_MAX_SIZE = 256
-_cache_lock = asyncio.Lock()
+
+
+def _get_cache_lock() -> __import__("asyncio").Lock:
+    return __import__("asyncio").Lock()
 
 _LISTING_PATTERN = re.compile(r'<a\s+href="([^"]+\.(?:zip|csv|txt))"', re.IGNORECASE)
 _PERIOD_RE = re.compile(r"(\d{4}\d{2}|\d{4})(?:\D|$)")
 
 
 async def _cache_get(key: str) -> list[str] | None:
-    async with _cache_lock:
+    lock = _get_cache_lock()
+    async with lock:
         entry = _CACHE.get(key)
         if entry and (time.monotonic() - entry[0]) < _CACHE_TTL:
             return entry[1]
@@ -34,7 +38,8 @@ async def _cache_get(key: str) -> list[str] | None:
 
 
 async def _cache_set(key: str, value: list[str]) -> None:
-    async with _cache_lock:
+    lock = _get_cache_lock()
+    async with lock:
         if len(_CACHE) >= _CACHE_MAX_SIZE:
             # Evict oldest entries
             now = time.monotonic()

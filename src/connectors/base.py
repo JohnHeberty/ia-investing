@@ -57,6 +57,21 @@ class HttpClient:
         self._timeout = httpx.Timeout(timeout)
         self._max_retries = max_retries
         self._retry_delay = retry_delay
+        self._client: httpx.AsyncClient | None = None
+
+    async def _get_client(self) -> httpx.AsyncClient:
+        if self._client is None or self._client.is_closed:
+            self._client = httpx.AsyncClient(timeout=self._timeout)
+        return self._client
+
+    async def close(self) -> None:
+        if self._client is not None and not self._client.is_closed:
+            await self._client.aclose()
+            self._client = None
+
+    def __del__(self) -> None:
+        if self._client is not None and not self._client.is_closed:
+            logger.warning("HttpClient %r was not closed before garbage collection", self)
 
     def _build_url(self, url: str) -> str:
         if url.startswith("http"):
@@ -75,26 +90,26 @@ class HttpClient:
         full_url = self._build_url(url)
 
         last_error: Exception | None = None
-        async with httpx.AsyncClient(timeout=self._timeout) as client:
-            for attempt in range(1, self._max_retries + 1):
-                try:
-                    response = await client.get(
-                        full_url, params=params, headers=headers, follow_redirects=follow_redirects
+        client = await self._get_client()
+        for attempt in range(1, self._max_retries + 1):
+            try:
+                response = await client.get(
+                    full_url, params=params, headers=headers, follow_redirects=follow_redirects
+                )
+                response.raise_for_status()
+                return response.content
+            except (TimeoutError, httpx.HTTPError) as exc:
+                last_error = exc
+                if attempt < self._max_retries:
+                    delay = self._retry_delay * (2 ** (attempt - 1))
+                    logger.warning(
+                        "Attempt %d failed for %s: %s. Retrying in %.1fs...",
+                        attempt,
+                        full_url,
+                        exc,
+                        delay,
                     )
-                    response.raise_for_status()
-                    return response.content
-                except (TimeoutError, httpx.HTTPError) as exc:
-                    last_error = exc
-                    if attempt < self._max_retries:
-                        delay = self._retry_delay * (2 ** (attempt - 1))
-                        logger.warning(
-                            "Attempt %d failed for %s: %s. Retrying in %.1fs...",
-                            attempt,
-                            full_url,
-                            exc,
-                            delay,
-                        )
-                        await asyncio.sleep(delay)
+                    await asyncio.sleep(delay)
 
         if last_error is None:
             raise RuntimeError(f"No attempts made for {full_url}")

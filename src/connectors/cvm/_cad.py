@@ -10,6 +10,10 @@ from ..base import HttpClient
 CAD_URL = "https://dados.cvm.gov.br/dados/CIA_ABERTA/CAD/DADOS/cad_cia_aberta.csv"
 
 
+def _normalize_cnpj(cnpj: str) -> str:
+    return "".join(c for c in cnpj if c.isdigit())
+
+
 async def get_companies(
     cnpj: str | None = None,
     client: HttpClient | None = None,
@@ -17,7 +21,7 @@ async def get_companies(
     """Listar todas as companhias abertas cadastradas na CVM.
 
     Args:
-        cnpj: filtro opcional por CNPJ específico.
+        cnpj: filtro opcional por CNPJ específico (com ou sem pontuação).
         client: HttpClient opcional.
 
     Returns: lista de dicts com colunas do CSV original.
@@ -27,8 +31,8 @@ async def get_companies(
     rows = await fetch_csv(CAD_URL, client=client)
 
     if cnpj:
-        target = cnpj.strip()
-        rows = [r for r in rows if (r.get("CNPJ") or "").strip() == target]
+        target = _normalize_cnpj(cnpj)
+        rows = [r for r in rows if _normalize_cnpj(r.get("CNPJ") or "") == target]
 
     return rows
 

@@ -96,7 +96,10 @@ def _parse_csv_price(val: str | None) -> float:
     if not s:
         return 0.0
     try:
-        s = s.replace(".", "").replace(",", ".")
+        if "," in s:
+            s = s.replace(".", "").replace(",", ".")
+        elif s.count(".") > 1:
+            s = s.replace(".", "")
         return float(s)
     except ValueError:
         return 0.0

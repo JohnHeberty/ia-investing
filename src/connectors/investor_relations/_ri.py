@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
 from ..base import HttpClient
+
+logger = logging.getLogger(__name__)
 
 CVM_FNET_URL = "https://fnet.bmfbovespa.com.br/dotnet"
 CVM_DOCUMENTS_URL = f"{CVM_FNET_URL}/formulario/DadosDocumento.aspx"
@@ -34,6 +37,7 @@ def _parse_date(raw: str) -> datetime:
             return dt.replace(tzinfo=UTC)
         except ValueError:
             continue
+    logger.warning("Could not parse date '%s', using current time", raw)
     return datetime.now(UTC)
 
 

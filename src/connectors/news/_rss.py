@@ -1,12 +1,16 @@
 from __future__ import annotations
 
-import xml.etree.ElementTree as ET
+import logging
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote_plus
 
+import defusedxml.ElementTree as DefusedET
+
 from ..base import DEFAULT_TIMEOUT, HttpClient
+
+logger = logging.getLogger(__name__)
 
 GOOGLE_NEWS_RSS = "https://news.google.com/rss/search"
 REUTERS_RSS = "https://www.reuters.com/rssFeed"
@@ -40,10 +44,11 @@ def _parse_pub_date(raw: str) -> datetime:
         except ValueError:
             continue
 
+    logger.warning("Could not parse publish date '%s', using current time", raw)
     return datetime.now(UTC)
 
 
-def _extract_text(element: ET.Element | None) -> str:
+def _extract_text(element: DefusedET.Element | None) -> str:
     if element is None:
         return ""
     text = element.text or ""
@@ -51,7 +56,7 @@ def _extract_text(element: ET.Element | None) -> str:
 
 
 def parse_rss_feed(xml_content: str, source: str) -> list[NewsArticle]:
-    root = ET.fromstring(xml_content)
+    root = DefusedET.fromstring(xml_content)
     articles: list[NewsArticle] = []
     now = datetime.now(UTC)
 
