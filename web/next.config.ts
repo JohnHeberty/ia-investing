@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  devIndicators: {
+    position: "bottom-right",
+  },
   async rewrites() {
     return [
       {
