@@ -4,9 +4,10 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from apps.api._errors import map_error
 from apps.api.dependencies import get_committee_service
 from apps.api.security import AuthContext, actor_uuid, require_permission
 from ia_investing.application.committee_service import (
@@ -96,20 +97,82 @@ class PublishDecisionRequest(BaseModel):
         return self
 
 
-def _committee_error(exc: Exception) -> HTTPException:
-    if isinstance(exc, LookupError):
-        return HTTPException(status_code=404, detail=str(exc))
-    if isinstance(exc, PermissionError | ConflictOfInterestError):
-        return HTTPException(status_code=403, detail=str(exc))
-    return HTTPException(status_code=409, detail=str(exc))
+class CommitteeSessionCreatedResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    scheduled_at: str
 
 
-@router.post("/sessions", status_code=201)
+class CommitteeSessionListItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    scheduled_at: str | None = None
+    total_members: int
+    present_members: int
+    created_at: str | None = None
+
+
+class PaginatedCommitteeSessions(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    items: list[CommitteeSessionListItem]
+    total: int
+    limit: int
+    offset: int
+
+
+class CommitteeSessionDetailResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    present_members: int | None = None
+
+
+class CommitteeVotingResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    proposals: list[Any]
+
+
+class CommitteeVoteResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    vote: str
+    proposal_id: str
+
+
+class CommitteeFinalizeResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    votes_in_favor: int
+    votes_against: int
+
+
+class CommitteePublishResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    decision: str
+    published_at: str | None = None
+
+
+@router.post("/sessions", status_code=201, response_model=CommitteeSessionCreatedResponse)
 async def create_session(
     body: CreateSessionRequest,
     auth: AuthContext = Depends(require_permission("committee:create")),
     service: CommitteeService = Depends(get_committee_service),
-) -> dict[str, Any]:
+) -> CommitteeSessionCreatedResponse:
     session = await service.create_session(
         thesis_ids=body.thesis_ids,
         members=[member.model_dump(mode="json") for member in body.members],
@@ -117,63 +180,65 @@ async def create_session(
         agenda=body.agenda,
         actor_id=actor_uuid(auth),
     )
-    return {"id": str(session.id), "state": session.state, "scheduled_at": session.scheduled_at.isoformat()}
+    return CommitteeSessionCreatedResponse(
+        id=str(session.id), state=session.state, scheduled_at=session.scheduled_at.isoformat()
+    )
 
 
-@router.get("/sessions")
+@router.get("/sessions", response_model=PaginatedCommitteeSessions)
 async def list_sessions(
     state: str | None = Query(None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-    _auth: AuthContext = Depends(require_permission("committee:read")),
+    auth: AuthContext = Depends(require_permission("committee:read")),
     service: CommitteeService = Depends(get_committee_service),
-) -> dict[str, Any]:
+) -> PaginatedCommitteeSessions:
     sessions, total = await service.list_sessions(state=state, limit=limit, offset=offset)
-    return {
-        "items": [
-            {
-                "id": str(item.id),
-                "state": item.state,
-                "scheduled_at": item.scheduled_at.isoformat() if item.scheduled_at else None,
-                "total_members": item.total_members,
-                "present_members": item.present_members,
-                "created_at": item.created_at.isoformat() if item.created_at else None,
-            }
+    return PaginatedCommitteeSessions(
+        items=[
+            CommitteeSessionListItem(
+                id=str(item.id),
+                state=item.state,
+                scheduled_at=item.scheduled_at.isoformat() if item.scheduled_at else None,
+                total_members=item.total_members,
+                present_members=item.present_members,
+                created_at=item.created_at.isoformat() if item.created_at else None,
+            )
             for item in sessions
         ],
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-    }
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
-@router.get("/sessions/pending")
+@router.get("/sessions/pending", response_model=list[dict[str, Any]])
 async def get_pending(
-    _auth: AuthContext = Depends(require_permission("committee:read")),
+    auth: AuthContext = Depends(require_permission("committee:read")),
     service: CommitteeService = Depends(get_committee_service),
 ) -> list[dict[str, Any]]:
     return await service.get_pending_sessions()
 
 
-@router.get("/sessions/{session_id}")
+@router.get("/sessions/{session_id}", response_model=dict[str, Any])
 async def get_session(
     session_id: UUID,
-    _auth: AuthContext = Depends(require_permission("committee:read")),
+    auth: AuthContext = Depends(require_permission("committee:read")),
     service: CommitteeService = Depends(get_committee_service),
 ) -> dict[str, Any]:
     try:
         return await service.get_session(session_id)
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_error(exc) from exc
 
 
-@router.post("/sessions/{session_id}/convene")
+@router.post("/sessions/{session_id}/convene", response_model=CommitteeSessionDetailResponse)
 async def convene_session(
     session_id: UUID,
     body: ConveneSessionRequest,
     auth: AuthContext = Depends(require_permission("committee:chair")),
     service: CommitteeService = Depends(get_committee_service),
-) -> dict[str, Any]:
+) -> CommitteeSessionDetailResponse:
     try:
         session = await service.convene_session(
             session_id=session_id,
@@ -181,17 +246,19 @@ async def convene_session(
             actor_id=actor_uuid(auth),
         )
     except (LookupError, InvalidTransitionError, ValueError) as exc:
-        raise _committee_error(exc) from exc
-    return {"id": str(session.id), "state": session.state, "present_members": session.present_members}
+        raise map_error(exc) from exc
+    return CommitteeSessionDetailResponse(
+        id=str(session.id), state=session.state, present_members=session.present_members
+    )
 
 
-@router.post("/sessions/{session_id}/voting")
+@router.post("/sessions/{session_id}/voting", response_model=CommitteeVotingResponse)
 async def start_voting(
     session_id: UUID,
     body: StartVotingRequest,
     auth: AuthContext = Depends(require_permission("committee:chair")),
     service: CommitteeService = Depends(get_committee_service),
-) -> dict[str, Any]:
+) -> CommitteeVotingResponse:
     try:
         session = await service.start_voting(
             session_id=session_id,
@@ -199,17 +266,19 @@ async def start_voting(
             actor_id=actor_uuid(auth),
         )
     except (LookupError, InvalidTransitionError, QuorumNotMetError, ValueError) as exc:
-        raise _committee_error(exc) from exc
-    return {"id": str(session.id), "state": session.state, "proposals": session.agenda.get("proposals", [])}
+        raise map_error(exc) from exc
+    return CommitteeVotingResponse(
+        id=str(session.id), state=session.state, proposals=session.agenda.get("proposals", [])
+    )
 
 
-@router.post("/sessions/{session_id}/vote")
+@router.post("/sessions/{session_id}/vote", response_model=CommitteeVoteResponse)
 async def cast_vote(
     session_id: UUID,
     body: CastVoteRequest,
     auth: AuthContext = Depends(require_permission("committee:vote")),
     service: CommitteeService = Depends(get_committee_service),
-) -> dict[str, Any]:
+) -> CommitteeVoteResponse:
     try:
         vote = await service.cast_vote(
             session_id=session_id,
@@ -227,35 +296,35 @@ async def cast_vote(
         InvalidTransitionError,
         DuplicateVoteError,
     ) as exc:
-        raise _committee_error(exc) from exc
-    return {"id": str(vote.id), "vote": vote.vote, "proposal_id": vote.proposal_id}
+        raise map_error(exc) from exc
+    return CommitteeVoteResponse(id=str(vote.id), vote=vote.vote, proposal_id=vote.proposal_id)
 
 
-@router.post("/sessions/{session_id}/finalize")
+@router.post("/sessions/{session_id}/finalize", response_model=CommitteeFinalizeResponse)
 async def finalize_voting(
     session_id: UUID,
     auth: AuthContext = Depends(require_permission("committee:chair")),
     service: CommitteeService = Depends(get_committee_service),
-) -> dict[str, Any]:
+) -> CommitteeFinalizeResponse:
     try:
         session = await service.finalize_voting(session_id=session_id, actor_id=actor_uuid(auth))
     except (LookupError, InvalidTransitionError, MajorityNotReachedError) as exc:
-        raise _committee_error(exc) from exc
-    return {
-        "id": str(session.id),
-        "state": session.state,
-        "votes_in_favor": session.votes_in_favor,
-        "votes_against": session.votes_against,
-    }
+        raise map_error(exc) from exc
+    return CommitteeFinalizeResponse(
+        id=str(session.id),
+        state=session.state,
+        votes_in_favor=session.votes_in_favor,
+        votes_against=session.votes_against,
+    )
 
 
-@router.post("/sessions/{session_id}/publish")
+@router.post("/sessions/{session_id}/publish", response_model=CommitteePublishResponse)
 async def publish_decision(
     session_id: UUID,
     body: PublishDecisionRequest,
     auth: AuthContext = Depends(require_permission("committee:publish")),
     service: CommitteeService = Depends(get_committee_service),
-) -> dict[str, Any]:
+) -> CommitteePublishResponse:
     try:
         session = await service.publish_decision(
             session_id=session_id,
@@ -265,10 +334,10 @@ async def publish_decision(
             actor_subject=auth.subject,
         )
     except (LookupError, PermissionError, InvalidTransitionError, ValueError) as exc:
-        raise _committee_error(exc) from exc
-    return {
-        "id": str(session.id),
-        "state": session.state,
-        "decision": session.decision,
-        "published_at": session.published_at.isoformat() if session.published_at else None,
-    }
+        raise map_error(exc) from exc
+    return CommitteePublishResponse(
+        id=str(session.id),
+        state=session.state,
+        decision=session.decision,
+        published_at=session.published_at.isoformat() if session.published_at else None,
+    )

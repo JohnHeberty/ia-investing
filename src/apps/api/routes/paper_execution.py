@@ -9,19 +9,13 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api._context import context_from
 from apps.api._errors import map_error
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application.paper_execution import PaperExecutionService
-from ia_investing.domain.identity import InstitutionalAccessContext
 
 router = APIRouter(prefix="/api/v1/paper", tags=["paper-execution"])
-
-
-def context_from(auth: AuthContext) -> InstitutionalAccessContext:
-    if auth.organization_id is None:
-        raise HTTPException(status_code=403, detail="institutional organization context is required")
-    return InstitutionalAccessContext(auth.subject, auth.organization_id, auth.team_ids, auth.permissions, "paper")
 
 
 class CreateTradeIntentV1(BaseModel):

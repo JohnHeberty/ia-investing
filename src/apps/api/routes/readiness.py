@@ -6,16 +6,16 @@ from typing import Annotated
 from uuid import UUID, uuid4
 
 import httpx
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api._context import context_from
 from apps.api._errors import map_error
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application.readiness import ReadinessService
-from ia_investing.domain.identity import InstitutionalAccessContext
 from ia_investing.settings import get_settings
 
 router = APIRouter(prefix="/api/v1/readiness", tags=["readiness"])
@@ -96,12 +96,6 @@ async def readiness_check() -> dict[str, object]:
             checks[name] = str(exc)
             all_ok = False
     return {"status": "ready" if all_ok else "degraded", "version": "0.1.0", "checks": checks}
-
-
-def context_from(auth: AuthContext) -> InstitutionalAccessContext:
-    if auth.organization_id is None:
-        raise HTTPException(status_code=403, detail="institutional organization context is required")
-    return InstitutionalAccessContext(auth.subject, auth.organization_id, auth.team_ids, auth.permissions, "paper")
 
 
 class RegisterEvidenceV1(BaseModel):

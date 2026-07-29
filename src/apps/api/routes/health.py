@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import Any
-
 from fastapi import APIRouter
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import text
 
 from connectors.base import HttpClient
@@ -12,8 +11,15 @@ from ia_investing.settings import get_settings
 router = APIRouter(prefix="/api/v1/health", tags=["health"])
 
 
-@router.get("")
-async def deep_health() -> dict[str, Any]:
+class HealthCheckResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: str
+    checks: dict[str, str]
+
+
+@router.get("", response_model=HealthCheckResponse)
+async def deep_health() -> HealthCheckResponse:
     checks: dict[str, str] = {}
 
     try:
@@ -32,4 +38,4 @@ async def deep_health() -> dict[str, Any]:
         checks["s3"] = f"error: {exc}"
 
     healthy = all(v == "ok" for v in checks.values())
-    return {"status": "healthy" if healthy else "degraded", "checks": checks}
+    return HealthCheckResponse(status="healthy" if healthy else "degraded", checks=checks)

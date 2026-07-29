@@ -5,9 +5,10 @@ from datetime import datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from apps.api._errors import map_error
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application.paper_portfolio import PaperPortfolioService
@@ -38,13 +39,51 @@ class OptimizationRequest(BaseModel):
     as_of: datetime
 
 
-@router.post("", status_code=201)
+class PortfolioCreatedResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str | None = None
+    name: str | None = None
+    is_paper_trading: bool | None = None
+    base_currency: str | None = None
+
+
+class PortfolioListItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    name: str
+    is_paper_trading: bool
+    base_currency: str
+
+
+class PortfolioDetailResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    name: str
+    positions: list[Any]
+
+
+class PortfolioOptimizationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    operation_id: str
+    status: str
+    weights: dict[str, Any]
+    trades: list[Any]
+    slacks: dict[str, Any]
+    diagnostics: dict[str, Any]
+    input_sha256: str
+
+
+@router.post("", status_code=201, response_model=PortfolioCreatedResponse)
 async def create_portfolio(
     body: PortfolioCreate,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
-) -> dict[str, Any]:
+) -> PortfolioCreatedResponse:
     svc = PaperPortfolioService(session)
     d = await svc.create(
         name=body.name,
@@ -54,10 +93,10 @@ async def create_portfolio(
         initial_capital=body.initial_capital,
         organization_id=auth.organization_id,
     )
-    return {k: d.get(k) for k in ("id", "name", "is_paper_trading", "base_currency")}
+    return PortfolioCreatedResponse(**{k: d.get(k) for k in ("id", "name", "is_paper_trading", "base_currency")})
 
 
-@router.get("")
+@router.get("", response_model=list[dict[str, Any]])
 async def list_portfolios(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
@@ -67,7 +106,7 @@ async def list_portfolios(
     return await PaperPortfolioService(session).list_all(organization_id=auth.organization_id)
 
 
-@router.get("/{portfolio_id}")
+@router.get("/{portfolio_id}", response_model=dict[str, Any])
 async def get_portfolio(
     portfolio_id: uuid.UUID,
     auth: AuthContext = Depends(get_auth_context),
@@ -78,11 +117,11 @@ async def get_portfolio(
         organization_id=auth.organization_id,
     )
     if result is None:
-        raise HTTPException(status_code=404, detail="Portfolio not found")
+        raise map_error(LookupError("Portfolio not found"))
     return result
 
 
-@router.post("/{portfolio_id}/positions", status_code=201)
+@router.post("/{portfolio_id}/positions", status_code=201, response_model=dict[str, Any])
 async def add_position(
     portfolio_id: uuid.UUID,
     body: PositionCreate,
@@ -103,33 +142,33 @@ async def add_position(
             organization_id=auth.organization_id,
         )
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_error(exc) from exc
 
 
-@router.post("/optimize")
+@router.post("/optimize", response_model=PortfolioOptimizationResponse)
 async def run_optimization(
     body: OptimizationRequest,
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=1, max_length=255)],
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
-) -> dict[str, Any]:
+) -> PortfolioOptimizationResponse:
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="Institutional organization context is required")
     context = InstitutionalAccessContext(auth.subject, auth.organization_id, auth.team_ids, auth.permissions, "paper")
     try:
         run = await BackendPortfolioOptimizationService(session).optimize(body.portfolio_id, body.as_of, context)
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_error(exc) from exc
     except PermissionError as exc:
-        raise HTTPException(status_code=403, detail=str(exc)) from exc
+        raise map_error(exc) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return {
-        "operation_id": str(run.id),
-        "status": run.status,
-        "weights": run.weights,
-        "trades": run.trades,
-        "slacks": run.slacks,
-        "diagnostics": run.diagnostics,
-        "input_sha256": run.input_sha256,
-    }
+        raise map_error(exc) from exc
+    return PortfolioOptimizationResponse(
+        operation_id=str(run.id),
+        status=run.status,
+        weights=run.weights,
+        trades=run.trades,
+        slacks=run.slacks,
+        diagnostics=run.diagnostics,
+        input_sha256=run.input_sha256,
+    )

@@ -44,7 +44,7 @@ class AgentRunRequest(BaseModel):
         return self
 
 
-class OperationAccepted(BaseModel):
+class AgentRunAccepted(BaseModel):
     operation_id: str
     workflow_id: str
     status: str = "accepted"
@@ -123,7 +123,7 @@ async def list_model_portfolios(
 
 @router.post(
     "/agent-runs",
-    response_model=OperationAccepted,
+    response_model=AgentRunAccepted,
     status_code=status.HTTP_202_ACCEPTED,
 )
 async def start_agent_run(
@@ -133,7 +133,7 @@ async def start_agent_run(
     principal: Annotated[Principal, Depends(require_permission("agent:run"))],
     idempotency_key: Annotated[str, Header(alias="Idempotency-Key", min_length=8, max_length=200)],
     temporal: Client = Depends(get_temporal_client),
-) -> OperationAccepted:
+) -> AgentRunAccepted:
     organization_id = organization_uuid(principal)
     request_data = {
         "organization_id": str(organization_id),
@@ -161,7 +161,7 @@ async def start_agent_run(
                 status.HTTP_409_CONFLICT,
                 "Idempotency-Key was already used with a different request",
             )
-        return OperationAccepted(
+        return AgentRunAccepted(
             operation_id=str(existing.id),
             workflow_id=f"operation-{existing.id}",
             status=existing.state,
@@ -219,7 +219,7 @@ async def start_agent_run(
         ).scalar_one_or_none()
         if concurrent is None or concurrent.request_hash != request_hash:
             raise HTTPException(status.HTTP_409_CONFLICT, "Idempotency conflict") from exc
-        return OperationAccepted(
+        return AgentRunAccepted(
             operation_id=str(concurrent.id),
             workflow_id=f"operation-{concurrent.id}",
             status=concurrent.state,
@@ -254,7 +254,7 @@ async def start_agent_run(
         except Exception:
             logger.exception("immediate Temporal dispatch failed; operation remains queued")
 
-    return OperationAccepted(
+    return AgentRunAccepted(
         operation_id=str(operation.id),
         workflow_id=workflow_id,
         status=operation.state,

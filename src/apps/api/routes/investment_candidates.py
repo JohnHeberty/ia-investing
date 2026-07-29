@@ -182,7 +182,7 @@ class CandidateCreatedV1(BaseModel):
     replayed: bool
 
 
-class OperationAcceptedV1(BaseModel):
+class CandidateReanalysisAccepted(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     operation_id: UUID
@@ -495,7 +495,7 @@ async def resolve_candidate_gap(
     return CandidateGapV1.model_validate(gap)
 
 
-@router.post("/{candidate_id}/reanalysis", response_model=OperationAcceptedV1, status_code=202)
+@router.post("/{candidate_id}/reanalysis", response_model=CandidateReanalysisAccepted, status_code=202)
 async def reanalyze_candidate(
     candidate_id: UUID,
     body: CandidateReanalysisRequest,
@@ -503,7 +503,7 @@ async def reanalyze_candidate(
     auth: AuthContext = Depends(get_auth_context),
     correlation_id: UUID | None = Header(default=None, alias="X-Correlation-ID"),
     session: AsyncSession = Depends(get_async_session),
-) -> OperationAcceptedV1:
+) -> CandidateReanalysisAccepted:
     try:
         run = await InvestmentCandidateApplicationService(session).request_reanalysis(
             candidate_id=candidate_id,
@@ -522,7 +522,7 @@ async def reanalyze_candidate(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    return OperationAcceptedV1(operation_id=run.id, resource_id=candidate_id)
+    return CandidateReanalysisAccepted(operation_id=run.id, resource_id=candidate_id)
 
 
 @exploration_router.get("", response_model=list[ExplorationRunV1])

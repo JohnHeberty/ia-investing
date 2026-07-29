@@ -5,9 +5,10 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, ConfigDict, Field
 
+from apps.api._errors import map_error
 from apps.api.dependencies import get_execution_service
 from apps.api.security import AuthContext, require_permission
 from ia_investing.application.execution_service import (  # type: ignore[attr-defined]
@@ -42,34 +43,108 @@ class FailExecutionRequest(BaseModel):
     reason: str = Field(min_length=1, max_length=500)
 
 
-@router.post("", status_code=201)
+class ExecutionCreatedResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    order_id: str
+    state: str
+    action: str
+    quantity: str
+
+
+class ExecutionListItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    order_id: str
+    portfolio_id: str
+    action: str
+    quantity: str
+    state: str
+    created_at: str | None = None
+
+
+class PaginatedExecutions(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    items: list[ExecutionListItem]
+    total: int
+    limit: int
+    offset: int
+
+
+class ExecutionStateResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+
+
+class ExecutionDispatchedResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    dispatched_at: str | None = None
+
+
+class ExecutionConfirmedResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    filled_quantity: str
+    avg_price: str
+
+
+class ExecutionFailedResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    reason: str
+
+
+class ExecutionSettledResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    id: str
+    state: str
+    settled_at: str | None = None
+
+
+def _actor_id(auth: AuthContext) -> UUID | None:
+    try:
+        return UUID(auth.subject) if auth.subject else None
+    except (ValueError, AttributeError):
+        return None
+
+
+@router.post("", status_code=201, response_model=ExecutionCreatedResponse)
 async def create_execution(
     body: CreateExecutionRequest,
-    _auth: AuthContext = Depends(require_permission("execution:*")),
+    auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
-) -> dict[str, Any]:
-    try:
-        actor_id = UUID(_auth.subject) if _auth.subject else None
-    except (ValueError, AttributeError):
-        actor_id = None
+) -> ExecutionCreatedResponse:
     execution = await service.create_execution(
         order_id=body.order_id,
         portfolio_id=body.portfolio_id,
         action=body.action,
         quantity=body.quantity,
         price_limit=body.price_limit,
-        actor_id=actor_id,
+        actor_id=_actor_id(auth),
     )
-    return {
-        "id": str(execution.id),
-        "order_id": execution.order_id,
-        "state": execution.state,
-        "action": execution.action,
-        "quantity": str(execution.quantity),
-    }
+    return ExecutionCreatedResponse(
+        id=str(execution.id),
+        order_id=execution.order_id,
+        state=execution.state,
+        action=execution.action,
+        quantity=str(execution.quantity),
+    )
 
 
-@router.get("")
+@router.get("", response_model=PaginatedExecutions)
 async def list_executions(
     portfolio_id: UUID | None = Query(None),
     state: str | None = Query(None),
@@ -77,9 +152,9 @@ async def list_executions(
     to_date: datetime | None = Query(None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
-    _auth: AuthContext = Depends(require_permission("execution:*")),
+    auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
-) -> dict[str, Any]:
+) -> PaginatedExecutions:
     executions, total = await service.list_executions(
         portfolio_id=portfolio_id,
         state=state,
@@ -88,171 +163,146 @@ async def list_executions(
         limit=limit,
         offset=offset,
     )
-    return {
-        "items": [
-            {
-                "id": str(e.id),
-                "order_id": e.order_id,
-                "portfolio_id": str(e.portfolio_id),
-                "action": e.action,
-                "quantity": str(e.quantity),
-                "state": e.state,
-                "created_at": e.created_at.isoformat() if e.created_at else None,
-            }
+    return PaginatedExecutions(
+        items=[
+            ExecutionListItem(
+                id=str(e.id),
+                order_id=e.order_id,
+                portfolio_id=str(e.portfolio_id),
+                action=e.action,
+                quantity=str(e.quantity),
+                state=e.state,
+                created_at=e.created_at.isoformat() if e.created_at else None,
+            )
             for e in executions
         ],
-        "total": total,
-        "limit": limit,
-        "offset": offset,
-    }
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
 
 
-@router.get("/{execution_id}")
+@router.get("/{execution_id}", response_model=dict[str, Any])
 async def get_execution(
     execution_id: UUID,
-    _auth: AuthContext = Depends(require_permission("execution:*")),
+    auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
 ) -> dict[str, Any]:
     try:
         return await service.get_execution(execution_id)
     except LookupError as exc:
-        raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise map_error(exc) from exc
 
 
-@router.post("/{execution_id}/validate")
+@router.post("/{execution_id}/validate", response_model=ExecutionStateResponse)
 async def validate_execution(
     execution_id: UUID,
-    _auth: AuthContext = Depends(require_permission("execution:*")),
+    auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
-) -> dict[str, Any]:
-    try:
-        actor_id = UUID(_auth.subject) if _auth.subject else None
-    except (ValueError, AttributeError):
-        actor_id = None
+) -> ExecutionStateResponse:
     try:
         execution = await service.validate_execution(
             execution_id=execution_id,
-            actor_id=actor_id,
+            actor_id=_actor_id(auth),
         )
     except (LookupError, InvalidTransitionError) as exc:
-        raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc
-    return {"id": str(execution.id), "state": execution.state}
+        raise map_error(exc) from exc
+    return ExecutionStateResponse(id=str(execution.id), state=execution.state)
 
 
-@router.post("/{execution_id}/queue")
+@router.post("/{execution_id}/queue", response_model=ExecutionStateResponse)
 async def queue_execution(
     execution_id: UUID,
-    _auth: AuthContext = Depends(require_permission("execution:*")),
+    auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
-) -> dict[str, Any]:
-    try:
-        actor_id = UUID(_auth.subject) if _auth.subject else None
-    except (ValueError, AttributeError):
-        actor_id = None
+) -> ExecutionStateResponse:
     try:
         execution = await service.queue_execution(
             execution_id=execution_id,
-            actor_id=actor_id,
+            actor_id=_actor_id(auth),
         )
     except (LookupError, InvalidTransitionError) as exc:
-        raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc
-    return {"id": str(execution.id), "state": execution.state}
+        raise map_error(exc) from exc
+    return ExecutionStateResponse(id=str(execution.id), state=execution.state)
 
 
-@router.post("/{execution_id}/dispatch")
+@router.post("/{execution_id}/dispatch", response_model=ExecutionDispatchedResponse)
 async def dispatch_execution(
     execution_id: UUID,
-    _auth: AuthContext = Depends(require_permission("execution:*")),
+    auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
-) -> dict[str, Any]:
-    try:
-        actor_id = UUID(_auth.subject) if _auth.subject else None
-    except (ValueError, AttributeError):
-        actor_id = None
+) -> ExecutionDispatchedResponse:
     try:
         execution = await service.dispatch_execution(
             execution_id=execution_id,
-            actor_id=actor_id,
+            actor_id=_actor_id(auth),
         )
     except (LookupError, InvalidTransitionError, InsufficientBalanceError) as exc:
-        status = 404 if isinstance(exc, LookupError) else 409
-        raise HTTPException(status_code=status, detail=str(exc)) from exc
-    return {
-        "id": str(execution.id),
-        "state": execution.state,
-        "dispatched_at": execution.dispatched_at.isoformat() if execution.dispatched_at else None,
-    }
+        raise map_error(exc) from exc
+    return ExecutionDispatchedResponse(
+        id=str(execution.id),
+        state=execution.state,
+        dispatched_at=execution.dispatched_at.isoformat() if execution.dispatched_at else None,
+    )
 
 
-@router.post("/{execution_id}/confirm")
+@router.post("/{execution_id}/confirm", response_model=ExecutionConfirmedResponse)
 async def confirm_execution(
     execution_id: UUID,
     body: ConfirmExecutionRequest,
-    _auth: AuthContext = Depends(require_permission("execution:*")),
+    auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
-) -> dict[str, Any]:
-    try:
-        actor_id = UUID(_auth.subject) if _auth.subject else None
-    except (ValueError, AttributeError):
-        actor_id = None
+) -> ExecutionConfirmedResponse:
     try:
         execution = await service.confirm_execution(
             execution_id=execution_id,
             filled_quantity=body.filled_quantity,
             avg_price=body.avg_price,
-            actor_id=actor_id,
+            actor_id=_actor_id(auth),
         )
     except (LookupError, InvalidTransitionError) as exc:
-        raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc
-    return {
-        "id": str(execution.id),
-        "state": execution.state,
-        "filled_quantity": str(execution.filled_quantity),
-        "avg_price": str(execution.avg_price),
-    }
+        raise map_error(exc) from exc
+    return ExecutionConfirmedResponse(
+        id=str(execution.id),
+        state=execution.state,
+        filled_quantity=str(execution.filled_quantity),
+        avg_price=str(execution.avg_price),
+    )
 
 
-@router.post("/{execution_id}/fail")
+@router.post("/{execution_id}/fail", response_model=ExecutionFailedResponse)
 async def fail_execution(
     execution_id: UUID,
     body: FailExecutionRequest,
-    _auth: AuthContext = Depends(require_permission("execution:*")),
+    auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
-) -> dict[str, Any]:
-    try:
-        actor_id = UUID(_auth.subject) if _auth.subject else None
-    except (ValueError, AttributeError):
-        actor_id = None
+) -> ExecutionFailedResponse:
     try:
         execution = await service.fail_execution(
             execution_id=execution_id,
             reason=body.reason,
-            actor_id=actor_id,
+            actor_id=_actor_id(auth),
         )
     except (LookupError, InvalidTransitionError) as exc:
-        raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc
-    return {"id": str(execution.id), "state": execution.state, "reason": execution.reason}
+        raise map_error(exc) from exc
+    return ExecutionFailedResponse(id=str(execution.id), state=execution.state, reason=execution.reason)
 
 
-@router.post("/{execution_id}/settle")
+@router.post("/{execution_id}/settle", response_model=ExecutionSettledResponse)
 async def settle_execution(
     execution_id: UUID,
-    _auth: AuthContext = Depends(require_permission("execution:*")),
+    auth: AuthContext = Depends(require_permission("execution:*")),
     service: ExecutionService = Depends(get_execution_service),
-) -> dict[str, Any]:
-    try:
-        actor_id = UUID(_auth.subject) if _auth.subject else None
-    except (ValueError, AttributeError):
-        actor_id = None
+) -> ExecutionSettledResponse:
     try:
         execution = await service.settle_execution(
             execution_id=execution_id,
-            actor_id=actor_id,
+            actor_id=_actor_id(auth),
         )
     except (LookupError, InvalidTransitionError) as exc:
-        raise HTTPException(status_code=404 if isinstance(exc, LookupError) else 409, detail=str(exc)) from exc
-    return {
-        "id": str(execution.id),
-        "state": execution.state,
-        "settled_at": execution.settled_at.isoformat() if execution.settled_at else None,
-    }
+        raise map_error(exc) from exc
+    return ExecutionSettledResponse(
+        id=str(execution.id),
+        state=execution.state,
+        settled_at=execution.settled_at.isoformat() if execution.settled_at else None,
+    )
