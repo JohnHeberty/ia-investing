@@ -67,12 +67,13 @@ class BackendPortfolioOptimizationService:
         mandate = await self.session.get(StrategyMandate, portfolio.mandate_id)
         if mandate is None:
             raise RuntimeError("portfolio mandate is missing")
-        raw_ids = mandate.universe_definition.get("instrument_ids", [])
+        raw_ids = mandate.config.get("universe_definition", {}).get("instrument_ids", [])
         try:
             instrument_ids = tuple(UUID(str(value)) for value in raw_ids)  # type: ignore[attr-defined]
         except (TypeError, ValueError) as exc:
             raise ValueError("mandate universe contains invalid instrument IDs") from exc
-        restricted = frozenset(str(UUID(str(value))) for value in mandate.exclusions.get("restricted", []))  # type: ignore[attr-defined]
+        restricted_raw = mandate.config.get("exclusions", {}).get("restricted", [])
+        restricted = frozenset(str(UUID(str(value))) for value in restricted_raw)  # type: ignore[attr-defined]
         investable = tuple(
             UUID(item) for item in investable_universe(tuple(map(str, instrument_ids)), restricted=restricted)
         )
@@ -106,13 +107,13 @@ class BackendPortfolioOptimizationService:
                 float(values[index] / values[index - 1] - 1) for index in range(1, len(values))
             ]
 
-        max_weight = float(mandate.concentration_limits.get("position", "0.10"))  # type: ignore[arg-type]
+        max_weight = float(mandate.config.get("concentration_limits", {}).get("position", "0.10"))  # type: ignore[arg-type]
         optimizer = PortfolioOptimizer(
             OptimizerConfig(
                 max_weight=max_weight,
-                max_turnover=float(mandate.max_turnover),
-                min_cash_weight=float(mandate.min_cash_weight),
-                max_cash_weight=float(mandate.max_cash_weight),
+                max_turnover=float(mandate.config["max_turnover"]),
+                min_cash_weight=float(mandate.config["min_cash_weight"]),
+                max_cash_weight=float(mandate.config["max_cash_weight"]),
                 timeout_seconds=30,
             )
         )

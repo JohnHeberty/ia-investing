@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from decimal import Decimal
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
@@ -19,26 +18,9 @@ class StrategyMandate(Base):
     organization_id: Mapped[UUID] = mapped_column(sa.ForeignKey("organizations.id", ondelete="RESTRICT"), index=True)
     logical_id: Mapped[str] = mapped_column(sa.String(100))
     version: Mapped[int] = mapped_column()
-    objective: Mapped[str] = mapped_column(sa.Text)
-    strategy_type: Mapped[str] = mapped_column(sa.String(50))
-    universe_definition: Mapped[dict[str, object]] = mapped_column(JSONB)
     benchmark_index_id: Mapped[UUID] = mapped_column(sa.ForeignKey("market_indices.id", ondelete="RESTRICT"))
     base_currency: Mapped[str] = mapped_column(sa.String(3), default="BRL")
-    investment_horizon_days: Mapped[int] = mapped_column()
-    rebalance_policy: Mapped[dict[str, object]] = mapped_column(JSONB)
-    risk_budget: Mapped[dict[str, object]] = mapped_column(JSONB)
-    target_volatility: Mapped[Decimal | None] = mapped_column(sa.Numeric(8, 6))
-    max_drawdown: Mapped[Decimal] = mapped_column(sa.Numeric(8, 6))
-    concentration_limits: Mapped[dict[str, object]] = mapped_column(JSONB)
-    factor_limits: Mapped[dict[str, object]] = mapped_column(JSONB)
-    liquidity_policy: Mapped[dict[str, object]] = mapped_column(JSONB)
-    min_cash_weight: Mapped[Decimal] = mapped_column(sa.Numeric(8, 6))
-    max_cash_weight: Mapped[Decimal] = mapped_column(sa.Numeric(8, 6))
-    max_turnover: Mapped[Decimal] = mapped_column(sa.Numeric(8, 6))
-    exclusions: Mapped[dict[str, object]] = mapped_column(JSONB)
-    cost_policy: Mapped[dict[str, object]] = mapped_column(JSONB)
-    tax_policy: Mapped[dict[str, object]] = mapped_column(JSONB)
-    approval_policy: Mapped[dict[str, object]] = mapped_column(JSONB)
+    config: Mapped[dict[str, object]] = mapped_column(JSONB)
     content_sha256: Mapped[str] = mapped_column(sa.String(64))
     status: Mapped[str] = mapped_column(sa.String(20), default="draft")
     created_by: Mapped[str] = mapped_column(sa.String(255))
@@ -51,12 +33,6 @@ class StrategyMandate(Base):
         sa.CheckConstraint("version > 0", name="positive_version"),
         sa.CheckConstraint("content_sha256 ~ '^[0-9a-f]{64}$'", name="sha256_format"),
         sa.CheckConstraint("base_currency ~ '^[A-Z]{3}$'", name="currency_format"),
-        sa.CheckConstraint("investment_horizon_days > 0", name="positive_horizon"),
-        sa.CheckConstraint(
-            "min_cash_weight BETWEEN 0 AND 1 AND max_cash_weight BETWEEN min_cash_weight AND 1", name="cash_range"
-        ),
-        sa.CheckConstraint("max_turnover BETWEEN 0 AND 2", name="turnover_range"),
-        sa.CheckConstraint("max_drawdown BETWEEN 0 AND 1", name="drawdown_range"),
         sa.CheckConstraint("status IN ('draft', 'active', 'retired')", name="status_values"),
     )
 

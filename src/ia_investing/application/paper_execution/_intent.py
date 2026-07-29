@@ -53,7 +53,7 @@ class IntentService:
         mandate = await self.session.get(StrategyMandate, portfolio.mandate_id)
         if mandate is None:
             raise LookupError("mandate not found")
-        universe_def = mandate.universe_definition or {}
+        universe_def = mandate.config.get("universe_definition", {})
         instrument_ids = {str(item) for item in (universe_def.get("instrument_ids") or [])}  # type: ignore[attr-defined]
         if instrument_ids and str(instrument_id) not in instrument_ids:
             raise ValueError("instrument is outside the mandate universe")

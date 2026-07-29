@@ -50,30 +50,35 @@ class MandateService:
                 )
             )
         ) or 1
+        config = {
+            "objective": str(payload["objective"]),
+            "strategy_type": str(payload["strategy_type"]),
+            "investment_horizon_days": int(str(payload["investment_horizon_days"])),
+            "target_volatility": (
+                Decimal(str(payload["target_volatility"])) if payload.get("target_volatility") else None
+            ),
+            "max_drawdown": Decimal(str(payload["max_drawdown"])),
+            "min_cash_weight": Decimal(str(payload["min_cash_weight"])),
+            "max_cash_weight": Decimal(str(payload["max_cash_weight"])),
+            "max_turnover": Decimal(str(payload["max_turnover"])),
+            "universe_definition": dict(payload["universe_definition"]),  # type: ignore[call-overload]
+            "rebalance_policy": dict(payload["rebalance_policy"]),  # type: ignore[call-overload]
+            "risk_budget": dict(payload["risk_budget"]),  # type: ignore[call-overload]
+            "concentration_limits": dict(payload["concentration_limits"]),  # type: ignore[call-overload]
+            "factor_limits": dict(payload["factor_limits"]),  # type: ignore[call-overload]
+            "liquidity_policy": dict(payload["liquidity_policy"]),  # type: ignore[call-overload]
+            "exclusions": dict(payload["exclusions"]),  # type: ignore[call-overload]
+            "cost_policy": dict(payload["cost_policy"]),  # type: ignore[call-overload]
+            "tax_policy": dict(payload["tax_policy"]),  # type: ignore[call-overload]
+            "approval_policy": dict(payload["approval_policy"]),  # type: ignore[call-overload]
+        }
         mandate = StrategyMandate(
             organization_id=context.organization_id,
             logical_id=str(payload["logical_id"]),
             version=next_version,
-            objective=str(payload["objective"]),
-            strategy_type=str(payload["strategy_type"]),
-            universe_definition=dict(payload["universe_definition"]),  # type: ignore[call-overload]
             benchmark_index_id=UUID(str(payload["benchmark_index_id"])),
             base_currency=str(payload.get("base_currency", "BRL")),
-            investment_horizon_days=int(str(payload["investment_horizon_days"])),
-            rebalance_policy=dict(payload["rebalance_policy"]),  # type: ignore[call-overload]
-            risk_budget=dict(payload["risk_budget"]),  # type: ignore[call-overload]
-            target_volatility=Decimal(str(payload["target_volatility"])) if payload.get("target_volatility") else None,
-            max_drawdown=Decimal(str(payload["max_drawdown"])),
-            concentration_limits=dict(payload["concentration_limits"]),  # type: ignore[call-overload]
-            factor_limits=dict(payload["factor_limits"]),  # type: ignore[call-overload]
-            liquidity_policy=dict(payload["liquidity_policy"]),  # type: ignore[call-overload]
-            min_cash_weight=Decimal(str(payload["min_cash_weight"])),
-            max_cash_weight=Decimal(str(payload["max_cash_weight"])),
-            max_turnover=Decimal(str(payload["max_turnover"])),
-            exclusions=dict(payload["exclusions"]),  # type: ignore[call-overload]
-            cost_policy=dict(payload["cost_policy"]),  # type: ignore[call-overload]
-            tax_policy=dict(payload["tax_policy"]),  # type: ignore[call-overload]
-            approval_policy=dict(payload["approval_policy"]),  # type: ignore[call-overload]
+            config=config,
             content_sha256=content_hash,
             status="draft",
             created_by=context.subject,
