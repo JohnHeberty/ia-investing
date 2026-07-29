@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import logging
-from unittest.mock import MagicMock, patch
-
+import structlog
 import pytest
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
@@ -44,73 +42,50 @@ def client() -> TestClient:
 
 
 class TestLoggingMiddleware:
-    @patch("apps.api.middleware.logging.logging.getLogger")
-    def test_2xx_logs_at_info(self, mock_get_logger: MagicMock, client: TestClient) -> None:
-        mock_logger = MagicMock()
-        mock_get_logger.return_value = mock_logger
+    def test_2xx_logs_at_info(self, client: TestClient) -> None:
+        with structlog.testing.capture_logs() as logs:
+            client.get("/api/v1/ok")
 
-        client.get("/api/v1/ok")
+        assert len(logs) == 1
+        assert logs[0]["log_level"] == "info"
+        assert logs[0]["method"] == "GET"
+        assert logs[0]["path"] == "/api/v1/ok"
+        assert logs[0]["status_code"] == 200
+        assert "duration_ms" in logs[0]
 
-        mock_logger.info.assert_called_once()
-        call_args = mock_logger.info.call_args
-        assert call_args[0][0] == "request"
-        assert call_args[1]["status_code"] == 200
-        assert call_args[1]["method"] == "GET"
-        assert call_args[1]["path"] == "/api/v1/ok"
-        assert "duration_ms" in call_args[1]
+    def test_4xx_logs_at_warning(self, client: TestClient) -> None:
+        with structlog.testing.capture_logs() as logs:
+            client.get("/api/v1/warn")
 
-    @patch("apps.api.middleware.logging.logging.getLogger")
-    def test_4xx_logs_at_warning(self, mock_get_logger: MagicMock, client: TestClient) -> None:
-        mock_logger = MagicMock()
-        mock_get_logger.return_value = mock_logger
+        assert len(logs) == 1
+        assert logs[0]["log_level"] == "warning"
+        assert logs[0]["status_code"] == 400
 
-        client.get("/api/v1/warn")
+    def test_5xx_logs_at_error(self, client: TestClient) -> None:
+        with structlog.testing.capture_logs() as logs:
+            client.get("/api/v1/error")
 
-        mock_logger.warning.assert_called_once()
-        call_args = mock_logger.warning.call_args
-        assert call_args[1]["status_code"] == 400
+        assert len(logs) == 1
+        assert logs[0]["log_level"] == "error"
+        assert logs[0]["status_code"] == 500
 
-    @patch("apps.api.middleware.logging.logging.getLogger")
-    def test_5xx_logs_at_error(self, mock_get_logger: MagicMock, client: TestClient) -> None:
-        mock_logger = MagicMock()
-        mock_get_logger.return_value = mock_logger
+    def test_health_excluded_from_logging(self, client: TestClient) -> None:
+        with structlog.testing.capture_logs() as logs:
+            client.get("/api/v1/health")
 
-        client.get("/api/v1/error")
+        assert len(logs) == 0
 
-        mock_logger.error.assert_called_once()
-        call_args = mock_logger.error.call_args
-        assert call_args[1]["status_code"] == 500
+    def test_readiness_excluded_from_logging(self, client: TestClient) -> None:
+        with structlog.testing.capture_logs() as logs:
+            client.get("/api/v1/readiness")
 
-    @patch("apps.api.middleware.logging.logging.getLogger")
-    def test_health_excluded_from_logging(self, mock_get_logger: MagicMock, client: TestClient) -> None:
-        mock_logger = MagicMock()
-        mock_get_logger.return_value = mock_logger
+        assert len(logs) == 0
 
-        client.get("/api/v1/health")
+    def test_log_includes_audit_context_fields(self, client: TestClient) -> None:
+        with structlog.testing.capture_logs() as logs:
+            client.get("/api/v1/ok")
 
-        mock_logger.info.assert_not_called()
-        mock_logger.warning.assert_not_called()
-        mock_logger.error.assert_not_called()
-
-    @patch("apps.api.middleware.logging.logging.getLogger")
-    def test_readiness_excluded_from_logging(self, mock_get_logger: MagicMock, client: TestClient) -> None:
-        mock_logger = MagicMock()
-        mock_get_logger.return_value = mock_logger
-
-        client.get("/api/v1/readiness")
-
-        mock_logger.info.assert_not_called()
-        mock_logger.warning.assert_not_called()
-        mock_logger.error.assert_not_called()
-
-    @patch("apps.api.middleware.logging.logging.getLogger")
-    def test_log_includes_audit_context_fields(self, mock_get_logger: MagicMock, client: TestClient) -> None:
-        mock_logger = MagicMock()
-        mock_get_logger.return_value = mock_logger
-
-        client.get("/api/v1/ok")
-
-        call_kwargs = mock_logger.info.call_args[1]
-        assert "request_id" in call_kwargs
-        assert "ip" in call_kwargs
-        assert "user_agent" in call_kwargs
+        assert len(logs) == 1
+        assert "request_id" in logs[0]
+        assert "ip" in logs[0]
+        assert "user_agent" in logs[0]
