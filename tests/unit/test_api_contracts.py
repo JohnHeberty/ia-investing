@@ -14,7 +14,7 @@ def test_agent_run_command_is_async_and_idempotent_in_openapi() -> None:
 def test_legacy_synchronous_agent_command_is_not_exposed() -> None:
     paths = app.openapi()["paths"]
 
-    assert "post" not in paths["/api/v1/agents/runs"]
+    assert "/api/v1/agents/runs" not in paths
     assert "/api/v1/operations/{operation_id}" in paths
 
 

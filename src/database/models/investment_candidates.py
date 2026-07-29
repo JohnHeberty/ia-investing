@@ -120,7 +120,6 @@ class InvestmentCandidateRecord(Base):
     )
     exploration_suggestion: Mapped[ExplorationSuggestionRecord | None] = relationship(
         foreign_keys=[exploration_suggestion_id],
-        back_populates="promoted_candidate",
         lazy="selectin",
     )
 
@@ -323,6 +322,7 @@ class ExplorationSuggestionRecord(Base):
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), index=True)
     promoted_candidate_id: Mapped[UUID | None] = mapped_column(
+        sa.ForeignKey("investment_candidates.id", ondelete="SET NULL"),
         index=True,
     )
     dismissed_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
@@ -331,7 +331,6 @@ class ExplorationSuggestionRecord(Base):
 
     promoted_candidate: Mapped[InvestmentCandidateRecord | None] = relationship(
         foreign_keys=[promoted_candidate_id],
-        back_populates="exploration_suggestion",
         lazy="selectin",
     )
 

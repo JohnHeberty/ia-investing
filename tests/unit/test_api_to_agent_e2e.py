@@ -37,6 +37,7 @@ def _make_config(name: str = "filing_analyst", output_type: str | None = None) -
 def _make_settings() -> MagicMock:
     mock_settings = MagicMock()
     mock_settings.openai_api_key = "test-key"
+    mock_settings.ai.provider = "openai"
     return mock_settings
 
 

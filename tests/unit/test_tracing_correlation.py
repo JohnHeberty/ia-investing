@@ -159,6 +159,7 @@ class TestRunnerTracing:
 
         mock_settings = MagicMock()
         mock_settings.openai_api_key = "test"
+        mock_settings.ai.provider = "openai"
 
         mock_runner_mod = MagicMock()
         mock_result = MagicMock()
@@ -197,6 +198,7 @@ class TestRunnerTracing:
 
         mock_settings = MagicMock()
         mock_settings.openai_api_key = "test"
+        mock_settings.ai.provider = "openai"
 
         mock_runner_mod = MagicMock()
         mock_runner_mod.run = AsyncMock(side_effect=RuntimeError("provider down"))
