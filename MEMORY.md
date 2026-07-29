@@ -119,6 +119,14 @@
 
 - [x] Permissões frontend — implementado (hook + Can + sidebar filtrado + logout)
 - [x] Evals source discovery — datasets criados + seed CLI entrypoint
+- [x] R7-M1: CSRF via BFF (commit `2e3a129`)
+- [x] R7-M2: JWT signature verify — jose npm + PyJWT (commit `f715968`)
+- [x] R7-M3: CNPJ mask (commit `55c624d`)
+- [x] R7-M7: API patterns standardization — 13 route files (commit `d2e6743`)
+- [x] R9-1: .env — not applicable (never committed)
+- [x] Tarefa 7: StrategyMandate JSONB — 28→11 columns (commit `fc5b68c`)
+- [x] R5-15..R5-22: DB duplications — all pre-resolved
+- [x] R8: Testes — all 66 failures fixed, 1129 passed (commit `08728c6`)
 
 ### Feature/Infra (não bugs — precisam de escopo)
 
@@ -233,3 +241,35 @@ Nada pendente — todos os itens corrigidos.
 - **R7-12**: `rebalance/page.tsx` — Tailwind substituído por CSS design tokens
 - **R9-4**: `quality.yml` fundido em `ci.yml`; `quality.yml` removido
 - 11 arquivos modificados no total
+
+---
+
+## Sessão 2026-07-28/29 — FIX.md completion ✅
+
+### Foco: Resolver todos os itens pendentes do FIX.md
+
+**Commits (10 total):**
+
+| Commit | Descrição |
+|--------|-----------|
+| `d2e6743` | R7-M7: API patterns — 13 route files, map_error hierarchy, _context.py, contracts/v1/common.py |
+| `f715968` | R7-M2: JWT verify — jose npm, PyJWT replaces python-jose |
+| `fc5b68c` | Tarefa 7: StrategyMandate 18→1 JSONB (migration 20260728_07) |
+| `358a28a` | FIX.md update |
+| `7d0b072` | R8: Unblock 19 test files (heartbeat_timeout, DetectedBreak, stale imports) |
+| `08728c6` | R8: Fix 66 test failures (FK back_populates, mock provider, stale path) |
+| `e05c1bc` | FIX.md final update — all resolved |
+
+**Fixes técnicos:**
+- `_errors.py`: map_error hierarchy (404/403/409/422/500) — expanded from 3 exceptions to universal
+- `_context.py`: shared context_from() — eliminated 3 duplicates
+- 13 route files: response_model + consistent error handling + removed dead patterns
+- `oidc.ts`: verifyJwt() with jose.jwtVerify() + remote JWKS
+- `auth.py`: PyJWKClient replaces python-jose
+- `investment_candidates.py`: FK + removed bidirectional back_populates (circular MANYTOONE)
+- 8 `@activity.defn()`: removed invalid heartbeat_timeout_seconds
+
+**Resultado final:**
+- FIX.md: 0 items pending
+- Tests: 1129 passed, 0 failed
+- python-jose: removed (single JWT lib: PyJWT)
