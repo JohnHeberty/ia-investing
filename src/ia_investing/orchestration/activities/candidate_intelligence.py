@@ -308,7 +308,7 @@ async def resolve_candidate_identity(command: CandidateWorkflowInput) -> Candida
         return result
 
 
-@activity.defn(heartbeat_timeout_seconds=300)
+@activity.defn()
 async def discover_candidate_sources(command: CandidateWorkflowInput) -> SourceDiscoveryCheckpoint:
     with _telemetry.activity_span("candidate.discover_sources") as correlation_id:
         logger.info(
@@ -363,31 +363,31 @@ async def validate_candidate_sources(command: CandidateWorkflowInput) -> Candida
         return await _runtime().validate_candidate_sources(command)
 
 
-@activity.defn(heartbeat_timeout_seconds=300)
+@activity.defn()
 async def collect_candidate_documents(command: CandidateWorkflowInput) -> CandidateCheckpoint:
     with _telemetry.activity_span("candidate.collect_documents") as _:
         return await _runtime().collect_candidate_documents(command)
 
 
-@activity.defn(heartbeat_timeout_seconds=300)
+@activity.defn()
 async def ingest_candidate_financial_data(command: CandidateWorkflowInput) -> CandidateCheckpoint:
     with _telemetry.activity_span("candidate.ingest_financials") as _:
         return await _runtime().ingest_candidate_financial_data(command)
 
 
-@activity.defn(heartbeat_timeout_seconds=300)
+@activity.defn()
 async def validate_candidate_financial_data(command: CandidateWorkflowInput) -> CandidateCheckpoint:
     with _telemetry.activity_span("candidate.validate_financials") as _:
         return await _runtime().validate_candidate_financial_data(command)
 
 
-@activity.defn(heartbeat_timeout_seconds=300)
+@activity.defn()
 async def run_candidate_fundamental_analysis(command: CandidateWorkflowInput) -> CandidateCheckpoint:
     with _telemetry.activity_span("candidate.fundamental_analysis") as _:
         return await _runtime().run_candidate_fundamental_analysis(command)
 
 
-@activity.defn(heartbeat_timeout_seconds=300)
+@activity.defn()
 async def run_candidate_risk_analysis(command: CandidateWorkflowInput) -> CandidateCheckpoint:
     with _telemetry.activity_span("candidate.risk_analysis") as _:
         return await _runtime().run_candidate_risk_analysis(command)
@@ -408,13 +408,13 @@ async def complete_candidate_analysis_run(
         return await _runtime().complete_candidate_analysis_run(command, checkpoint)
 
 
-@activity.defn(heartbeat_timeout_seconds=300)
+@activity.defn()
 async def screen_equity_universe(command: ExplorationWorkflowInput) -> ExplorationShortlist:
     with _telemetry.activity_span("candidate.screen_universe") as _:
         return await _runtime().screen_equity_universe(command)
 
 
-@activity.defn(heartbeat_timeout_seconds=300)
+@activity.defn()
 async def run_equity_explorer_agent(shortlist: ExplorationShortlist) -> ExplorationFindings:
     with _telemetry.activity_span("candidate.explorer_agent") as _:
         return await _runtime().run_equity_explorer_agent(shortlist)

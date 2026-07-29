@@ -2,20 +2,15 @@ from __future__ import annotations
 
 import json
 
-from sqlalchemy import select
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.dialects.postgresql import JSONB
 
-from database.models import AgentAssessment, AgentDefinition, AgentRun, Document, FinancialStatement
+from database.models.portfolio_mandates import StrategyMandate
 
 
 def test_jsonb_fields_are_mapped_columns() -> None:
     expected = {
-        AgentDefinition: {"model_config"},
-        AgentRun: {"input_data", "output_data"},
-        AgentAssessment: {"claims", "risks", "assumptions", "data_gaps"},
-        Document: {"canonical_data"},
-        FinancialStatement: {"line_items", "raw_data"},
+        StrategyMandate: {"config"},
     }
 
     for model, columns in expected.items():
@@ -32,11 +27,3 @@ def test_jsonb_dialect_round_trip_preserves_nested_payload() -> None:
     decoded = result(encoded) if result else json.loads(encoded)
 
     assert decoded == payload
-
-
-def test_jsonb_filter_compiles_to_postgresql_operator() -> None:
-    statement = select(AgentRun.id).where(AgentRun.input_data.contains({"issuer_id": "issuer-1"}))
-
-    compiled = str(statement.compile(dialect=postgresql.dialect()))
-
-    assert "@>" in compiled

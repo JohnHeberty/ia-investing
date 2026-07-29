@@ -25,7 +25,7 @@ from ia_investing.domain.paper_execution import (
     reconcile_positions,
 )
 from ia_investing.domain.paper_execution import (
-    ReconciliationBreak as DomainBreak,
+    DetectedBreak as DomainBreak,
 )
 
 from ._base import audit_entity

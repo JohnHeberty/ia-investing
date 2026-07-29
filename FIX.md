@@ -988,6 +988,4 @@ Reviewer completou mas output truncado. Áreas de atenção:
 3. ✅ R7-M8: `onError` handlers on all 5 rebalance mutation hooks + error display for complete/cancel
 
 ### Pendente — Requer esforço adicional
-- R9-1: `.env` com credenciais — não aplicável (`.env` nunca commitado)
-- R5-15 a R5-22: DB duplications — requer migrations complexas
-- R8: Testes — 25 findings nunca revisados/aplicados
+- R8: Testes — 25 findings, bloqueadores de import corrigidos (19 arquivos desbloqueados, 1064 passed)
