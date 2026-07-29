@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-import logging.handlers
+import logging.config
 import sys
 from pathlib import Path
 from typing import Any
@@ -57,38 +57,52 @@ def setup_logging(settings: Settings) -> None:
         cache_logger_on_first_use=True,
     )
 
-    root = logging.getLogger()
-    root.setLevel(log_level)
-
-    for handler in root.handlers[:]:
-        root.removeHandler(handler)
-
-    stdout_handler = logging.StreamHandler(stream=sys.stdout)
-    stdout_handler.setLevel(log_level)
-    stdout_handler.setFormatter(logging.Formatter("%(message)s"))
-    root.addHandler(stdout_handler)
-
-    error_handler = logging.handlers.RotatingFileHandler(
-        filename=str(log_dir / "errors.log"),
-        maxBytes=settings.log.max_bytes,
-        backupCount=settings.log.backup_count,
-        encoding="utf-8",
-    )
-    error_handler.setLevel(logging.ERROR)
-    error_handler.setFormatter(logging.Formatter("%(message)s"))
-    root.addHandler(error_handler)
-
-    app_handler = logging.handlers.RotatingFileHandler(
-        filename=str(log_dir / "app.log"),
-        maxBytes=settings.log.max_bytes,
-        backupCount=settings.log.backup_count,
-        encoding="utf-8",
-    )
-    app_handler.setLevel(log_level)
-    app_handler.setFormatter(logging.Formatter("%(message)s"))
-    root.addHandler(app_handler)
-
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.config.dictConfig({
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "raw": {"format": "%(message)s"},
+        },
+        "handlers": {
+            "stdout": {
+                "class": "logging.StreamHandler",
+                "stream": "ext://sys.stdout",
+                "level": log_level,
+                "formatter": "raw",
+            },
+            "file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": str(log_dir / "app.log"),
+                "maxBytes": settings.log.max_bytes,
+                "backupCount": settings.log.backup_count,
+                "encoding": "utf-8",
+                "level": log_level,
+                "formatter": "raw",
+            },
+            "error_file": {
+                "class": "logging.handlers.RotatingFileHandler",
+                "filename": str(log_dir / "errors.log"),
+                "maxBytes": settings.log.max_bytes,
+                "backupCount": settings.log.backup_count,
+                "encoding": "utf-8",
+                "level": logging.ERROR,
+                "formatter": "raw",
+            },
+        },
+        "root": {
+            "level": log_level,
+            "handlers": ["stdout", "file", "error_file"],
+        },
+        "loggers": {
+            "uvicorn.access": {"level": "WARNING"},
+            "uvicorn.error": {"level": "WARNING"},
+            "httpx": {"level": "WARNING"},
+            "httpcore": {"level": "WARNING", "propagate": False},
+            "sqlalchemy": {"level": "WARNING", "propagate": False},
+            "grpc": {"level": "ERROR", "propagate": False},
+            "opentelemetry": {"level": "ERROR", "propagate": False},
+        },
+    })
 
 
 def get_log_context() -> dict[str, Any]:
