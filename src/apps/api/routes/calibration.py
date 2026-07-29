@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import structlog
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -12,6 +13,7 @@ from ia_investing.application.production_gate import ProductionGate
 from ia_investing.domain.calibration import ComponentName
 
 router = APIRouter(prefix="/api/v1/calibration", tags=["calibration"])
+logger = structlog.get_logger("calibration")
 
 _engine = CalibrationEngine()
 _gate = ProductionGate(_engine)
@@ -134,6 +136,7 @@ async def create_override(
     except ValueError as exc:
         raise map_error(LookupError(f"Unknown component: {body.component}")) from exc
     override = gate.override_gate(comp, body.reason, body.duration_hours, requested_by=auth.subject)
+    logger.info("calibration_override_created", component=body.component, reason=body.reason, requested_by=auth.subject)
     return OverrideResponse(
         id=str(override.id),
         component=override.component,
