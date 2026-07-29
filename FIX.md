@@ -988,4 +988,4 @@ Reviewer completou mas output truncado. Áreas de atenção:
 3. ✅ R7-M8: `onError` handlers on all 5 rebalance mutation hooks + error display for complete/cancel
 
 ### Pendente — Requer esforço adicional
-- R8: Testes — 25 findings, bloqueadores de import corrigidos (19 arquivos desbloqueados, 1064 passed)
+- (nenhum item pendente — todos os findings resolvidos)
