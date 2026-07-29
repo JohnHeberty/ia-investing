@@ -3,6 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from uuid import UUID
 
+import structlog
+
+logger = structlog.get_logger("security")
+
 
 @dataclass(frozen=True, slots=True)
 class ActorContext:
@@ -97,7 +101,7 @@ def enforce(
 
 class SecurityAuditor:
     def on_auth_failure(self, token_present: bool, detail: str) -> None:
-        pass
+        logger.warning("auth_failure", token_present=token_present, detail=detail)
 
     def on_permission_denied(
         self,
@@ -106,7 +110,22 @@ class SecurityAuditor:
         action: str,
         detail: str,
     ) -> None:
-        pass
+        logger.warning(
+            "permission_denied",
+            actor_subject=actor.subject if actor else None,
+            resource=resource,
+            action=action,
+            detail=detail,
+        )
+
+    def on_csrf_failure(self, ip: str, path: str) -> None:
+        logger.warning("csrf_failure", ip=ip, path=path)
+
+    def on_ssrf_blocked(self, host: str, ip: str) -> None:
+        logger.warning("ssrf_blocked", host=host, ip=ip)
+
+    def on_rate_limit_exceeded(self, ip: str, path: str) -> None:
+        logger.warning("rate_limit_exceeded", ip=ip, path=path)
 
 
 _security_auditor: SecurityAuditor | None = None

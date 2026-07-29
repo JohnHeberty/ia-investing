@@ -8,10 +8,12 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from apps.api.dependencies import get_operation_service
 from apps.api.security import AuthContext, require_permission
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.operations import AgentRunCommand, IdempotencyConflictError, OperationService
 from ia_investing.contracts.v1 import OperationAcceptedV1, OperationStatusV1
 
 router = APIRouter(prefix="/api/v1", tags=["operations"])
+_audit = AuditMixin()
 
 
 class AgentRunCommandV1(BaseModel):
@@ -40,6 +42,14 @@ async def submit_agent_run(
         )
     except IdempotencyConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await _audit._audit(
+        session=service.session,
+        tenant_id=_auth.organization_id,
+        actor_id=UUID(_auth.subject) if _auth.subject else None,
+        action="execute",
+        resource_type="agent_run",
+        resource_id=accepted.operation_id,
+    )
     response.headers["Location"] = f"/api/v1/operations/{accepted.operation_id}"
     return accepted
 

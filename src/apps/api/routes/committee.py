@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from apps.api._errors import map_error
 from apps.api.dependencies import get_committee_service
 from apps.api.security import AuthContext, actor_uuid, require_permission
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.committee_service import (
     CommitteeService,
     ConflictOfInterestError,
@@ -20,6 +21,7 @@ from ia_investing.application.committee_service import (
 )
 
 router = APIRouter(prefix="/api/v1/committee", tags=["committee"])
+_audit = AuditMixin()
 
 
 class CommitteeMemberInput(BaseModel):
@@ -180,6 +182,14 @@ async def create_session(
         agenda=body.agenda,
         actor_id=actor_uuid(auth),
     )
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="create",
+        resource_type="committee_session",
+        resource_id=session.id,
+    )
     return CommitteeSessionCreatedResponse(
         id=str(session.id), state=session.state, scheduled_at=session.scheduled_at.isoformat()
     )
@@ -247,6 +257,15 @@ async def convene_session(
         )
     except (LookupError, InvalidTransitionError, ValueError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="update",
+        resource_type="committee_session",
+        resource_id=session_id,
+        changes={"action": "convene"},
+    )
     return CommitteeSessionDetailResponse(
         id=str(session.id), state=session.state, present_members=session.present_members
     )
@@ -267,6 +286,15 @@ async def start_voting(
         )
     except (LookupError, InvalidTransitionError, QuorumNotMetError, ValueError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="update",
+        resource_type="committee_session",
+        resource_id=session_id,
+        changes={"action": "start_voting"},
+    )
     return CommitteeVotingResponse(
         id=str(session.id), state=session.state, proposals=session.agenda.get("proposals", [])
     )
@@ -297,6 +325,15 @@ async def cast_vote(
         DuplicateVoteError,
     ) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="vote",
+        resource_type="committee_vote",
+        resource_id=vote.id,
+        changes={"proposal_id": body.proposal_id, "vote": body.vote},
+    )
     return CommitteeVoteResponse(id=str(vote.id), vote=vote.vote, proposal_id=vote.proposal_id)
 
 
@@ -310,6 +347,15 @@ async def finalize_voting(
         session = await service.finalize_voting(session_id=session_id, actor_id=actor_uuid(auth))
     except (LookupError, InvalidTransitionError, MajorityNotReachedError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="update",
+        resource_type="committee_session",
+        resource_id=session_id,
+        changes={"action": "finalize_voting"},
+    )
     return CommitteeFinalizeResponse(
         id=str(session.id),
         state=session.state,
@@ -335,6 +381,15 @@ async def publish_decision(
         )
     except (LookupError, PermissionError, InvalidTransitionError, ValueError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="approve" if body.decision == "approve" else "reject",
+        resource_type="committee_decision",
+        resource_id=session_id,
+        changes={"decision": body.decision},
+    )
     return CommitteePublishResponse(
         id=str(session.id),
         state=session.state,

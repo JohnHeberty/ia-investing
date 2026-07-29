@@ -10,9 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, require_permission
 from database.core import get_async_session
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.data_quality import QualityGovernanceService, QualityIncidentV1
 
 router = APIRouter(prefix="/api/v1/quality", tags=["data-quality"])
+_audit = AuditMixin()
 
 
 class IncidentTransitionV1(BaseModel):
@@ -45,4 +47,13 @@ async def transition_incident(
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await _audit._audit(
+        session=session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="update",
+        resource_type="quality_incident",
+        resource_id=incident_id,
+        changes={"target": body.target},
+    )
     return QualityIncidentV1.model_validate(incident)

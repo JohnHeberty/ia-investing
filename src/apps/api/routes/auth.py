@@ -20,6 +20,7 @@ from apps.api.security import (
     decode_session_token,
     generate_csrf_token,
 )
+from ia_investing.application.security import get_security_auditor
 from ia_investing.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -150,15 +151,20 @@ async def _verify_jwt(id_token: str) -> dict[str, object]:
             options={"verify_exp": True},
         )
     except jwt.ExpiredSignatureError as exc:
+        get_security_auditor().on_auth_failure(token_present=True, detail="JWT has expired")
         raise HTTPException(status_code=401, detail="JWT has expired") from exc
     except jwt.InvalidAudienceError as exc:
+        get_security_auditor().on_auth_failure(token_present=True, detail="JWT audience mismatch")
         raise HTTPException(status_code=401, detail="JWT audience mismatch") from exc
     except jwt.InvalidIssuerError as exc:
+        get_security_auditor().on_auth_failure(token_present=True, detail="JWT issuer mismatch")
         raise HTTPException(status_code=401, detail="JWT issuer mismatch") from exc
     except jwt.DecodeError as exc:
+        get_security_auditor().on_auth_failure(token_present=True, detail="JWT decode failed")
         raise HTTPException(status_code=401, detail="JWT decode failed") from exc
     except jwt.InvalidTokenError as exc:
         logger.warning("JWT verification failed: %s", exc)
+        get_security_auditor().on_auth_failure(token_present=True, detail=str(exc))
         raise HTTPException(status_code=401, detail="JWT verification failed") from exc
     return dict(claims)
 

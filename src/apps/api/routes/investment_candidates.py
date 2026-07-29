@@ -22,6 +22,7 @@ from temporalio.client import (
 from apps.api._etag import parse_etag
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.investment_candidates import (
     CandidateConcurrencyError,
     CandidateDetail,
@@ -61,6 +62,7 @@ exploration_router = APIRouter(
     tags=["equity-exploration"],
     dependencies=[Depends(require_candidate_intelligence)],
 )
+_audit = AuditMixin()
 
 
 class CandidateV1(BaseModel):
@@ -403,6 +405,14 @@ async def create_candidate(
         response.status_code = 200
     response.headers["ETag"] = f'"{candidate.lock_version}"'
     response.headers["Location"] = f"/api/v1/investment-candidates/{candidate.id}"
+    await _audit._audit(
+        session=session,
+        tenant_id=organization_id(auth),
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="create",
+        resource_type="investment_candidate",
+        resource_id=candidate.id,
+    )
     return CandidateCreatedV1(
         candidate=CandidateV1.model_validate(candidate),
         analysis_run=CandidateRunV1.model_validate(run),

@@ -4,13 +4,18 @@ import { getCsrfToken } from "./csrf";
 
 function csrfFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
   const method = (init?.method ?? "GET").toUpperCase();
+  const requestId = crypto.randomUUID();
+  const headers = new Headers(init?.headers);
+  headers.set("X-Request-Id", requestId);
+
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const token = getCsrfToken();
     if (token) {
-      init = { ...init, headers: { ...init?.headers, "x-csrf-token": token } };
+      headers.set("x-csrf-token", token);
     }
   }
-  return fetch(input, init);
+
+  return fetch(input, { ...init, headers });
 }
 
 export const institutionalApi = createClient<paths>({

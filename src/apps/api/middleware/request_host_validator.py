@@ -9,6 +9,7 @@ from starlette.requests import Request
 from starlette.responses import Response
 
 from ia_investing.application.audit import emit_security_event
+from ia_investing.application.security import get_security_auditor
 from ia_investing.settings import get_settings
 
 logger = logging.getLogger(__name__)
@@ -57,6 +58,10 @@ class RequestHostValidator(BaseHTTPMiddleware):
                 "private_request_host_detected",
                 detail=f"Request to private IP blocked: {request_host}",
                 source_ip=request.client.host if request.client else "unknown",
+            )
+            get_security_auditor().on_ssrf_blocked(
+                host=request_host,
+                ip=request.client.host if request.client else "unknown",
             )
             logger.warning("Request to private IP blocked: %s", request_host)
             from starlette.responses import JSONResponse

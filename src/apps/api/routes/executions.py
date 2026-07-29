@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from apps.api._errors import map_error
 from apps.api.dependencies import get_execution_service
 from apps.api.security import AuthContext, require_permission
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.execution_service import (  # type: ignore[attr-defined]
     ExecutionService,
     InsufficientBalanceError,
@@ -18,6 +19,7 @@ from ia_investing.application.execution_service import (  # type: ignore[attr-de
 )
 
 router = APIRouter(prefix="/api/v1/executions", tags=["executions"])
+_audit = AuditMixin()
 
 
 class CreateExecutionRequest(BaseModel):
@@ -135,6 +137,14 @@ async def create_execution(
         price_limit=body.price_limit,
         actor_id=_actor_id(auth),
     )
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=_actor_id(auth),
+        action="create",
+        resource_type="execution",
+        resource_id=execution.id,
+    )
     return ExecutionCreatedResponse(
         id=str(execution.id),
         order_id=execution.order_id,
@@ -207,6 +217,15 @@ async def validate_execution(
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=_actor_id(auth),
+        action="update",
+        resource_type="execution",
+        resource_id=execution_id,
+        changes={"action": "validate"},
+    )
     return ExecutionStateResponse(id=str(execution.id), state=execution.state)
 
 
@@ -223,6 +242,15 @@ async def queue_execution(
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=_actor_id(auth),
+        action="update",
+        resource_type="execution",
+        resource_id=execution_id,
+        changes={"action": "queue"},
+    )
     return ExecutionStateResponse(id=str(execution.id), state=execution.state)
 
 
@@ -239,6 +267,14 @@ async def dispatch_execution(
         )
     except (LookupError, InvalidTransitionError, InsufficientBalanceError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=_actor_id(auth),
+        action="execute",
+        resource_type="execution",
+        resource_id=execution_id,
+    )
     return ExecutionDispatchedResponse(
         id=str(execution.id),
         state=execution.state,
@@ -262,6 +298,15 @@ async def confirm_execution(
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=_actor_id(auth),
+        action="update",
+        resource_type="execution",
+        resource_id=execution_id,
+        changes={"action": "confirm"},
+    )
     return ExecutionConfirmedResponse(
         id=str(execution.id),
         state=execution.state,
@@ -285,6 +330,15 @@ async def fail_execution(
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=_actor_id(auth),
+        action="update",
+        resource_type="execution",
+        resource_id=execution_id,
+        changes={"action": "fail", "reason": body.reason},
+    )
     return ExecutionFailedResponse(id=str(execution.id), state=execution.state, reason=execution.reason)
 
 
@@ -301,6 +355,15 @@ async def settle_execution(
         )
     except (LookupError, InvalidTransitionError) as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=service._session,
+        tenant_id=auth.organization_id,
+        actor_id=_actor_id(auth),
+        action="update",
+        resource_type="execution",
+        resource_id=execution_id,
+        changes={"action": "settle"},
+    )
     return ExecutionSettledResponse(
         id=str(execution.id),
         state=execution.state,

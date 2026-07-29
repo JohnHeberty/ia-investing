@@ -10,9 +10,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api._errors import map_error
 from apps.api.security import AuthContext, require_permission
 from database.core import get_async_session
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.rebalance_service import RebalanceService
 
 router = APIRouter(prefix="/api/v1/rebalance", tags=["rebalance"])
+_audit = AuditMixin()
 
 
 class ProposeRequest(BaseModel):

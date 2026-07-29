@@ -161,6 +161,13 @@ class CandidateIntelligenceSettings(BaseModel):
     exploration_shortlist_limit: int = Field(default=20, ge=1, le=500)
 
 
+class LogSettings(BaseModel):
+    dir: str = "./logs"
+    max_bytes: int = 10_485_760
+    backup_count: int = 30
+    enabled: bool = True
+
+
 class ApplicationSettings(BaseModel):
     environment: Literal["development", "test", "production"] = "development"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "DEBUG"
@@ -186,6 +193,7 @@ class Settings(BaseSettings):
     scheduler: SchedulerSettings = Field(default_factory=SchedulerSettings)
     worker: WorkerSettings = Field(default_factory=WorkerSettings)
     application: ApplicationSettings = Field(default_factory=ApplicationSettings)
+    log: LogSettings = Field(default_factory=LogSettings)
     candidate: CandidateSettings = Field(default_factory=CandidateSettings)
     candidate_intelligence: CandidateIntelligenceSettings = Field(default_factory=CandidateIntelligenceSettings)
 

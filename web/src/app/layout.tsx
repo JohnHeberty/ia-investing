@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import { Providers } from "@/components/providers";
+import { TelemetryProvider } from "@/components/telemetry-provider";
 
 import "./globals.css";
 
@@ -16,7 +17,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="pt-BR" suppressHydrationWarning>
       <body>
         <Providers>
-          <AppShell>{children}</AppShell>
+          <TelemetryProvider>
+            <AppShell>{children}</AppShell>
+          </TelemetryProvider>
         </Providers>
       </body>
     </html>

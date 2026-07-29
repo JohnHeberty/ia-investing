@@ -11,11 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.macro import MacroSeriesService
 from ia_investing.application.policy_intelligence import PolicyIngestionService, PolicyIntelligenceQueryService
 
 router = APIRouter(prefix="/api/v1/policy", tags=["policy-intelligence"])
 macro_router = APIRouter(prefix="/api/v1/macro", tags=["macro-intelligence"])
+_audit = AuditMixin()
 
 
 class MacroDefinitionInputV1(BaseModel):

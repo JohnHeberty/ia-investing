@@ -13,6 +13,7 @@ from apps.api._etag import parse_etag
 from apps.api.security import AuthContext, get_auth_context, require_permission
 from database.core import get_async_session
 from database.models.research import ResearchCase
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.evidence import EvidenceReferenceV1, EvidenceRepository
 from ia_investing.application.research import (
     ClaimService,
@@ -35,6 +36,7 @@ from ia_investing.application.valuations import (
 from ia_investing.domain.valuation import DCFInput
 
 router = APIRouter(prefix="/api/v1/research", tags=["research"])
+_audit = AuditMixin()
 
 
 def _organization_id(auth: AuthContext) -> UUID:
@@ -450,6 +452,14 @@ async def create_case(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not created:
         response.status_code = 200
+    await _audit._audit(
+        session=session,
+        tenant_id=_organization_id(auth),
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="create",
+        resource_type="research_case",
+        resource_id=case.id,
+    )
     return case_response(case, response)
 
 
@@ -481,6 +491,15 @@ async def transition_case(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    await _audit._audit(
+        session=session,
+        tenant_id=_organization_id(auth),
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="update",
+        resource_type="research_case",
+        resource_id=case_id,
+        changes={"target": body.target},
+    )
     return case_response(case, response)
 
 
@@ -623,6 +642,14 @@ async def create_thesis(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     response.headers["ETag"] = f'"{thesis.lock_version}"'
+    await _audit._audit(
+        session=session,
+        tenant_id=_organization_id(auth),
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="create",
+        resource_type="thesis",
+        resource_id=thesis.id,
+    )
     return ThesisCreatedV1(thesis=ThesisV1.model_validate(thesis), version=ThesisVersionV1.model_validate(version))
 
 
@@ -729,6 +756,14 @@ async def create_valuation(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
     if execution.replayed:
         response.status_code = 200
+    await _audit._audit(
+        session=session,
+        tenant_id=_organization_id(auth),
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="create",
+        resource_type="valuation_run",
+        resource_id=execution.run.id,
+    )
     response.headers["ETag"] = f'"{execution.run.input_sha256}"'
     return ValuationRunV1.from_execution(execution)
 

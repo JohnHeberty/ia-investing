@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, FastAPI, Request, Response
 from apps.api.auth import get_current_user
 from apps.api.errors import install_problem_handlers
 from apps.api.middleware.audit_context import AuditContextMiddleware
+from apps.api.middleware.logging import LoggingMiddleware
 from apps.api.middleware.rate_limit import RateLimitExceededError, RateLimitMiddleware
 from apps.api.middleware.request_host_validator import RequestHostValidator
 from apps.api.middleware.security_headers import SecurityHeadersMiddleware
@@ -18,6 +19,7 @@ from apps.api.routes.agent_runtime import router as agent_runtime_router
 from apps.api.routes.audit import router as audit_router
 from apps.api.routes.auth import router as auth_router
 from apps.api.routes.committee import router as committee_router
+from apps.api.routes.events import router as events_router
 from apps.api.routes.executions import router as executions_router
 from apps.api.routes.financials import router as financials_router
 from apps.api.routes.health import router as health_router
@@ -45,6 +47,8 @@ from apps.api.security import (
     generate_csrf_token,
     validate_csrf_token,
 )
+from ia_investing.application.security import get_security_auditor
+from ia_investing.logging_config import setup_logging
 from ia_investing.settings import Settings, get_settings
 from observability import setup_telemetry
 
@@ -64,6 +68,8 @@ def _build_lifespan(settings: Settings) -> Callable[..., Any]:
         from apps.api.security import _build_oidc_verifier
         from ia_investing.ai.artifacts import ArtifactLoader
 
+        setup_logging(settings)
+
         prompts_root = Path(__file__).resolve().parents[3] / "prompts"
         app.state.agent_registry = ArtifactLoader(prompts_root).load_registry()
         app.state.oidc_verifier = _build_oidc_verifier(settings)
@@ -79,6 +85,7 @@ _PUBLIC_ROUTERS = [
     health_router,
     readiness_router,
     auth_router,
+    events_router,
 ]
 
 _AUTH_ROUTERS = [
@@ -151,6 +158,10 @@ async def _csrf_middleware(request: Request, call_next: Callable[[Request], Awai
         if auth_context is not None and auth_context.session_id:
             provided = request.headers.get("x-csrf-token", "")
             if not provided or not validate_csrf_token(provided, auth_context.session_id):
+                get_security_auditor().on_csrf_failure(
+                    ip=request.client.host if request.client else "unknown",
+                    path=request.url.path,
+                )
                 from fastapi.responses import JSONResponse
 
                 return JSONResponse(
@@ -198,6 +209,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         )
 
     app.add_middleware(AuditContextMiddleware)
+    app.add_middleware(LoggingMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestHostValidator)
     app.add_middleware(RateLimitMiddleware)

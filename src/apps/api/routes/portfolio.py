@@ -3,6 +3,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 from typing import Annotated, Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel, ConfigDict
@@ -11,11 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api._errors import map_error
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.paper_portfolio import PaperPortfolioService
 from ia_investing.application.portfolio import BackendPortfolioOptimizationService
 from ia_investing.domain.identity import InstitutionalAccessContext
 
 router = APIRouter(prefix="/api/v1/portfolio", tags=["portfolio"])
+_audit = AuditMixin()
 
 
 class PortfolioCreate(BaseModel):
@@ -93,6 +96,15 @@ async def create_portfolio(
         initial_capital=body.initial_capital,
         organization_id=auth.organization_id,
     )
+    portfolio_id = d.get("id")
+    await _audit._audit(
+        session=session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="create",
+        resource_type="portfolio",
+        resource_id=UUID(portfolio_id) if portfolio_id else None,
+    )
     return PortfolioCreatedResponse(**{k: d.get(k) for k in ("id", "name", "is_paper_trading", "base_currency")})
 
 
@@ -132,7 +144,7 @@ async def add_position(
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="organization context is required")
     try:
-        return await PaperPortfolioService(session).add_position(
+        result = await PaperPortfolioService(session).add_position(
             portfolio_id=portfolio_id,
             ticker_symbol=body.ticker_symbol,
             quantity=body.quantity,
@@ -143,6 +155,15 @@ async def add_position(
         )
     except LookupError as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="create",
+        resource_type="portfolio_position",
+        resource_id=portfolio_id,
+    )
+    return result
 
 
 @router.post("/optimize", response_model=PortfolioOptimizationResponse)
@@ -163,6 +184,14 @@ async def run_optimization(
         raise map_error(exc) from exc
     except ValueError as exc:
         raise map_error(exc) from exc
+    await _audit._audit(
+        session=session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="execute",
+        resource_type="portfolio_optimization",
+        resource_id=run.id,
+    )
     return PortfolioOptimizationResponse(
         operation_id=str(run.id),
         status=run.status,

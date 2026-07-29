@@ -13,6 +13,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
+from ia_investing.application.security import get_security_auditor
+
 logger = logging.getLogger(__name__)
 
 P = ParamSpec("P")
@@ -115,13 +117,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         if not await _global_limiter.is_allowed(f"global:{client_ip}"):
+            get_security_auditor().on_rate_limit_exceeded(ip=client_ip, path=path)
             return _rate_limit_response()
 
         is_auth_path = path.startswith("/api/v1/auth") or path.startswith("/auth")
         if is_auth_path:
             if not await _auth_limiter.is_allowed(f"auth:{client_ip}"):
+                get_security_auditor().on_rate_limit_exceeded(ip=client_ip, path=path)
                 return _rate_limit_response()
         elif not await _api_limiter.is_allowed(f"api:{client_ip}"):
+            get_security_auditor().on_rate_limit_exceeded(ip=client_ip, path=path)
             return _rate_limit_response()
 
         return await call_next(request)

@@ -224,3 +224,6 @@ docs/books/*.pdf
 docs/books/*.epub
 FIX/
 .candidate-upgrade-backup/
+
+# Application logs
+logs/

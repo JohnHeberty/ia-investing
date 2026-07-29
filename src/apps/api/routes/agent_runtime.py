@@ -12,9 +12,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, require_permission
 from database.core import get_async_session
+from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.agent_runtime import AgentRuntimeService
 
 router = APIRouter(prefix="/api/v1/agent-runs", tags=["agent-runtime"])
+_audit = AuditMixin()
 
 
 class CreateAgentRunV1(BaseModel):
@@ -113,6 +115,14 @@ async def create_agent_run(
             "agent.trace_id": run.trace_id,
             "agent.capability_id": str(run.capability_id),
         }
+    )
+    await _audit._audit(
+        session=session,
+        tenant_id=auth.organization_id,
+        actor_id=UUID(auth.subject) if auth.subject else None,
+        action="create",
+        resource_type="agent_run",
+        resource_id=run.id,
     )
     return AgentRunV1.model_validate(run)
 
