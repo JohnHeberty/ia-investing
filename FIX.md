@@ -988,10 +988,6 @@ Reviewer completou mas output truncado. Áreas de atenção:
 3. ✅ R7-M8: `onError` handlers on all 5 rebalance mutation hooks + error display for complete/cancel
 
 ### Pendente — Requer esforço adicional
-- R9-1: `.env` com credenciais — requer `git filter-repo` manual
+- R9-1: `.env` com credenciais — não aplicável (`.env` nunca commitado)
 - R5-15 a R5-22: DB duplications — requer migrations complexas
-- R7-M1: CSRF token no login — requer server-side BFF
-- R7-M2: JWT signature verify — requer `jose` library + server-side
-- R7-M3: CNPJ format validation — frontend masking
-- R7-M7: Mixed API patterns — refactoring amplo
 - R8: Testes — 25 findings nunca revisados/aplicados
