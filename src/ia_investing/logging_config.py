@@ -101,6 +101,9 @@ def setup_logging(settings: Settings) -> None:
             "sqlalchemy": {"level": "WARNING", "propagate": False},
             "grpc": {"level": "ERROR", "propagate": False},
             "opentelemetry": {"level": "ERROR", "propagate": False},
+            "asyncio": {"level": "WARNING", "propagate": False},
+            "anyio": {"level": "WARNING", "propagate": False},
+            "anyio._backends._asyncio": {"level": "WARNING", "propagate": False},
         },
     })
 
