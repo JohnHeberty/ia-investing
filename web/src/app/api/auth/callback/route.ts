@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 
 import {
   clearSession,
-  decodeJwtPayload,
   exchangeCode,
   safeReturnTo,
   storeTokenSet,
+  verifyJwt,
 } from "@/lib/oidc";
 
 export async function GET(request: NextRequest) {
@@ -23,8 +23,9 @@ export async function GET(request: NextRequest) {
   }
   try {
     const tokens = await exchangeCode(code, verifier);
-    if (!tokens.id_token || decodeJwtPayload(tokens.id_token).nonce !== expectedNonce)
-      throw new Error("OIDC nonce validation failed");
+    if (!tokens.id_token) throw new Error("OIDC token response missing id_token");
+    const claims = await verifyJwt(tokens.id_token);
+    if (claims.nonce !== expectedNonce) throw new Error("OIDC nonce validation failed");
     await storeTokenSet(tokens);
     jar.delete("ia_oidc_state");
     jar.delete("ia_oidc_nonce");

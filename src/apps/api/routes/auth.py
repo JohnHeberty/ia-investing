@@ -4,15 +4,13 @@ import base64
 import hashlib
 import logging
 import secrets
-from typing import Any
 from uuid import UUID
 
 import httpx
+import jwt
 from fastapi import APIRouter, HTTPException, Request, Response
-from jose import jwk, jwt  # type: ignore[import-untyped]
-from jose.constants import Algorithms  # type: ignore[import-untyped]
-from jose.exceptions import JWKError, JWTError  # type: ignore[import-untyped]
-from pydantic import BaseModel
+from jwt import PyJWKClient
+from pydantic import BaseModel, ConfigDict
 
 from apps.api.security import (
     CSRF_COOKIE_NAME,
@@ -41,6 +39,8 @@ class LoginRequest(BaseModel):
 
 
 class UserInfo(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
     subject: str
     name: str | None = None
     email: str | None = None
@@ -48,6 +48,43 @@ class UserInfo(BaseModel):
     roles: list[str] = []
     team_ids: list[str] = []
     permissions: list[str] = []
+
+
+class AuthorizeResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    authorization_url: str
+    client_id: str
+    redirect_uri: str
+    scope: str
+    state: str
+    nonce: str
+    code_challenge: str
+    return_to: str
+
+
+class CallbackResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: str
+
+
+class LoginDisabledResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    detail: str
+
+
+class LogoutResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    status: str
+
+
+class CsrfTokenResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    csrf_token: str
 
 
 def _is_production() -> bool:
@@ -99,45 +136,37 @@ def _safe_return_to(url: str | None) -> str:
 
 async def _verify_jwt(id_token: str) -> dict[str, object]:
     settings = get_settings().security
-    unverified_header = jwt.get_unverified_header(id_token)
-    kid = unverified_header.get("kid")
-    if not kid:
-        raise HTTPException(status_code=401, detail="JWT missing kid header")
-    async with httpx.AsyncClient(timeout=HTTP_TIMEOUT) as client:
-        resp = await client.get(settings.oidc_jwks_url or "")
-    if resp.is_error:
-        raise HTTPException(status_code=503, detail="Failed to fetch JWKS")
-    jwks: dict[str, Any] = resp.json()
-    key_data = None
-    for key in jwks.get("keys", []):
-        if key.get("kid") == kid:
-            key_data = key
-            break
-    if not key_data:
-        raise HTTPException(status_code=401, detail="No matching JWK found")
+    if not settings.oidc_jwks_url:
+        raise HTTPException(status_code=503, detail="OIDC JWKS URL is not configured")
     try:
-        rsa_key = jwk.construct(key_data, algorithm=Algorithms.RS256)
-    except JWKError as err:
-        raise HTTPException(status_code=401, detail="Invalid JWK") from err
-    try:
+        jwks_client = PyJWKClient(settings.oidc_jwks_url)
+        signing_key = jwks_client.get_signing_key_from_jwt(id_token)
         claims = jwt.decode(
             id_token,
-            rsa_key.to_pem().decode() if hasattr(rsa_key, "to_pem") else rsa_key,
-            algorithms=[Algorithms.RS256],
+            signing_key.key,
+            algorithms=["RS256"],
             audience=settings.oidc_client_id,
             issuer=settings.oidc_issuer,
-            options={"verify_at_hash": False, "verify_nonce": False},
+            options={"verify_exp": True},
         )
-    except JWTError as exc:
+    except jwt.ExpiredSignatureError as exc:
+        raise HTTPException(status_code=401, detail="JWT has expired") from exc
+    except jwt.InvalidAudienceError as exc:
+        raise HTTPException(status_code=401, detail="JWT audience mismatch") from exc
+    except jwt.InvalidIssuerError as exc:
+        raise HTTPException(status_code=401, detail="JWT issuer mismatch") from exc
+    except jwt.DecodeError as exc:
+        raise HTTPException(status_code=401, detail="JWT decode failed") from exc
+    except jwt.InvalidTokenError as exc:
         logger.warning("JWT verification failed: %s", exc)
         raise HTTPException(status_code=401, detail="JWT verification failed") from exc
     return dict(claims)
 
 
-@router.get("/authorize")
+@router.get("/authorize", response_model=AuthorizeResponse)
 async def authorize(
     return_to: str | None = None,
-) -> dict[str, str]:
+) -> AuthorizeResponse:
     settings = get_settings().security
     if not settings.oidc_authorization_url or not settings.oidc_client_id:
         raise HTTPException(status_code=503, detail="OIDC authorization is not configured")
@@ -147,24 +176,24 @@ async def authorize(
     challenge = hashlib.sha256(verifier.encode()).digest()
     code_challenge = base64.urlsafe_b64encode(challenge).rstrip(b"=").decode()
     _oidc_states[state] = {"nonce": nonce, "verifier": verifier}
-    return {
-        "authorization_url": settings.oidc_authorization_url,
-        "client_id": settings.oidc_client_id,
-        "redirect_uri": settings.oidc_redirect_uri,
-        "scope": settings.oidc_scope,
-        "state": state,
-        "nonce": nonce,
-        "code_challenge": code_challenge,
-        "return_to": _safe_return_to(return_to),
-    }
+    return AuthorizeResponse(
+        authorization_url=settings.oidc_authorization_url,
+        client_id=settings.oidc_client_id,
+        redirect_uri=settings.oidc_redirect_uri,
+        scope=settings.oidc_scope,
+        state=state,
+        nonce=nonce,
+        code_challenge=code_challenge,
+        return_to=_safe_return_to(return_to),
+    )
 
 
-@router.get("/callback")
+@router.get("/callback", response_model=CallbackResponse)
 async def callback(
     code: str | None = None,
     state: str | None = None,
     request: Request = None,  # type: ignore[assignment]
-) -> dict[str, object]:
+) -> CallbackResponse:
     if not code or not state:
         raise HTTPException(status_code=400, detail="Missing authorization code or state")
     stored = _oidc_states.pop(state, None)
@@ -238,7 +267,7 @@ async def callback(
                     secure=_is_production(),
                     samesite="strict",
                 )
-            return {"status": "authenticated"}
+            return CallbackResponse(status="authenticated")
     raise HTTPException(status_code=401, detail="OIDC callback failed")
 
 
@@ -250,16 +279,16 @@ async def login() -> dict[str, str]:
     )
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=LogoutResponse)
 async def logout(
     request: Request,
     response: Response,
-) -> dict[str, str]:
+) -> LogoutResponse:
     _delete_session_cookie(response)
-    return {"status": "ok"}
+    return LogoutResponse(status="ok")
 
 
-@router.get("/me")
+@router.get("/me", response_model=UserInfo)
 async def me(
     request: Request,
 ) -> UserInfo:
@@ -286,11 +315,11 @@ async def me(
     )
 
 
-@router.get("/csrf-token")
+@router.get("/csrf-token", response_model=CsrfTokenResponse)
 async def csrf_token(
     request: Request,
     response: Response,
-) -> dict[str, str]:
+) -> CsrfTokenResponse:
     session = _session_from_request(request)
     if session is None:
         raise HTTPException(status_code=401, detail="Not authenticated")
@@ -306,4 +335,4 @@ async def csrf_token(
         secure=settings.application.environment == "production",
         samesite="strict",
     )
-    return {"csrf_token": token}
+    return CsrfTokenResponse(csrf_token=token)
