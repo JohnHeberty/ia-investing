@@ -1,10 +1,20 @@
 import type { NextConfig } from "next";
 
+const backendUrl = process.env.IA_API_BASE_URL ?? "http://localhost:8000";
+
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1"],
+  allowedDevOrigins: ["127.0.0.1", "localhost", "100.*.*.*"],
   reactStrictMode: true,
   poweredByHeader: false,
   typedRoutes: true,
+  async rewrites() {
+    return [
+      {
+        source: "/api/backend/:path*",
+        destination: `${backendUrl}/:path*`,
+      },
+    ];
+  },
   headers: async () => [
     {
       source: "/(.*)",

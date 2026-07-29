@@ -1,14 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 const publicPaths = ["/login", "/api/auth"];
+const bffPaths = ["/api/backend"];
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(p));
+  const isBff = bffPaths.some((p) => pathname.startsWith(p));
   const isStatic =
     pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname === "/";
 
-  if (isPublic || isStatic) {
+  if (isPublic || isStatic || isBff) {
     return NextResponse.next();
   }
 
