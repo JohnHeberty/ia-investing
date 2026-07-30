@@ -11,6 +11,15 @@ declare global {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type EChartOption = Record<string, any>;
 
+let echartsMod: typeof import("echarts") | null = null;
+
+async function getEcharts() {
+  if (!echartsMod) {
+    echartsMod = await import("echarts");
+  }
+  return echartsMod;
+}
+
 /**
  * Shared hook for ECharts with proper synchronous cleanup.
  * No memory leaks: chart is disposed and resize listener removed on every unmount/update.
@@ -27,7 +36,7 @@ export function useEchart(buildOption: () => EChartOption | null, deps: unknown[
 
     let disposed = false;
 
-    import("echarts").then((mod) => {
+    getEcharts().then((mod) => {
       if (disposed || !el) return;
 
       const chart = mod.init(el);

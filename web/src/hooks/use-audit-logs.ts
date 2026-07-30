@@ -4,6 +4,10 @@ import { useQuery } from "@tanstack/react-query";
 
 import { bffFetch } from "@/lib/api-client";
 
+/**
+ * Raw audit log entry from the API.
+ * For the transformed view used in the audit page, see AuditEvent in use-audit.ts.
+ */
 export interface AuditLogEntry {
   id: string;
   tenant_id: string;

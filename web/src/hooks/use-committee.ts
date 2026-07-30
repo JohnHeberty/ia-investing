@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
 import type { DataState } from "@/components/domain";
 import { bffFetch, queryKeys } from "@/lib/api-client";
@@ -92,8 +93,13 @@ export function useCommittee() {
     refetchOnWindowFocus: false,
   });
 
+  const sessionIdsKey = useMemo(
+    () => (sessionsQuery.data as unknown as CommitteeSessionListItem[] | undefined)?.map((s) => s.id).join(",") ?? "",
+    [sessionsQuery.data],
+  );
+
   const detailsQuery = useQuery({
-    queryKey: [...queryKeys.committeeSessions(), "details", (sessionsQuery.data as unknown as CommitteeSessionListItem[])?.map((s) => s.id).join(",") ?? ""],
+    queryKey: [...queryKeys.committeeSessions(), "details", sessionIdsKey],
     enabled: Boolean(sessionsQuery.data),
     queryFn: async () => {
       const sessions = (sessionsQuery.data ?? []) as unknown as CommitteeSessionListItem[];

@@ -608,6 +608,7 @@ h1 {
 .text-sm { font-size: 12px; }
 .text-xs { font-size: 11px; }
 .fw-500 { font-weight: 500; }
+.text-right { text-align: right; }
 
 /* ── Form Controls ── */
 .form-input {

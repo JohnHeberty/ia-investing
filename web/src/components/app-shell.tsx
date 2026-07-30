@@ -22,7 +22,7 @@ import type { LucideIcon } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import React, { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { usePermissions } from "@/hooks/use-permissions";
 
@@ -49,7 +49,7 @@ const operations: NavItem[] = [
   ["/audit", "Auditoria", FileCheck2, "audit:read"],
 ];
 
-function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
+const NavGroup = React.memo(function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
   const pathname = usePathname();
   const { can } = usePermissions();
 
@@ -80,7 +80,7 @@ function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
       ))}
     </div>
   );
-}
+});
 
 function getInitialTheme(): string {
   if (typeof window === "undefined") return "dark";
