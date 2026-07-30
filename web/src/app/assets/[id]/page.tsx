@@ -135,7 +135,7 @@ function AssetContent() {
         </div>
       )}
 
-      <section className="grid grid-4" aria-label="Indicadores do ativo">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores do ativo">
         <Metric
           label="Valor justo"
           value={instrument.fair_value ?? "—"}

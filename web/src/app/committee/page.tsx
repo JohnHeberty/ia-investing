@@ -88,7 +88,7 @@ function CommitteeContent() {
         </div>
       )}
 
-      <section className="grid grid-4" aria-label="Indicadores do comitê">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores do comitê">
         <Metric
           label="Na agenda"
           value={String(pendingDecisions.length)}

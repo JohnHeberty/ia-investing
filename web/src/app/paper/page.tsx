@@ -88,7 +88,7 @@ function PaperContent() {
         </div>
       )}
 
-      <section className="grid grid-4">
+      <section className="grid grid-4 section-gap">
         <Metric
           label="Intents aprovados"
           value={hasLiveOrders ? String(approvedIntents) : "—"}

@@ -162,7 +162,7 @@ function OpportunitiesContent() {
         </div>
       )}
 
-      <section className="grid grid-4" aria-label="Indicadores de oportunidades">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores de oportunidades">
         <Metric
           label="Novas"
           value={String(openCases)}

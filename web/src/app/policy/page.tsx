@@ -89,7 +89,7 @@ function PolicyContent() {
         </div>
       )}
 
-      <section className="grid grid-4">
+      <section className="grid grid-4 section-gap">
         <Metric
           label="Eventos materiais"
           value={hasLiveEvents ? String(materialEvents.length) : "—"}

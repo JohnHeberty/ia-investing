@@ -94,7 +94,7 @@ export default function CandidateDetailPage() {
       {error && <div className={styles.error} role="alert">{error}</div>}
       {detail.blocking_gap_codes.length > 0 && <div className="state-panel" data-state="partial" style={{ marginBottom: 14 }}><strong>Análise bloqueada aguardando complemento</strong>Resolva ou forneça as fontes obrigatórias indicadas abaixo. URLs fornecidas passam por validação antes de liberar o fluxo.</div>}
 
-      <section className="grid grid-4">
+      <section className="grid grid-4 section-gap">
         <article className="card metric"><div className="metric-label">Prontidão</div><div className={`metric-value ${readinessPercent >= 90 ? "positive" : readinessPercent < 60 ? "warning" : ""}`}>{readinessPercent}%</div><div className="metric-note">não substitui aprovação</div></article>
         <article className="card metric"><div className="metric-label">Lacunas abertas</div><div className={`metric-value ${openGaps.length ? "warning" : "positive"}`}>{openGaps.length}</div><div className="metric-note">{(detail.blocking_gap_codes ?? []).length} bloqueantes</div></article>
         <article className="card metric"><div className="metric-label">Fontes verificadas</div><div className="metric-value">{(detail.sources ?? []).filter((source) => source.status === "verified").length}</div><div className="metric-note">de {(detail.sources ?? []).length} cadastradas</div></article>
