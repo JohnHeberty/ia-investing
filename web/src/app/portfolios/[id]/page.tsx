@@ -53,6 +53,22 @@ export function PortfolioContent({ id }: { id: string }) {
   const deletePosition = useDeletePosition();
   const router = useRouter();
 
+  const positions = portfolio?.positions || [];
+  const totalValue = useMemo(
+    () => positions.reduce((sum, pos) => sum + (pos.quantity * (pos.current_price ?? pos.avg_cost_per_share)), 0),
+    [positions],
+  );
+  const totalCost = useMemo(
+    () => positions.reduce((sum, pos) => sum + (pos.quantity * pos.avg_cost_per_share), 0),
+    [positions],
+  );
+  const riskMetrics = useMemo(() => computeRiskMetrics(positions, totalValue), [positions, totalValue]);
+  const currency = portfolio?.base_currency || "BRL";
+  const fmt = useMemo(
+    () => new Intl.NumberFormat("pt-BR", { style: "currency", currency, maximumFractionDigits: 0 }),
+    [currency],
+  );
+
   if (isLoading) {
     return (
       <>
@@ -95,26 +111,9 @@ export function PortfolioContent({ id }: { id: string }) {
   }
 
   const name = portfolio.name || "Carteira";
-  const currency = portfolio.base_currency || "BRL";
   const isPaper = portfolio.is_paper_trading;
-  const positions = portfolio.positions || [];
-
-  const totalValue = positions.reduce((sum, pos) => {
-    const price = pos.current_price ?? pos.avg_cost_per_share;
-    return sum + (pos.quantity * price);
-  }, 0);
-
-  const totalCost = positions.reduce((sum, pos) => {
-    return sum + (pos.quantity * pos.avg_cost_per_share);
-  }, 0);
-
   const totalPnl = totalValue - totalCost;
   const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
-  const riskMetrics = useMemo(() => computeRiskMetrics(positions, totalValue), [positions, totalValue]);
-  const fmt = useMemo(
-    () => new Intl.NumberFormat("pt-BR", { style: "currency", currency, maximumFractionDigits: 0 }),
-    [currency],
-  );
 
   return (
     <>

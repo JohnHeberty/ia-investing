@@ -14,6 +14,43 @@ const money = new Intl.NumberFormat("pt-BR", {
 export default function MissionControlPage() {
   const { portfolios, isLoading, isError, error, count } = usePortfoliosList();
 
+  const totalPositions = useMemo(
+    () => portfolios.reduce((sum, p) => sum + (p.positions?.length || 0), 0),
+    [portfolios],
+  );
+
+  const totalValue = useMemo(
+    () =>
+      portfolios.reduce((sum, p) => {
+        const positions = p.positions || [];
+        return (
+          sum +
+          positions.reduce((posSum: number, pos) => {
+            const price = pos.current_price ?? pos.avg_cost_per_share ?? 0;
+            return posSum + pos.quantity * price;
+          }, 0)
+        );
+      }, 0),
+    [portfolios],
+  );
+
+  const totalCost = useMemo(
+    () =>
+      portfolios.reduce((sum, p) => {
+        const positions = p.positions || [];
+        return (
+          sum +
+          positions.reduce((posSum: number, pos) => {
+            return posSum + pos.quantity * (pos.avg_cost_per_share || 0);
+          }, 0)
+        );
+      }, 0),
+    [portfolios],
+  );
+
+  const totalPnl = totalValue - totalCost;
+  const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
+
   if (isLoading) {
     return (
       <div className="state-panel" aria-busy="true">
@@ -41,24 +78,6 @@ export default function MissionControlPage() {
       </>
     );
   }
-
-  const totalPositions = useMemo(() => portfolios.reduce((sum, p) => sum + (p.positions?.length || 0), 0), [portfolios]);
-  const totalValue = useMemo(() => portfolios.reduce((sum, p) => {
-    const positions = p.positions || [];
-    return sum + positions.reduce((posSum: number, pos) => {
-      const price = pos.current_price ?? pos.avg_cost_per_share ?? 0;
-      return posSum + (pos.quantity * price);
-    }, 0);
-  }, 0), [portfolios]);
-
-  const totalCost = useMemo(() => portfolios.reduce((sum, p) => {
-    const positions = p.positions || [];
-    return sum + positions.reduce((posSum: number, pos) => {
-      return posSum + (pos.quantity * (pos.avg_cost_per_share || 0));
-    }, 0);
-  }, 0), [portfolios]);
-  const totalPnl = totalValue - totalCost;
-  const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
   return (
     <>
