@@ -103,7 +103,7 @@ function PolicyContent() {
         />
         <Metric
           label="Diffs novos"
-          value={hasLiveEvents ? String(Math.min(materialEvents.length, 3)) : "—"}
+          value={hasLiveEvents ? String(materialEvents.length) : "—"}
           note="texto versionado"
         />
         <Metric

@@ -28,7 +28,7 @@ async function api<T>(
       (body as { detail?: string }).detail ?? `API error: ${response.status}`,
     );
   }
-  if (response.status === 204) return undefined as unknown as Promise<T>;
+  if (response.status === 204) return null as unknown as T;
   return response.json() as Promise<T>;
 }
 
@@ -84,7 +84,7 @@ export interface CandidateSource {
   status: string;
   official: boolean;
   verification_method: string;
-  confidence: string;
+  confidence: number;
 }
 
 export interface CandidateGap {
@@ -181,25 +181,21 @@ export function addCandidateSource(
   });
 }
 
-export function getCandidate(id: string): Promise<{ data: CandidateDetail; etag: string }> {
+export async function getCandidate(id: string): Promise<{ data: CandidateDetail; etag: string }> {
   const url = `${apiBase}/api/v1/investment-candidates/${id}`;
-  return fetch(url, {
+  const response = await fetch(url, {
     credentials: "include",
-    headers: {
-      Accept: "application/json",
-    },
-  })
-    .then(async (response) => {
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(
-          (body as { detail?: string }).detail ?? `API error: ${response.status}`,
-        );
-      }
-      const data = await response.json() as CandidateDetail;
-      const etag = response.headers.get("ETag") ?? "";
-      return { data, etag };
-    });
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(
+      (body as { detail?: string }).detail ?? `API error: ${response.status}`,
+    );
+  }
+  const data = (await response.json()) as CandidateDetail;
+  const etag = response.headers.get("ETag") ?? "";
+  return { data, etag };
 }
 
 export function requestCandidateReanalysis(

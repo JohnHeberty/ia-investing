@@ -50,10 +50,16 @@ export function useAudit() {
     integrity: tamperedIds.has(String(entry.id ?? "")) ? "mismatch" : "ok",
   }));
 
-  const totalEvents = auditEvents.length;
-  const correlatedEvents = auditEvents.filter((event) => event.correlationId).length;
-  const overrides = auditEvents.filter((event) => event.type.includes("override") || event.type.includes("waiv")).length;
-  const integrityFailures = auditEvents.filter((event) => event.integrity === "mismatch").length;
+  const { totalEvents, correlatedEvents, overrides, integrityFailures } = auditEvents.reduce(
+    (acc, event) => {
+      acc.totalEvents++;
+      if (event.correlationId) acc.correlatedEvents++;
+      if (event.type.includes("override") || event.type.includes("waiv")) acc.overrides++;
+      if (event.integrity === "mismatch") acc.integrityFailures++;
+      return acc;
+    },
+    { totalEvents: 0, correlatedEvents: 0, overrides: 0, integrityFailures: 0 },
+  );
   const isLoading = logsQuery.isLoading || integrityQuery.isLoading;
   const isError = logsQuery.isError || integrityQuery.isError;
   const dataState: DataState = computeDataState(isLoading, isError, null, auditEvents.length > 0);

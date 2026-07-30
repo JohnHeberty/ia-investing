@@ -90,6 +90,7 @@ export type ScenarioEntry = {
 };
 
 export function ScenarioWaterfall({ scenarios }: { scenarios: ScenarioEntry[] }) {
+  if (!scenarios.length) return null;
   const maxAbs = Math.max(...scenarios.map((s) => Math.abs(s.impact)), 1);
   return (
     <div className="card card-pad">

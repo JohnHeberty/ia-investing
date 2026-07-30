@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { AddPositionForm } from "@/components/add-position-form";
@@ -49,6 +49,7 @@ export function PortfolioContent({ id }: { id: string }) {
   const [editingPosition, setEditingPosition] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<{ ticker_symbol: string; quantity: string; avg_cost_per_share: string; current_price: string }>({ ticker_symbol: "", quantity: "", avg_cost_per_share: "", current_price: "" });
   const [needsRecalc, setNeedsRecalc] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const deletePortfolio = useDeletePortfolio();
   const updatePosition = useUpdatePosition();
   const deletePosition = useDeletePosition();
@@ -111,7 +112,7 @@ export function PortfolioContent({ id }: { id: string }) {
 
   const totalPnl = totalValue - totalCost;
   const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
-  const riskMetrics = computeRiskMetrics(positions, totalValue);
+  const riskMetrics = useMemo(() => computeRiskMetrics(positions, totalValue), [positions, totalValue]);
 
   return (
     <>
@@ -316,6 +317,12 @@ export function PortfolioContent({ id }: { id: string }) {
                                     className="button sm"
                                     disabled={updatePosition.isPending}
                                     onClick={async () => {
+                                      const qty = parseFloat(editForm.quantity);
+                                      if (isNaN(qty) || qty <= 0) {
+                                        setEditError("Quantidade inválida");
+                                        return;
+                                      }
+                                      setEditError(null);
                                       await updatePosition.mutateAsync({
                                         portfolioId: id,
                                         positionId: pos.id,
@@ -332,11 +339,14 @@ export function PortfolioContent({ id }: { id: string }) {
                                   </button>
                                   <button
                                     className="button secondary sm"
-                                    onClick={() => setEditingPosition(null)}
+                                    onClick={() => { setEditingPosition(null); setEditError(null); }}
                                   >
                                     Cancelar
                                   </button>
                                 </div>
+                                {editError && (
+                                  <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>{editError}</div>
+                                )}
                               </td>
                             </tr>
                           );

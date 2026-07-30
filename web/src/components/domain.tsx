@@ -42,7 +42,7 @@ export function Metric({
   return (
     <article className="card metric">
       <div className="metric-label">{label}</div>
-      <div className={`metric-value ${tone ?? ""}`}>{value}</div>
+      <div className={tone ? `metric-value ${tone}` : "metric-value"}>{value}</div>
       <div className="metric-note">{note}</div>
     </article>
   );

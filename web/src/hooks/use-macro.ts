@@ -91,5 +91,18 @@ export function useMacro() {
     error: sourceHealthQuery.error,
     dataState,
     refetch: sourceHealthQuery.refetch,
+  } as {
+    macroSeries: MacroSeries[];
+    selic: MacroSeries | undefined;
+    ipca: MacroSeries | undefined;
+    usdBrl: MacroSeries | undefined;
+    staleSeries: number;
+    missingSeries: number;
+    totalSeries: number;
+    isLoading: boolean;
+    isError: boolean;
+    error: unknown;
+    dataState: DataState;
+    refetch: () => Promise<unknown>;
   };
 }

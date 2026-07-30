@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 
 import { usePortfoliosList } from "@/hooks/use-portfolios";
 
@@ -41,21 +42,21 @@ export default function MissionControlPage() {
     );
   }
 
-  const totalPositions = portfolios.reduce((sum, p) => sum + (p.positions?.length || 0), 0);
-  const totalValue = portfolios.reduce((sum, p) => {
+  const totalPositions = useMemo(() => portfolios.reduce((sum, p) => sum + (p.positions?.length || 0), 0), [portfolios]);
+  const totalValue = useMemo(() => portfolios.reduce((sum, p) => {
     const positions = p.positions || [];
     return sum + positions.reduce((posSum: number, pos) => {
       const price = pos.current_price ?? pos.avg_cost_per_share ?? 0;
       return posSum + (pos.quantity * price);
     }, 0);
-  }, 0);
+  }, 0), [portfolios]);
 
-  const totalCost = portfolios.reduce((sum, p) => {
+  const totalCost = useMemo(() => portfolios.reduce((sum, p) => {
     const positions = p.positions || [];
     return sum + positions.reduce((posSum: number, pos) => {
       return posSum + (pos.quantity * (pos.avg_cost_per_share || 0));
     }, 0);
-  }, 0);
+  }, 0), [portfolios]);
   const totalPnl = totalValue - totalCost;
   const totalPnlPercent = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0;
 
@@ -73,7 +74,7 @@ export default function MissionControlPage() {
           <Link href="/portfolios" className="button secondary">
             Ver Carteiras
           </Link>
-          <Link href="/portfolios" className="button">
+          <Link href="/portfolios?create=true" className="button">
             + Nova Carteira
           </Link>
         </div>

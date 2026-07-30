@@ -103,7 +103,7 @@ export function useCommittee() {
     refetchOnWindowFocus: false,
   });
 
-  const sessions = (detailsQuery.data ?? sessionsQuery.data ?? []) as unknown as CommitteeSessionDetail[];
+  const sessions = (detailsQuery.data ?? []) as unknown as CommitteeSessionDetail[];
   const decisions: CommitteeDecision[] = sessions.map((session) => {
     const agenda = session.agenda ?? {};
     const conflicts = Array.isArray(agenda.conflicts) ? agenda.conflicts.length : 0;

@@ -62,6 +62,9 @@ function BacktestsContent() {
   }
 
   const hasRuns = runs.length > 0;
+  const medianSharpe = hasRuns
+    ? runs.map(r => Number(r.sharpeRatio)).filter(n => Number.isFinite(n)).sort((a, b) => a - b)[Math.floor(runs.length / 2)]
+    : null;
 
   return (
     <>
@@ -98,7 +101,7 @@ function BacktestsContent() {
         />
         <Metric
           label="Sharpe mediano"
-          value={hasRuns ? "—" : "—"}
+          value={hasRuns && medianSharpe != null ? medianSharpe.toFixed(2) : "—"}
           note="out-of-sample"
         />
         <Metric

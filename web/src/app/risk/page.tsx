@@ -11,10 +11,8 @@ import {
 } from "@/components/data-state-components";
 import { ScenarioWaterfall, type ScenarioEntry } from "@/components/decision-components";
 import { useSourceHealthSummary } from "@/hooks/use-source-health-summary";
-import { useUrlState, filterPresets } from "@/hooks/use-url-state";
 
 function RiskContent() {
-  const [urlState] = useUrlState(filterPresets.risk);
   const {
     assessment,
     sources,

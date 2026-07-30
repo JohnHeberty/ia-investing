@@ -314,6 +314,12 @@ def build_portfolio_recommendation(
 
     risk_analysis = analyze_portfolio_risk(positions, total_value)
 
+    avg_momentum = sum(
+        scores.get("momentum", 0.5)
+        for scores in (all_scores or {}).values()
+    ) / max(len(all_scores or {}), 1)
+    expected_return = 0.03 + (avg_momentum * 0.15)
+
     buy_recs = [r for r in recommendations if r.action in ("buy", "increase")]
     sell_recs = [r for r in recommendations if r.action in ("sell", "reduce")]
 
@@ -335,8 +341,8 @@ def build_portfolio_recommendation(
         recommendations=recommendations,
         risk_assessment=risk_analysis,
         performance_outlook={
-            "expected_return_12m": 0.08,
-            "scenario_analysis": {"bull": 0.20, "base": 0.08, "bear": -0.08},
+            "expected_return_12m": expected_return,
+            "scenario_analysis": {"bull": expected_return * 2.5, "base": expected_return, "bear": -expected_return},
         },
         key_risks=[
             risk

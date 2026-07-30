@@ -70,7 +70,7 @@ export function useQualityIncidents() {
     neverSucceededSources,
     totalSources: sources.length,
     openIncidents,
-    isLoading: query.isLoading || sourceHealthQuery.isLoading,
+    isLoading: query.isLoading || sourceHealthQuery.isLoading, // NOTE: consumers may want to check query.isLoading and sourceHealthQuery.isLoading separately for granular loading states
     isError: query.isError || sourceHealthQuery.isError,
     error: query.error ?? sourceHealthQuery.error,
     dataState,

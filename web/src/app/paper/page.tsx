@@ -109,7 +109,7 @@ function PaperContent() {
         <Metric
           label="Slippage"
           value={hasLiveOrders ? "—" : "—"}
-          note="spread + impacto"
+          note="Disponível após execuções"
         />
       </section>
 

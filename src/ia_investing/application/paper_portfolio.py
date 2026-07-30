@@ -45,16 +45,25 @@ class PaperPortfolioService:
         )
         result = await self._session.execute(stmt)
         portfolios = result.scalars().all()
-        output = []
-        for p in portfolios:
-            pos_stmt = sa.select(Position).where(Position.portfolio_id == p.id)
+
+        portfolio_ids = [p.id for p in portfolios]
+        all_positions: list[Position] = []
+        if portfolio_ids:
+            pos_stmt = sa.select(Position).where(Position.portfolio_id.in_(portfolio_ids))
             pos_result = await self._session.execute(pos_stmt)
-            positions = pos_result.scalars().all()
-            output.append({
+            all_positions = list(pos_result.scalars().all())
+
+        positions_by_portfolio: dict[uuid.UUID, list[Position]] = {}
+        for pos in all_positions:
+            positions_by_portfolio.setdefault(pos.portfolio_id, []).append(pos)
+
+        return [
+            {
                 **self._to_dict(p),
-                "positions": [self._position_to_dict(pos) for pos in positions],
-            })
-        return output
+                "positions": [self._position_to_dict(pos) for pos in positions_by_portfolio.get(p.id, [])],
+            }
+            for p in portfolios
+        ]
 
     async def get_with_positions(
         self,

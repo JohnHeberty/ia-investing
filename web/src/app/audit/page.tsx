@@ -188,6 +188,11 @@ function AuditContent() {
               </tbody>
             </table>
           </div>
+          {auditEvents.length > 15 && (
+            <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--muted)", borderTop: "1px solid var(--line-soft)" }}>
+              …e mais {auditEvents.length - 15} evento{auditEvents.length - 15 !== 1 ? "s" : ""}
+            </div>
+          )}
         </section>
       ) : (
         <div className="section-gap">

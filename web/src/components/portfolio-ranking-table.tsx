@@ -67,13 +67,16 @@ export function PortfolioRankingTable({ items }: { items: PortfolioRankItem[] })
                 {formatPercent(item.score)}
               </td>
               <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "var(--font-mono, monospace)", fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>
-                {item.nav === null
-                  ? "Indisponível"
-                  : new Intl.NumberFormat("pt-BR", {
-                      style: "currency",
-                      currency: item.currency || "BRL",
-                      maximumFractionDigits: 0,
-                    }).format(Number(item.nav))}
+                {(() => {
+                  if (item.nav === null) return "Indisponível";
+                  const nav = Number(item.nav);
+                  if (!Number.isFinite(nav)) return "Indisponível";
+                  return new Intl.NumberFormat("pt-BR", {
+                    style: "currency",
+                    currency: item.currency || "BRL",
+                    maximumFractionDigits: 0,
+                  }).format(nav);
+                })()}
               </td>
               <td style={{ padding: "12px 16px", textAlign: "right", fontFamily: "var(--font-mono, monospace)", fontVariantNumeric: "tabular-nums", color: "var(--text)" }}>
                 {formatPercent(item.volatility)}

@@ -13,7 +13,6 @@ import {
   StaleWarning,
 } from "@/components/data-state-components";
 import { useResearchCases } from "@/hooks/use-research-cases";
-import { useUrlState, filterPresets } from "@/hooks/use-url-state";
 import { usePermissions } from "@/hooks/use-permissions";
 import { commandHeaders } from "@/lib/api";
 import { queryKeys } from "@/lib/api-client";
@@ -305,7 +304,6 @@ function NewCaseForm({ onClose }: { onClose: () => void }) {
 /*  Main page content                                                 */
 /* ------------------------------------------------------------------ */
 function OpportunitiesContent() {
-  const [urlState, setUrlState] = useUrlState(filterPresets.opportunities);
   const {
     cases,
     openCases,

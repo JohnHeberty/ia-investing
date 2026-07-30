@@ -8,12 +8,10 @@ import {
   LoadingSkeleton,
   StaleWarning,
 } from "@/components/data-state-components";
-import { FreshnessPill } from "@/components/evidence-tags";
+
 import { useQualityIncidents } from "@/hooks/use-quality-incidents";
-import { useUrlState, filterPresets } from "@/hooks/use-url-state";
 
 function DataQualityContent() {
-  const [urlState] = useUrlState(filterPresets.dataQuality);
   const {
     incidents,
     sources,

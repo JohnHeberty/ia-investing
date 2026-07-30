@@ -9,7 +9,7 @@ import { computeDataState } from "@/lib/data-state";
 
 export interface SourceHealthSummary {
   snapshot_id: string;
-  as_of: string;
+  as_of: string | null;
   breaches: Array<{
     id: string;
     limit_name: string;
@@ -46,7 +46,7 @@ export function useSourceHealthSummary() {
 
   const assessment: SourceHealthSummary = {
     snapshot_id: "latest",
-    as_of: new Date().toISOString(),
+    as_of: null,
     breaches: [],
     volatility: null,
     drawdown: null,
@@ -57,7 +57,7 @@ export function useSourceHealthSummary() {
   const dataState: DataState = computeDataState(
     sourceHealthQuery.isLoading,
     sourceHealthQuery.isError,
-    new Date().toISOString(),
+    null,
     sources.length > 0,
   );
 
