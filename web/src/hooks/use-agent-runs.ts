@@ -32,7 +32,7 @@ export function useAgentRuns(params?: { status?: string; agent_name?: string }) 
       if (params?.status) qs.set("status", params.status);
       if (params?.agent_name) qs.set("agent_name", params.agent_name);
       const queryStr = qs.toString();
-      return await bffFetch<Array<Record<string, unknown>>>(`/api/v1/agents/runs${queryStr ? `?${queryStr}` : ""}`);
+      return await bffFetch<Array<Record<string, unknown>>>(`/api/v1/agent-runs${queryStr ? `?${queryStr}` : ""}`);
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
