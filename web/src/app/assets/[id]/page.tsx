@@ -38,7 +38,7 @@ function AssetContent() {
           <LoadingSkeleton lines={4} />
           <LoadingSkeleton lines={4} />
         </section>
-        <section style={{ marginTop: 14 }}>
+        <section className="section-gap">
           <LoadingSkeleton lines={6} />
         </section>
       </>
@@ -160,7 +160,7 @@ function AssetContent() {
       </section>
 
       {/* Evidence coverage detail */}
-      <section className="card card-pad" style={{ marginTop: 14 }}>
+      <section className="card card-pad section-gap">
         <div className="card-title">
           <h2>Cobertura de evidências</h2>
           <button
@@ -196,7 +196,7 @@ function AssetContent() {
 
       {/* Safety margin visual indicator */}
       {safetyMargin != null && (
-        <section className="card card-pad" style={{ marginTop: 14 }}>
+        <section className="card card-pad section-gap">
           <div className="card-title">
             <h2>Margem de segurança</h2>
             <Badge tone={safetyMargin > 20 ? "good" : safetyMargin > 0 ? "warn" : "bad"}>
@@ -257,7 +257,7 @@ function AssetContent() {
       )}
 
       {/* Sections */}
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <div className="card-title">
             <h2>Métricas e provenance</h2>

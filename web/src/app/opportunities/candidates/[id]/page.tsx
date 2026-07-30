@@ -101,7 +101,7 @@ export default function CandidateDetailPage() {
         <article className="card metric"><div className="metric-label">Execuções</div><div className="metric-value">{(detail.analysis_runs ?? []).length}</div><div className="metric-note">última: {(detail.analysis_runs ?? [])[0]?.status ?? "—"}</div></article>
       </section>
 
-      <section className="card card-pad" style={{ marginTop: 14 }}>
+      <section className="card card-pad section-gap">
         <div className={styles.tabs} role="tablist">
           {(["overview", "sources", "gaps", "analysis", "timeline"] as Tab[]).map((value) => <button key={value} className={`${styles.tab} ${tab === value ? styles.tabActive : ""}`} role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>{({ overview: "Visão geral", sources: "Fontes", gaps: "Lacunas", analysis: "Análises", timeline: "Timeline" } as Record<Tab, string>)[value]}</button>)}
         </div>

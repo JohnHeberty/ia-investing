@@ -117,7 +117,7 @@ function AgentsContent() {
         />
       </section>
 
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <div className="card-title">
             <h2>Versions e evals</h2>
@@ -150,7 +150,7 @@ function AgentsContent() {
       </section>
 
       {runs.length > 0 && (
-        <section className="card card-pad" style={{ marginTop: 14 }}>
+        <section className="card card-pad section-gap">
           <div className="card-title">
             <h2>Runs recentes</h2>
             <span>{count} execuções</span>
@@ -220,7 +220,7 @@ function AgentsContent() {
       )}
 
       {runs.length === 0 && (
-        <div style={{ marginTop: 14 }}>
+        <div className="section-gap">
           <DataStatePanel
             state="missing"
             title="Nenhum run encontrado"

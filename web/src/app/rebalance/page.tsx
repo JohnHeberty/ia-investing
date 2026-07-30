@@ -33,7 +33,7 @@ function ErrorState({ message }: { message: string }) {
   return (
     <main>
       <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text)" }}>Rebalanceamento</h1>
-      <div className="state-panel" data-state="error" role="alert" style={{ marginTop: 24 }}>
+      <div className="state-panel section-gap" data-state="error" role="alert">
         <strong>Erro</strong>
         {message}
       </div>
