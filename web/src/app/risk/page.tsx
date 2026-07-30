@@ -99,10 +99,25 @@ function RiskContent() {
 
       {staleCount > 0 && totalSources > 0 && (
         <div className="section-gap">
-          <PartialDataIndicator
-            coverage={Math.round((healthyCount / totalSources) * 100)}
-            missingFields={sources.filter((s) => s.status !== "healthy").map((s) => String(s.name ?? s.code ?? ""))}
-          />
+          <div className="card card-pad">
+            <div className="card-title">
+              <h2>Cobertura de Dados</h2>
+              <Badge tone={healthyCount > 0 ? "good" : "warn"}>
+                {Math.round((healthyCount / totalSources) * 100)}% fontes institucionais
+              </Badge>
+            </div>
+            <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 8 }}>
+              Dados de mercado (preços, fundamentais) são fornecidos via <strong>yfinance</strong> e estão disponíveis em tempo real.
+              As fontes institucionais abaixo aguardam ativação do Temporal Worker para ingestão automática.
+            </p>
+            <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {sources.filter((s) => s.status !== "healthy").map((s) => (
+                <span key={String(s.code ?? s.name)} className="badge" data-tone="warn">
+                  {String(s.name ?? s.code ?? "")}
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 
