@@ -49,11 +49,11 @@ export default function CandidateDetailPage() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const openGaps = useMemo(() => detail?.gaps.filter((gap) => gap.status === "open") ?? [], [detail]);
-  const sourceByKind = useMemo(() => new Map(detail?.sources.map((source) => [source.kind, source]) ?? []), [detail]);
+  const openGaps = useMemo(() => (detail?.gaps ?? []).filter((gap) => gap.status === "open") ?? [], [detail]);
+  const sourceByKind = useMemo(() => new Map((detail?.sources ?? []).map((source) => [source.kind, source]) ?? []), [detail]);
   const shouldPoll = Boolean(
-    detail?.sources.some((source) => source.status === "discovered")
-      || detail?.analysis_runs.some((run) => run.status === "queued" || run.status === "running"),
+    (detail?.sources ?? []).some((source) => source.status === "discovered")
+      || (detail?.analysis_runs ?? []).some((run) => run.status === "queued" || run.status === "running"),
   );
 
   useEffect(() => {
@@ -96,9 +96,9 @@ export default function CandidateDetailPage() {
 
       <section className="grid grid-4">
         <article className="card metric"><div className="metric-label">Prontidão</div><div className={`metric-value ${readinessPercent >= 90 ? "positive" : readinessPercent < 60 ? "warning" : ""}`}>{readinessPercent}%</div><div className="metric-note">não substitui aprovação</div></article>
-        <article className="card metric"><div className="metric-label">Lacunas abertas</div><div className={`metric-value ${openGaps.length ? "warning" : "positive"}`}>{openGaps.length}</div><div className="metric-note">{detail.blocking_gap_codes.length} bloqueantes</div></article>
-        <article className="card metric"><div className="metric-label">Fontes verificadas</div><div className="metric-value">{detail.sources.filter((source) => source.status === "verified").length}</div><div className="metric-note">de {detail.sources.length} cadastradas</div></article>
-        <article className="card metric"><div className="metric-label">Execuções</div><div className="metric-value">{detail.analysis_runs.length}</div><div className="metric-note">última: {detail.analysis_runs[0]?.status ?? "—"}</div></article>
+        <article className="card metric"><div className="metric-label">Lacunas abertas</div><div className={`metric-value ${openGaps.length ? "warning" : "positive"}`}>{openGaps.length}</div><div className="metric-note">{(detail.blocking_gap_codes ?? []).length} bloqueantes</div></article>
+        <article className="card metric"><div className="metric-label">Fontes verificadas</div><div className="metric-value">{(detail.sources ?? []).filter((source) => source.status === "verified").length}</div><div className="metric-note">de {(detail.sources ?? []).length} cadastradas</div></article>
+        <article className="card metric"><div className="metric-label">Execuções</div><div className="metric-value">{(detail.analysis_runs ?? []).length}</div><div className="metric-note">última: {(detail.analysis_runs ?? [])[0]?.status ?? "—"}</div></article>
       </section>
 
       <section className="card card-pad" style={{ marginTop: 14 }}>

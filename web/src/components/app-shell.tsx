@@ -158,7 +158,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             {user ? (
               <>
                 <span style={{ fontWeight: 600, fontSize: 12 }}>{user.name ?? user.subject}</span>
-                {user.roles.length > 0 && (
+                {(user.roles?.length ?? 0) > 0 && (
                   <span style={{ fontSize: 11, color: "var(--muted)", display: "block" }}>
                     {user.roles.join(", ")}
                   </span>

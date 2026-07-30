@@ -71,7 +71,7 @@ export function PortfolioRankingTable({ items }: { items: PortfolioRankItem[] })
                   ? "Indisponível"
                   : new Intl.NumberFormat("pt-BR", {
                       style: "currency",
-                      currency: item.currency,
+                      currency: item.currency || "BRL",
                       maximumFractionDigits: 0,
                     }).format(Number(item.nav))}
               </td>

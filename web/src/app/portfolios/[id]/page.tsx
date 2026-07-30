@@ -645,10 +645,10 @@ export function PortfolioContent({ id }: { id: string }) {
                       <p className="mt-8">
                         {recommendations.summary}
                       </p>
-                      {recommendations.key_risks.length > 0 && (
+                      {(recommendations.key_risks?.length ?? 0) > 0 && (
                         <div className="mt-12">
                           <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Riscos Principais:</div>
-                          {recommendations.key_risks.map((risk, i) => (
+                          {(recommendations.key_risks ?? []).map((risk, i) => (
                             <div key={i} style={{ fontSize: 12, color: "var(--amber)" }}>⚠️ {risk}</div>
                           ))}
                         </div>
@@ -672,7 +672,7 @@ export function PortfolioContent({ id }: { id: string }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {recommendations.recommendations.map((rec) => (
+                          {(recommendations.recommendations ?? []).map((rec) => (
                             <tr key={rec.ticker}>
                               <td style={{ fontWeight: 500 }}>{rec.ticker}</td>
                               <td>
