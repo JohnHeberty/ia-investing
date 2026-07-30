@@ -135,16 +135,6 @@ export async function POST(request: NextRequest) {
     maxAge: SESSION_DURATION_MS / 1000,
   });
 
-  // Also create CSRF token for mutating requests
-  const sessionId = crypto.randomUUID();
-  jar.set("ia_csrf_token", sessionId, {
-    httpOnly: false,
-    secure: process.env.NODE_ENV !== "development",
-    sameSite: "strict",
-    path: "/",
-    maxAge: SESSION_DURATION_MS / 1000,
-  });
-
   const returnTo = request.nextUrl.searchParams.get("return_to") || "/";
   return NextResponse.json({ success: true, return_to: returnTo });
 }

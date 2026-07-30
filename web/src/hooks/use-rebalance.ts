@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { getCsrfToken } from "@/lib/csrf";
+import { bffFetch } from "@/lib/api-client";
 
 export type DriftItem = {
   ticker: string;
@@ -75,36 +75,10 @@ export type RebalanceProposal = {
   };
 };
 
-const apiBaseUrl = "/api/backend";
-
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const method = (options?.method ?? "GET").toUpperCase();
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-    ...(options?.headers as Record<string, string>),
-  };
-  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
-    const token = getCsrfToken();
-    if (token) {
-      headers["x-csrf-token"] = token;
-    }
-  }
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    ...options,
-    credentials: "include",
-    headers,
-  });
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Rebalance API error (${response.status}): ${detail}`);
-  }
-  return response.json() as Promise<T>;
-}
-
 export function useDriftSummary(portfolioId: string | undefined) {
   return useQuery({
     queryKey: ["rebalance", "drift", portfolioId],
-    queryFn: () => apiFetch<DriftSummary>(`/api/v1/rebalance/${portfolioId}/drift`),
+    queryFn: () => bffFetch<DriftSummary>(`/api/v1/rebalance/${portfolioId}/drift`),
     enabled: !!portfolioId,
     staleTime: 30_000,
     retry: 1,
@@ -119,7 +93,7 @@ export function useRebalanceProposals(portfolioId?: string, status?: string) {
 
   return useQuery({
     queryKey: ["rebalance", "proposals", portfolioId, status],
-    queryFn: () => apiFetch<RebalanceProposal[]>(`/api/v1/rebalance/proposals${qs ? `?${qs}` : ""}`),
+    queryFn: () => bffFetch<RebalanceProposal[]>(`/api/v1/rebalance/proposals${qs ? `?${qs}` : ""}`),
     staleTime: 15_000,
     retry: 1,
   });
@@ -128,7 +102,7 @@ export function useRebalanceProposals(portfolioId?: string, status?: string) {
 export function useRebalanceProposal(id: string | undefined) {
   return useQuery({
     queryKey: ["rebalance", "proposal", id],
-    queryFn: () => apiFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${id}`),
+    queryFn: () => bffFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${id}`),
     enabled: !!id,
     staleTime: 10_000,
     retry: 1,
@@ -148,7 +122,7 @@ export function useProposeRebalance() {
       targetAllocations: Record<string, number>;
       rationale: string;
     }) =>
-      apiFetch<RebalanceProposal>(`/api/v1/rebalance/${portfolioId}/propose`, {
+      bffFetch<RebalanceProposal>(`/api/v1/rebalance/${portfolioId}/propose`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target_allocations: targetAllocations, rationale }),
@@ -173,7 +147,7 @@ export function useApproveRebalance() {
       proposalId: string;
       notes?: string;
     }) =>
-      apiFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/approve`, {
+      bffFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes }),
@@ -198,7 +172,7 @@ export function useExecuteTradeStep() {
       proposalId: string;
       tradeIds: string[];
     }) =>
-      apiFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/execute-step`, {
+      bffFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/execute-step`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ trade_ids: tradeIds }),
@@ -217,7 +191,7 @@ export function useCompleteRebalance() {
 
   return useMutation({
     mutationFn: ({ proposalId }: { proposalId: string }) =>
-      apiFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/complete`, {
+      bffFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/complete`, {
         method: "POST",
       }),
     onSuccess: () => {
@@ -240,7 +214,7 @@ export function useCancelRebalance() {
       proposalId: string;
       reason: string;
     }) =>
-      apiFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/cancel`, {
+      bffFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reason }),

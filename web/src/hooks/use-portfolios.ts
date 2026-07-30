@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import type { DataState } from "@/components/domain";
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
 
 export interface PortfolioPosition {
@@ -47,18 +47,10 @@ export interface CreatePortfolioInput {
 /** Fetch all paper portfolios */
 export function usePortfoliosList() {
   const query = useQuery({
-    queryKey: ["paperPortfolios"],
+    queryKey: queryKeys.modelPortfolios(),
     queryFn: async () => {
-      const res = await fetch("/api/backend/api/v1/portfolio", {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
-      }
-      const data = await res.json();
-      return (Array.isArray(data) ? data : []) as unknown as Portfolio[];
+      const data = await bffFetch<Portfolio[]>("/api/v1/portfolio");
+      return Array.isArray(data) ? data : [];
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
@@ -89,15 +81,9 @@ export function usePortfolioDetail(portfolioId: string | null) {
     queryKey: ["paperPortfolio", portfolioId],
     queryFn: async () => {
       if (!portfolioId) return null;
-      const res = await fetch(`/api/backend/api/v1/portfolio/${portfolioId}`, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
-      }
-      return (await res.json()) as unknown as PortfolioWithPositions | null;
+      return await bffFetch<PortfolioWithPositions | null>(
+        `/api/v1/portfolio/${portfolioId}`,
+      );
     },
     enabled: !!portfolioId,
     staleTime: 30_000,
@@ -129,13 +115,11 @@ export function useCreatePortfolio() {
 
   return useMutation({
     mutationFn: async (input: CreatePortfolioInput) => {
-      const idempotencyKey = crypto.randomUUID();
-      const res = await fetch("/api/backend/api/v1/portfolio", {
+      return await bffFetch<Portfolio>("/api/v1/portfolio", {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
-          "Idempotency-Key": idempotencyKey,
+          "Idempotency-Key": crypto.randomUUID(),
         },
         body: JSON.stringify({
           name: input.name,
@@ -145,11 +129,6 @@ export function useCreatePortfolio() {
           initial_capital: input.initial_capital,
         }),
       });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
-      }
-      return (await res.json()) as unknown as Portfolio;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolios"] });
@@ -175,25 +154,22 @@ export function useAddPosition() {
       avgCost: number;
       currentPrice?: number;
     }) => {
-      const res = await fetch(`/api/backend/api/v1/portfolio/${portfolioId}/positions`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
+      return await bffFetch<unknown>(
+        `/api/v1/portfolio/${portfolioId}/positions`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": crypto.randomUUID(),
+          },
+          body: JSON.stringify({
+            ticker_symbol: ticker,
+            quantity,
+            avg_cost_per_share: avgCost,
+            current_price: currentPrice,
+          }),
         },
-        body: JSON.stringify({
-          ticker_symbol: ticker,
-          quantity,
-          avg_cost_per_share: avgCost,
-          current_price: currentPrice,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
-      }
-      return (await res.json()) as unknown;
+      );
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolio", variables.portfolioId] });
@@ -229,15 +205,9 @@ export function usePortfolioRecommendations(portfolioId: string | null) {
     queryKey: ["portfolioRecommendations", portfolioId],
     queryFn: async () => {
       if (!portfolioId) return null;
-      const res = await fetch(`/api/backend/api/v1/portfolio/${portfolioId}/recommendations`, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) {
-        const body = await res.text().catch(() => "");
-        throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
-      }
-      return (await res.json()) as unknown as PortfolioRecommendations;
+      return await bffFetch<PortfolioRecommendations>(
+        `/api/v1/portfolio/${portfolioId}/recommendations`,
+      );
     },
     enabled: !!portfolioId,
     staleTime: 60_000,
@@ -259,15 +229,10 @@ export function useDeletePosition() {
 
   return useMutation({
     mutationFn: async ({ portfolioId, positionId }: { portfolioId: string; positionId: string }) => {
-      const res = await fetch(`/api/backend/api/v1/portfolio/${portfolioId}/positions/${positionId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as Record<string, unknown>).detail as string || `HTTP ${res.status}`);
-      }
-      return (await res.json()) as { deleted: boolean };
+      return await bffFetch<{ deleted: boolean }>(
+        `/api/v1/portfolio/${portfolioId}/positions/${positionId}`,
+        { method: "DELETE" },
+      );
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolio", variables.portfolioId] });
@@ -302,18 +267,14 @@ export function useUpdatePosition() {
       if (avg_cost_per_share !== undefined) body.avg_cost_per_share = avg_cost_per_share;
       if (current_price !== undefined) body.current_price = current_price;
 
-      const res = await fetch(`/api/backend/api/v1/portfolio/${portfolioId}/positions/${positionId}`, {
-        method: "PUT",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as Record<string, unknown>).detail as string || `HTTP ${res.status}`);
-      }
-      if (res.headers.get("content-length") === "0") return { deleted: true };
-      return (await res.json().catch(() => ({ deleted: true }))) as { deleted: boolean };
+      return await bffFetch<{ deleted: boolean }>(
+        `/api/v1/portfolio/${portfolioId}/positions/${positionId}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        },
+      );
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolio", variables.portfolioId] });
@@ -328,15 +289,10 @@ export function useDeletePortfolio() {
 
   return useMutation({
     mutationFn: async (portfolioId: string) => {
-      const res = await fetch(`/api/backend/api/v1/portfolio/${portfolioId}`, {
-        method: "DELETE",
-        credentials: "include",
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error((body as Record<string, unknown>).detail as string || `HTTP ${res.status}`);
-      }
-      return (await res.json().catch(() => ({ id: portfolioId, deleted: true }))) as { id: string; deleted: boolean };
+      return await bffFetch<{ id: string; deleted: boolean }>(
+        `/api/v1/portfolio/${portfolioId}`,
+        { method: "DELETE" },
+      );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolios"] });

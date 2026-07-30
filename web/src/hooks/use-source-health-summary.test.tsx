@@ -6,7 +6,7 @@ import React, { type ReactNode } from "react";
 import { useSourceHealthSummary } from "./use-source-health-summary";
 
 vi.mock("@/lib/api-client", () => ({
-  institutionalApi: { GET: vi.fn() },
+  bffFetch: vi.fn(),
   queryKeys: {
     sourceHealth: () => ["sourceHealth"] as const,
   },

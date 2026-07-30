@@ -1,41 +1,28 @@
-import createClient from "openapi-fetch";
-import type { paths } from "./api-schema.d";
 import { getCsrfToken } from "./csrf";
 
-function csrfFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
+/**
+ * Direct fetch through the BFF proxy.
+ * Prepends /api/backend to the path.
+ * Automatically adds CSRF token for mutating methods.
+ */
+export async function bffFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? "GET").toUpperCase();
-  const requestId = crypto.randomUUID();
-  const headers = new Headers(init?.headers);
-  headers.set("X-Request-Id", requestId);
+  const headers: Record<string, string> = {
+    Accept: "application/json",
+    ...(init?.headers as Record<string, string>),
+  };
 
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const token = getCsrfToken();
     if (token) {
-      headers.set("x-csrf-token", token);
+      headers["x-csrf-token"] = token;
     }
   }
 
-  return fetch(input, { ...init, headers });
-}
-
-export const institutionalApi = createClient<paths>({
-  baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL ?? "",
-  credentials: "include",
-  headers: {
-    "Content-Type": "application/json",
-  },
-  fetch: csrfFetch,
-});
-
-/**
- * Direct fetch through the BFF proxy — use this instead of institutionalApi
- * for hooks that were broken by the openapi-fetch header replacement bug.
- */
-export async function bffFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`/api/backend${path}`, {
     credentials: "include",
-    headers: { Accept: "application/json" },
     ...init,
+    headers,
   });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
