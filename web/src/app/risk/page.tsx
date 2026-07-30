@@ -36,7 +36,7 @@ function RiskContent() {
             </p>
           </div>
         </div>
-        <section className="grid grid-4">
+        <section className="grid grid-4 section-gap">
           <LoadingSkeleton lines={4} />
           <LoadingSkeleton lines={4} />
           <LoadingSkeleton lines={4} />
@@ -121,7 +121,7 @@ function RiskContent() {
         </div>
       )}
 
-      <section className="grid grid-4" aria-label="Indicadores de risco">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores de risco">
         <Metric
           label="Hard breaches"
           value={String(hardBreaches.length)}

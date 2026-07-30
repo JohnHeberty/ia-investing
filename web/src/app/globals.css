@@ -655,7 +655,7 @@ h1 {
 .mb-16 { margin-bottom: 16px; }
 
 /* ── Section Spacing (default between page sections) ── */
-.section-gap { margin-top: 24px; }
+.section-gap { margin-top: 24px; margin-bottom: 24px; }
 
 /* ── Modal / Dialog ── */
 .modal-overlay {
