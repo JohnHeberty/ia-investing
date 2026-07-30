@@ -1,7 +1,5 @@
 "use client";
 
-import { useEffect } from "react";
-
 import { StatePanel } from "@/components/domain";
 
 export default function ErrorBoundary({
@@ -11,9 +9,6 @@ export default function ErrorBoundary({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  useEffect(() => {
-    console.error("authorized-ui-error", { digest: error.digest });
-  }, [error]);
   return (
     <div>
       <StatePanel

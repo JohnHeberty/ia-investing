@@ -37,8 +37,8 @@ export function CreatePortfolioForm({ onClose }: CreatePortfolioFormProps) {
         router.push(`/portfolios/${result.id}`);
       }
       onClose();
-    } catch (err) {
-      console.error("Failed to create portfolio:", err);
+    } catch {
+      // Error propagated via mutation error state
     }
   };
 

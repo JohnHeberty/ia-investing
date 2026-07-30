@@ -34,8 +34,8 @@ export function AddPositionForm({ portfolioId, onClose }: AddPositionFormProps) 
         currentPrice: currentPrice ? parseFloat(currentPrice) : undefined,
       });
       onClose();
-    } catch (err) {
-      console.error("Failed to add position:", err);
+    } catch {
+      // Error propagated via mutation error state
     }
   };
 
