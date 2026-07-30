@@ -75,8 +75,7 @@ export type RebalanceProposal = {
   };
 };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-const organizationId = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
+const apiBaseUrl = "/api/backend";
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const method = (options?.method ?? "GET").toUpperCase();
@@ -84,9 +83,6 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
     Accept: "application/json",
     ...(options?.headers as Record<string, string>),
   };
-  if (organizationId) {
-    headers["X-Organization-Id"] = organizationId;
-  }
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     const token = getCsrfToken();
     if (token) {

@@ -1,7 +1,6 @@
 import { getCsrfToken } from "./csrf";
 
-const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-const orgId = process.env.NEXT_PUBLIC_ORGANIZATION_ID ?? "";
+const apiBase = "/api/backend";
 
 async function api<T>(
   path: string,
@@ -11,7 +10,7 @@ async function api<T>(
   const method = (options.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "X-Organization-Id": orgId,
+    Accept: "application/json",
     ...(options.headers as Record<string, string>),
   };
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
@@ -187,8 +186,7 @@ export function getCandidate(id: string): Promise<{ data: CandidateDetail; etag:
   return fetch(url, {
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
-      "X-Organization-Id": orgId,
+      Accept: "application/json",
     },
   })
     .then(async (response) => {

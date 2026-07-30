@@ -49,6 +49,13 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json(
+      { error: "This login endpoint is for development only. Use OIDC in production." },
+      { status: 403 },
+    );
+  }
+
   let body: { email?: string; password?: string };
   try {
     body = await request.json();
@@ -122,7 +129,7 @@ export async function POST(request: NextRequest) {
   const jar = await cookies();
   jar.set("ia_session", token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV !== "development",
     sameSite: "strict",
     path: "/",
     maxAge: SESSION_DURATION_MS / 1000,
@@ -132,7 +139,7 @@ export async function POST(request: NextRequest) {
   const sessionId = crypto.randomUUID();
   jar.set("ia_csrf_token", sessionId, {
     httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
+    secure: process.env.NODE_ENV !== "development",
     sameSite: "strict",
     path: "/",
     maxAge: SESSION_DURATION_MS / 1000,

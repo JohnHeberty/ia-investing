@@ -66,8 +66,8 @@ export default function ExplorationPage() {
     try {
       const run = await createExplorationRun({
         strategy_codes: strategies,
-        minimum_liquidity: String(form.get("minimum_liquidity") ?? "5000000"),
-        maximum_suggestions: Number(form.get("maximum_suggestions") ?? 20),
+        minimum_liquidity: String(form.get("minimum_liquidity") || "5000000"),
+        maximum_suggestions: Number(form.get("maximum_suggestions") || 20),
       });
       setSuccess(`Exploração ${run.id} enfileirada. Nenhuma sugestão entra diretamente em carteira.`);
       await refresh(run.id);
@@ -92,11 +92,11 @@ export default function ExplorationPage() {
     }
     try {
       const schedule = await createExplorationSchedule({
-        name: String(form.get("schedule_name") ?? "weekly-discovery"),
+        name: String(form.get("schedule_name") || "weekly-discovery"),
         strategy_codes: strategies,
-        minimum_liquidity: String(form.get("schedule_minimum_liquidity") ?? "5000000"),
-        maximum_suggestions: Number(form.get("schedule_maximum_suggestions") ?? 20),
-        interval_hours: Number(form.get("schedule_interval_hours") ?? 168),
+        minimum_liquidity: String(form.get("schedule_minimum_liquidity") || "5000000"),
+        maximum_suggestions: Number(form.get("schedule_maximum_suggestions") || 20),
+        interval_hours: Number(form.get("schedule_interval_hours") || 168),
         paused: false,
       });
       setSuccess(`Agendamento ${schedule.schedule_id} criado a cada ${schedule.interval_hours} horas.`);

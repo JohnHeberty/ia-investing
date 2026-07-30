@@ -2,6 +2,8 @@
 
 import { useQuery } from "@tanstack/react-query";
 
+import { bffFetch } from "@/lib/api-client";
+
 export interface AuditLogEntry {
   id: string;
   tenant_id: string;
@@ -26,12 +28,7 @@ export function useAuditLogs(resourceType: string, resourceId: string | null) {
         resource_id: resourceId,
         limit: "50",
       });
-      const res = await fetch(`/api/backend/api/v1/audit/logs?${params}`, {
-        credentials: "include",
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) return { items: [], total: 0 };
-      const data = await res.json();
+      const data = await bffFetch<{ items?: AuditLogEntry[]; total?: number }>(`/api/v1/audit/logs?${params}`);
       return { items: (data.items ?? []) as AuditLogEntry[], total: data.total ?? 0 };
     },
     enabled: !!resourceId,

@@ -21,7 +21,7 @@ function computeRiskMetrics(positions: Array<{
   current_price: number | null;
 }>, totalValue: number) {
   const weights = positions.map((p) => {
-    const price = p.current_price || p.avg_cost_per_share;
+    const price = p.current_price ?? p.avg_cost_per_share;
     return totalValue > 0 ? (p.quantity * price) / totalValue : 0;
   });
   const maxWeight = weights.length > 0 ? Math.max(...weights) : 0;
@@ -101,7 +101,7 @@ export function PortfolioContent({ id }: { id: string }) {
   const positions = portfolio.positions || [];
 
   const totalValue = positions.reduce((sum, pos) => {
-    const price = pos.current_price || pos.avg_cost_per_share;
+    const price = pos.current_price ?? pos.avg_cost_per_share;
     return sum + (pos.quantity * price);
   }, 0);
 
@@ -258,7 +258,7 @@ export function PortfolioContent({ id }: { id: string }) {
                     <tbody>
                       {positions.map((pos) => {
                         const isEditing = editingPosition === pos.id;
-                        const currentPrice = pos.current_price || pos.avg_cost_per_share;
+                        const currentPrice = pos.current_price ?? pos.avg_cost_per_share;
                         const value = pos.quantity * currentPrice;
                         const cost = pos.quantity * pos.avg_cost_per_share;
                         const pnl = value - cost;
@@ -485,7 +485,7 @@ export function PortfolioContent({ id }: { id: string }) {
                   {positions.length > 0 ? (
                     <div className="mt-12">
                       {positions.map((pos) => {
-                        const currentPrice = pos.current_price || pos.avg_cost_per_share;
+                        const currentPrice = pos.current_price ?? pos.avg_cost_per_share;
                         const value = pos.quantity * currentPrice;
                         const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
                         return (
@@ -524,7 +524,7 @@ export function PortfolioContent({ id }: { id: string }) {
                     </div>
                     <div className="mt-16">
                       {positions.map((pos, idx) => {
-                        const currentPrice = pos.current_price || pos.avg_cost_per_share;
+                        const currentPrice = pos.current_price ?? pos.avg_cost_per_share;
                         const value = pos.quantity * currentPrice;
                         const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
                         const colors = ["var(--accent)", "var(--blue)", "var(--amber)", "var(--red)", "#9b59b6", "#1abc9c"];

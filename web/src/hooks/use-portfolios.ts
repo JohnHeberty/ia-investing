@@ -312,7 +312,8 @@ export function useUpdatePosition() {
         const body = await res.json().catch(() => ({}));
         throw new Error((body as Record<string, unknown>).detail as string || `HTTP ${res.status}`);
       }
-      return (await res.json()) as unknown as PortfolioPosition;
+      if (res.headers.get("content-length") === "0") return { deleted: true };
+      return (await res.json().catch(() => ({ deleted: true }))) as { deleted: boolean };
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolio", variables.portfolioId] });
@@ -335,7 +336,7 @@ export function useDeletePortfolio() {
         const body = await res.json().catch(() => ({}));
         throw new Error((body as Record<string, unknown>).detail as string || `HTTP ${res.status}`);
       }
-      return (await res.json()) as { id: string; deleted: boolean };
+      return (await res.json().catch(() => ({ id: portfolioId, deleted: true }))) as { id: string; deleted: boolean };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolios"] });

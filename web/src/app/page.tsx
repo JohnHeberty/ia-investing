@@ -45,7 +45,7 @@ export default function MissionControlPage() {
   const totalValue = portfolios.reduce((sum, p) => {
     const positions = p.positions || [];
     return sum + positions.reduce((posSum: number, pos) => {
-      const price = pos.current_price || pos.avg_cost_per_share || 0;
+      const price = pos.current_price ?? pos.avg_cost_per_share ?? 0;
       return posSum + (pos.quantity * price);
     }, 0);
   }, 0);
@@ -122,7 +122,7 @@ export default function MissionControlPage() {
             {portfolios.map((portfolio) => {
               const positions = portfolio.positions || [];
               const value = positions.reduce((sum: number, pos) => {
-                const price = pos.current_price || pos.avg_cost_per_share || 0;
+                const price = pos.current_price ?? pos.avg_cost_per_share ?? 0;
                 return sum + (pos.quantity * price);
               }, 0);
               const cost = positions.reduce((sum: number, pos) => {

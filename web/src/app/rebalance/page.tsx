@@ -105,13 +105,16 @@ function ProposeForm({
   const propose = useProposeRebalance();
   const [targets, setTargets] = useState("");
   const [rationale, setRationale] = useState("");
+  const [parseError, setParseError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setParseError(null);
     let parsed: Record<string, number>;
     try {
       parsed = JSON.parse(targets) as Record<string, number>;
     } catch {
+      setParseError("JSON inválido. Use o formato: {\"TICKER\": 0.25, ...}");
       return;
     }
     propose.mutate(
@@ -348,8 +351,8 @@ function ProposalDetail({
             <div style={{ height: 8, flex: 1, overflow: "hidden", borderRadius: 999, background: "var(--surface-3)" }}>
               <div
                 style={{ height: "100%", borderRadius: 999, background: "var(--accent)", transition: "all 0.3s", width: `${proposal.execution_progress.percent_complete}%` }}
-              />
-            </div>
+        />
+      </div>
             <span style={{ fontSize: 14, color: "var(--muted)" }}>
               {proposal.execution_progress.executed}/{proposal.execution_progress.total}
             </span>
