@@ -5,13 +5,15 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+import sqlalchemy as sa
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from opentelemetry import trace
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.api.security import safe_uuid,  AuthContext, require_permission
+from apps.api.security import safe_uuid, AuthContext, require_permission
 from database.core import get_async_session
+from database.models.agent_runtime import AgentRuntimeRun
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.agent_runtime import AgentRuntimeService
 
@@ -125,6 +127,27 @@ async def create_agent_run(
         resource_id=run.id,
     )
     return AgentRunV1.model_validate(run)
+
+
+@router.get("", response_model=list[AgentRunV1])
+async def list_agent_runs(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    status: str | None = Query(default=None),
+    auth: AuthContext = Depends(require_permission("agent_runs:read")),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[AgentRunV1]:
+    stmt = (
+        sa.select(AgentRuntimeRun)
+        .where(AgentRuntimeRun.organization_id == auth.organization_id)
+        .order_by(AgentRuntimeRun.created_at.desc())
+    )
+    if status:
+        stmt = stmt.where(AgentRuntimeRun.status == status)
+    stmt = stmt.limit(limit).offset(offset)
+    result = await session.execute(stmt)
+    runs = result.scalars().all()
+    return [AgentRunV1.model_validate(r) for r in runs]
 
 
 @router.get("/{run_id}", response_model=AgentRunV1)

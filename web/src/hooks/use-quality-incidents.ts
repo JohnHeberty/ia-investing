@@ -23,7 +23,7 @@ export function useQualityIncidents() {
   const query = useQuery({
     queryKey: queryKeys.qualityIncidents(),
     queryFn: async () => {
-      return await bffFetch<{ items?: Array<Record<string, unknown>> }>("/api/v1/quality/incidents?limit=250&offset=0");
+      return await bffFetch<{ items?: Array<Record<string, unknown>> }>("/api/v1/quality/incidents?limit=200&offset=0");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,

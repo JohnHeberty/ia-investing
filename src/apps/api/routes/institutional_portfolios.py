@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
+import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +14,7 @@ from apps.api._etag import parse_etag
 from apps.api.dependencies import get_operation_service
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
-from database.models.portfolio_domain import ModelPortfolio
+from database.models.portfolio_domain import ModelPortfolio, InstitutionalBacktestRun
 from ia_investing.application.backtests import InstitutionalBacktestService
 from ia_investing.application.institutional_portfolio import (
     InstitutionalPortfolioService,
@@ -672,6 +673,24 @@ async def optimize_model_portfolio(
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     response.headers["Location"] = f"/api/v1/operations/{accepted.operation_id}"
     return accepted
+
+
+@router.get("/backtests", response_model=list[BacktestRunV1])
+async def list_backtests(
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[BacktestRunV1]:
+    stmt = (
+        sa.select(InstitutionalBacktestRun)
+        .order_by(InstitutionalBacktestRun.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    result = await session.execute(stmt)
+    runs = result.scalars().all()
+    return [BacktestRunV1.model_validate(r) for r in runs]
 
 
 @router.post("/backtests", response_model=OperationAcceptedV1, status_code=202)
