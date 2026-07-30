@@ -87,7 +87,7 @@ function BacktestsContent() {
         </div>
       )}
 
-      <section className="grid grid-4" aria-label="Métricas de backtest">
+      <section className="grid grid-4 section-gap" aria-label="Métricas de backtest">
         <Metric
           label="Runs concluídos"
           value={hasRuns ? String(completedRuns) : "—"}

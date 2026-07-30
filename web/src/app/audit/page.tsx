@@ -88,7 +88,7 @@ function AuditContent() {
         </div>
       )}
 
-      <section className="grid grid-4" aria-label="Métricas de auditoria">
+      <section className="grid grid-4 section-gap" aria-label="Métricas de auditoria">
         <Metric
           label="Eventos hoje"
           value={formattedCount}

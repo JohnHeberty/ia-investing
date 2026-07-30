@@ -92,7 +92,7 @@ function MacroContent() {
         </div>
       )}
 
-      <section className="grid grid-4" aria-label="Indicadores macro">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores macro">
         <Metric
           label="SELIC"
           value={selicValue}

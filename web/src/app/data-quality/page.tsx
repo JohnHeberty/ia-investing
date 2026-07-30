@@ -91,7 +91,7 @@ function DataQualityContent() {
         </div>
       )}
 
-      <section className="grid grid-4" aria-label="Métricas de qualidade">
+      <section className="grid grid-4 section-gap" aria-label="Métricas de qualidade">
         <Metric
           label="Fontes saudáveis"
           value={totalSources > 0 ? `${healthySources}/${totalSources}` : "\u2014"}

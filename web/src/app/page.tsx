@@ -99,7 +99,7 @@ export default function MissionControlPage() {
         </div>
       </header>
 
-      <section className="grid grid-4 mt-24">
+      <section className="grid grid-4 section-gap">
         <div className="card metric">
           <div className="metric-label">Carteiras</div>
           <div className="metric-value">{count}</div>
@@ -133,7 +133,7 @@ export default function MissionControlPage() {
           </Link>
         </div>
       ) : (
-        <section className="card card-pad mt-24">
+        <section className="card card-pad section-gap">
           <div className="card-title">
             <h2>Suas Carteiras</h2>
             <span className="mono">{count} {count === 1 ? "carteira" : "carteiras"}</span>
@@ -179,7 +179,7 @@ export default function MissionControlPage() {
         </section>
       )}
 
-      <section className="card card-pad mt-24">
+      <section className="card card-pad section-gap">
         <div className="card-title">
           <h2>Funcionalidades Disponíveis</h2>
         </div>

@@ -92,7 +92,7 @@ function AgentsContent() {
         </div>
       )}
 
-      <section className="grid grid-4" aria-label="Métricas de agents">
+      <section className="grid grid-4 section-gap" aria-label="Métricas de agents">
         <Metric
           label="Runs hoje"
           value={String(count)}
