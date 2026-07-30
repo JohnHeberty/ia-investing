@@ -23,11 +23,13 @@ export function CreatePortfolioForm({ onClose }: CreatePortfolioFormProps) {
     if (!name.trim()) return;
 
     try {
+      const cap = parseFloat(initialCapital);
+      const initialCapitalNum = isNaN(cap) ? undefined : cap;
       const result = await createPortfolio.mutateAsync({
         name: name.trim(),
         description: description.trim() || undefined,
         base_currency: baseCurrency,
-        initial_capital: initialCapital ? parseFloat(initialCapital) : undefined,
+        initial_capital: initialCapitalNum,
         is_paper_trading: true,
       });
 

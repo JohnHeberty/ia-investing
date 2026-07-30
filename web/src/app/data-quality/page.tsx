@@ -104,9 +104,9 @@ function DataQualityContent() {
           tone={openIncidents > 0 ? "warning" : undefined}
         />
         <Metric
-          label="Quarentena"
-          value={`${quarantineCount} objeto${quarantineCount !== 1 ? "s" : ""}`}
-          note="isolados do domínio"
+          label="Incidentes Críticos"
+          value={String(quarantineCount)}
+          note="abertos + alta severidade"
           tone={quarantineCount > 0 ? "warning" : undefined}
         />
         <Metric

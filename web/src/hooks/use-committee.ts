@@ -124,6 +124,7 @@ export function useCommittee() {
       status: mapStatus(session),
       requestedBy: typeof agenda.requested_by === "string" ? agenda.requested_by : "investment-research",
       requestedAt: session.created_at ?? session.scheduled_at ?? "",
+      decidedBy: typeof agenda.decided_by === "string" ? agenda.decided_by : typeof agenda.requested_by === "string" ? agenda.requested_by : undefined,
       decidedAt: session.published_at ?? undefined,
       reason: session.rationale ?? undefined,
       conditions,

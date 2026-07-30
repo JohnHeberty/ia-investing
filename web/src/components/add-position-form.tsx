@@ -21,12 +21,16 @@ export function AddPositionForm({ portfolioId, onClose }: AddPositionFormProps) 
     e.preventDefault();
     if (!ticker.trim() || !quantity || !avgCost) return;
 
+    const qty = parseFloat(quantity);
+    const cost = parseFloat(avgCost);
+    if (isNaN(qty) || qty <= 0 || isNaN(cost) || cost <= 0) return;
+
     try {
       await addPosition.mutateAsync({
         portfolioId,
         ticker: ticker.trim().toUpperCase(),
-        quantity: parseFloat(quantity),
-        avgCost: parseFloat(avgCost),
+        quantity: qty,
+        avgCost: cost,
         currentPrice: currentPrice ? parseFloat(currentPrice) : undefined,
       });
       onClose();

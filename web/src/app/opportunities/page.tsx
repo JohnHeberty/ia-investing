@@ -1,10 +1,7 @@
 "use client";
 
-import { Suspense, useState, useCallback } from "react";
-import { FileText, FolderOpen, Plus, X, CheckCircle, AlertTriangle } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { useQueryClient } from "@tanstack/react-query";
+import { Suspense, useState } from "react";
+import { FolderOpen, Plus } from "lucide-react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
 import {
@@ -12,291 +9,53 @@ import {
   LoadingSkeleton,
   StaleWarning,
 } from "@/components/data-state-components";
+import { CaseCard } from "@/components/opportunities/CaseCard";
+import { CreateCaseForm } from "@/components/opportunities/CreateCaseForm";
 import { useResearchCases } from "@/hooks/use-research-cases";
 import { usePermissions } from "@/hooks/use-permissions";
-import { commandHeaders } from "@/lib/api";
-import { queryKeys } from "@/lib/api-client";
 
 /* ------------------------------------------------------------------ */
-/*  New-case form schema                                              */
+/*  Helper — funnel bar                                                */
 /* ------------------------------------------------------------------ */
-const newCaseSchema = z.object({
-  title: z.string().min(3, "Título deve ter pelo menos 3 caracteres"),
-  instrument: z.string().min(1, "Instrumento é obrigatório"),
-  case_type: z.enum(["fundamental", "macro", "event", "technical"], {
-    error: "Selecione um tipo de caso",
-  }),
-});
-
-type NewCaseFormValues = z.infer<typeof newCaseSchema>;
-
-/* ------------------------------------------------------------------ */
-/*  New Case Form component                                           */
-/* ------------------------------------------------------------------ */
-function NewCaseForm({ onClose }: { onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<NewCaseFormValues>({
-    defaultValues: { title: "", instrument: "", case_type: undefined },
-  });
-
-  const onSubmit = useCallback(
-    async (values: NewCaseFormValues) => {
-      setSubmitError(null);
-      setSubmitSuccess(false);
-
-      const idempotencyKey =
-        typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-
-      try {
-        // Check for existing case by instrument (mock search)
-        const existingCases = queryClient.getQueryData(
-          queryKeys.researchCases(),
-        ) as Array<Record<string, unknown>> | undefined;
-
-        const duplicate = existingCases?.find(
-          (c) =>
-            String(c.instrument_id ?? "").toLowerCase() ===
-            values.instrument.toLowerCase(),
-        );
-
-        if (duplicate) {
-          setSubmitError(
-            `Já existe um caso para o instrumento "${values.instrument}". Caso existente: ${String(duplicate.title ?? "Sem título")}`,
-          );
-          return;
-        }
-
-        // POST to create new case
-        const response = await fetch("/api/backend/api/v1/research/cases", {
-          method: "POST",
-          headers: commandHeaders(idempotencyKey),
-          body: JSON.stringify({
-            title: values.title,
-            instrument_id: values.instrument,
-            case_type: values.case_type,
-            priority: "medium",
-            state: "open",
-          }),
-        });
-
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(
-            (body as { detail?: string }).detail ?? "Erro ao criar caso",
-          );
-        }
-
-        setSubmitSuccess(true);
-        queryClient.invalidateQueries({ queryKey: queryKeys.researchCases() });
-
-        // Auto-close after brief success feedback
-        setTimeout(() => {
-          onClose();
-          setSubmitSuccess(false);
-        }, 1500);
-      } catch (err) {
-        setSubmitError(
-          err instanceof Error ? err.message : "Erro desconhecido",
-        );
-      }
-    },
-    [queryClient, onClose],
-  );
-
+function FunnelRow({
+  label,
+  value,
+  total,
+  tone,
+}: {
+  label: string;
+  value: number;
+  total: number;
+  tone: "neutral" | "warn" | "good";
+}) {
+  const pct = total > 0 ? (value / total) * 100 : 0;
   return (
-    <section
-      className="card card-pad section-gap"
-      aria-label="Abrir novo caso de pesquisa"
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        padding: "8px 0",
+        borderTop: "1px solid var(--line-soft)",
+        fontSize: 12,
+      }}
     >
-      <div className="card-title">
-        <h2>Novo caso de pesquisa</h2>
-        <button
-          onClick={onClose}
-          className="icon-button"
-          aria-label="Fechar formulário"
-          style={{ background: "none", border: "none", cursor: "pointer", color: "var(--muted)" }}
-        >
-          <X size={16} />
-        </button>
-      </div>
-
-      {submitSuccess ? (
+      <span style={{ minWidth: 160, color: "var(--muted)" }}>{label}</span>
+      <div style={{ flex: 1, height: 8, background: "var(--surface-2)", borderRadius: 4, overflow: "hidden" }}>
         <div
-          role="status"
           style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "12px 16px",
-            background: "var(--accent-soft)",
-            borderRadius: 8,
-            color: "var(--accent)",
-            fontSize: 13,
-            fontWeight: 600,
+            width: `${pct}%`,
+            height: "100%",
+            background:
+              tone === "good" ? "var(--accent)" : tone === "warn" ? "var(--amber)" : "var(--muted-2)",
+            borderRadius: 4,
           }}
-        >
-          <CheckCircle size={16} />
-          Caso criado com sucesso
-        </div>
-      ) : (
-        <form onSubmit={handleSubmit(onSubmit)} noValidate>
-          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {/* Title */}
-            <div>
-              <label
-                htmlFor="case-title"
-                style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 4 }}
-              >
-                Título <span aria-hidden="true" style={{ color: "var(--red)" }}>*</span>
-              </label>
-              <input
-                id="case-title"
-                type="text"
-                aria-required="true"
-                aria-invalid={!!errors.title}
-                aria-describedby={errors.title ? "case-title-error" : undefined}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  background: "var(--surface-2)",
-                  border: `1px solid ${errors.title ? "var(--red)" : "var(--line)"}`,
-                  borderRadius: 8,
-                  color: "var(--text)",
-                  fontSize: 13,
-                }}
-                placeholder="Ex: Valuation Petrobras PBR"
-                {...register("title")}
-              />
-              {errors.title && (
-                <p id="case-title-error" role="alert" style={{ color: "var(--red)", fontSize: 11, marginTop: 4 }}>
-                  {errors.title.message}
-                </p>
-              )}
-            </div>
-
-            {/* Instrument */}
-            <div>
-              <label
-                htmlFor="case-instrument"
-                style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 4 }}
-              >
-                Instrumento <span aria-hidden="true" style={{ color: "var(--red)" }}>*</span>
-              </label>
-              <input
-                id="case-instrument"
-                type="text"
-                aria-required="true"
-                aria-invalid={!!errors.instrument}
-                aria-describedby={errors.instrument ? "case-instrument-error" : undefined}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  background: "var(--surface-2)",
-                  border: `1px solid ${errors.instrument ? "var(--red)" : "var(--line)"}`,
-                  borderRadius: 8,
-                  color: "var(--text)",
-                  fontSize: 13,
-                }}
-                placeholder="Ex: PETR4, USD/BRL"
-                {...register("instrument")}
-              />
-              {errors.instrument && (
-                <p id="case-instrument-error" role="alert" style={{ color: "var(--red)", fontSize: 11, marginTop: 4 }}>
-                  {errors.instrument.message}
-                </p>
-              )}
-            </div>
-
-            {/* Case type */}
-            <div>
-              <label
-                htmlFor="case-type"
-                style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 4 }}
-              >
-                Tipo de caso <span aria-hidden="true" style={{ color: "var(--red)" }}>*</span>
-              </label>
-              <select
-                id="case-type"
-                aria-required="true"
-                aria-invalid={!!errors.case_type}
-                aria-describedby={errors.case_type ? "case-type-error" : undefined}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  background: "var(--surface-2)",
-                  border: `1px solid ${errors.case_type ? "var(--red)" : "var(--line)"}`,
-                  borderRadius: 8,
-                  color: "var(--text)",
-                  fontSize: 13,
-                }}
-                {...register("case_type")}
-              >
-                <option value="">Selecione...</option>
-                <option value="fundamental">Fundamental</option>
-                <option value="macro">Macro</option>
-                <option value="event">Evento corporativo</option>
-                <option value="technical">Técnico</option>
-              </select>
-              {errors.case_type && (
-                <p id="case-type-error" role="alert" style={{ color: "var(--red)", fontSize: 11, marginTop: 4 }}>
-                  {errors.case_type.message}
-                </p>
-              )}
-            </div>
-
-            {/* Submit error */}
-            {submitError && (
-              <div
-                role="alert"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "10px 14px",
-                  background: "rgb(255 133 127 / 10%)",
-                  border: "1px solid rgb(255 133 127 / 30%)",
-                  borderRadius: 8,
-                  color: "var(--red)",
-                  fontSize: 12,
-                }}
-              >
-                <AlertTriangle size={14} />
-                {submitError}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                onClick={onClose}
-                className="button secondary"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                className="button"
-                disabled={isSubmitting}
-                aria-label="Criar caso de pesquisa"
-                style={{ opacity: isSubmitting ? 0.6 : 1 }}
-              >
-                {isSubmitting ? "Criando..." : "Criar caso"}
-              </button>
-            </div>
-          </div>
-        </form>
-      )}
-    </section>
+        />
+      </div>
+      <span style={{ fontFamily: "var(--font-mono)", minWidth: 32, textAlign: "right" }}>
+        {value}
+      </span>
+    </div>
   );
 }
 
@@ -394,7 +153,7 @@ function OpportunitiesContent() {
       </div>
 
       {showNewCaseForm && canCreateCase && (
-        <NewCaseForm onClose={() => setShowNewCaseForm(false)} />
+        <CreateCaseForm onClose={() => setShowNewCaseForm(false)} />
       )}
 
       {dataState === "stale" && (
@@ -467,7 +226,6 @@ function OpportunitiesContent() {
         </div>
       ) : (
         <>
-          {/* Research funnel stages */}
           <section className="card card-pad section-gap">
             <div className="card-title">
               <h2>Funil de pesquisa</h2>
@@ -480,7 +238,6 @@ function OpportunitiesContent() {
             </div>
           </section>
 
-          {/* Cases table */}
           <section className="card card-pad section-gap">
             <div className="card-title">
               <h2>Casos de pesquisa</h2>
@@ -499,67 +256,13 @@ function OpportunitiesContent() {
                 </thead>
                 <tbody>
                   {cases.slice(0, 12).map((c) => (
-                    <tr key={c.id}>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <FileText size={12} style={{ color: "var(--muted)" }} />
-                          <span style={{ fontWeight: 600 }}>{c.title || "Sem título"}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <Badge tone="neutral">{c.case_type || "—"}</Badge>
-                      </td>
-                      <td>
-                        <Badge
-                          tone={
-                            c.priority === "high"
-                              ? "bad"
-                              : c.priority === "medium"
-                                ? "warn"
-                                : "neutral"
-                          }
-                        >
-                          {c.priority === "high"
-                            ? "Alta"
-                            : c.priority === "medium"
-                              ? "Média"
-                              : c.priority === "low"
-                                ? "Baixa"
-                                : c.priority || "—"}
-                        </Badge>
-                      </td>
-                      <td>
-                        <Badge
-                          tone={
-                            c.state === "ready_for_committee"
-                              ? "good"
-                              : c.state === "in_research"
-                                ? "warn"
-                                : "neutral"
-                          }
-                        >
-                          {c.state === "open"
-                            ? "Aberto"
-                            : c.state === "triaged"
-                              ? "Triado"
-                              : c.state === "in_research"
-                                ? "Em pesquisa"
-                                : c.state === "ready_for_committee"
-                                  ? "Pronto"
-                                  : c.state}
-                        </Badge>
-                      </td>
-                      <td style={{ color: "var(--muted)", fontSize: 12 }}>
-                        {c.created_by || "—"}
-                      </td>
-                    </tr>
+                    <CaseCard key={c.id} caseItem={c} />
                   ))}
                 </tbody>
               </table>
             </div>
           </section>
 
-          {/* Info sections */}
           <section className="grid grid-3 section-gap">
             <article className="card card-pad">
               <div className="card-title">
@@ -592,48 +295,6 @@ function OpportunitiesContent() {
         </>
       )}
     </>
-  );
-}
-
-function FunnelRow({
-  label,
-  value,
-  total,
-  tone,
-}: {
-  label: string;
-  value: number;
-  total: number;
-  tone: "neutral" | "warn" | "good";
-}) {
-  const pct = total > 0 ? (value / total) * 100 : 0;
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "8px 0",
-        borderTop: "1px solid var(--line-soft)",
-        fontSize: 12,
-      }}
-    >
-      <span style={{ minWidth: 160, color: "var(--muted)" }}>{label}</span>
-      <div style={{ flex: 1, height: 8, background: "var(--surface-2)", borderRadius: 4, overflow: "hidden" }}>
-        <div
-          style={{
-            width: `${pct}%`,
-            height: "100%",
-            background:
-              tone === "good" ? "var(--accent)" : tone === "warn" ? "var(--amber)" : "var(--muted-2)",
-            borderRadius: 4,
-          }}
-        />
-      </div>
-      <span style={{ fontFamily: "var(--font-mono)", minWidth: 32, textAlign: "right" }}>
-        {value}
-      </span>
-    </div>
   );
 }
 
