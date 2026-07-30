@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api._etag import parse_etag
-from apps.api.security import AuthContext, get_auth_context, require_permission
+from apps.api.security import safe_uuid,  AuthContext, get_auth_context, require_permission
 from database.core import get_async_session
 from database.models.research import ResearchCase
 from ia_investing.application._audit_mixin import AuditMixin
@@ -455,7 +455,7 @@ async def create_case(
     await _audit._audit(
         session=session,
         tenant_id=_organization_id(auth),
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="create",
         resource_type="research_case",
         resource_id=case.id,
@@ -494,7 +494,7 @@ async def transition_case(
     await _audit._audit(
         session=session,
         tenant_id=_organization_id(auth),
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="update",
         resource_type="research_case",
         resource_id=case_id,
@@ -645,7 +645,7 @@ async def create_thesis(
     await _audit._audit(
         session=session,
         tenant_id=_organization_id(auth),
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="create",
         resource_type="thesis",
         resource_id=thesis.id,
@@ -759,7 +759,7 @@ async def create_valuation(
     await _audit._audit(
         session=session,
         tenant_id=_organization_id(auth),
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="create",
         resource_type="valuation_run",
         resource_id=execution.run.id,

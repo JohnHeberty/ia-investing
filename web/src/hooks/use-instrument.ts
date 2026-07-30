@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
@@ -31,17 +31,13 @@ export interface InstrumentDetail {
   }>;
 }
 
-/** Fetch instrument detail from instruments/resolve endpoint. */
 export function useInstrument(instrumentId: string | null) {
   const query = useQuery({
     queryKey: queryKeys.instrument(instrumentId ?? ""),
     queryFn: async () => {
       if (!instrumentId) return null;
-      const { data, error } = await institutionalApi.GET("/api/v1/instruments/resolve", {
-        params: { query: { query: instrumentId, as_of: new Date().toISOString().slice(0, 10) } },
-      });
-      if (error) throw error;
-      return data ?? null;
+      const asOf = new Date().toISOString().slice(0, 10);
+      return await bffFetch<Record<string, unknown>>(`/api/v1/instruments/resolve?query=${encodeURIComponent(instrumentId)}&as_of=${asOf}`);
     },
     enabled: !!instrumentId,
     staleTime: 60_000,

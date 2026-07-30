@@ -94,13 +94,13 @@ function RiskContent() {
       </div>
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <StaleWarning source="sources/health" />
         </div>
       )}
 
       {staleCount > 0 && totalSources > 0 && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <PartialDataIndicator
             coverage={Math.round((healthyCount / totalSources) * 100)}
             missingFields={sources.filter((s) => s.status !== "healthy").map((s) => String(s.name ?? s.code ?? ""))}
@@ -134,7 +134,7 @@ function RiskContent() {
         />
       </section>
 
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <div className="card-title">
             <h2>Concentração</h2>
@@ -194,12 +194,12 @@ function RiskContent() {
         </article>
       </section>
 
-      <div style={{ marginTop: 14 }}>
+      <div className="section-gap">
         <ScenarioWaterfall scenarios={scenarios} />
       </div>
 
       {breaches.length > 0 && (
-        <section className="card card-pad" style={{ marginTop: 14 }}>
+        <section className="card card-pad section-gap">
           <div className="card-title">
             <h2>Breaches registrados</h2>
             <span>{breaches.length} total</span>

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
@@ -24,28 +24,22 @@ export interface AgentRunSummary {
   evidence_coverage: string | null;
 }
 
-/** Fetch agent runs from agents/runs endpoint. */
 export function useAgentRuns(params?: { status?: string; agent_name?: string }) {
   const query = useQuery({
     queryKey: queryKeys.agentRuns(params),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/agents/runs", {
-        params: {
-          query: {
-            status: params?.status ?? undefined,
-            agent_name: params?.agent_name ?? undefined,
-          },
-        },
-      });
-      if (error) throw error;
-      return data ?? [];
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set("status", params.status);
+      if (params?.agent_name) qs.set("agent_name", params.agent_name);
+      const queryStr = qs.toString();
+      return await bffFetch<Array<Record<string, unknown>>>(`/api/v1/agents/runs${queryStr ? `?${queryStr}` : ""}`);
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
   const runs: AgentRunSummary[] = Array.isArray(query.data)
-    ? (query.data as Array<Record<string, unknown>>).map((r) => ({
+    ? query.data.map((r) => ({
         id: String(r.id ?? ""),
         status: String(r.status ?? "unknown"),
         agent_name: r.agent_name ? String(r.agent_name) : undefined,

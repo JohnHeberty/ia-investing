@@ -1,7 +1,7 @@
 import { renderHook } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import type { ReactNode } from "react";
+import React, { type ReactNode } from "react";
 
 import { useSourceHealthSummary } from "./use-source-health-summary";
 

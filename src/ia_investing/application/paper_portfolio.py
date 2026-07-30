@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
+from decimal import Decimal
 from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.portfolio import Portfolio, Position
+from ia_investing.market_data import get_current_price
 
 
 class PaperPortfolioService:
@@ -41,8 +44,17 @@ class PaperPortfolioService:
             .order_by(Portfolio.created_at.desc())
         )
         result = await self._session.execute(stmt)
-        rows = result.scalars().all()
-        return [self._to_dict(r) for r in rows]
+        portfolios = result.scalars().all()
+        output = []
+        for p in portfolios:
+            pos_stmt = sa.select(Position).where(Position.portfolio_id == p.id)
+            pos_result = await self._session.execute(pos_stmt)
+            positions = pos_result.scalars().all()
+            output.append({
+                **self._to_dict(p),
+                "positions": [self._position_to_dict(pos) for pos in positions],
+            })
+        return output
 
     async def get_with_positions(
         self,
@@ -80,6 +92,14 @@ class PaperPortfolioService:
         if pos_result.scalar_one_or_none() is None:
             raise LookupError("Portfolio not found")
 
+        if current_price is None:
+            try:
+                price_data = await asyncio.to_thread(get_current_price, ticker_symbol)
+                if price_data and price_data.get("price"):
+                    current_price = float(price_data["price"])
+            except Exception:
+                pass
+
         position = Position(
             portfolio_id=portfolio_id,
             issuer_id=uuid.UUID(issuer_id) if issuer_id else None,
@@ -90,12 +110,108 @@ class PaperPortfolioService:
         )
         self._session.add(position)
         await self._session.flush()
-        return {
-            "id": str(position.id),
-            "ticker_symbol": position.ticker_symbol,
-            "quantity": float(position.quantity),
-            "avg_cost_per_share": float(position.avg_cost_per_share),
-        }
+
+        await self._recalculate_weights(portfolio_id)
+
+        return self._position_to_dict(position)
+
+    async def update_position(
+        self,
+        portfolio_id: uuid.UUID,
+        position_id: uuid.UUID,
+        ticker_symbol: str | None = None,
+        quantity: float | None = None,
+        avg_cost_per_share: float | None = None,
+        current_price: float | None = None,
+    ) -> dict[str, Any] | None:
+        stmt = sa.select(Position).where(
+            Position.id == position_id,
+            Position.portfolio_id == portfolio_id,
+        )
+        result = await self._session.execute(stmt)
+        position = result.scalar_one_or_none()
+        if position is None:
+            return None
+
+        if ticker_symbol is not None:
+            position.ticker_symbol = ticker_symbol
+            if current_price is None:
+                try:
+                    price_data = await asyncio.to_thread(get_current_price, ticker_symbol)
+                    if price_data and price_data.get("price"):
+                        current_price = float(price_data["price"])
+                except Exception:
+                    pass
+        if quantity is not None:
+            position.quantity = Decimal(str(quantity))
+        if avg_cost_per_share is not None:
+            position.avg_cost_per_share = Decimal(str(avg_cost_per_share))
+        if current_price is not None:
+            position.current_price = Decimal(str(current_price))
+
+        await self._session.flush()
+        await self._recalculate_weights(portfolio_id)
+        return self._position_to_dict(position)
+
+    async def delete_position(
+        self,
+        portfolio_id: uuid.UUID,
+        position_id: uuid.UUID,
+    ) -> bool:
+        stmt = sa.select(Position).where(
+            Position.id == position_id,
+            Position.portfolio_id == portfolio_id,
+        )
+        result = await self._session.execute(stmt)
+        position = result.scalar_one_or_none()
+        if position is None:
+            return False
+        await self._session.delete(position)
+        await self._session.flush()
+        await self._recalculate_weights(portfolio_id)
+        return True
+
+    async def delete_portfolio(
+        self,
+        portfolio_id: uuid.UUID,
+        organization_id: uuid.UUID | None = None,
+    ) -> bool:
+        stmt = sa.select(Portfolio).where(Portfolio.id == portfolio_id)
+        if organization_id is not None:
+            stmt = stmt.where(Portfolio.organization_id == organization_id)
+        result = await self._session.execute(stmt)
+        portfolio = result.scalar_one_or_none()
+        if portfolio is None:
+            return False
+
+        from database.models.execution import Execution
+        exec_stmt = sa.select(sa.func.count(Execution.id)).where(Execution.portfolio_id == portfolio_id)
+        exec_count = (await self._session.execute(exec_stmt)).scalar_one()
+        if exec_count > 0:
+            raise RuntimeError("Portfolio has active executions and cannot be deleted")
+
+        await self._session.delete(portfolio)
+        await self._session.flush()
+        return True
+
+    async def _recalculate_weights(self, portfolio_id: uuid.UUID) -> None:
+        pos_stmt = sa.select(Position).where(Position.portfolio_id == portfolio_id)
+        result = await self._session.execute(pos_stmt)
+        positions = result.scalars().all()
+
+        total_value = 0.0
+        for pos in positions:
+            price = float(pos.current_price) if pos.current_price else float(pos.avg_cost_per_share)
+            total_value += float(pos.quantity) * price
+
+        for pos in positions:
+            if total_value > 0:
+                price = float(pos.current_price) if pos.current_price else float(pos.avg_cost_per_share)
+                pos.weight_pct = (float(pos.quantity) * price) / total_value
+            else:
+                pos.weight_pct = 0.0
+
+        await self._session.flush()
 
     @staticmethod
     def _to_dict(p: Portfolio) -> dict[str, Any]:
@@ -115,5 +231,6 @@ class PaperPortfolioService:
             "ticker_symbol": p.ticker_symbol,
             "quantity": float(p.quantity) if p.quantity else None,
             "avg_cost_per_share": float(p.avg_cost_per_share) if p.avg_cost_per_share else None,
-            "weight_pct": p.weight_pct,
+            "current_price": float(p.current_price) if p.current_price else None,
+            "weight_pct": float(p.weight_pct) if p.weight_pct is not None else None,
         }

@@ -115,8 +115,7 @@ function NewCaseForm({ onClose }: { onClose: () => void }) {
 
   return (
     <section
-      className="card card-pad"
-      style={{ marginTop: 14 }}
+      className="card card-pad section-gap"
       aria-label="Abrir novo caso de pesquisa"
     >
       <div className="card-title">
@@ -401,7 +400,7 @@ function OpportunitiesContent() {
       )}
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <StaleWarning source="research/cases" />
         </div>
       )}
@@ -431,7 +430,7 @@ function OpportunitiesContent() {
       </section>
 
       {count === 0 ? (
-        <div style={{ marginTop: 14 }}>
+        <div className="section-gap">
           <DataStatePanel
             state="empty"
             title="Nenhum caso de pesquisa encontrado"
@@ -471,7 +470,7 @@ function OpportunitiesContent() {
       ) : (
         <>
           {/* Research funnel stages */}
-          <section className="card card-pad" style={{ marginTop: 14 }}>
+          <section className="card card-pad section-gap">
             <div className="card-title">
               <h2>Funil de pesquisa</h2>
               <span>{count} caso{count !== 1 ? "s" : ""} total</span>
@@ -484,7 +483,7 @@ function OpportunitiesContent() {
           </section>
 
           {/* Cases table */}
-          <section className="card card-pad" style={{ marginTop: 14 }}>
+          <section className="card card-pad section-gap">
             <div className="card-title">
               <h2>Casos de pesquisa</h2>
               <span>{count} registro{count !== 1 ? "s" : ""}</span>
@@ -563,7 +562,7 @@ function OpportunitiesContent() {
           </section>
 
           {/* Info sections */}
-          <section className="grid grid-3" style={{ marginTop: 14 }}>
+          <section className="grid grid-3 section-gap">
             <article className="card card-pad">
               <div className="card-title">
                 <h2>Sinais fundamentais</h2>

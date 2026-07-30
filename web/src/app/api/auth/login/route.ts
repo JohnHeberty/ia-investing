@@ -1,45 +1,143 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { SignJWT } from "jose";
 
-import {
-  oidcConfig,
-  pkceChallenge,
-  randomUrlSafe,
-  safeReturnTo,
-  transientCookie,
-} from "@/lib/oidc";
+const SESSION_SECRET = process.env.SECURITY__SESSION_SECRET_KEY ?? "";
+const SESSION_DURATION_MS = 8 * 60 * 60 * 1000; // 8 hours
 
-export async function GET(request: NextRequest) {
-  try {
-    const config = oidcConfig();
-    const state = randomUrlSafe();
-    const nonce = randomUrlSafe();
-    const verifier = randomUrlSafe(48);
-    const jar = await cookies();
-    jar.set("ia_oidc_state", state, transientCookie);
-    jar.set("ia_oidc_nonce", nonce, transientCookie);
-    jar.set("ia_oidc_verifier", verifier, transientCookie);
-    jar.set(
-      "ia_return_to",
-      safeReturnTo(request.nextUrl.searchParams.get("return_to")),
-      transientCookie,
-    );
-    const authorization = new URL(config.authorizationUrl);
-    authorization.search = new URLSearchParams({
-      response_type: "code",
-      client_id: config.clientId,
-      redirect_uri: config.redirectUri,
-      scope: config.scope,
-      state,
-      nonce,
-      code_challenge: pkceChallenge(verifier),
-      code_challenge_method: "S256",
-    }).toString();
-    return NextResponse.redirect(authorization);
-  } catch (error) {
+function getSecretKey() {
+  return new TextEncoder().encode(SESSION_SECRET);
+}
+
+async function createSessionToken(claims: {
+  sub: string;
+  name?: string;
+  email?: string;
+  organization_id?: string;
+  roles?: string[];
+  permissions?: string[];
+  team_ids?: string[];
+}) {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const jwt = await new SignJWT({
+    sub: claims.sub,
+    ...(claims.name && { name: claims.name }),
+    ...(claims.email && { email: claims.email }),
+    ...(claims.organization_id && { organization_id: claims.organization_id }),
+    ...(claims.roles && { roles: claims.roles }),
+    ...(claims.permissions && { permissions: claims.permissions }),
+    ...(claims.team_ids && { team_ids: claims.team_ids }),
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt(nowSec)
+    .setExpirationTime(nowSec + SESSION_DURATION_MS / 1000)
+    .setJti(crypto.randomUUID())
+    .sign(getSecretKey());
+  return jwt;
+}
+
+/**
+ * POST /api/auth/login
+ * Simple session-based login for development.
+ * In production, use OIDC authorization-code flow.
+ */
+export async function POST(request: NextRequest) {
+  if (!SESSION_SECRET) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "OIDC login failed" },
-      { status: 503 },
+      { error: "Session secret not configured" },
+      { status: 500 },
     );
   }
+
+  let body: { email?: string; password?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
+
+  const email = body.email;
+  if (!email) {
+    return NextResponse.json({ error: "Email is required" }, { status: 400 });
+  }
+
+  // Dev mode: accept any email, no password validation
+  // In production, validate against identity provider
+  const subject = email;
+  const name = email.split("@")[0];
+
+  const token = await createSessionToken({
+    sub: subject,
+    name,
+    email,
+    organization_id: process.env.NEXT_PUBLIC_ORGANIZATION_ID ?? "00000000-0000-0000-0000-000000000001",
+    roles: ["admin"],
+    permissions: [
+      "admin",
+      "portfolio:read",
+      "thesis:read",
+      "thesis:create",
+      "thesis:update",
+      "reports:export",
+      "agent_runs:read",
+      "agent_runs:create",
+      "agent:read",
+      "agent:run",
+      "agent_approvals:decide",
+      "quality_incidents:manage",
+      "audit:read",
+      "policy:read",
+      "macro:read",
+      "rebalance:*",
+      "committee:read",
+      "committee:vote",
+      "committee:chair",
+      "committee:create",
+      "committee:publish",
+      "dashboard:read",
+      "sources:read",
+      "schedules:read",
+      "schedules:manage",
+      "financials:read",
+      "instruments:read",
+      "issuers:read",
+      "metrics:read",
+      "operations:read",
+      "execution:*",
+      "research_cases:create",
+      "candidates:read",
+      "candidates:create",
+      "exploration:read",
+      "research:read",
+      "risk:read",
+      "risk:assess",
+      "backtests:read",
+      "backtests:run",
+      "approval:read",
+      "approval:decide",
+      "market_data:read",
+    ],
+  });
+
+  const jar = await cookies();
+  jar.set("ia_session", token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+    maxAge: SESSION_DURATION_MS / 1000,
+  });
+
+  // Also create CSRF token for mutating requests
+  const sessionId = crypto.randomUUID();
+  jar.set("ia_csrf_token", sessionId, {
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: "/",
+    maxAge: SESSION_DURATION_MS / 1000,
+  });
+
+  const returnTo = request.nextUrl.searchParams.get("return_to") || "/";
+  return NextResponse.json({ success: true, return_to: returnTo });
 }

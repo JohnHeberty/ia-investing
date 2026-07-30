@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { DataState } from "@/components/domain";
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
 
 export interface QualityIncidentSummary {
@@ -23,11 +23,16 @@ export function useQualityIncidents() {
   const query = useQuery({
     queryKey: queryKeys.qualityIncidents(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/quality/incidents", {
-        params: { query: { limit: 250, offset: 0 } },
-      });
-      if (error) throw error;
-      return data as { items?: Array<Record<string, unknown>> } | undefined;
+      return await bffFetch<{ items?: Array<Record<string, unknown>> }>("/api/v1/quality/incidents?limit=250&offset=0");
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const sourceHealthQuery = useQuery({
+    queryKey: queryKeys.sourceHealth(),
+    queryFn: async () => {
+      return await bffFetch<Array<Record<string, unknown>>>("/api/v1/sources/health");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
@@ -47,19 +52,27 @@ export function useQualityIncidents() {
     waiver_expires_at: item.waiver_expires_at ? String(item.waiver_expires_at) : null,
   }));
   const openIncidents = incidents.filter((incident) => ["open", "acknowledged"].includes(incident.status));
+
+  const sources = Array.isArray(sourceHealthQuery.data)
+    ? sourceHealthQuery.data
+    : [];
+  const healthySources = sources.filter((s) => s.status === "healthy").length;
+  const staleSources = sources.filter((s) => s.status === "stale").length;
+  const neverSucceededSources = sources.filter((s) => s.status === "never_succeeded").length;
+
   const dataState: DataState = computeDataState(query.isLoading, query.isError, null, incidents.length > 0);
 
   return {
     incidents,
-    sources: [],
-    healthySources: 0,
-    staleSources: 0,
-    neverSucceededSources: 0,
-    totalSources: 0,
+    sources,
+    healthySources,
+    staleSources,
+    neverSucceededSources,
+    totalSources: sources.length,
     openIncidents,
-    isLoading: query.isLoading,
-    isError: query.isError,
-    error: query.error,
+    isLoading: query.isLoading || sourceHealthQuery.isLoading,
+    isError: query.isError || sourceHealthQuery.isError,
+    error: query.error ?? sourceHealthQuery.error,
     dataState,
     refetch: query.refetch,
     count: incidents.length,

@@ -17,6 +17,7 @@ import type {
   RebalanceProposal,
   RebalanceTrade,
 } from "@/hooks/use-rebalance";
+import { usePortfoliosList } from "@/hooks/use-portfolios";
 
 const percent = new Intl.NumberFormat("pt-BR", {
   style: "percent",
@@ -33,32 +34,14 @@ const dateTime = new Intl.DateTimeFormat("pt-BR", {
   timeStyle: "short",
 });
 
-const DEMO_PORTFOLIOS = [
-  { id: "portfolio-1", name: "Brasil Long Only" },
-  { id: "portfolio-2", name: "Global Tech" },
-  { id: "portfolio-3", name: "Dividend Yield" },
-];
-
 function pct(value: number): string {
   return percent.format(value / 100);
 }
 
 function DriftBadge({ severity }: { severity: DriftItem["severity"] }) {
-  const colors: Record<string, React.CSSProperties> = {
-    green: { background: "var(--accent-soft)", color: "var(--accent)", borderColor: "var(--accent)" },
-    yellow: { background: "var(--amber)", color: "var(--bg)", borderColor: "var(--amber)" },
-    red: { background: "var(--red)", color: "#fff", borderColor: "var(--red)" },
-  };
+  const tone = severity === "green" ? "good" : severity === "yellow" ? "warn" : "bad";
   return (
-    <span
-      style={{
-        borderRadius: 9999,
-        border: "1px solid",
-        padding: "1px 8px",
-        fontSize: 12,
-        ...colors[severity],
-      }}
-    >
+    <span className="badge" data-tone={tone}>
       {severity === "green" ? "<1%" : severity === "yellow" ? "1-3%" : ">3%"}
     </span>
   );
@@ -66,38 +49,22 @@ function DriftBadge({ severity }: { severity: DriftItem["severity"] }) {
 
 function SideBadge({ side }: { side: "buy" | "sell" }) {
   return (
-    <span
-      style={{
-        borderRadius: 4,
-        padding: "1px 6px",
-        fontSize: 12,
-        fontWeight: 500,
-        background: side === "buy" ? "var(--accent-soft)" : "var(--red)",
-        color: side === "buy" ? "var(--accent)" : "#fff",
-      }}
-    >
+    <span className="badge" data-tone={side === "buy" ? "good" : "bad"}>
       {side.toUpperCase()}
     </span>
   );
 }
 
 function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, React.CSSProperties> = {
-    draft: { background: "var(--surface-3)", color: "var(--muted)" },
-    approved: { background: "var(--blue)", color: "#fff" },
-    in_progress: { background: "var(--amber)", color: "var(--bg)" },
-    completed: { background: "var(--accent-soft)", color: "var(--accent)" },
-    cancelled: { background: "var(--red)", color: "#fff" },
+  const toneMap: Record<string, string> = {
+    draft: "neutral",
+    approved: "info",
+    in_progress: "warn",
+    completed: "good",
+    cancelled: "bad",
   };
   return (
-    <span
-      style={{
-        borderRadius: 4,
-        padding: "1px 6px",
-        fontSize: 12,
-        ...(styles[status] || { background: "var(--surface-3)", color: "var(--muted)" }),
-      }}
-    >
+    <span className="badge" data-tone={toneMap[status] ?? "neutral"}>
       {status.replaceAll("_", " ")}
     </span>
   );
@@ -105,10 +72,10 @@ function StatusBadge({ status }: { status: string }) {
 
 function LoadingSkeleton() {
   return (
-    <div className="space-y-4 p-6">
+    <div style={{ display: "grid", gap: 16, padding: 24 }}>
       <div style={{ height: 32, width: 256, borderRadius: 4, background: "var(--surface-3)", animation: "pulse 2s infinite" }} />
       <div style={{ height: 16, width: 384, borderRadius: 4, background: "var(--surface-3)", animation: "pulse 2s infinite" }} />
-      <div className="grid gap-4 md:grid-cols-2">
+      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr" }}>
         <div style={{ height: 192, borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)" }} />
         <div style={{ height: 192, borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)" }} />
       </div>
@@ -118,19 +85,10 @@ function LoadingSkeleton() {
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <main className="p-6">
+    <main>
       <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text)" }}>Rebalanceamento</h1>
-      <div
-        role="alert"
-        style={{
-          marginTop: 24,
-          borderRadius: 10,
-          border: "1px solid var(--red)",
-          background: "var(--red)",
-          padding: 16,
-          color: "#fff",
-        }}
-      >
+      <div className="state-panel" data-state="error" role="alert" style={{ marginTop: 24 }}>
+        <strong>Erro</strong>
         {message}
       </div>
     </main>
@@ -163,19 +121,8 @@ function ProposeForm({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: 16,
-        borderRadius: 10,
-        border: "1px solid var(--line)",
-        background: "var(--surface)",
-        padding: 20,
-      }}
-    >
-      <h3 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>Nova proposta de rebalanceamento</h3>
+    <form onSubmit={handleSubmit} className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div className="card-title"><h3>Nova proposta de rebalanceamento</h3></div>
       <div>
         <label style={{ display: "block", fontSize: 14, color: "var(--muted)" }}>Target allocations (JSON)</label>
         <textarea
@@ -186,7 +133,7 @@ function ProposeForm({
             border: "1px solid var(--line)",
             background: "var(--surface-2)",
             padding: 8,
-            fontFamily: "var(--font-mono, monospace)",
+            fontFamily: "var(--font-mono)",
             fontSize: 14,
             color: "var(--text)",
             resize: "vertical",
@@ -219,34 +166,13 @@ function ProposeForm({
       <div style={{ display: "flex", gap: 12 }}>
         <button
           type="submit"
+          className="button"
           disabled={propose.isPending || !targets || !rationale}
-          style={{
-            borderRadius: 8,
-            background: "var(--accent)",
-            padding: "8px 16px",
-            fontSize: 14,
-            fontWeight: 500,
-            color: "var(--bg)",
-            border: "none",
-            cursor: "pointer",
-            opacity: propose.isPending || !targets || !rationale ? 0.5 : 1,
-          }}
+          style={{ opacity: propose.isPending || !targets || !rationale ? 0.5 : 1 }}
         >
           {propose.isPending ? "Criando..." : "Propor rebalanceamento"}
         </button>
-        <button
-          type="button"
-          onClick={onClose}
-          style={{
-            borderRadius: 8,
-            border: "1px solid var(--line)",
-            padding: "8px 16px",
-            fontSize: 14,
-            color: "var(--muted)",
-            background: "none",
-            cursor: "pointer",
-          }}
-        >
+        <button type="button" className="button secondary" onClick={onClose}>
           Cancelar
         </button>
       </div>
@@ -278,7 +204,7 @@ function DriftTable({ items }: { items: DriftItem[] }) {
             <td style={{ fontWeight: 500, color: "var(--text)" }}>{item.ticker}</td>
             <td>{pct(item.current_weight)}</td>
             <td>{pct(item.target_weight)}</td>
-            <td style={{ fontFamily: "var(--font-mono, monospace)" }}>{pct(item.drift)}</td>
+            <td style={{ fontFamily: "var(--font-mono)" }}>{pct(item.drift)}</td>
             <td><DriftBadge severity={item.severity} /></td>
           </tr>
         ))}
@@ -332,10 +258,10 @@ function TradesTable({
             <td>
               {pct(trade.current_weight)} → {pct(trade.target_weight)}
             </td>
-            <td style={{ fontFamily: "var(--font-mono, monospace)", color: trade.delta > 0 ? "var(--accent)" : "var(--red)" }}>
+            <td style={{ fontFamily: "var(--font-mono)", color: trade.delta > 0 ? "var(--accent)" : "var(--red)" }}>
               {trade.delta > 0 ? "+" : ""}{pct(trade.delta)}
             </td>
-            <td style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{money.format(trade.estimated_value)}</td>
+            <td style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{money.format(trade.estimated_value)}</td>
             <td><StatusBadge status={trade.status} /></td>
           </tr>
         ))}
@@ -370,7 +296,7 @@ function ProposalDetail({
   const canCancel = !["completed", "cancelled"].includes(proposal.status);
 
   return (
-    <div className="space-y-6">
+    <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <button
           onClick={onBack}
@@ -381,10 +307,10 @@ function ProposalDetail({
         <StatusBadge status={proposal.status} />
       </div>
 
-      <div style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, color: "var(--text)" }}>
-          Proposta {proposal.id.slice(0, 8)}
-        </h2>
+      <div className="card card-pad">
+        <div className="card-title">
+          <h2>Proposta {proposal.id.slice(0, 8)}</h2>
+        </div>
         <p style={{ marginTop: 8, fontSize: 14, color: "var(--muted)" }}>{proposal.rationale}</p>
         <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "var(--muted-2)" }}>
           <span>Criada por: {proposal.created_by}</span>
@@ -394,30 +320,30 @@ function ProposalDetail({
       </div>
 
       {proposal.drift_analysis && (
-        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
-          <h3 style={{ marginBottom: 16, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Análise de desvio</h3>
+        <section className="card card-pad">
+          <div className="card-title"><h3>Análise de desvio</h3></div>
           <div style={{ marginBottom: 16, display: "flex", gap: 24, fontSize: 14 }}>
             <div>
               <span style={{ color: "var(--muted)" }}>Desvio máximo: </span>
-              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{pct(proposal.drift_analysis.max_drift)}</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{pct(proposal.drift_analysis.max_drift)}</span>
             </div>
             <div>
               <span style={{ color: "var(--muted)" }}>Desvio total: </span>
-              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{pct(proposal.drift_analysis.total_drift)}</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{pct(proposal.drift_analysis.total_drift)}</span>
             </div>
           </div>
           <DriftTable items={proposal.drift_analysis.items} />
         </section>
       )}
 
-      <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
-        <h3 style={{ marginBottom: 16, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Trades</h3>
+      <section className="card card-pad">
+        <div className="card-title"><h3>Trades</h3></div>
         <TradesTable trades={proposal.trades} selected={selectedTrades} onToggle={toggleTrade} />
       </section>
 
       {proposal.execution_progress && (
-        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
-          <h3 style={{ marginBottom: 16, fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Progresso</h3>
+        <section className="card card-pad">
+          <div className="card-title"><h3>Progresso</h3></div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ height: 8, flex: 1, overflow: "hidden", borderRadius: 999, background: "var(--surface-3)" }}>
               <div
@@ -441,17 +367,8 @@ function ProposalDetail({
           <button
             onClick={() => approve.mutate({ proposalId: proposal.id })}
             disabled={approve.isPending}
-            style={{
-              borderRadius: 8,
-              background: "var(--blue)",
-              padding: "8px 16px",
-              fontSize: 14,
-              fontWeight: 500,
-              color: "#fff",
-              border: "none",
-              cursor: "pointer",
-              opacity: approve.isPending ? 0.5 : 1,
-            }}
+            className="button"
+            style={{ background: "var(--blue)", color: "#fff", opacity: approve.isPending ? 0.5 : 1 }}
           >
             {approve.isPending ? "Aprovando..." : "Aprovar proposta"}
           </button>
@@ -465,17 +382,8 @@ function ProposalDetail({
               })
             }
             disabled={execute.isPending}
-            style={{
-              borderRadius: 8,
-              background: "var(--accent)",
-              padding: "8px 16px",
-              fontSize: 14,
-              fontWeight: 500,
-              color: "var(--bg)",
-              border: "none",
-              cursor: "pointer",
-              opacity: execute.isPending ? 0.5 : 1,
-            }}
+            className="button"
+            style={{ opacity: execute.isPending ? 0.5 : 1 }}
           >
             {execute.isPending ? "Executando..." : `Executar ${selectedTrades.size} trade(s)`}
           </button>
@@ -484,16 +392,8 @@ function ProposalDetail({
           <button
             onClick={() => complete.mutate({ proposalId: proposal.id })}
             disabled={complete.isPending}
-            style={{
-              borderRadius: 8,
-              border: "1px solid var(--accent)",
-              padding: "8px 16px",
-              fontSize: 14,
-              color: "var(--accent)",
-              background: "none",
-              cursor: "pointer",
-              opacity: complete.isPending ? 0.5 : 1,
-            }}
+            className="button secondary"
+            style={{ borderColor: "var(--accent)", color: "var(--accent)", opacity: complete.isPending ? 0.5 : 1 }}
           >
             {complete.isPending ? "Finalizando..." : "Completar rebalanceamento"}
           </button>
@@ -502,16 +402,8 @@ function ProposalDetail({
           <button
             onClick={() => cancel.mutate({ proposalId: proposal.id, reason: "Cancelado pelo operador" })}
             disabled={cancel.isPending}
-            style={{
-              borderRadius: 8,
-              border: "1px solid var(--red)",
-              padding: "8px 16px",
-              fontSize: 14,
-              color: "var(--red)",
-              background: "none",
-              cursor: "pointer",
-              opacity: cancel.isPending ? 0.5 : 1,
-            }}
+            className="button secondary"
+            style={{ borderColor: "var(--red)", color: "var(--red)", opacity: cancel.isPending ? 0.5 : 1 }}
           >
             {cancel.isPending ? "Cancelando..." : "Cancelar proposta"}
           </button>
@@ -539,18 +431,12 @@ function Timeline({ items }: { items: RebalanceProposal[] }) {
     return <p style={{ fontSize: 14, color: "var(--muted)" }}>Nenhum rebalanceamento anterior.</p>;
   }
   return (
-    <div className="space-y-3">
+    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
       {items.map((item) => (
         <div
           key={item.id}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderRadius: 8,
-            border: "1px solid var(--line)",
-            padding: 12,
-          }}
+          className="event"
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
         >
           <div>
             <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>
@@ -568,14 +454,16 @@ function Timeline({ items }: { items: RebalanceProposal[] }) {
 }
 
 export default function RebalancePage() {
-  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>(DEMO_PORTFOLIOS[0].id);
+  const { portfolios, isLoading: portfoliosLoading } = usePortfoliosList();
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState<string>("");
   const [showProposeForm, setShowProposeForm] = useState(false);
   const [selectedProposalId, setSelectedProposalId] = useState<string | null>(null);
 
-  const driftQuery = useDriftSummary(selectedPortfolioId);
-  const proposalsQuery = useRebalanceProposals(selectedPortfolioId);
+  const effectiveId = selectedPortfolioId || portfolios[0]?.id || "";
+
+  const driftQuery = useDriftSummary(effectiveId);
+  const proposalsQuery = useRebalanceProposals(effectiveId);
   const proposalDetailQuery = useRebalanceProposal(selectedProposalId ?? undefined);
-  const historyQuery = useRebalanceProposals(selectedPortfolioId);
 
   if (driftQuery.isError && proposalsQuery.isError) {
     return <ErrorState message={driftQuery.error?.message ?? proposalsQuery.error?.message ?? "Erro desconhecido"} />;
@@ -587,10 +475,12 @@ export default function RebalancePage() {
 
   if (selectedProposalId && proposalDetailQuery.data) {
     return (
-      <main className="space-y-6 p-6">
-        <header>
-          <p style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.2em", color: "var(--muted-2)" }}>Portfolio Intelligence</p>
-          <h1 style={{ marginTop: 8, fontSize: 30, fontWeight: 600, color: "var(--text)" }}>Rebalanceamento</h1>
+      <main style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <header className="page-head">
+          <div>
+            <div className="eyebrow">Portfolio Intelligence</div>
+            <h1>Rebalanceamento</h1>
+          </div>
         </header>
         <ProposalDetail proposal={proposalDetailQuery.data} onBack={() => setSelectedProposalId(null)} />
       </main>
@@ -598,13 +488,15 @@ export default function RebalancePage() {
   }
 
   return (
-    <main className="space-y-8 p-6">
-      <header>
-        <p style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: "0.2em", color: "var(--muted-2)" }}>Portfolio Intelligence</p>
-        <h1 style={{ marginTop: 8, fontSize: 30, fontWeight: 600, color: "var(--text)" }}>Rebalanceamento de carteiras</h1>
-        <p style={{ marginTop: 8, maxWidth: 768, fontSize: 14, color: "var(--muted)" }}>
-          Monitore desvios de alocação, proponha e execute rebalanceamentos, e acompanhe o histórico.
-        </p>
+    <main style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <header className="page-head">
+        <div>
+          <div className="eyebrow">Portfolio Intelligence</div>
+          <h1>Rebalanceamento de carteiras</h1>
+          <p className="subtitle">
+            Monitore desvios de alocação, proponha e execute rebalanceamentos, e acompanhe o histórico.
+          </p>
+        </div>
       </header>
 
       <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16 }}>
@@ -617,29 +509,22 @@ export default function RebalancePage() {
             fontSize: 14,
             color: "var(--text)",
           }}
-          value={selectedPortfolioId}
+          value={effectiveId}
           onChange={(e) => {
             setSelectedPortfolioId(e.target.value);
             setSelectedProposalId(null);
             setShowProposeForm(false);
           }}
         >
-          {DEMO_PORTFOLIOS.map((p) => (
+          {portfoliosLoading && <option>Carregando...</option>}
+          {!portfoliosLoading && portfolios.length === 0 && <option>Nenhuma carteira</option>}
+          {portfolios.map((p) => (
             <option key={p.id} value={p.id}>{p.name}</option>
           ))}
         </select>
         <button
           onClick={() => setShowProposeForm(true)}
-          style={{
-            borderRadius: 8,
-            background: "var(--accent)",
-            padding: "8px 16px",
-            fontSize: 14,
-            fontWeight: 500,
-            color: "var(--bg)",
-            border: "none",
-            cursor: "pointer",
-          }}
+          className="button"
         >
           Propor rebalanceamento
         </button>
@@ -648,20 +533,20 @@ export default function RebalancePage() {
       {isLoading && <LoadingSkeleton />}
 
       {!isLoading && showProposeForm && (
-        <ProposeForm portfolioId={selectedPortfolioId} onClose={() => setShowProposeForm(false)} />
+        <ProposeForm portfolioId={effectiveId} onClose={() => setShowProposeForm(false)} />
       )}
 
       {!isLoading && driftQuery.data && (
-        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
-          <h2 style={{ marginBottom: 16, fontSize: 18, fontWeight: 600, color: "var(--text)" }}>Desvios atuais vs. alvo</h2>
+        <section className="card card-pad">
+          <div className="card-title"><h2>Desvios atuais vs. alvo</h2></div>
           <div style={{ marginBottom: 16, display: "flex", gap: 24, fontSize: 14 }}>
             <div>
               <span style={{ color: "var(--muted)" }}>Desvio máximo: </span>
-              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{pct(driftQuery.data.max_drift)}</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{pct(driftQuery.data.max_drift)}</span>
             </div>
             <div>
               <span style={{ color: "var(--muted)" }}>Desvio total: </span>
-              <span style={{ fontFamily: "var(--font-mono, monospace)", color: "var(--text)" }}>{pct(driftQuery.data.total_drift)}</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{pct(driftQuery.data.total_drift)}</span>
             </div>
           </div>
           <DriftTable items={driftQuery.data.items} />
@@ -669,24 +554,22 @@ export default function RebalancePage() {
       )}
 
       {!isLoading && proposalsQuery.data && (
-        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
-          <h2 style={{ marginBottom: 16, fontSize: 18, fontWeight: 600, color: "var(--text)" }}>Propostas</h2>
+        <section className="card card-pad">
+          <div className="card-title"><h2>Propostas</h2></div>
           {proposalsQuery.data.length === 0 ? (
             <p style={{ fontSize: 14, color: "var(--muted)" }}>Nenhuma proposta de rebalanceamento para esta carteira.</p>
           ) : (
-            <div className="space-y-2">
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {proposalsQuery.data.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setSelectedProposalId(p.id)}
+                  className="event"
                   style={{
                     display: "flex",
                     width: "100%",
                     alignItems: "center",
                     justifyContent: "space-between",
-                    borderRadius: 8,
-                    border: "1px solid var(--line)",
-                    padding: 12,
                     textAlign: "left",
                     background: "none",
                     cursor: "pointer",
@@ -710,9 +593,9 @@ export default function RebalancePage() {
       )}
 
       {!isLoading && (
-        <section style={{ borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)", padding: 20 }}>
-          <h2 style={{ marginBottom: 16, fontSize: 18, fontWeight: 600, color: "var(--text)" }}>Histórico de rebalanceamentos</h2>
-          <Timeline items={historyQuery.data ?? []} />
+        <section className="card card-pad">
+          <div className="card-title"><h2>Histórico de rebalanceamentos</h2></div>
+          <Timeline items={proposalsQuery.data ?? []} />
         </section>
       )}
     </main>

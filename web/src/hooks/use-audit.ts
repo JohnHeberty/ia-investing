@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { DataState } from "@/components/domain";
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
 
 export interface AuditEvent {
@@ -21,11 +21,7 @@ export function useAudit() {
   const logsQuery = useQuery({
     queryKey: queryKeys.auditLogs(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/audit/logs", {
-        params: { query: { limit: 250, offset: 0 } },
-      });
-      if (error) throw error;
-      return data as { items?: Array<Record<string, unknown>> } | undefined;
+      return await bffFetch<{ items?: Array<Record<string, unknown>> }>("/api/v1/audit/logs?limit=250&offset=0");
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
@@ -33,9 +29,7 @@ export function useAudit() {
   const integrityQuery = useQuery({
     queryKey: ["audit-chain-verification"],
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/audit/verify");
-      if (error) throw error;
-      return data as { tampered_entries?: Array<Record<string, unknown>>; verified?: boolean } | undefined;
+      return await bffFetch<{ tampered_entries?: Array<Record<string, unknown>>; verified?: boolean }>("/api/v1/audit/verify");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,

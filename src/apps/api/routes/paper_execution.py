@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api._context import context_from
 from apps.api._errors import map_error
-from apps.api.security import AuthContext, get_auth_context
+from apps.api.security import safe_uuid,  AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.paper_execution import PaperExecutionService
@@ -279,7 +279,7 @@ async def create_trade_intent(
     await _audit._audit(
         session=session,
         tenant_id=context_from(auth).organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="create",
         resource_type="trade_intent",
         resource_id=intent.id,

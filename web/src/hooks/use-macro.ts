@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
@@ -18,24 +18,20 @@ export interface MacroSeries {
   unit: string;
 }
 
-/** Fetch macro series from source health endpoint, deriving series data. */
 export function useMacro() {
   const sourceHealthQuery = useQuery({
     queryKey: queryKeys.sourceHealth(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/sources/health");
-      if (error) throw error;
-      return data ?? [];
+      return await bffFetch<Array<Record<string, unknown>>>("/api/v1/sources/health");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
   const sources = Array.isArray(sourceHealthQuery.data)
-    ? (sourceHealthQuery.data as Array<Record<string, unknown>>)
+    ? sourceHealthQuery.data
     : [];
 
-  // Derive macro series from source health data
   const macroSeries: MacroSeries[] = sources.map((s) => {
     const status = s.status === "healthy" ? "ok" : s.status === "stale" ? "stale" : "missing";
     const lastSuccess = s.last_success_at ? String(s.last_success_at) : null;
@@ -52,7 +48,6 @@ export function useMacro() {
     };
   });
 
-  // Identify key macro indicators
   const selic = macroSeries.find(
     (s) => s.id.includes("selic") || s.name.toLowerCase().includes("selic"),
   );

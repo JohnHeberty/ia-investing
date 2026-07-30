@@ -7,14 +7,13 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const isPublic = publicPaths.some((p) => pathname === p || pathname.startsWith(p));
   const isBff = bffPaths.some((p) => pathname.startsWith(p));
-  const isStatic =
-    pathname.startsWith("/_next") || pathname.startsWith("/favicon") || pathname === "/";
+  const isStatic = pathname.startsWith("/_next") || pathname.startsWith("/favicon");
 
   if (isPublic || isStatic || isBff) {
     return NextResponse.next();
   }
 
-  if (!request.cookies.has("ia_access_token")) {
+  if (!request.cookies.has("ia_session")) {
     const login = new URL("/login", request.url);
     login.searchParams.set("return_to", pathname);
     return NextResponse.redirect(login);

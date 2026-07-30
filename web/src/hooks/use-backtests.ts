@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { DataState } from "@/components/domain";
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
 
 export interface BacktestRun {
@@ -21,11 +21,7 @@ export function useBacktests() {
   const query = useQuery({
     queryKey: queryKeys.backtests(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/backtests", {
-        params: { query: { limit: 100, offset: 0 } },
-      });
-      if (error) throw error;
-      return data as { items?: Array<Record<string, unknown>> } | undefined;
+      return await bffFetch<{ items?: Array<Record<string, unknown>> }>("/api/v1/backtests?limit=100&offset=0");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,

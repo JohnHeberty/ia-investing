@@ -31,7 +31,7 @@ export default function CandidateQueuePage() {
     setError(null);
     try {
       const result = await listCandidates(status || undefined);
-      setItems(result.items);
+      setItems(Array.isArray(result) ? result : (result.items ?? []));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao carregar candidatos");
     } finally {
@@ -60,14 +60,14 @@ export default function CandidateQueuePage() {
 
       {showCreate && <CandidateCreateForm onClose={() => setShowCreate(false)} />}
 
-      <section className="grid grid-4" style={{ marginTop: 14 }}>
+      <section className="grid grid-4 section-gap">
         <article className="card metric"><div className="metric-label">Na visão atual</div><div className="metric-value">{metrics.total}</div><div className="metric-note">candidatos</div></article>
         <article className="card metric"><div className="metric-label">Precisam de você</div><div className="metric-value warning">{metrics.waiting}</div><div className="metric-note">lacunas ou fontes</div></article>
         <article className="card metric"><div className="metric-label">Prontos para decisão</div><div className="metric-value">{metrics.committee}</div><div className="metric-note">em comitê</div></article>
         <article className="card metric"><div className="metric-label">Elegíveis</div><div className="metric-value positive">{metrics.approved}</div><div className="metric-note">aprovados</div></article>
       </section>
 
-      <section className="card card-pad" style={{ marginTop: 14 }}>
+      <section className="card card-pad section-gap">
         <div className={styles.toolbar}>
           <div className="card-title" style={{ marginBottom: 0 }}><h2>Fila de investigação</h2><span>{items.length} registros</span></div>
           <div className={styles.actions}>
@@ -78,9 +78,9 @@ export default function CandidateQueuePage() {
           </div>
         </div>
 
-        {error && <div className={styles.error} role="alert" style={{ marginTop: 14 }}>{error}</div>}
-        {loading ? <div className="state-panel" style={{ marginTop: 14 }}><strong>Carregando candidatos</strong>Consultando o estado operacional e as lacunas.</div> : items.length === 0 ? <div className="state-panel" style={{ marginTop: 14 }}><strong>Nenhum candidato nesta visão</strong>Cadastre uma ação ou inicie a exploração autônoma.</div> : (
-          <div className="table-wrap" style={{ marginTop: 14 }}>
+        {error && <div className={`${styles.error} section-gap`} role="alert">{error}</div>}
+        {loading ? <div className="state-panel section-gap"><strong>Carregando candidatos</strong>Consultando o estado operacional e as lacunas.</div> : items.length === 0 ? <div className="state-panel section-gap"><strong>Nenhum candidato nesta visão</strong>Cadastre uma ação ou inicie a exploração autônoma.</div> : (
+          <div className="table-wrap section-gap">
             <table className="table">
               <thead><tr><th>Ativo</th><th>Origem</th><th>Estado</th><th>Decisão</th><th>Atualização</th><th /></tr></thead>
               <tbody>{items.map((item) => (

@@ -87,7 +87,7 @@ function MacroContent() {
       </div>
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <StaleWarning source="sources/health" />
         </div>
       )}
@@ -121,7 +121,7 @@ function MacroContent() {
 
       {/* Series detail table */}
       {macroSeries.length > 0 ? (
-        <section className="card card-pad" style={{ marginTop: 14 }}>
+        <section className="card card-pad section-gap">
           <div className="card-title">
             <h2>Séries monitoradas</h2>
             <span>{totalSeries} série{totalSeries !== 1 ? "s" : ""}</span>
@@ -170,7 +170,7 @@ function MacroContent() {
           </div>
         </section>
       ) : (
-        <div style={{ marginTop: 14 }}>
+        <div className="section-gap">
           <DataStatePanel
             state="missing"
             title="Nenhuma série macro registrada"
@@ -179,7 +179,7 @@ function MacroContent() {
         </div>
       )}
 
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <div className="card-title">
             <h2>Revisões point-in-time</h2>

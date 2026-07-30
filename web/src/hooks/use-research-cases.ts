@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
@@ -22,21 +22,18 @@ export interface ResearchCaseSummary {
   created_by: string;
 }
 
-/** Fetch research cases. */
 export function useResearchCases() {
   const query = useQuery({
     queryKey: queryKeys.researchCases(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/research/cases");
-      if (error) throw error;
-      return data ?? [];
+      return await bffFetch<Array<Record<string, unknown>>>("/api/v1/research/cases");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
   const cases: ResearchCaseSummary[] = Array.isArray(query.data)
-    ? (query.data as Array<Record<string, unknown>>).map((c) => ({
+    ? query.data.map((c) => ({
         id: String(c.id ?? ""),
         title: String(c.title ?? ""),
         state: String(c.state ?? ""),

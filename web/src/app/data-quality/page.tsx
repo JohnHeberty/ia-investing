@@ -88,7 +88,7 @@ function DataQualityContent() {
       </div>
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <StaleWarning source="sources/health" />
         </div>
       )}
@@ -119,7 +119,7 @@ function DataQualityContent() {
         />
       </section>
 
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <div className="card-title">
             <h2>Source registry</h2>
@@ -163,7 +163,7 @@ function DataQualityContent() {
       </section>
 
       {sources.length > 0 && (
-        <section className="card card-pad" style={{ marginTop: 14 }}>
+        <section className="card card-pad section-gap">
           <div className="card-title">
             <h2>Saúde das fontes</h2>
             <span>{totalSources} fontes</span>
@@ -245,7 +245,7 @@ function DataQualityContent() {
       )}
 
       {incidents.length > 0 && (
-        <section className="card card-pad" style={{ marginTop: 14 }}>
+        <section className="card card-pad section-gap">
           <div className="card-title">
             <h2>Incidentes de qualidade</h2>
             <span>{incidents.length} incidente{incidents.length !== 1 ? "s" : ""}</span>

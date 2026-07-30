@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
@@ -20,23 +20,19 @@ export interface PolicyEvent {
   updated_at: string;
 }
 
-/** Fetch policy events from policy/events endpoint. */
 export function usePolicy() {
   const policyEventsQuery = useQuery({
     queryKey: queryKeys.policyEvents(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/policy/events", {
-        params: { query: { as_of: new Date().toISOString().slice(0, 10) } },
-      });
-      if (error) throw error;
-      return data ?? [];
+      const asOf = new Date().toISOString();
+      return await bffFetch<Array<Record<string, unknown>>>(`/api/v1/policy/events?as_of=${encodeURIComponent(asOf)}`);
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
   const events = Array.isArray(policyEventsQuery.data)
-    ? (policyEventsQuery.data as Array<Record<string, unknown>>)
+    ? policyEventsQuery.data
     : [];
 
   const policyEvents: PolicyEvent[] = events.map((e) => ({

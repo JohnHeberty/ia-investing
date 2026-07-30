@@ -20,7 +20,7 @@ from temporalio.client import (
 )
 
 from apps.api._etag import parse_etag
-from apps.api.security import AuthContext, get_auth_context
+from apps.api.security import safe_uuid,  AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.investment_candidates import (
@@ -408,7 +408,7 @@ async def create_candidate(
     await _audit._audit(
         session=session,
         tenant_id=organization_id(auth),
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="create",
         resource_type="investment_candidate",
         resource_id=candidate.id,

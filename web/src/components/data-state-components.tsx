@@ -29,6 +29,12 @@ const stateConfig: Record<
     detail: "Este dado nunca foi coletado ou processado. Zero não substitui dado faltante.",
     variant: "info",
   },
+  ready: {
+    icon: <Database size={20} />,
+    title: "Dados prontos",
+    detail: "Dados disponíveis e atualizados.",
+    variant: "info",
+  },
   stale: {
     icon: <Clock size={20} />,
     title: "Dados desatualizados",
@@ -150,7 +156,7 @@ export function StaleWarning({
   lastUpdated?: string;
   source?: string;
 }) {
-  if (!lastUpdated) return null;
+  if (!lastUpdated && !source) return null;
   return (
     <div
       role="alert"
@@ -168,7 +174,9 @@ export function StaleWarning({
     >
       <Clock size={14} />
       <span>
-        Dados desatualizados desde {new Date(lastUpdated).toLocaleString("pt-BR")}
+        {lastUpdated
+          ? `Dados desatualizados desde ${new Date(lastUpdated).toLocaleString("pt-BR")}`
+          : "Dados podem estar desatualizados"}
         {source && ` (fonte: ${source})`}
       </span>
     </div>

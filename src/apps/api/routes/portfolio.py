@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api._errors import map_error
-from apps.api.security import AuthContext, get_auth_context
+from apps.api.security import safe_uuid,  AuthContext, get_auth_context
 from database.core import get_async_session
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.paper_portfolio import PaperPortfolioService
@@ -34,6 +34,13 @@ class PositionCreate(BaseModel):
     ticker_symbol: str
     quantity: float
     avg_cost_per_share: float
+    current_price: float | None = None
+
+
+class PositionUpdate(BaseModel):
+    ticker_symbol: str | None = None
+    quantity: float | None = None
+    avg_cost_per_share: float | None = None
     current_price: float | None = None
 
 
@@ -97,14 +104,21 @@ async def create_portfolio(
         organization_id=auth.organization_id,
     )
     portfolio_id = d.get("id")
-    await _audit._audit(
-        session=session,
-        tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
-        action="create",
-        resource_type="portfolio",
-        resource_id=UUID(portfolio_id) if portfolio_id else None,
-    )
+    actor_uuid = None
+    if auth.subject:
+        try:
+            actor_uuid = UUID(auth.subject)
+        except ValueError:
+            actor_uuid = None
+    if auth.organization_id:
+        await _audit._audit(
+            session=session,
+            tenant_id=auth.organization_id,
+            actor_id=actor_uuid,
+            action="create",
+            resource_type="portfolio",
+            resource_id=UUID(portfolio_id) if portfolio_id else None,
+        )
     return PortfolioCreatedResponse(**{k: d.get(k) for k in ("id", "name", "is_paper_trading", "base_currency")})
 
 
@@ -133,6 +147,32 @@ async def get_portfolio(
     return result
 
 
+@router.delete("/{portfolio_id}", status_code=200)
+async def delete_portfolio(
+    portfolio_id: uuid.UUID,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    try:
+        deleted = await PaperPortfolioService(session).delete_portfolio(
+            portfolio_id, organization_id=auth.organization_id
+        )
+    except RuntimeError as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Portfolio not found")
+    if auth.organization_id:
+        await _audit._audit(
+            session=session,
+            tenant_id=auth.organization_id,
+            actor_id=safe_uuid(auth.subject),
+            action="delete",
+            resource_type="portfolio",
+            resource_id=portfolio_id,
+        )
+    return {"id": str(portfolio_id), "deleted": True}
+
+
 @router.post("/{portfolio_id}/positions", status_code=201, response_model=dict[str, Any])
 async def add_position(
     portfolio_id: uuid.UUID,
@@ -151,19 +191,79 @@ async def add_position(
             avg_cost_per_share=body.avg_cost_per_share,
             issuer_id=body.issuer_id,
             current_price=body.current_price,
-            organization_id=auth.organization_id,
         )
     except LookupError as exc:
         raise map_error(exc) from exc
+    actor_uuid = None
+    if auth.subject:
+        try:
+            actor_uuid = UUID(auth.subject)
+        except ValueError:
+            actor_uuid = None
+    if auth.organization_id:
+        await _audit._audit(
+            session=session,
+            tenant_id=auth.organization_id,
+            actor_id=actor_uuid,
+            action="create",
+            resource_type="portfolio_position",
+            resource_id=portfolio_id,
+        )
+    return result
+
+
+@router.put("/{portfolio_id}/positions/{position_id}", response_model=dict[str, Any])
+async def update_position(
+    portfolio_id: uuid.UUID,
+    position_id: uuid.UUID,
+    body: PositionUpdate,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
+    result = await PaperPortfolioService(session).update_position(
+        portfolio_id=portfolio_id,
+        position_id=position_id,
+        ticker_symbol=body.ticker_symbol,
+        quantity=body.quantity,
+        avg_cost_per_share=body.avg_cost_per_share,
+        current_price=body.current_price,
+    )
+    if result is None:
+        raise HTTPException(status_code=404, detail="Position not found")
     await _audit._audit(
         session=session,
         tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
-        action="create",
+        actor_id=safe_uuid(auth.subject),
+        action="update",
         resource_type="portfolio_position",
         resource_id=portfolio_id,
     )
     return result
+
+
+@router.delete("/{portfolio_id}/positions/{position_id}", status_code=200)
+async def delete_position(
+    portfolio_id: uuid.UUID,
+    position_id: uuid.UUID,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> dict[str, Any]:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
+    deleted = await PaperPortfolioService(session).delete_position(portfolio_id, position_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Position not found")
+    await _audit._audit(
+        session=session,
+        tenant_id=auth.organization_id,
+        actor_id=safe_uuid(auth.subject),
+        action="delete",
+        resource_type="portfolio_position",
+        resource_id=portfolio_id,
+    )
+    return {"deleted": True}
 
 
 @router.post("/optimize", response_model=PortfolioOptimizationResponse)
@@ -187,7 +287,7 @@ async def run_optimization(
     await _audit._audit(
         session=session,
         tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="execute",
         resource_type="portfolio_optimization",
         resource_id=run.id,

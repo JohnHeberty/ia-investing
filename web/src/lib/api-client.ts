@@ -27,6 +27,23 @@ export const institutionalApi = createClient<paths>({
   fetch: csrfFetch,
 });
 
+/**
+ * Direct fetch through the BFF proxy — use this instead of institutionalApi
+ * for hooks that were broken by the openapi-fetch header replacement bug.
+ */
+export async function bffFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(`/api/backend${path}`, {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+    ...init,
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
+  }
+  return (await res.json()) as T;
+}
+
 function k(prefix: string, ...rest: unknown[]): unknown[] {
   return [prefix, ...rest];
 }

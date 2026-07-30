@@ -10,7 +10,7 @@ from opentelemetry import trace
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.api.security import AuthContext, require_permission
+from apps.api.security import safe_uuid,  AuthContext, require_permission
 from database.core import get_async_session
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.agent_runtime import AgentRuntimeService
@@ -119,7 +119,7 @@ async def create_agent_run(
     await _audit._audit(
         session=session,
         tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="create",
         resource_type="agent_run",
         resource_id=run.id,

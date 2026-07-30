@@ -40,7 +40,7 @@ function PolicyContent() {
           <LoadingSkeleton lines={4} />
           <LoadingSkeleton lines={4} />
         </section>
-        <section style={{ marginTop: 14 }}>
+        <section className="section-gap">
           <LoadingSkeleton lines={6} />
         </section>
       </>
@@ -84,7 +84,7 @@ function PolicyContent() {
       </div>
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <StaleWarning source="policy/events" />
         </div>
       )}
@@ -114,7 +114,7 @@ function PolicyContent() {
         />
       </section>
 
-      <section className="card card-pad" style={{ marginTop: 14 }}>
+      <section className="card card-pad section-gap">
         <div className="card-title">
           <h2>Legislative tracker</h2>
           <span>estágio ≠ probabilidade ≠ impacto</span>
@@ -169,7 +169,7 @@ function PolicyContent() {
         )}
       </section>
 
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <h2>Timeline versionada</h2>
           <p className="subtitle">
@@ -192,7 +192,7 @@ function PolicyContent() {
         </article>
       </section>
 
-      <div style={{ marginTop: 14 }}>
+      <div className="section-gap">
         <StatePanel
           title="Sem alteração automática"
           detail="Impacto material pausa no Temporal; tese e carteira permanecem imutáveis até decisão humana autorizada."

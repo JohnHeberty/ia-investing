@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getCsrfToken } from "@/lib/csrf";
 
 export type DriftItem = {
   ticker: string;
@@ -78,12 +79,19 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const organizationId = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
+  const method = (options?.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
     Accept: "application/json",
     ...(options?.headers as Record<string, string>),
   };
   if (organizationId) {
     headers["X-Organization-Id"] = organizationId;
+  }
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    const token = getCsrfToken();
+    if (token) {
+      headers["x-csrf-token"] = token;
+    }
   }
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...options,

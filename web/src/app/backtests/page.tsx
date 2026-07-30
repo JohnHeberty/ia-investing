@@ -79,7 +79,7 @@ function BacktestsContent() {
       </div>
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <StaleWarning source="backtests" />
         </div>
       )}
@@ -111,7 +111,7 @@ function BacktestsContent() {
 
       {/* Runs table */}
       {hasRuns ? (
-        <section className="card card-pad" style={{ marginTop: 14 }}>
+        <section className="card card-pad section-gap">
           <div className="card-title">
             <h2>Runs de backtest</h2>
             <span>{count} run{count !== 1 ? "s" : ""}</span>
@@ -160,7 +160,7 @@ function BacktestsContent() {
           </div>
         </section>
       ) : (
-        <div style={{ marginTop: 14 }}>
+        <div className="section-gap">
           <DataStatePanel
             state="missing"
             title="Nenhum backtest registrado"
@@ -169,7 +169,7 @@ function BacktestsContent() {
         </div>
       )}
 
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <div className="card-title">
             <h2>Estratégia vs benchmark</h2>

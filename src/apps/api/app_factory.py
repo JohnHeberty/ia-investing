@@ -35,6 +35,8 @@ from apps.api.routes.paper_execution import router as paper_execution_router
 from apps.api.routes.policy import macro_router
 from apps.api.routes.policy import router as policy_router
 from apps.api.routes.portfolio import router as portfolio_router
+from apps.api.routes.portfolio_recommendations import router as portfolio_recommendations_router
+from apps.api.routes.market_data import router as market_data_router
 from apps.api.routes.quality import router as quality_router
 from apps.api.routes.readiness import router as readiness_router
 from apps.api.routes.rebalance import router as rebalance_router
@@ -92,6 +94,8 @@ _AUTH_ROUTERS = [
     issuers_router,
     financials_router,
     portfolio_router,
+    portfolio_recommendations_router,
+    market_data_router,
     operations_router,
     sources_router,
     instruments_router,

@@ -5,7 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 from apps.api.dependencies import get_audit_service
 from apps.api.security import AuthContext, require_permission
@@ -15,6 +15,8 @@ router = APIRouter(prefix="/api/v1/audit", tags=["audit"])
 
 
 class AuditEntryV1(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: UUID
     tenant_id: UUID
     actor_id: UUID | None
@@ -22,7 +24,7 @@ class AuditEntryV1(BaseModel):
     resource_type: str
     resource_id: UUID | None
     changes: dict[str, Any] | None
-    metadata: dict[str, Any]
+    metadata: dict[str, Any] = Field(alias="meta_data")
     hash_prev: str | None
     hash: str
     timestamp: datetime

@@ -193,7 +193,7 @@ export default function ExplorationPage() {
         </aside>
       </div>
 
-      <section className="card card-pad" style={{ marginTop: 16 }}>
+      <section className="card card-pad section-gap">
         <div className="card-title"><h2>Exploração recorrente</h2><span>Temporal Schedule</span></div>
         <form className={styles.layout} onSubmit={createSchedule}>
           <div className={styles.formGrid}>
@@ -208,7 +208,7 @@ export default function ExplorationPage() {
         </form>
       </section>
 
-      <section className="card card-pad" style={{ marginTop: 16 }}>
+      <section className="card card-pad section-gap">
         <div className="card-title">
           <h2>Execuções e sugestões</h2>
           <button className="button secondary" type="button" onClick={() => void refresh()} disabled={loading}><RefreshCw size={14} /> Atualizar</button>
@@ -289,20 +289,13 @@ export default function ExplorationPage() {
               onChange={(e) => setDismissReason(e.target.value)}
               placeholder="Ex: fora do perfil, risco elevado, dados insuficientes..."
               rows={4}
+              className="form-input section-gap"
               style={{
-                marginTop: 16,
                 width: "100%",
-                borderRadius: 8,
-                border: "1px solid var(--line)",
-                background: "var(--surface-2)",
-                padding: 8,
-                fontSize: 14,
-                color: "var(--text)",
                 resize: "vertical",
-                boxSizing: "border-box",
               }}
             />
-            <div style={{ marginTop: 16, display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <div className="section-gap flex justify-between" style={{ gap: 12 }}>
               <Dialog.Close asChild>
                 <button
                   style={{

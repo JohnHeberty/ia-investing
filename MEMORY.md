@@ -259,6 +259,8 @@ Nada pendente — todos os itens corrigidos.
 | `7d0b072` | R8: Unblock 19 test files (heartbeat_timeout, DetectedBreak, stale imports) |
 | `08728c6` | R8: Fix 66 test failures (FK back_populates, mock provider, stale path) |
 | `e05c1bc` | FIX.md final update — all resolved |
+| `c31a2f6` | Logging full-stack: structlog, LoggingMiddleware, AuditContextMiddleware, events endpoint, TelemetryProvider |
+| `17e6786` | Fix: LoggingMiddleware switched to structlog, trace_id correlation, 6 tests updated |
 
 **Fixes técnicos:**
 - `_errors.py`: map_error hierarchy (404/403/409/422/500) — expanded from 3 exceptions to universal
@@ -271,5 +273,31 @@ Nada pendente — todos os itens corrigidos.
 
 **Resultado final:**
 - FIX.md: 0 items pending
-- Tests: 1129 passed, 0 failed
+- Tests: 1164 passed, 0 failed
 - python-jose: removed (single JWT lib: PyJWT)
+
+---
+
+## Sessão: Logging Full-Stack (2026-07-29)
+
+**Objetivo:** Rastrear tudo — clicks, requests, accesses, ações backend — salvos em arquivos, sem Grafana/Prometheus.
+
+**Implementado:**
+- **structlog** com JSON (prod) / ConsoleRenderer (dev), file rotation (logs/app.log, logs/errors.log, 10MB, 30 backups)
+- **LoggingMiddleware**: request/response logging com structlog, method/path/status_code/duration_ms/request_id/trace_id
+- **AuditContextMiddleware**: structlog contextvars binding, request_id (server), trace_id (client X-Request-Id)
+- **AuditLogEntry**: 5 new columns (request_id, http_method, http_path, duration_ms, status_code) — migration 20260729_01
+- **AuditMixin**: auto-audit in write routes (12 files integrated)
+- **SecurityAuditor**: 5 structlog event methods (auth failures, CSRF, SSRF, rate limit, calibration)
+- **Frontend telemetry**: telemetry.ts (zero deps), use-telemetry.ts hooks, TelemetryProvider (error capture + auto-flush)
+- **POST /api/v1/events**: rate-limited (100/min), public endpoint for frontend events
+- **X-Request-Id correlation**: FE sends header → BE uses as trace_id, same request_id shared across middleware chain
+
+**Fixes nesta sessão:**
+- LoggingMiddleware: `logging.getLogger()` → `structlog.get_logger()` (fields weren't appearing in logs)
+- `trace_id` added to LoggingMiddleware bind (client X-Request-Id was lost)
+- Tests: rewrote 6 tests from mock-based to structlog.testing.capture_logs()
+
+**Commits finais:**
+- `c31a2f6`: Logging full-stack (structlog, middleware, events, TelemetryProvider, 35 tests)
+- `17e6786`: Fix LoggingMiddleware structlog + trace_id correlation

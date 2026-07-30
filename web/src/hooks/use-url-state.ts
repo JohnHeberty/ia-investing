@@ -51,7 +51,8 @@ export function useUrlState<T extends Record<string, string | string[] | undefin
         }
       }
       const qs = params.toString();
-      router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      router.push(qs ? `${pathname}?${qs}` : pathname as any, { scroll: false });
     },
     [router, pathname, searchParams],
   );

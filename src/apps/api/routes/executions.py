@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from apps.api._errors import map_error
 from apps.api.dependencies import get_execution_service
-from apps.api.security import AuthContext, require_permission
+from apps.api.security import safe_uuid,  AuthContext, require_permission
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.execution_service import (  # type: ignore[attr-defined]
     ExecutionService,
@@ -118,7 +118,7 @@ class ExecutionSettledResponse(BaseModel):
 
 def _actor_id(auth: AuthContext) -> UUID | None:
     try:
-        return UUID(auth.subject) if auth.subject else None
+        return safe_uuid(auth.subject)
     except (ValueError, AttributeError):
         return None
 

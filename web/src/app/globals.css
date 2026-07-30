@@ -249,7 +249,7 @@ h1 {
 }
 .grid {
   display: grid;
-  gap: 14px;
+  gap: 18px;
 }
 .grid-4 {
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -260,8 +260,8 @@ h1 {
 .split {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(300px, 0.85fr);
-  gap: 14px;
-  margin-top: 14px;
+  gap: 18px;
+  margin-top: 18px;
 }
 .card {
   background: linear-gradient(145deg, rgb(17 34 29 / 92%), rgb(11 24 20 / 92%));
@@ -586,5 +586,208 @@ h1 {
   }
   .table-wrap {
     overflow-x: auto;
+  }
+}
+
+/* Screen reader only - visually hidden but accessible */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ── Typography ── */
+.mono { font-family: var(--font-mono); }
+.muted { color: var(--muted); }
+.text-sm { font-size: 12px; }
+.text-xs { font-size: 11px; }
+.fw-500 { font-weight: 500; }
+
+/* ── Form Controls ── */
+.form-input {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  transition: border-color 0.15s;
+}
+.form-input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+.form-input.mono {
+  font-family: var(--font-mono);
+}
+.form-label {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+/* ── Flex Utilities ── */
+.flex { display: flex; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-4 { gap: 4px; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.gap-16 { gap: 16px; }
+
+/* ── Spacing ── */
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mt-24 { margin-top: 24px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-16 { margin-bottom: 16px; }
+
+/* ── Section Spacing (default between page sections) ── */
+.section-gap { margin-top: 24px; }
+
+/* ── Modal / Dialog ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.modal-content {
+  max-width: 420px;
+  width: 100%;
+}
+
+/* ── Alert Banners ── */
+.banner {
+  padding: 10px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+.banner.warn {
+  background: rgba(244, 189, 99, 0.1);
+  border: 1px solid var(--amber);
+}
+
+/* ── Inline Edit Row ── */
+.table tr[data-editing] {
+  background: var(--surface-2);
+}
+
+/* ── Stat Grid ── */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.stat-grid .stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+.stat-grid .stat-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+.stat-grid .stat-detail {
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+/* ── Exposure Bar ── */
+.exposure-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.exposure-bar .bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--surface-3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.exposure-bar .bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+.exposure-bar .bar-fill.low { background: var(--accent); }
+.exposure-bar .bar-fill.mid { background: var(--amber); }
+.exposure-bar .bar-fill.high { background: var(--red); }
+
+/* ── Audit Timeline ── */
+.audit-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.audit-entry:last-child { border-bottom: 0; }
+.audit-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-top: 5px;
+  flex-shrink: 0;
+}
+.audit-dot.create { background: var(--accent); }
+.audit-dot.update { background: var(--blue); }
+.audit-dot.delete { background: var(--red); }
+.audit-detail {
+  flex: 1;
+}
+.audit-action {
+  font-size: 13px;
+  font-weight: 500;
+}
+.audit-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+.audit-time {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ── Card Layout ── */
+.card-list {
+  display: grid;
+  gap: 10px;
+}
+
+/* ── Button sizes ── */
+.button.sm {
+  font-size: 11px;
+  padding: 3px 8px;
+}
+.button.danger {
+  background: var(--red);
+  color: white;
+}
+
+/* ── Responsive overrides ── */
+@media (max-width: 680px) {
+  .stat-grid {
+    grid-template-columns: 1fr;
   }
 }

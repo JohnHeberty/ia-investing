@@ -56,7 +56,7 @@ export function useSSE(
     function connect(attempt: number) {
       if (cancelled) return;
 
-      const target = new URL(url, window.location.origin);
+      const target = new URL(url!, window.location.origin);
       if (lastEventId) target.searchParams.set("last_event_id", lastEventId);
 
       setInternalState("connecting");

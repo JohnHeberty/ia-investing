@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 
-const bffBase = process.env.NEXT_PUBLIC_IA_BFF_BASE_URL ?? "/api/backend";
+const bffBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "/api/backend";
 
 export type UserInfo = {
   subject: string;
@@ -19,7 +19,7 @@ type AuthContextValue = {
   user: UserInfo | null;
   loading: boolean;
   error: string | null;
-  login: (returnTo?: string) => void;
+  login: (email: string, returnTo?: string) => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -27,7 +27,7 @@ const AuthContext = createContext<AuthContextValue>({
   user: null,
   loading: true,
   error: null,
-  login: () => {},
+  login: async () => {},
   logout: async () => {},
 });
 
@@ -78,19 +78,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    (returnTo?: string) => {
+    async (email: string, returnTo?: string) => {
       const params = new URLSearchParams();
       if (returnTo) params.set("return_to", returnTo);
       const qs = params.toString();
-      window.location.href = `${bffBase}/api/v1/auth/authorize${qs ? `?${qs}` : ""}`;
+
+      const response = await fetch(`/api/auth/login${qs ? `?${qs}` : ""}`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error || "Login failed");
+      }
+
+      const result = await response.json() as { return_to?: string };
+      setUser(null);
+      setLoading(true);
+      window.location.href = result.return_to || returnTo || "/";
     },
     [],
   );
 
   const logout = useCallback(async () => {
     try {
-      await fetch(`${bffBase}/api/v1/auth/logout`, {
-        method: "POST",
+      await fetch("/api/auth/logout", {
         credentials: "include",
       });
     } catch {

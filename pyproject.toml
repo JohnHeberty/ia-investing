@@ -8,43 +8,36 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
     "pydantic[email]>=2.10",
-
     # Database
     "sqlalchemy[asyncio]>=2.0",
     "alembic>=1.14",
     "asyncpg>=0.30",
     "psycopg[binary,pool]>=3.2",
     "pgvector>=0.3",
-
     # Orchestration
     "temporalio>=1.8",
-
+    # Logging
+    "structlog>=24.0",
     # Agents
     "openai>=1.0",
     "openai-agents>=0.1",
     "anthropic>=0.30",
-
     # Data processing
     "polars>=1.20",
     "duckdb>=1.1",
     "pyarrow>=18",
-
     # Optimization
     "cvxpy>=1.5",
-
     # Storage
     "boto3>=1.36",
-
     # HTTP / connectors
     "httpx[socks]>=0.28",
     "aiofiles>=24.1",
     "pyjwt[crypto]>=2.10",
-
     # Parsing
     "python-docx>=1.1",
     "openpyxl>=3.1",
     "pdfplumber>=0.11",
-
     # Observability
     "opentelemetry-api>=1.28",
     "opentelemetry-sdk>=1.28",
@@ -52,17 +45,15 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0.49b",
     "opentelemetry-instrumentation-sqlalchemy>=0.49b",
     "opentelemetry-exporter-otlp-proto-grpc>=1.28",
-
     # ML / experiments
     "mlflow>=2.17",
-
     # Utilities
     "pydantic-settings>=2.6",
     "python-dotenv>=1.0",
     "rich>=13.9",
-
     # State machines
     "transitions>=0.9.0",
+    "yfinance>=1.5.2",
 ]
 
 [project.optional-dependencies]

@@ -1,8 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-import { clearSession, refreshSession } from "@/lib/oidc";
-
 type RouteContext = { params: Promise<{ path: string[] }> };
 
 async function proxy(request: NextRequest, context: RouteContext) {
@@ -13,13 +11,26 @@ async function proxy(request: NextRequest, context: RouteContext) {
   const target = new URL(path.join("/"), `${base.replace(/\/$/, "")}/`);
   target.search = request.nextUrl.search;
   const jar = await cookies();
-  let accessToken = jar.get("ia_access_token")?.value;
-  if (!accessToken) return NextResponse.json({ error: "Authentication required" }, { status: 401 });
 
-  const execute = (token: string) => {
+  // Session cookie (primary auth method — backend validates it)
+  const sessionCookie = jar.get("ia_session")?.value;
+
+  // Auth routes are public — allow without any auth
+  const isAuthRoute = path[2] === "auth";
+
+  if (!sessionCookie && !isAuthRoute) {
+    return NextResponse.json({ error: "Authentication required (no ia_session cookie in proxy)" }, { status: 401 });
+  }
+
+  const execute = () => {
     const headers = new Headers(request.headers);
-    for (const name of ["cookie", "host", "content-length", "connection"]) headers.delete(name);
-    headers.set("authorization", `Bearer ${token}`);
+    for (const name of ["host", "content-length", "connection"]) headers.delete(name);
+
+    // Forward session cookie to backend (session middleware validates it)
+    if (sessionCookie) {
+      headers.set("cookie", `ia_session=${sessionCookie}`);
+    }
+
     headers.set("accept", "application/json");
     return fetch(target, {
       method: request.method,
@@ -30,21 +41,15 @@ async function proxy(request: NextRequest, context: RouteContext) {
     } as RequestInit);
   };
 
-  let response = await execute(accessToken);
-  if (response.status === 401) {
-    try {
-      accessToken = (await refreshSession()) ?? undefined;
-      if (accessToken) response = await execute(accessToken);
-    } catch {
-      await clearSession();
-    }
-  }
+  let response = await execute();
+
   const outgoingHeaders = new Headers(response.headers);
   outgoingHeaders.delete("transfer-encoding");
 
   const setCookies = response.headers.getSetCookie();
   const res = new NextResponse(response.body, { status: response.status, headers: outgoingHeaders });
 
+  // Forward CSRF token from backend to client
   for (const raw of setCookies) {
     const name = raw.split("=")[0].trim();
     if (name === "ia_csrf_token") {

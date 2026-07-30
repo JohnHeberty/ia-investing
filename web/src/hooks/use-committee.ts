@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 
 import type { DataState } from "@/components/domain";
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
 
 export interface CommitteeDecision {
@@ -29,11 +29,6 @@ interface CommitteeSessionListItem {
   total_members: number;
   present_members: number;
   created_at?: string | null;
-}
-
-interface CommitteeSessionList {
-  items: CommitteeSessionListItem[];
-  total: number;
 }
 
 interface CommitteeSessionDetail extends CommitteeSessionListItem {
@@ -65,21 +60,14 @@ function proposalTitle(session: CommitteeSessionDetail): string {
 
 async function batchFetchDetails(
   sessions: CommitteeSessionListItem[],
-  signal: AbortSignal,
 ): Promise<CommitteeSessionDetail[]> {
   const results: CommitteeSessionDetail[] = [];
   const concurrency = 5;
   for (let i = 0; i < sessions.length; i += concurrency) {
-    if (signal.aborted) throw new DOMException("Aborted", "AbortError");
     const batch = sessions.slice(i, i + concurrency);
     const settled = await Promise.allSettled(
       batch.map(async (session) => {
-        const { data, error } = await institutionalApi.GET<CommitteeSessionDetail>(
-          "/api/v1/committee/sessions/{session_id}",
-          { params: { path: { session_id: session.id }, signal } },
-        );
-        if (error) throw error;
-        return data ?? session;
+        return await bffFetch<CommitteeSessionDetail>(`/api/v1/committee/sessions/${session.id}`);
       }),
     );
     for (const result of settled) {
@@ -95,28 +83,27 @@ export function useCommittee() {
   const sessionsQuery = useQuery({
     queryKey: queryKeys.committeeSessions(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET<CommitteeSessionList>("/api/v1/committee/sessions", {
-        params: { query: { limit: 50, offset: 0 } },
-      });
-      if (error) throw error;
-      return data?.items ?? [];
+      const raw = await bffFetch<unknown>("/api/v1/committee/sessions?limit=50&offset=0");
+      if (Array.isArray(raw)) return raw as CommitteeSessionListItem[];
+      if (raw && typeof raw === "object" && "items" in raw) return (raw as { items: CommitteeSessionListItem[] }).items;
+      return [] as CommitteeSessionListItem[];
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
   const detailsQuery = useQuery({
-    queryKey: [...queryKeys.committeeSessions(), "details", sessionsQuery.data?.map((s) => s.id).join(",") ?? ""],
+    queryKey: [...queryKeys.committeeSessions(), "details", (sessionsQuery.data as unknown as CommitteeSessionListItem[])?.map((s) => s.id).join(",") ?? ""],
     enabled: Boolean(sessionsQuery.data),
-    queryFn: async ({ signal }) => {
-      const sessions = sessionsQuery.data ?? [];
-      return batchFetchDetails(sessions, signal);
+    queryFn: async () => {
+      const sessions = (sessionsQuery.data ?? []) as unknown as CommitteeSessionListItem[];
+      return batchFetchDetails(sessions);
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
-  const sessions = detailsQuery.data ?? sessionsQuery.data ?? [];
+  const sessions = (detailsQuery.data ?? sessionsQuery.data ?? []) as unknown as CommitteeSessionDetail[];
   const decisions: CommitteeDecision[] = sessions.map((session) => {
     const agenda = session.agenda ?? {};
     const conflicts = Array.isArray(agenda.conflicts) ? agenda.conflicts.length : 0;

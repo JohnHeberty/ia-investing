@@ -29,7 +29,7 @@ async function api<T>(
       (body as { detail?: string }).detail ?? `API error: ${response.status}`,
     );
   }
-  if (response.status === 204) return undefined as Promise<T>;
+  if (response.status === 204) return undefined as unknown as Promise<T>;
   return response.json() as Promise<T>;
 }
 
@@ -250,7 +250,7 @@ export function createExplorationSchedule(input: {
   interval_hours: number;
   paused: boolean;
 }): Promise<{ schedule_id: string; interval_hours: number }> {
-  return api("/exploration-schedules", {
+  return api("/exploration-runs/schedules", {
     method: "POST",
     body: JSON.stringify(input),
   });

@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
@@ -20,21 +20,18 @@ export interface PaperOrder {
   created_at: string;
 }
 
-/** Fetch paper trade intents from paper/trade-intents endpoint. */
 export function usePaper() {
   const tradeIntentsQuery = useQuery({
     queryKey: queryKeys.paperTradeIntents(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/paper/trade-intents");
-      if (error) throw error;
-      return data ?? [];
+      return await bffFetch<Array<Record<string, unknown>>>("/api/v1/paper/trade-intents");
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
   const intents = Array.isArray(tradeIntentsQuery.data)
-    ? (tradeIntentsQuery.data as Array<Record<string, unknown>>)
+    ? tradeIntentsQuery.data
     : [];
 
   const orders: PaperOrder[] = intents.map((i) => {

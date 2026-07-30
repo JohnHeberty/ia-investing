@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from apps.api.dependencies import get_operation_service
-from apps.api.security import AuthContext, require_permission
+from apps.api.security import AuthContext, require_permission, safe_uuid
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.operations import AgentRunCommand, IdempotencyConflictError, OperationService
 from ia_investing.contracts.v1 import OperationAcceptedV1, OperationStatusV1
@@ -39,17 +39,25 @@ async def submit_agent_run(
                 actor_subject=_auth.subject,
             ),
             idempotency_key,
+            organization_id=_auth.organization_id,
         )
     except IdempotencyConflictError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
-    await _audit._audit(
-        session=service.session,
-        tenant_id=_auth.organization_id,
-        actor_id=UUID(_auth.subject) if _auth.subject else None,
-        action="execute",
-        resource_type="agent_run",
-        resource_id=accepted.operation_id,
-    )
+    actor_uuid = None
+    if _auth.subject:
+        try:
+            actor_uuid = UUID(_auth.subject)
+        except ValueError:
+            actor_uuid = None
+    if _auth.organization_id:
+        await _audit._audit(
+            session=service.session,
+            tenant_id=_auth.organization_id,
+            actor_id=actor_uuid,
+            action="execute",
+            resource_type="agent_run",
+            resource_id=accepted.operation_id,
+        )
     response.headers["Location"] = f"/api/v1/operations/{accepted.operation_id}"
     return accepted
 

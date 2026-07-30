@@ -21,7 +21,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -30,7 +30,7 @@ type NavItem = readonly [string, string, LucideIcon, string | null];
 
 const primary: NavItem[] = [
   ["/", "Missão", CircleGauge, null],
-  ["/portfolios/demo", "Carteiras", BriefcaseBusiness, "portfolio:read"],
+  ["/portfolios", "Carteiras", BriefcaseBusiness, "portfolio:read"],
   ["/opportunities", "Oportunidades", Radar, "research_cases:read"],
   ["/opportunities/candidates", "Candidatos", Search, null],
   ["/opportunities/exploration", "Exploração", Radar, null],
@@ -89,12 +89,21 @@ function getInitialTheme(): string {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { user, logout } = useAuth();
+  const { user, loading, logout } = useAuth();
+  const pathname = usePathname();
+  const router = useRouter();
   const [theme] = useState(getInitialTheme);
+  const isLoginPage = pathname === "/login";
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
+
+  useEffect(() => {
+    if (!loading && !user && !isLoginPage) {
+      router.replace("/login");
+    }
+  }, [loading, user, isLoginPage, router]);
 
   const toggleTheme = useCallback(() => {
     const next = document.documentElement.dataset.theme === "light" ? "dark" : "light";
@@ -105,6 +114,31 @@ export function AppShell({ children }: { children: ReactNode }) {
   const handleLogout = useCallback(() => {
     logout();
   }, [logout]);
+
+  const handleSearch = useCallback(() => {
+    router.push("/opportunities/candidates");
+  }, [router]);
+
+  const handleNotifications = useCallback(() => {
+    router.push("/audit");
+  }, [router]);
+
+  // Login page: minimal layout without sidebar/topbar
+  if (isLoginPage) {
+    return (
+      <main
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          minHeight: "100vh",
+          background: "var(--bg)",
+        }}
+      >
+        {children}
+      </main>
+    );
+  }
 
   return (
     <div className="shell">
@@ -172,10 +206,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             Organização / <strong>Brasil Long Only</strong>
           </div>
           <div className="top-actions">
-            <button className="icon-button" aria-label="Pesquisar" type="button">
+            <button className="icon-button" aria-label="Pesquisar" onClick={handleSearch} type="button">
               <Search size={15} />
             </button>
-            <button className="icon-button" aria-label="Notificações" type="button">
+            <button className="icon-button" aria-label="Notificações" onClick={handleNotifications} type="button">
               <Bell size={15} />
             </button>
             <button

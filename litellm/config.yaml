@@ -1,0 +1,25 @@
+model_list:
+  - model_name: qwen
+    litellm_params:
+      model: openai/qwen
+      api_base: http://100.91.54.69:4000/v1
+      api_key: sk-litellm-master
+  - model_name: gpt-4o
+    litellm_params:
+      model: openai/qwen
+      api_base: http://100.91.54.69:4000/v1
+      api_key: sk-litellm-master
+  - model_name: text-embedding-3-small
+    litellm_params:
+      model: openai/qwen3-embedding:0.6b-cpu-smart
+      api_base: http://100.91.54.69:4000/v1
+      api_key: sk-litellm-master
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false
+  num_retries: 2
+  request_timeout: 120
+
+general_settings:
+  master_key: sk-litellm-master

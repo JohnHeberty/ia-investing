@@ -88,7 +88,7 @@ function base64Url(bytes: Uint8Array): string {
     .replace(/=+$/, "");
 }
 
-export function pkceChallenge(verifier: string): string {
+export async function pkceChallenge(verifier: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(verifier);
   return crypto.subtle.digest("SHA-256", data).then((hash) => base64Url(new Uint8Array(hash)));
@@ -149,7 +149,6 @@ export async function storeTokenSet(tokens: TokenSet): Promise<void> {
     jar.set("ia_refresh_token", tokens.refresh_token, {
       ...sessionCookieOpts,
       maxAge: 86400 * 30,
-      path: "/api/auth/refresh",
     });
   }
 }

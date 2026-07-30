@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from apps.api._errors import map_error
 from apps.api.dependencies import get_committee_service
-from apps.api.security import AuthContext, actor_uuid, require_permission
+from apps.api.security import safe_uuid,  AuthContext, actor_uuid, require_permission
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.committee_service import (
     CommitteeService,
@@ -185,7 +185,7 @@ async def create_session(
     await _audit._audit(
         session=service._session,
         tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="create",
         resource_type="committee_session",
         resource_id=session.id,
@@ -260,7 +260,7 @@ async def convene_session(
     await _audit._audit(
         session=service._session,
         tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="update",
         resource_type="committee_session",
         resource_id=session_id,
@@ -289,7 +289,7 @@ async def start_voting(
     await _audit._audit(
         session=service._session,
         tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="update",
         resource_type="committee_session",
         resource_id=session_id,
@@ -328,7 +328,7 @@ async def cast_vote(
     await _audit._audit(
         session=service._session,
         tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="vote",
         resource_type="committee_vote",
         resource_id=vote.id,
@@ -350,7 +350,7 @@ async def finalize_voting(
     await _audit._audit(
         session=service._session,
         tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="update",
         resource_type="committee_session",
         resource_id=session_id,
@@ -384,7 +384,7 @@ async def publish_decision(
     await _audit._audit(
         session=service._session,
         tenant_id=auth.organization_id,
-        actor_id=UUID(auth.subject) if auth.subject else None,
+        actor_id=safe_uuid(auth.subject),
         action="approve" if body.decision == "approve" else "reject",
         resource_type="committee_decision",
         resource_id=session_id,

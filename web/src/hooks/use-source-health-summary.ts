@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 
-import { institutionalApi, queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
@@ -24,21 +24,18 @@ export interface SourceHealthSummary {
   liquidity: Record<string, unknown>;
 }
 
-/** Fetch source health data and compute a summary for the risk dashboard. */
 export function useSourceHealthSummary() {
   const sourceHealthQuery = useQuery({
     queryKey: queryKeys.sourceHealth(),
     queryFn: async () => {
-      const { data, error } = await institutionalApi.GET("/api/v1/sources/health");
-      if (error) throw error;
-      return data ?? [];
+      return await bffFetch<Array<Record<string, unknown>>>("/api/v1/sources/health");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
   const sources = Array.isArray(sourceHealthQuery.data)
-    ? (sourceHealthQuery.data as Array<Record<string, unknown>>)
+    ? sourceHealthQuery.data
     : [];
 
   const staleCount = sources.filter(

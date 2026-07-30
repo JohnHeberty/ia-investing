@@ -83,7 +83,7 @@ function AuditContent() {
       </div>
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <StaleWarning source="agents/runs" />
         </div>
       )}
@@ -116,7 +116,7 @@ function AuditContent() {
 
       {/* Audit events table */}
       {auditEvents.length > 0 ? (
-        <section className="card card-pad" style={{ marginTop: 14 }}>
+        <section className="card card-pad section-gap">
           <div className="card-title">
             <h2>Eventos recentes</h2>
             <span>{auditEvents.length} evento{auditEvents.length !== 1 ? "s" : ""}</span>
@@ -190,7 +190,7 @@ function AuditContent() {
           </div>
         </section>
       ) : (
-        <div style={{ marginTop: 14 }}>
+        <div className="section-gap">
           <DataStatePanel
             state="empty"
             title="Nenhum evento de auditoria"
@@ -199,7 +199,7 @@ function AuditContent() {
         </div>
       )}
 
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <div className="card-title">
             <h2>Pesquisa</h2>

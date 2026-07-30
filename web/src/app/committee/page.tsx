@@ -83,7 +83,7 @@ function CommitteeContent() {
       </div>
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <StaleWarning source="readiness/decision-packs" />
         </div>
       )}
@@ -114,7 +114,7 @@ function CommitteeContent() {
       </section>
 
       {/* Quorum status */}
-      <section className="card card-pad" style={{ marginTop: 14 }}>
+      <section className="card card-pad section-gap">
         <div className="card-title">
           <h2>Quórum e governança</h2>
           <Badge tone={quorumMet ? "good" : "warn"}>
@@ -165,7 +165,7 @@ function CommitteeContent() {
 
       {/* Decision packs */}
       {decisions.length === 0 ? (
-        <div style={{ marginTop: 14 }}>
+        <div className="section-gap">
           <DataStatePanel
             state="empty"
             title="Nenhum decision pack na agenda"
@@ -173,7 +173,7 @@ function CommitteeContent() {
           />
         </div>
       ) : (
-        <section style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 12 }}>
+        <section className="section-gap flex flex-col" style={{ gap: 12 }}>
           {decisions.map((d) => (
             <ApprovalCard
               key={d.id}
@@ -192,7 +192,7 @@ function CommitteeContent() {
       )}
 
       {/* Governance sections */}
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <div className="card-title">
             <h2>Decision pack</h2>

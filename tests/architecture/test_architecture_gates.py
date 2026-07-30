@@ -78,7 +78,7 @@ class TestEntryPointsHaveActivities:
             "readiness",
             "policy",
             "research",
-            "agents",
+            "agent_runtime",
         ]
         for router in required_routers:
             assert (

@@ -21,6 +21,16 @@ from ia_investing.settings import Settings, get_settings
 bearer_scheme = HTTPBearer(auto_error=False)
 
 
+def safe_uuid(value: str | None) -> UUID | None:
+    """Safely parse a string as UUID, returning None if invalid."""
+    if not value:
+        return None
+    try:
+        return UUID(value)
+    except ValueError:
+        return None
+
+
 @dataclass(frozen=True, slots=True)
 class AuthContext:
     subject: str

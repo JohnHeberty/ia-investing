@@ -40,7 +40,7 @@ function PaperContent() {
           <LoadingSkeleton lines={4} />
           <LoadingSkeleton lines={4} />
         </section>
-        <section style={{ marginTop: 14 }}>
+        <section className="section-gap">
           <LoadingSkeleton lines={6} />
         </section>
       </>
@@ -83,7 +83,7 @@ function PaperContent() {
       </div>
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="section-gap">
           <StaleWarning source="paper/trade-intents" />
         </div>
       )}
@@ -113,7 +113,7 @@ function PaperContent() {
         />
       </section>
 
-      <section className="card card-pad" style={{ marginTop: 14 }}>
+      <section className="card card-pad section-gap">
         <div className="card-title">
           <h2>Order lifecycle</h2>
           <Badge tone="warn">PAPER</Badge>
@@ -190,7 +190,7 @@ function PaperContent() {
         )}
       </section>
 
-      <section className="grid grid-3" style={{ marginTop: 14 }}>
+      <section className="grid grid-3 section-gap">
         <article className="card card-pad">
           <h2>Break crítico</h2>
           <p className="subtitle">
@@ -211,7 +211,7 @@ function PaperContent() {
         </article>
       </section>
 
-      <div style={{ marginTop: 14 }}>
+      <div className="section-gap">
         <StatePanel
           title="Ambiente PAPER"
           detail="A UI não oferece send-order live. Cancelamento, leitura e reconciliação permanecem disponíveis durante suspensão."
