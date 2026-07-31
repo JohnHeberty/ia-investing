@@ -11,6 +11,13 @@ from workflows import (
     PortfolioRankingWorkflow,
     RunAgentWorkflow,
 )
+from workflows.candidate_dispatch import CandidateOutboxDispatchWorkflow
+from workflows.candidate_intelligence import (
+    CandidateAnalysisWorkflow,
+    CandidateSourceValidationWorkflow,
+    AutonomousEquityExplorationWorkflow,
+    ScheduledEquityExplorationWorkflow,
+)
 
 
 def test_capability_queues_are_stable_and_unique() -> None:
@@ -28,6 +35,11 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
     assert WORKFLOWS_BY_CAPABILITY[Capability.RESEARCH_AGENTS] == (
         RunAgentWorkflow,
         DispatchOperationsWorkflow,
+        CandidateOutboxDispatchWorkflow,
+        CandidateAnalysisWorkflow,
+        CandidateSourceValidationWorkflow,
+        AutonomousEquityExplorationWorkflow,
+        ScheduledEquityExplorationWorkflow,
     )
     assert WORKFLOWS_BY_CAPABILITY[Capability.PORTFOLIO_RISK] == (
         PortfolioConstructionWorkflow,

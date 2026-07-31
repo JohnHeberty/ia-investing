@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { bffFetch } from "@/lib/api-client";
 
 export type PortfolioRankItem = {
   portfolio_id: string;
@@ -75,28 +76,17 @@ export type MissionControl = {
   candidate_pipeline: CandidatePipeline | null;
 };
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 const organizationId = process.env.NEXT_PUBLIC_ORGANIZATION_ID;
 
 async function fetchMissionControl(): Promise<MissionControl> {
-  if (!apiBaseUrl) {
-    throw new Error("NEXT_PUBLIC_API_BASE_URL não está configurado");
-  }
   if (!organizationId) {
     throw new Error("NEXT_PUBLIC_ORGANIZATION_ID não está configurado");
   }
-  const response = await fetch(`${apiBaseUrl}/api/v1/dashboard/mission-control`, {
-    credentials: "include",
+  return bffFetch<MissionControl>("/api/v1/dashboard/mission-control", {
     headers: {
-      Accept: "application/json",
       "X-Organization-Id": organizationId,
     },
   });
-  if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(`Mission Control indisponível (${response.status}): ${detail}`);
-  }
-  return response.json() as Promise<MissionControl>;
 }
 
 export function useMissionControl() {

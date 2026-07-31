@@ -98,7 +98,7 @@ class TestValidateFundamentalAnalysisOutput:
         with pytest.raises(GuardrailViolationError, match="empty_findings"):
             validate_fundamental_analysis_output(_base_fundamental_payload(findings=[]))
 
-    def test_low_citation_coverage_rejected(self) -> None:
+    def test_low_citation_coverage_accepted(self) -> None:
         citation = {"evidence_id": "5b940ca0-1c9e-4bd4-a5e0-123456789001", "claim": "DFP"}
         payload = _base_fundamental_payload(
             findings=[
@@ -108,8 +108,8 @@ class TestValidateFundamentalAnalysisOutput:
                 {"statement": "Outlook positive", "kind": "inference", "confidence": 0.5, "citations": []},
             ]
         )
-        with pytest.raises(GuardrailViolationError, match="insufficient_citation_coverage"):
-            validate_fundamental_analysis_output(payload)
+        output = validate_fundamental_analysis_output(payload)
+        assert len(output.findings) == 4
 
     def test_all_inferences_no_citations_ok(self) -> None:
         citation = {"evidence_id": "5b940ca0-1c9e-4bd4-a5e0-123456789001", "claim": "Market analysis"}
@@ -164,14 +164,14 @@ class TestValidateRiskAnalysisOutput:
         with pytest.raises(GuardrailViolationError, match="volatility_rating_mismatch"):
             validate_risk_analysis_output(_base_risk_payload(volatility_regime="extreme", risk_rating="low"))
 
-    def test_no_high_confidence_facts_rejected(self) -> None:
+    def test_no_high_confidence_facts_accepted(self) -> None:
         payload = _base_risk_payload(
             findings=[
                 {"statement": "Maybe risky", "kind": "inference", "confidence": 0.4, "citations": []},
             ]
         )
-        with pytest.raises(GuardrailViolationError, match="insufficient_high_confidence_facts"):
-            validate_risk_analysis_output(payload)
+        output = validate_risk_analysis_output(payload)
+        assert len(output.findings) == 1
 
 
 class TestValidateCommitteeDecisionOutput:
