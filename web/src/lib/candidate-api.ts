@@ -265,3 +265,29 @@ export function dismissExplorationSuggestion(
     body: JSON.stringify({ reason }),
   });
 }
+
+export interface PipelineStageResult {
+  stage: string;
+  status: string;
+  reason: string;
+  blocker_codes: string[];
+  duration_ms: number;
+}
+
+export interface PipelineResult {
+  candidate_id: string;
+  run_id: string;
+  final_status: string;
+  stages: PipelineStageResult[];
+  total_duration_ms: number;
+}
+
+export function runCandidatePipeline(
+  candidateId: string,
+  skipStages: string[] = [],
+): Promise<PipelineResult> {
+  return api<PipelineResult>(`/investment-candidates/${candidateId}/run-pipeline`, {
+    method: "POST",
+    body: JSON.stringify({ skip_stages: skipStages }),
+  });
+}

@@ -535,6 +535,74 @@ async def reanalyze_candidate(
     return CandidateReanalysisAccepted(operation_id=run.id, resource_id=candidate_id)
 
 
+# ---------------------------------------------------------------------------
+# Synchronous pipeline execution (no Temporal required)
+# ---------------------------------------------------------------------------
+
+class RunPipelineRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    skip_stages: list[str] = Field(default_factory=list)
+
+
+class StageResultV1(BaseModel):
+    stage: str
+    status: str
+    reason: str
+    blocker_codes: list[str]
+    duration_ms: float
+
+
+class PipelineResultV1(BaseModel):
+    candidate_id: UUID
+    run_id: UUID
+    final_status: str
+    stages: list[StageResultV1]
+    total_duration_ms: float
+
+
+@router.post("/{candidate_id}/run-pipeline", response_model=PipelineResultV1)
+async def run_candidate_pipeline_endpoint(
+    candidate_id: UUID,
+    body: RunPipelineRequest | None = None,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> PipelineResultV1:
+    detail = await InvestmentCandidateApplicationService(session).get_detail(
+        candidate_id=candidate_id,
+        organization_id=organization_id(auth),
+        permissions=auth.permissions,
+    )
+    if detail is None:
+        raise HTTPException(status_code=404, detail="candidate not found")
+
+    from ia_investing.candidate_intelligence.sync_pipeline import (
+        run_candidate_pipeline,
+    )
+
+    result = await run_candidate_pipeline(
+        candidate_id=candidate_id,
+        organization_id=organization_id(auth),
+        skip_stages=body.skip_stages if body else [],
+    )
+
+    return PipelineResultV1(
+        candidate_id=result.candidate_id,
+        run_id=result.run_id,
+        final_status=result.final_status,
+        stages=[
+            StageResultV1(
+                stage=s.stage,
+                status=s.status,
+                reason=s.reason,
+                blocker_codes=s.blocker_codes,
+                duration_ms=s.duration_ms,
+            )
+            for s in result.stages
+        ],
+        total_duration_ms=result.total_duration_ms,
+    )
+
+
 @exploration_router.get("", response_model=list[ExplorationRunV1])
 async def list_exploration_runs(
     status: str | None = None,

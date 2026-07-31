@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react";
 import { CandidateStatusBadge } from "@/components/candidates/candidate-status";
 import { SourceCompletionForm } from "@/components/candidates/source-completion-form";
-import { getCandidate, requestCandidateReanalysis, type CandidateDetail, type SourceKind } from "@/lib/candidate-api";
+import { getCandidate, requestCandidateReanalysis, runCandidatePipeline, type CandidateDetail, type SourceKind, type PipelineResult } from "@/lib/candidate-api";
 import styles from "@/components/candidates/candidate-intelligence.module.css";
 
 type Tab = "overview" | "sources" | "gaps" | "analysis" | "timeline";
@@ -31,6 +31,8 @@ export default function CandidateDetailPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [pipelineLoading, setPipelineLoading] = useState(false);
+  const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async (silent = false) => {
@@ -76,6 +78,22 @@ export default function CandidateDetailPage() {
     }
   }
 
+  async function runPipeline() {
+    if (!detail) return;
+    setPipelineLoading(true);
+    setPipelineResult(null);
+    setError(null);
+    try {
+      const result = await runCandidatePipeline(detail.candidate.id);
+      setPipelineResult(result);
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Falha ao executar pipeline");
+    } finally {
+      setPipelineLoading(false);
+    }
+  }
+
   if (loading) return <div className="state-panel"><strong>Carregando investigação</strong>Consultando fontes, lacunas e execuções.</div>;
   if (error && !detail) return <div className="state-panel" data-state="error"><strong>Não foi possível abrir o candidato</strong>{error}</div>;
   if (!detail) return null;
@@ -88,10 +106,30 @@ export default function CandidateDetailPage() {
     <>
       <header className="page-head">
         <div><Link className="breadcrumb" href="/opportunities/candidates"><ArrowLeft size={13} /> Voltar para candidatos</Link><div className="eyebrow" style={{ marginTop: 12 }}>{candidate.origin === "manual" ? "Indicação manual" : "Exploração autônoma"}</div><h1>{candidate.ticker} · {candidate.legal_name ?? "Identidade em resolução"}</h1><p className="subtitle">{candidate.rationale ?? "Investigação completa para decidir elegibilidade de carteira."}</p></div>
-        <div className={styles.actions}><CandidateStatusBadge status={candidate.status} /><button className="button" onClick={() => void reanalyze()} disabled={actionLoading || detail.blocking_gap_codes.length > 0}><RefreshCw size={14} /> {actionLoading ? "Solicitando..." : "Analisar novamente"}</button></div>
+        <div className={styles.actions}><CandidateStatusBadge status={candidate.status} /><button className="button" onClick={() => void runPipeline()} disabled={pipelineLoading || actionLoading}><RefreshCw size={14} className={pipelineLoading ? "animate-spin" : ""} /> {pipelineLoading ? "Executando pipeline..." : "Executar Pipeline"}</button><button className="button" onClick={() => void reanalyze()} disabled={actionLoading || pipelineLoading}><RefreshCw size={14} /> {actionLoading ? "Solicitando..." : "Analisar novamente"}</button></div>
       </header>
 
       {error && <div className={styles.error} role="alert">{error}</div>}
+      {pipelineResult && (
+        <div className="card card-pad section-gap" style={{ borderLeft: `3px solid ${pipelineResult.final_status === "succeeded" ? "var(--accent)" : pipelineResult.final_status === "blocked" ? "var(--amber)" : "var(--red)"}` }}>
+          <div className="card-title">
+            <h2>Resultado do Pipeline</h2>
+            <span className="badge" data-tone={pipelineResult.final_status === "succeeded" ? "good" : pipelineResult.final_status === "blocked" ? "warn" : "bad"}>
+              {pipelineResult.final_status} ({(pipelineResult.total_duration_ms / 1000).toFixed(1)}s)
+            </span>
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4, marginTop: 8 }}>
+            {pipelineResult.stages.map((s) => (
+              <div key={s.stage} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 8px", background: "var(--surface-2)", borderRadius: 6 }}>
+                <span style={{ fontWeight: 500 }}>{s.stage}</span>
+                <span style={{ fontFamily: "var(--font-mono)", color: s.status === "blocked" ? "var(--red)" : s.status === "skipped" ? "var(--muted)" : "var(--accent)" }}>
+                  {s.status} ({s.duration_ms.toFixed(0)}ms)
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {detail.blocking_gap_codes.length > 0 && <div className="state-panel" data-state="partial" style={{ marginBottom: 14 }}><strong>Análise bloqueada aguardando complemento</strong>Resolva ou forneça as fontes obrigatórias indicadas abaixo. URLs fornecidas passam por validação antes de liberar o fluxo.</div>}
 
       <section className="grid grid-4 section-gap">
