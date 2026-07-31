@@ -226,6 +226,61 @@ export function usePortfolioRecommendations(portfolioId: string | null) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// Portfolio Theses
+// ---------------------------------------------------------------------------
+
+export interface PortfolioThesis {
+  thesis_id: string;
+  thesis_status: string;
+  version_id: string;
+  version_number: number;
+  version_status: string;
+  summary: string;
+  recommendation: string;
+  recommendation_confidence: number;
+  assumptions: Array<Record<string, unknown>>;
+  catalysts: Array<Record<string, unknown>>;
+  risks: Array<Record<string, unknown>>;
+  invalidation_criteria: Array<Record<string, unknown>>;
+  data_as_of: string;
+  expires_at: string;
+  created_by: string;
+  approved_by: string | null;
+  approved_at: string | null;
+}
+
+export interface PortfolioThesesResponse {
+  portfolio_id: string;
+  theses: PortfolioThesis[];
+  count: number;
+}
+
+/** Fetch theses linked to a portfolio via portfolio versions */
+export function usePortfolioTheses(portfolioId: string | null) {
+  const query = useQuery({
+    queryKey: ["portfolioTheses", portfolioId],
+    queryFn: async () => {
+      if (!portfolioId) return null;
+      return await bffFetch<PortfolioThesesResponse>(
+        `/api/v1/portfolio/${portfolioId}/theses`,
+      );
+    },
+    enabled: !!portfolioId,
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  return {
+    theses: query.data?.theses ?? [],
+    count: query.data?.count ?? 0,
+    isLoading: query.isLoading,
+    isError: query.isError,
+    error: query.error,
+    refetch: query.refetch,
+  };
+}
+
 /** Delete a position from a portfolio */
 export function useDeletePosition() {
   const queryClient = useQueryClient();

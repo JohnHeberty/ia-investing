@@ -1,8 +1,10 @@
-"""Portfolio recommendations API endpoint."""
+"""Portfolio recommendations and theses API endpoints."""
 
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -136,4 +138,106 @@ async def get_portfolio_recommendations(
         key_risks=rec.key_risks,
         suggested_limits=rec.suggested_limits,
         llm_analysis=llm_result.get("portfolio_analysis") if llm_result else None,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Portfolio Theses
+# ---------------------------------------------------------------------------
+
+
+class PortfolioThesisItem(BaseModel):
+    thesis_id: UUID
+    thesis_status: str
+    version_id: UUID
+    version_number: int
+    version_status: str
+    summary: str
+    recommendation: str
+    recommendation_confidence: float
+    assumptions: list[dict]
+    catalysts: list[dict]
+    risks: list[dict]
+    invalidation_criteria: list[dict]
+    data_as_of: datetime
+    expires_at: datetime
+    created_by: str
+    approved_by: str | None
+    approved_at: datetime | None
+
+
+class PortfolioThesesResponse(BaseModel):
+    portfolio_id: str
+    theses: list[PortfolioThesisItem]
+    count: int
+
+
+@router.get("/{portfolio_id}/theses", response_model=PortfolioThesesResponse)
+async def get_portfolio_theses(
+    portfolio_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> PortfolioThesesResponse:
+
+    from sqlalchemy import text
+
+    result = await session.execute(
+        text("""
+            SELECT DISTINCT ON (rt.id)
+                rt.id as thesis_id,
+                rt.status as thesis_status,
+                rtv.id as version_id,
+                rtv.version_number,
+                rtv.status as version_status,
+                rtv.summary,
+                rtv.recommendation,
+                rtv.recommendation_confidence,
+                rtv.assumptions,
+                rtv.catalysts,
+                rtv.risks,
+                rtv.invalidation_criteria,
+                rtv.data_as_of,
+                rtv.expires_at,
+                rtv.created_by,
+                rtv.approved_by,
+                rtv.approved_at
+            FROM portfolio_version_theses pvt
+            JOIN institutional_portfolio_versions ipv ON ipv.id = pvt.portfolio_version_id
+            JOIN research_thesis_versions rtv ON rtv.id = pvt.thesis_version_id
+            JOIN research_theses rt ON rt.id = rtv.thesis_id
+            WHERE ipv.portfolio_id = :portfolio_id
+            ORDER BY rt.id, rtv.version_number DESC
+        """),
+        {"portfolio_id": str(portfolio_id)},
+    )
+
+    rows = result.fetchall()
+
+    theses = [
+        PortfolioThesisItem(
+            thesis_id=row[0],
+            thesis_status=row[1],
+            version_id=row[2],
+            version_number=row[3],
+            version_status=row[4],
+            summary=row[5],
+            recommendation=row[6],
+            recommendation_confidence=float(row[7]) if row[7] is not None else 0.0,
+            assumptions=row[8] if row[8] else [],
+            catalysts=row[9] if row[9] else [],
+            risks=row[10] if row[10] else [],
+            invalidation_criteria=row[11] if row[11] else [],
+            data_as_of=row[12],
+            expires_at=row[13],
+            created_by=row[14] or "",
+            approved_by=row[15],
+            approved_at=row[16],
+        )
+        for row in rows
+    ]
+
+    return PortfolioThesesResponse(
+        portfolio_id=str(portfolio_id),
+        theses=theses,
+        count=len(theses),
     )

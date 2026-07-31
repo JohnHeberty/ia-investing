@@ -9,7 +9,7 @@ import { AsOfIndicator, Badge, DomainTabs } from "@/components/domain";
 import {
   LoadingSkeleton,
 } from "@/components/data-state-components";
-import { usePortfolioDetail, usePortfolioRecommendations, useDeletePortfolio } from "@/hooks/use-portfolios";
+import { usePortfolioDetail, usePortfolioRecommendations, usePortfolioTheses, useDeletePortfolio } from "@/hooks/use-portfolios";
 import { useUpdatePosition, useDeletePosition } from "@/hooks/use-portfolios";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
 
@@ -19,6 +19,7 @@ import { PerformanceTab } from "@/components/portfolio/PerformanceTab";
 import { RiskTab } from "@/components/portfolio/RiskTab";
 import { LimitsTab } from "@/components/portfolio/LimitsTab";
 import { RecommendationsTab } from "@/components/portfolio/RecommendationsTab";
+import { ThesesTab } from "@/components/portfolio/ThesesTab";
 import { AuditTab } from "@/components/portfolio/AuditTab";
 import { ConfirmDeleteModal } from "@/components/portfolio/ConfirmDeleteModal";
 
@@ -41,6 +42,7 @@ function computeRiskMetrics(positions: Array<{
 export function PortfolioContent({ id }: { id: string }) {
   const { portfolio, isLoading, isError } = usePortfolioDetail(id);
   const { recommendations, refetch: refetchRecommendations } = usePortfolioRecommendations(id);
+  const { theses, isLoading: thesesLoading } = usePortfolioTheses(id);
   const { entries: auditEntries, isLoading: auditLoading } = useAuditLogs("portfolio", id);
   const [showAddPosition, setShowAddPosition] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -270,25 +272,7 @@ export function PortfolioContent({ id }: { id: string }) {
             id: "theses",
             label: "Teses",
             content: (
-              <div className="card card-pad">
-                <div className="card-title">
-                  <h2>Teses de Investimento</h2>
-                </div>
-                <div style={{ padding: 24 }}>
-                  <p style={{ fontSize: 13, color: "var(--muted)", marginBottom: 12 }}>
-                    Teses de investimento são gerenciadas pelo workflow institucional.
-                    Para vincular teses a esta carteira, é necessário criar um portfolio version
-                    e associar as teses durante o processo de aprovação do comitê.
-                  </p>
-                  <div className="state-panel mt-12" data-state="empty">
-                    <strong>Nenhuma tese vinculada</strong>
-                    <p>
-                      Teses e propostas vinculadas a esta carteira aparecerão aqui
-                      quando conectadas ao workflow de aprovação do comitê de investimento.
-                    </p>
-                  </div>
-                </div>
-              </div>
+              <ThesesTab theses={theses} isLoading={thesesLoading} />
             ),
           },
           {
