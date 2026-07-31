@@ -223,7 +223,7 @@ def _resolve_run_decision(
     if checkpoint.blocked:
         return _ResolvedDecision(
             run_decision=cp_decision or "blocked",
-            candidate_status="blocked",
+            candidate_status="awaiting_user_input",
             final_decision=None,
             final_decision_reason=checkpoint.reason,
             approved_eligible=None,

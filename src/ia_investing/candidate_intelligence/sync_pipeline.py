@@ -489,8 +489,36 @@ async def run_candidate_pipeline(
 
     # --- Stage 6: Financial Ingestion ---
     if not _blocked():
-        ck = await _run_stage("financial_ingestion", runtime.ingest_candidate_financial_data, "data_quality")
-        _update_last(ck)
+        ck = await _run_stage("financial_ingestion", runtime.ingest_candidate_financial_data, "data_quality",
+                              allow_persist_duplicate=True)
+        if ck.blocked and ck.stage == "financial_ingestion":
+            is_session_rollback = "transaction has been rolled back" in ck.reason
+            is_no_data = "No DFP data found" in ck.reason or "financial_facts_missing" in ck.blocker_codes
+            if is_session_rollback or is_no_data:
+                async with db.session() as session:
+                    fact_count = (
+                        await session.execute(
+                            sa.text("SELECT count(*) FROM financial_facts ff "
+                                 "JOIN reporting_periods rp ON rp.id = ff.reporting_period_id "
+                                 "JOIN issuers iss ON iss.id = ff.issuer_id "
+                                 "JOIN investment_candidates ic ON ic.issuer_id = iss.id "
+                                 "WHERE ic.id = :cid"),
+                            {"cid": str(candidate_id)},
+                        )
+                    ).scalar()
+                if fact_count and fact_count > 0:
+                    stages_result[-1] = StageResult(
+                        stage="financial_ingestion", status="passed",
+                        reason=f"Skipped: {fact_count} financial facts already ingested",
+                        blocker_codes=[], duration_ms=0,
+                    )
+                    ck = CandidateCheckpoint(
+                        candidate_id=candidate_id, stage="financial_ingestion",
+                        blocked=False, decision="continue",
+                        reason=f"{fact_count} facts already ingested",
+                    )
+            if ck.blocked:
+                last_checkpoint = ck
 
     # --- Stage 7: Data Quality ---
     if not _blocked():

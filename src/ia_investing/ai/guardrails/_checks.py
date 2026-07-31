@@ -158,11 +158,11 @@ def validate_input_with_source(
         _check_semantic_content(text, config=config or GuardrailConfig(), violations=violations)
 
 
-def validate_untrusted_text(text: str) -> None:
+def validate_untrusted_text(text: str, *, trusted: bool = False) -> None:
     for pattern in _INJECTION_PATTERNS:
         if pattern.search(text):
             raise GuardrailViolationError("prompt_injection", "Untrusted instructions were detected")
-    if _PII_PATTERN.search(text):
+    if not trusted and _PII_PATTERN.search(text):
         raise GuardrailViolationError("personal_data", "Personal data is not allowed in agent input")
 
 
