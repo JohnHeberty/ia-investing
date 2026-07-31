@@ -196,9 +196,6 @@ a {
   flex-direction: column;
 }
 .topbar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
   height: 67px;
   min-height: 67px;
   border-bottom: 1px solid var(--line-soft);
@@ -206,7 +203,7 @@ a {
   align-items: center;
   justify-content: space-between;
   padding: 0 30px;
-  background: rgb(7 16 14 / 85%);
+  background: rgb(7 16 14 / 56%);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -729,7 +726,6 @@ h1 {
     min-height: 100dvh;
   }
   .topbar {
-    position: sticky;
     padding: 0 16px;
   }
   .content {
