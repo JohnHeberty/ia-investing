@@ -6,23 +6,31 @@ import { AsOfIndicator, Badge, Metric } from "@/components/domain";
 import {
   DataStatePanel,
   LoadingSkeleton,
-  PartialDataIndicator,
   StaleWarning,
 } from "@/components/data-state-components";
 import { ScenarioWaterfall, type ScenarioEntry } from "@/components/decision-components";
 import { useSourceHealthSummary } from "@/hooks/use-source-health-summary";
+import { useRiskOverview } from "@/hooks/use-risk-overview";
 
 function RiskContent() {
   const {
-    assessment,
     sources,
     staleCount,
     healthyCount,
     totalSources,
-    isLoading,
-    isError,
+    isLoading: sourceLoading,
+    isError: sourceError,
     dataState,
   } = useSourceHealthSummary();
+
+  const {
+    overview,
+    isLoading: riskLoading,
+    isError: riskError,
+  } = useRiskOverview();
+
+  const isLoading = sourceLoading || riskLoading;
+  const isError = sourceError || riskError;
 
   if (isLoading) {
     return (
@@ -36,7 +44,7 @@ function RiskContent() {
             </p>
           </div>
         </div>
-        <section className="grid grid-4 section-gap">
+        <section className="grid grid-4">
           <LoadingSkeleton lines={4} />
           <LoadingSkeleton lines={4} />
           <LoadingSkeleton lines={4} />
@@ -64,16 +72,26 @@ function RiskContent() {
     );
   }
 
-  const breaches = assessment.breaches ?? [];
-  const hardBreaches = breaches.filter((b) => b.limit_type === "hard");
-  const softBreaches = breaches.filter((b) => b.limit_type === "soft");
+  const breaches = overview?.breaches ?? [];
+  const hardBreaches = breaches.filter((b) => b.limit_type === "hard" && b.status === "open");
+  const softBreaches = breaches.filter((b) => b.limit_type === "soft" && b.status === "open");
 
-  const scenarios: ScenarioEntry[] = [
-    { name: "Choque de juros", impact: -0.012, cumulative: -0.012 },
-    { name: "Elevação cambial", impact: -0.008, cumulative: -0.020 },
-    { name: "Crise commodities", impact: -0.006, cumulative: -0.026 },
-    { name: "Retorno mercado", impact: 0.018, cumulative: -0.008 },
-  ];
+  const stressScenarios: ScenarioEntry[] = (overview?.stress_scenarios ?? []).map((s) => ({
+    name: s.name,
+    impact: s.nav_impact_ratio ?? s.pnl_impact ?? 0,
+    cumulative: 0,
+  }));
+
+  const scenarios = stressScenarios.length > 0
+    ? stressScenarios.reduce<ScenarioEntry[]>((acc, s, i) => {
+        const cumulative = i === 0 ? s.impact : (acc[i - 1]?.cumulative ?? 0) + s.impact;
+        acc.push({ ...s, cumulative });
+        return acc;
+      }, [])
+    : [];
+
+  const volatility = overview?.latest_volatility;
+  const drawdown = overview?.latest_drawdown;
 
   return (
     <>
@@ -157,7 +175,7 @@ function RiskContent() {
           </div>
           <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
             {hardBreaches.length > 0
-              ? `${hardBreaches.length} exposição ultrapassou o hard limit.`
+              ? `${hardBreaches.length} exposição(ões) ultrapassou(ram) o hard limit.`
               : "Todos os limites de concentração estão dentro dos parâmetros."}
           </p>
           {hardBreaches.length > 0 && (
@@ -183,33 +201,62 @@ function RiskContent() {
               ))}
             </div>
           )}
+          {hardBreaches.length === 0 && (
+            <div style={{ marginTop: 8, fontSize: 11, color: "var(--muted)" }}>
+              {overview?.total_snapshots ?? 0} snapshots de risco registrados
+            </div>
+          )}
         </article>
         <article className="card card-pad">
           <div className="card-title">
             <h2>Liquidez</h2>
-            <Badge tone="good">Saudável</Badge>
+            <Badge tone={overview?.snapshots?.[0]?.liquidity ? "good" : "neutral"}>
+              {overview?.snapshots?.[0]?.liquidity ? "Dados disponíveis" : "Sem dados"}
+            </Badge>
           </div>
           <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
-            97% da carteira é liquidável dentro da janela definida pelo mandato.
-            Dados de liquidez preservados no snapshot de avaliação.
+            {overview?.snapshots?.[0]?.liquidity
+              ? `Dados de liquidez preservados no snapshot.`
+              : "Dados de liquidez serão exibidos após execução de assessment de risco."}
           </p>
         </article>
         <article className="card card-pad">
           <div className="card-title">
             <h2>Volatilidade</h2>
+            {volatility !== null && volatility !== undefined && (
+              <Badge tone={volatility > 0.25 ? "bad" : volatility > 0.15 ? "warn" : "good"}>
+                {volatility > 0.25 ? "Alta" : volatility > 0.15 ? "Moderada" : "Baixa"}
+              </Badge>
+            )}
           </div>
           <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
-            VaR e volatilidade calculados no backend.
-            {assessment.volatility
-              ? ` Volatilidade atual: ${assessment.volatility}`
-              : " Dados de volatilidade indisponíveis no momento."}
+            {volatility !== null && volatility !== undefined
+              ? <>Volatilidade: <strong>{(volatility * 100).toFixed(1)}%</strong> anualizada</>
+              : "Dados de volatilidade serão exibidos após execução de assessment de risco."}
           </p>
+          {drawdown !== null && drawdown !== undefined && (
+            <p style={{ color: "var(--red)", fontSize: 12, marginTop: 4 }}>
+              Max drawdown: {(drawdown * 100).toFixed(1)}%
+            </p>
+          )}
         </article>
       </section>
 
-      <div className="section-gap">
-        <ScenarioWaterfall scenarios={scenarios} />
-      </div>
+      {scenarios.length > 0 && (
+        <div className="section-gap">
+          <ScenarioWaterfall scenarios={scenarios} />
+        </div>
+      )}
+
+      {scenarios.length === 0 && (
+        <div className="section-gap">
+          <DataStatePanel
+            state="missing"
+            title="Cenários de stress"
+            detail="Cenários de stress testing aparecerão aqui após execução de assessment de risco institucional."
+          />
+        </div>
+      )}
 
       {breaches.length > 0 && (
         <section className="card card-pad section-gap">

@@ -41,6 +41,7 @@ from apps.api.routes.quality import router as quality_router
 from apps.api.routes.readiness import router as readiness_router
 from apps.api.routes.rebalance import router as rebalance_router
 from apps.api.routes.research import router as research_router
+from apps.api.routes.risk_overview import router as risk_overview_router
 from apps.api.routes.schedules import router as schedules_router
 from apps.api.routes.sources import router as sources_router
 from apps.api.security import (
@@ -115,6 +116,7 @@ _AUTH_ROUTERS = [
     committee_router,
     executions_router,
     rebalance_router,
+    risk_overview_router,
 ]
 
 

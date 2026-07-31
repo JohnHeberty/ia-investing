@@ -1,3 +1,4 @@
+import { Badge } from "@/components/domain";
 import type { PortfolioPosition } from "@/hooks/use-portfolios";
 
 interface RiskMetrics {
@@ -12,7 +13,26 @@ interface RiskTabProps {
   riskMetrics: RiskMetrics;
 }
 
+function computePortfolioStats(positions: PortfolioPosition[], totalValue: number) {
+  const weights = positions.map((p) => {
+    const price = p.current_price ?? p.avg_cost_per_share;
+    return totalValue > 0 ? (p.quantity * price) / totalValue : 0;
+  });
+
+  const sectorMap: Record<string, number> = {};
+  positions.forEach((p) => {
+    const sector = (p as unknown as Record<string, unknown>)["sector"] as string || "Outro";
+    const price = p.current_price ?? p.avg_cost_per_share;
+    const val = totalValue > 0 ? (p.quantity * price) / totalValue : 0;
+    sectorMap[sector] = (sectorMap[sector] || 0) + val;
+  });
+
+  return { weights, sectorMap };
+}
+
 export function RiskTab({ positions, totalValue, riskMetrics }: RiskTabProps) {
+  const { sectorMap } = computePortfolioStats(positions, totalValue);
+
   return (
     <div>
       <div className="card card-pad mb-16">
@@ -47,8 +67,44 @@ export function RiskTab({ positions, totalValue, riskMetrics }: RiskTabProps) {
               {riskMetrics.top3Weight > 0.7 ? "Concentrado" : "Balanceado"}
             </div>
           </div>
+          <div>
+            <div className="stat-label">Diversificação</div>
+            <div className="stat-value">
+              {Object.keys(sectorMap).length}
+            </div>
+            <div className="stat-detail">
+              {Object.keys(sectorMap).length > 1 ? "setores" : "setor"}
+            </div>
+          </div>
         </div>
       </div>
+
+      {Object.keys(sectorMap).length > 1 && (
+        <div className="card card-pad mb-16">
+          <div className="card-title">
+            <h2>Exposição por Setor</h2>
+          </div>
+          <div className="mt-12">
+            {Object.entries(sectorMap)
+              .sort((a, b) => b[1] - a[1])
+              .map(([sector, weight]) => (
+                <div key={sector} className="exposure-bar">
+                  <span style={{ width: 100, fontWeight: 500, fontSize: 12 }}>{sector}</span>
+                  <div className="bar-track">
+                    <div
+                      className={`bar-fill ${weight > 0.3 ? "high" : weight > 0.15 ? "mid" : "low"}`}
+                      style={{ width: `${Math.min(weight * 100, 100)}%` }}
+                    />
+                  </div>
+                  <span style={{ width: 50, textAlign: "right", fontSize: 12, fontFamily: "var(--font-mono)" }}>
+                    {(weight * 100).toFixed(1)}%
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
       <div className="card card-pad">
         <div className="card-title">
           <h2>Exposição por Ativo</h2>
@@ -59,18 +115,31 @@ export function RiskTab({ positions, totalValue, riskMetrics }: RiskTabProps) {
               const currentPrice = pos.current_price ?? pos.avg_cost_per_share;
               const value = pos.quantity * currentPrice;
               const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
+              const costBasis = pos.quantity * pos.avg_cost_per_share;
+              const pnl = value - costBasis;
+              const pnlPct = costBasis > 0 ? (pnl / costBasis) * 100 : 0;
               return (
-                <div key={pos.id} className="exposure-bar">
-                  <span style={{ width: 60, fontWeight: 500 }}>{pos.ticker_symbol}</span>
-                  <div className="bar-track">
-                    <div
-                      className={`bar-fill ${weight > 25 ? "high" : weight > 15 ? "mid" : "low"}`}
-                      style={{ width: `${Math.min(weight, 100)}%` }}
-                    />
+                <div key={pos.id} style={{ marginBottom: 8, padding: "8px 12px", background: "var(--surface-2)", borderRadius: 8 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                    <span style={{ fontWeight: 600 }}>{pos.ticker_symbol}</span>
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
+                      {weight.toFixed(1)}%
+                    </span>
                   </div>
-                  <span style={{ width: 50, textAlign: "right", fontSize: 12, fontFamily: "var(--font-mono)" }}>
-                    {weight.toFixed(1)}%
-                  </span>
+                  <div className="exposure-bar" style={{ marginBottom: 0 }}>
+                    <span style={{ width: 60, fontSize: 11, color: "var(--muted)" }}>
+                      Peso
+                    </span>
+                    <div className="bar-track">
+                      <div
+                        className={`bar-fill ${weight > 25 ? "high" : weight > 15 ? "mid" : "low"}`}
+                        style={{ width: `${Math.min(weight, 100)}%` }}
+                      />
+                    </div>
+                    <span style={{ width: 50, textAlign: "right", fontSize: 11, color: pnlPct >= 0 ? "var(--accent)" : "var(--red)" }}>
+                      {pnlPct >= 0 ? "+" : ""}{pnlPct.toFixed(1)}%
+                    </span>
+                  </div>
                 </div>
               );
             })}
