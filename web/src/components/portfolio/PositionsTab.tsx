@@ -86,7 +86,7 @@ export function PositionsTab({
             <tr>
               <th>Ticker</th>
               <th>Quantidade</th>
-              <th>Preço Médio</th>
+              <th>Preço Compra</th>
               <th>Preço Atual</th>
               <th>Valor Investido</th>
               <th>Valor Atual</th>
@@ -132,7 +132,7 @@ export function PositionsTab({
                         type="number"
                         step="0.01"
                         style={{ width: 90 }}
-                        aria-label="Preço Médio"
+                        aria-label="Preço Compra"
                         value={editForm.avg_cost_per_share}
                         onChange={(e) => setEditForm({ ...editForm, avg_cost_per_share: e.target.value })}
                       />
