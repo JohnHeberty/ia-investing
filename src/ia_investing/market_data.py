@@ -1,14 +1,82 @@
-"""Market data service — fetches real-time and historical prices via yfinance."""
+"""Market data service — fetches real-time and historical prices via yfinance.
+
+Includes in-memory TTL cache to avoid excessive yfinance API calls:
+- Fundamentals: 1 hour TTL (changes daily at most)
+- Analyst data: 4 hours TTL (changes weekly)
+- Historical prices: 15 minutes TTL (intraday changes)
+- Current prices: no cache (always fresh)
+"""
 
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Any
 
 import yfinance as yf
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# In-memory TTL cache
+# ---------------------------------------------------------------------------
+
+
+class _TTLCache:
+    """Simple thread-safe TTL cache with max size and LRU eviction."""
+
+    def __init__(self, max_size: int = 512, default_ttl: float = 3600.0):
+        self._store: dict[str, tuple[float, Any]] = {}
+        self._max_size = max_size
+        self._default_ttl = default_ttl
+        self._hits = 0
+        self._misses = 0
+
+    def get(self, key: str, ttl: float | None = None) -> Any | None:
+        entry = self._store.get(key)
+        if entry is None:
+            self._misses += 1
+            return None
+        expires_at, value = entry
+        if time.monotonic() > expires_at:
+            del self._store[key]
+            self._misses += 1
+            return None
+        self._hits += 1
+        return value
+
+    def set(self, key: str, value: Any, ttl: float | None = None) -> None:
+        if len(self._store) >= self._max_size:
+            oldest_key = min(self._store, key=lambda k: self._store[k][0])
+            del self._store[oldest_key]
+        self._store[key] = (time.monotonic() + (ttl or self._default_ttl), value)
+
+    def stats(self) -> dict[str, Any]:
+        total = self._hits + self._misses
+        return {
+            "size": len(self._store),
+            "hits": self._hits,
+            "misses": self._misses,
+            "hit_rate": f"{self._hits / total * 100:.1f}%" if total > 0 else "N/A",
+        }
+
+
+# Separate caches per data type
+_fundamentals_cache = _TTLCache(max_size=256, default_ttl=3600.0)  # 1 hour
+_analyst_cache = _TTLCache(max_size=256, default_ttl=14400.0)  # 4 hours
+_history_cache = _TTLCache(max_size=128, default_ttl=900.0)  # 15 minutes
+_prices_cache = _TTLCache(max_size=128, default_ttl=60.0)  # 1 minute (batch only)
+
+
+def get_cache_stats() -> dict[str, dict[str, Any]]:
+    """Return cache statistics for monitoring."""
+    return {
+        "fundamentals": _fundamentals_cache.stats(),
+        "analyst": _analyst_cache.stats(),
+        "history": _history_cache.stats(),
+        "prices": _prices_cache.stats(),
+    }
 
 # Brazilian tickers need .SA suffix for yfinance
 _SA_SUFFIXES = (".SA", ".S", ".N")
@@ -101,13 +169,18 @@ def get_historical_prices(
     period: str = "6mo",
     interval: str = "1d",
 ) -> list[dict[str, Any]]:
-    """Fetch historical price data for a ticker.
+    """Fetch historical price data for a ticker (cached 15min).
 
     Args:
         ticker: Stock ticker symbol
         period: yfinance period (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
         interval: yfinance interval (1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo)
     """
+    cache_key = f"hist:{ticker}:{period}:{interval}"
+    cached = _history_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     yf_ticker = _to_yf_ticker(ticker)
     try:
         t = yf.Ticker(yf_ticker)
@@ -115,7 +188,7 @@ def get_historical_prices(
         if hist.empty:
             return []
 
-        return [
+        result = [
             {
                 "date": idx.strftime("%Y-%m-%d"),
                 "open": float(row["Open"]),
@@ -126,13 +199,20 @@ def get_historical_prices(
             }
             for idx, row in hist.iterrows()
         ]
+        _history_cache.set(cache_key, result)
+        return result
     except Exception as exc:
         logger.warning("Failed to fetch history for %s: %s", ticker, exc)
         return []
 
 
 def get_fundamentals(ticker: str) -> dict[str, Any] | None:
-    """Fetch fundamental data for a ticker."""
+    """Fetch fundamental data for a ticker (cached 1h)."""
+    cache_key = f"fund:{ticker}"
+    cached = _fundamentals_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
     yf_ticker = _to_yf_ticker(ticker)
     try:
         t = yf.Ticker(yf_ticker)
@@ -140,7 +220,7 @@ def get_fundamentals(ticker: str) -> dict[str, Any] | None:
         if not info:
             return None
 
-        return {
+        result = {
             "ticker": ticker,
             "name": info.get("longName") or info.get("shortName", ticker),
             "sector": info.get("sector", ""),
@@ -159,19 +239,133 @@ def get_fundamentals(ticker: str) -> dict[str, Any] | None:
             "return_on_assets": info.get("returnOnAssets"),
             "debt_to_equity": info.get("debtToEquity"),
             "current_ratio": info.get("currentRatio"),
+            "quick_ratio": info.get("quickRatio"),
             "revenue": info.get("totalRevenue"),
             "revenue_growth": info.get("revenueGrowth"),
             "earnings_growth": info.get("earningsGrowth"),
+            "earnings_quarterly_growth": info.get("earningsQuarterlyGrowth"),
             "dividend_yield": info.get("dividendYield"),
             "beta": info.get("beta"),
             "fifty_two_week_high": info.get("fiftyTwoWeekHigh"),
             "fifty_two_week_low": info.get("fiftyTwoWeekLow"),
+            "fifty_day_average": info.get("fiftyDayAverage"),
+            "two_hundred_day_average": info.get("twoHundredDayAverage"),
             "avg_volume": info.get("averageVolume"),
+            "average_volume_10days": info.get("averageVolume10days"),
+            "recommendation_mean": info.get("recommendationMean"),
+            "number_of_analyst_opinions": info.get("numberOfAnalystOpinions"),
+            "recommendation_key": info.get("recommendationKey"),
+            "target_mean_price": info.get("targetMeanPrice"),
+            "target_high_price": info.get("targetHighPrice"),
+            "target_low_price": info.get("targetLowPrice"),
+            "held_percent_insiders": info.get("heldPercentInsiders"),
+            "held_percent_institutions": info.get("heldPercentInstitutions"),
+            "short_ratio": info.get("shortRatio"),
+            "short_percent_of_float": info.get("shortPercentOfFloat"),
+            "free_cashflow": info.get("freeCashflow"),
+            "operating_cashflow": info.get("operatingCashflow"),
+            "payout_ratio": info.get("payoutRatio"),
             "currency": info.get("currency", "BRL"),
             "timestamp": datetime.utcnow().isoformat(),
         }
+        _fundamentals_cache.set(cache_key, result)
+        return result
     except Exception as exc:
         logger.warning("Failed to fetch fundamentals for %s: %s", ticker, exc)
+        return None
+
+
+def get_analyst_data(ticker: str) -> dict[str, Any] | None:
+    """Fetch analyst consensus, upgrades/downgrades, and earnings estimates (cached 4h)."""
+    cache_key = f"analyst:{ticker}"
+    cached = _analyst_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    yf_ticker = _to_yf_ticker(ticker)
+    try:
+        t = yf.Ticker(yf_ticker)
+        result: dict[str, Any] = {}
+
+        info = t.info or {}
+        result["recommendation_mean"] = info.get("recommendationMean")
+        result["number_of_analysts"] = info.get("numberOfAnalystOpinions")
+        result["recommendation_key"] = info.get("recommendationKey")
+        result["target_mean_price"] = info.get("targetMeanPrice")
+        result["target_high_price"] = info.get("targetHighPrice")
+        result["target_low_price"] = info.get("targetLowPrice")
+        result["current_price"] = info.get("currentPrice") or info.get("regularMarketPrice")
+
+        try:
+            ud = t.upgrades_downgrades
+            if ud is not None and not ud.empty:
+                recent = ud.head(10)
+                result["recent_upgrades_downgrades"] = [
+                    {"firm": str(row.get("Firm", "")), "action": str(row.get("Action", "")),
+                     "from_grade": str(row.get("FromGrade", "")), "to_grade": str(row.get("ToGrade", ""))}
+                    for _, row in recent.iterrows()
+                ]
+            else:
+                result["recent_upgrades_downgrades"] = []
+        except Exception:
+            result["recent_upgrades_downgrades"] = []
+
+        try:
+            ed = t.earnings_estimate
+            if ed is not None and not ed.empty:
+                result["earnings_estimate"] = {
+                    "next_quarter": {
+                        "avg": float(ed.loc["0q", "avg"]) if "0q" in ed.index and "avg" in ed.columns else None,
+                        "growth": float(ed.loc["0q", "growth"]) if "0q" in ed.index and "growth" in ed.columns else None,
+                    }
+                }
+            else:
+                result["earnings_estimate"] = None
+        except Exception:
+            result["earnings_estimate"] = None
+
+        try:
+            eh = t.earnings_history
+            if eh is not None and not eh.empty:
+                last = eh.iloc[-1]
+                result["last_earnings_surprise"] = {
+                    "eps_estimate": float(last.get("epsEstimate")) if last.get("epsEstimate") == last.get("epsEstimate") else None,
+                    "eps_actual": float(last.get("epsActual")) if last.get("epsActual") == last.get("epsActual") else None,
+                    "surprise_percent": float(last.get("surprisePercent")) if last.get("surprisePercent") == last.get("surprisePercent") else None,
+                }
+            else:
+                result["last_earnings_surprise"] = None
+        except Exception:
+            result["last_earnings_surprise"] = None
+
+        has_data = any(v is not None for v in result.values() if v != [] and v != {})
+        if has_data:
+            _analyst_cache.set(cache_key, result)
+            return result
+        return None
+    except Exception as exc:
+        logger.warning("Failed to fetch analyst data for %s: %s", ticker, exc)
+        return None
+
+
+def get_esg_data(ticker: str) -> dict[str, Any] | None:
+    """Fetch ESG/sustainability data for a ticker."""
+    yf_ticker = _to_yf_ticker(ticker)
+    try:
+        t = yf.Ticker(yf_ticker)
+        sustain = t.sustainability
+        if sustain is None or sustain.empty:
+            return None
+
+        result: dict[str, Any] = {}
+        for key in ["ESG Score", "Environmental Score", "Social Score", "Governance Score", "Highest Controversy"]:
+            val = sustain.loc[key].iloc[0] if key in sustain.index else None
+            if val is not None and val == val:  # NaN check
+                result[key.lower().replace(" ", "_")] = float(val)
+
+        return result if result else None
+    except Exception as exc:
+        logger.warning("Failed to fetch ESG data for %s: %s", ticker, exc)
         return None
 
 

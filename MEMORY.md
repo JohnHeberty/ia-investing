@@ -301,3 +301,45 @@ Nada pendente — todos os itens corrigidos.
 **Commits finais:**
 - `c31a2f6`: Logging full-stack (structlog, middleware, events, TelemetryProvider, 35 tests)
 - `17e6786`: Fix LoggingMiddleware structlog + trace_id correlation
+
+---
+
+## 2026-07-31 (Sessão Atual)
+
+### Foco: Escopo do sistema + limpeza de pendências
+
+**Clarificação de escopo:**
+- Este é um **sistema de recomendação de investimentos**, NÃO de operação/trading
+- **Nunca** haverá integração com broker
+- Broker item removido do PENDENTE.md
+
+**Feito:**
+- Atualizado `.env`: `AI__GATEWAY__MODEL=qwen` → `ornith` (modelo novo, API keys mantidas)
+- Backend e frontend reiniciados e funcionando
+- PENDENTE.md atualizado: item 1 (Broker) marcado como REMOVIDO com motivo
+
+**Expansão de Scoring (9 dimensões):**
+- `market_data.py`: novas funções `get_analyst_data()`, `get_esg_data()`, expandido `get_fundamentals()` com ~15 campos extras
+- `portfolio_advisor.py`: reescrito com 9 scoring functions: fundamental, momentum, valuation, risk, analyst, leverage, growth, liquidity, earnings
+- Pesos rebalanceados (soma = 1.0)
+- API route retorna scores detalhados por dimensão
+
+**Integração LLM (ornith):**
+- `generate_llm_analysis()` conecta ao ornith via LiteLLM proxy
+- Timeout 30s com fallback gracioso para rule-based
+- Gera análise em linguagem natural por ativo + portfolio-level
+- Frontend mostra "Análise IA" quando disponível, "indisponível" quando off-line
+
+**Cache de Dados de Mercado (PENDENTE.md #4 ✅):**
+- `_TTLCache` in-memory em `market_data.py`
+- Fundamentals: TTL 1h, max 256 entries
+- Analyst: TTL 4h, max 256 entries
+- History: TTL 15min, max 128 entries
+- Current prices: sem cache (sempre fresco)
+- `GET /api/v1/health/cache` para monitoramento
+- 50% hit rate em chamadas sequenciais
+
+**Frontend:**
+- `RecommendationsTab.tsx`: 9 barras de score (expandível), análise LLM por ativo
+- Tipos TS atualizados: `scores`, `llm_analysis` em `PortfolioRecommendation`
+- React key error corrigido (Fragment com key)

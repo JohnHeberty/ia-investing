@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import text
 
 from connectors.base import HttpClient
 from database.core import session_scope
+from ia_investing.market_data import get_cache_stats
 from ia_investing.settings import get_settings
 
 router = APIRouter(prefix="/api/v1/health", tags=["health"])
@@ -39,3 +42,9 @@ async def deep_health() -> HealthCheckResponse:
 
     healthy = all(v == "ok" for v in checks.values())
     return HealthCheckResponse(status="healthy" if healthy else "degraded", checks=checks)
+
+
+@router.get("/cache")
+async def cache_stats() -> dict[str, dict[str, Any]]:
+    """Return market data cache statistics."""
+    return get_cache_stats()

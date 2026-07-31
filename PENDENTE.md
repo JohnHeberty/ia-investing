@@ -2,15 +2,10 @@
 
 ## Prioridade Alta
 
-### 1. Integração com Broker (Paper Trading Engine)
-- **Status**: Pendente
-- **Descrição**: Conectar o sistema a um broker real ou engine de simulação para execução de ordens de paper trading.
-- **Opções**:
-  - CEI/B3 (API oficial — limitada)
-  - XP Investimentos API
-  - NuInvest API
-  - Simulation engine (order book simulado)
-- **Requisitos**: Validação de compliance antes da execução, cálculo de custos (corretagem, emolumentos, ISS, IOF)
+> **Escopo**: Este é um sistema de **recomendação de investimentos**, não de operação/trading. Não haverá integração com broker.
+
+### 1. ~~Integração com Broker~~ — REMOVIDO
+- **Motivo**: Sistema é de recomendação, não de operação. Não há necessidade de broker.
 
 ### 2. Temporal Worker Ativo
 - **Status**: Pendente
@@ -23,9 +18,15 @@
 - **Fontes**: yfinance (histórico), indicadores técnicos (ta-lib ou pandas_ta)
 
 ### 4. Cache de Dados de Mercado
-- **Status**: Pendente
-- **Descrição**: Cache de preços e fundamentais no banco para evitar chamadas excessivas ao yfinance.
-- **Estratégia**: Atualizar preços a cada 15 min durante horário de mercado, fundamentais diariamente.
+- **Status**: ✅ Implementado
+- **Descrição**: Cache in-memory TTL para evitar chamadas excessivas ao yfinance.
+- **Implementação**: `_TTLCache` em `market_data.py` com 3 caches separados:
+  - Fundamentals: TTL 1h, max 256 entries
+  - Analyst data: TTL 4h, max 256 entries  
+  - Historical prices: TTL 15min, max 128 entries
+  - Current prices: sem cache (sempre fresco)
+- **Monitoramento**: `GET /api/v1/health/cache` retorna stats (hits, misses, hit_rate)
+- **Resultado**: 50% hit rate em chamadas sequenciais, elimina chamadas repetidas ao yfinance
 
 ---
 

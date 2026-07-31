@@ -11,7 +11,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
-from ia_investing.agents.portfolio_advisor import build_portfolio_recommendation, compute_scores
+from ia_investing.agents.portfolio_advisor import (
+    SCORING_WEIGHTS,
+    build_portfolio_recommendation,
+    compute_scores,
+    generate_llm_analysis,
+)
 
 router = APIRouter(prefix="/api/v1/portfolio", tags=["portfolio-recommendations"])
 
@@ -25,6 +30,7 @@ class RecommendationResponse(BaseModel):
     performance_outlook: dict
     key_risks: list[str]
     suggested_limits: dict
+    llm_analysis: str | None = None
 
 
 @router.get("/{portfolio_id}/recommendations", response_model=RecommendationResponse)
@@ -53,7 +59,6 @@ async def get_portfolio_recommendations(
         raise HTTPException(status_code=404, detail="Portfolio not found")
 
     from ia_investing.market_data import get_current_prices
-    import asyncio
 
     tickers = [row[3] for row in rows if row[3]]
     real_prices = await asyncio.to_thread(get_current_prices, tickers) if tickers else {}
@@ -78,13 +83,32 @@ async def get_portfolio_recommendations(
             scores = await compute_scores(ticker)
             all_scores[ticker] = scores
         except Exception:
-            all_scores[ticker] = {"fundamental": 0.5, "momentum": 0.5, "valuation": 0.5, "risk": 0.5, "sentiment": 0.5}
+            all_scores[ticker] = {dim: 0.5 for dim in SCORING_WEIGHTS}
 
     rec = build_portfolio_recommendation(
         portfolio_id=str(portfolio_id),
         positions=positions,
         all_scores=all_scores,
     )
+
+    avg_momentum = sum(
+        scores.get("momentum", 0.5)
+        for scores in all_scores.values()
+    ) / max(len(all_scores), 1)
+    expected_return = 0.03 + (avg_momentum * 0.15)
+
+    llm_result = await generate_llm_analysis(
+        positions=positions,
+        all_scores=all_scores,
+        risk_analysis=rec.risk_assessment,
+        expected_return=expected_return,
+    )
+
+    for r in rec.recommendations:
+        if llm_result and "position_analyses" in llm_result:
+            llm_text = llm_result["position_analyses"].get(r.ticker)
+            if llm_text:
+                r.llm_analysis = llm_text
 
     return RecommendationResponse(
         portfolio_id=rec.portfolio_id,
@@ -99,6 +123,11 @@ async def get_portfolio_recommendations(
                 "confidence": r.confidence,
                 "rationale": r.rationale,
                 "risk_reward": r.risk_reward,
+                "llm_analysis": r.llm_analysis,
+                "scores": {
+                    dim: round(all_scores.get(r.ticker, {}).get(dim, 0.5), 3)
+                    for dim in SCORING_WEIGHTS
+                } if all_scores.get(r.ticker) else None,
             }
             for r in rec.recommendations
         ],
@@ -106,4 +135,5 @@ async def get_portfolio_recommendations(
         performance_outlook=rec.performance_outlook,
         key_risks=rec.key_risks,
         suggested_limits=rec.suggested_limits,
+        llm_analysis=llm_result.get("portfolio_analysis") if llm_result else None,
     )

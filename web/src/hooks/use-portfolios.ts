@@ -186,6 +186,8 @@ export interface PortfolioRecommendation {
   confidence: number;
   rationale: string;
   risk_reward: number | null;
+  llm_analysis: string | null;
+  scores: Record<string, number> | null;
 }
 
 export interface PortfolioRecommendations {
@@ -197,6 +199,7 @@ export interface PortfolioRecommendations {
   performance_outlook: Record<string, unknown>;
   key_risks: string[];
   suggested_limits: Record<string, unknown>;
+  llm_analysis: string | null;
 }
 
 /** Fetch portfolio recommendations */
