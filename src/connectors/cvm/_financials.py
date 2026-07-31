@@ -109,10 +109,16 @@ def parse_value_status(raw: str) -> tuple[Decimal | None, str]:
         return None, "parse_error"
 
 
+def _normalize_cnpj(value: str) -> str:
+    """Strip formatting from CNPJ: '33.000.167/0001-01' -> '33000167000101'."""
+    return "".join(ch for ch in value if ch.isdigit())
+
+
 def _parse(rows: list[dict[str, str]], cnpj_filter: str | None) -> list[FinancialEntry]:
     results: list[FinancialEntry] = []
+    normalized_filter = _normalize_cnpj(cnpj_filter) if cnpj_filter else None
     for r in rows:
-        if cnpj_filter and (r.get("CNPJ_CIA") or "").strip() != cnpj_filter.strip():
+        if normalized_filter and _normalize_cnpj((r.get("CNPJ_CIA") or "").strip()) != normalized_filter:
             continue
 
         raw_valor = (r.get("VL_CONTA") or "").strip()

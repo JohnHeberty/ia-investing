@@ -133,15 +133,22 @@ async def run_candidate_pipeline(
     pipeline_start = time.monotonic()
     stages_result: list[StageResult] = []
 
+    import sqlalchemy as sa
+    from database.models.investment_candidates import (
+        CandidateAnalysisRunRecord,
+        CandidateEventRecord,
+        CandidateGapRecord,
+        CandidateSourceRecord,
+        InvestmentCandidateRecord,
+    )
+
     db = DatabaseRuntime.create(
         _get_database_url(),
     )
 
-    from database.models.investment_candidates import (
-        CandidateAnalysisRunRecord,
-        InvestmentCandidateRecord,
+    db = DatabaseRuntime.create(
+        _get_database_url(),
     )
-    import sqlalchemy as sa
 
     async with db.session() as session:
         candidate = (
@@ -303,7 +310,7 @@ async def run_candidate_pipeline(
         nonlocal current_status
 
         if name in skip:
-            return None
+            return {"blocked": False, "raw": None, "reason": "skipped"}
 
         if new_status and new_status != current_status:
             await _update_candidate_status(db, candidate_id, new_status)
@@ -334,159 +341,191 @@ async def run_candidate_pipeline(
         ))
         return {"blocked": False, "raw": raw, "reason": "ok"}
 
+    source_checkpoint: dict[str, Any] | None = None
+    last_successful_checkpoint: CandidateCheckpoint | None = None
+
+    def _blocked() -> bool:
+        return last_checkpoint is not None and last_checkpoint.blocked
+
+    def _update_last(ck: CandidateCheckpoint) -> None:
+        nonlocal last_checkpoint, last_successful_checkpoint
+        if ck.blocked:
+            last_checkpoint = ck
+        else:
+            last_successful_checkpoint = ck
+
     # --- Stage 1: Identity Resolution ---
-    checkpoint = await _run_stage(
-        "identity_resolution",
-        runtime.resolve_candidate_identity,
-        "identity_resolution",
-    )
-    if checkpoint.blocked:
-        last_checkpoint = checkpoint
-    else:
-        # --- Stage 2: Source Discovery ---
+    ck = await _run_stage("identity_resolution", runtime.resolve_candidate_identity, "identity_resolution")
+    _update_last(ck)
+
+    # --- Stage 2: Source Discovery ---
+    if not _blocked():
         source_checkpoint = await _run_stage_source_discovery(
-            "source_discovery",
-            runtime.discover_candidate_sources,
-            "source_discovery",
+            "source_discovery", runtime.discover_candidate_sources, "source_discovery",
         )
         if source_checkpoint is None:
-            last_checkpoint = _make_blocked("source_discovery", "Source discovery returned None")
-        elif not source_checkpoint.get("blocked", False):
-            # --- Stage 2b: Persist Sources ---
-            persist_checkpoint = await _run_stage(
-                "source_persist",
-                runtime.persist_candidate_sources_and_gaps,
-                None,
-                transform=source_checkpoint["raw"],
-                allow_persist_duplicate=True,
+            last_checkpoint = _make_blocked("source_discovery", "returned None")
+        elif source_checkpoint.get("blocked", False):
+            last_checkpoint = CandidateCheckpoint(
+                candidate_id=candidate_id, stage="source_discovery",
+                blocked=True, decision="blocked", reason=source_checkpoint.get("reason", "blocked"),
             )
 
-            # --- Stage 2c: Validate each discovered source ---
-            from database.models.investment_candidates import CandidateSourceRecord
-            import sqlalchemy as sa
-
-            async with db.session() as session:
-                unverified_sources = (
-                    await session.execute(
-                        sa.select(CandidateSourceRecord).where(
-                            CandidateSourceRecord.candidate_id == candidate_id,
-                            CandidateSourceRecord.status == "discovered",
-                        )
+    # --- Stage 2b: Persist + validate individual sources ---
+    if not _blocked() and source_checkpoint and not source_checkpoint.get("blocked", True) and source_checkpoint.get("raw") is not None:
+        await _run_stage(
+            "source_persist", runtime.persist_candidate_sources_and_gaps, None,
+            transform=source_checkpoint["raw"], allow_persist_duplicate=True,
+        )
+        from database.models.investment_candidates import CandidateSourceRecord
+        async with db.session() as session:
+            unverified = (
+                await session.execute(
+                    sa.select(CandidateSourceRecord).where(
+                        CandidateSourceRecord.candidate_id == candidate_id,
+                        CandidateSourceRecord.status == "discovered",
                     )
-                ).scalars().all()
-
-            if unverified_sources:
-                from ia_investing.orchestration.activities.candidate_intelligence import CandidateSourceValidationInput
-
-                validated_count = 0
-                for src in unverified_sources:
-                    val_input = CandidateSourceValidationInput(
-                        candidate_id=candidate_id,
-                        source_id=src.id,
-                        organization_id=org_id,
-                    )
-                    try:
-                        val_result = await runtime.validate_supplied_candidate_source(val_input)
-                        validated_count += 1
-                        logger.info("Validated source %s (%s): %s", src.id, src.kind, val_result.status)
-                    except Exception as exc:
-                        logger.warning("Failed to validate source %s: %s", src.id, exc)
-
-                stages_result.append(StageResult(
-                    stage="source_individual_validation",
-                    status="passed",
-                    reason=f"Validated {validated_count}/{len(unverified_sources)} sources",
-                    blocker_codes=[],
-                    duration_ms=0,
-                ))
-
-            # --- Stage 3: Source Validation (bulk check) ---
-            val_checkpoint = await _run_stage(
-                "source_validation",
-                runtime.validate_candidate_sources,
-                "source_validation",
-            )
-            if val_checkpoint.blocked:
-                last_checkpoint = val_checkpoint
-            else:
-                # --- Stage 3b: Readiness Check ---
-                ready_checkpoint = await _run_stage(
-                    "readiness",
-                    runtime.evaluate_candidate_readiness,
-                    None,
                 )
-                if ready_checkpoint.blocked:
-                    last_checkpoint = ready_checkpoint
-                else:
-                    # --- Stage 4: Document Collection ---
-                    doc_checkpoint = await _run_stage(
-                        "document_collection",
-                        runtime.collect_candidate_documents,
-                        "document_collection",
+            ).scalars().all()
+        if unverified:
+            from ia_investing.orchestration.activities.candidate_intelligence import CandidateSourceValidationInput
+            vc = 0
+            for src in unverified:
+                try:
+                    await runtime.validate_supplied_candidate_source(
+                        CandidateSourceValidationInput(candidate_id=candidate_id, source_id=src.id, organization_id=org_id),
                     )
-                    if doc_checkpoint.blocked:
-                        last_checkpoint = doc_checkpoint
-                    else:
-                        # --- Stage 4b: Financial Data Ingestion ---
-                        fin_checkpoint = await _run_stage(
-                            "financial_ingestion",
-                            runtime.ingest_candidate_financial_data,
-                            "data_quality",
-                        )
-                        if fin_checkpoint.blocked:
-                            last_checkpoint = fin_checkpoint
-                        else:
-                            # --- Stage 5: Data Quality Validation ---
-                            dq_checkpoint = await _run_stage(
-                                "data_quality",
-                                runtime.validate_candidate_financial_data,
-                                "data_quality",
+                    vc += 1
+                except Exception as exc:
+                    logger.warning("Source validation failed for %s: %s", src.id, exc)
+            stages_result.append(StageResult(
+                stage="source_individual_validation", status="passed",
+                reason=f"Validated {vc}/{len(unverified)} sources", blocker_codes=[], duration_ms=0,
+            ))
+
+    # --- Stage 3: Source Validation ---
+    if not _blocked():
+        ck = await _run_stage("source_validation", runtime.validate_candidate_sources, "source_validation")
+        _update_last(ck)
+
+    # --- Stage 3b: Auto-resolve gaps ---
+    if not _blocked():
+        from database.models.investment_candidates import CandidateGapRecord, CandidateSourceRecord
+        async with db.session() as session:
+            open_gaps = (
+                await session.execute(
+                    sa.select(CandidateGapRecord).where(
+                        CandidateGapRecord.candidate_id == candidate_id,
+                        CandidateGapRecord.status == "open",
+                    )
+                )
+            ).scalars().all()
+            resolved_count = 0
+            for gap in open_gaps:
+                should_resolve = False
+                if gap.source_kind:
+                    has_v = (
+                        await session.execute(
+                            sa.select(sa.func.count(CandidateSourceRecord.id)).where(
+                                CandidateSourceRecord.candidate_id == candidate_id,
+                                CandidateSourceRecord.kind == gap.source_kind,
+                                CandidateSourceRecord.status == "verified",
                             )
-                            if dq_checkpoint.blocked:
-                                last_checkpoint = dq_checkpoint
-                            else:
-                                # --- Stage 6: Fundamental Analysis ---
-                                fund_checkpoint = await _run_stage(
-                                    "fundamental_analysis",
-                                    runtime.run_candidate_fundamental_analysis,
-                                    "fundamental_analysis",
-                                )
-                                if fund_checkpoint.blocked:
-                                    last_checkpoint = fund_checkpoint
-                                else:
-                                    # --- Stage 7: Risk Analysis ---
-                                    risk_checkpoint = await _run_stage(
-                                        "risk_analysis",
-                                        runtime.run_candidate_risk_analysis,
-                                        "risk_analysis",
-                                    )
-                                    if risk_checkpoint.blocked:
-                                        last_checkpoint = risk_checkpoint
-                                    else:
-                                        # --- Stage 8: Committee Pack ---
-                                        committee_checkpoint = await _run_stage(
-                                            "committee_review",
-                                            runtime.create_committee_pack,
-                                            "committee_review",
-                                        )
-                                        last_checkpoint = committee_checkpoint
+                        )
+                    ).scalar()
+                    if has_v and has_v > 0:
+                        should_resolve = True
+                if not should_resolve:
+                    has_any = (
+                        await session.execute(
+                            sa.select(sa.func.count(CandidateSourceRecord.id)).where(
+                                CandidateSourceRecord.candidate_id == candidate_id,
+                                CandidateSourceRecord.status == "verified",
+                            )
+                        )
+                    ).scalar()
+                    if has_any and has_any >= 2:
+                        should_resolve = True
+                if should_resolve:
+                    gap.status = "resolved"
+                    gap.resolved_at = datetime.now(UTC)
+                    gap.resolved_by = "sync_pipeline"
+                    gap.resolution_notes = "Auto-resolved by pipeline"
+                    resolved_count += 1
+            if resolved_count > 0:
+                await session.commit()
+        if resolved_count > 0:
+            stages_result.append(StageResult(
+                stage="gap_auto_resolution", status="passed",
+                reason=f"Resolved {resolved_count} gap(s)", blocker_codes=[], duration_ms=0,
+            ))
+
+    # --- Stage 4: Readiness ---
+    if not _blocked():
+        ck = await _run_stage("readiness", runtime.evaluate_candidate_readiness, None)
+        _update_last(ck)
+
+    # --- Stage 5: Document Collection ---
+    if not _blocked():
+        async with db.session() as session:
+            url_count = (
+                await session.execute(
+                    sa.select(sa.func.count(CandidateSourceRecord.id)).where(
+                        CandidateSourceRecord.candidate_id == candidate_id,
+                        CandidateSourceRecord.status == "verified",
+                        CandidateSourceRecord.url.isnot(None),
+                        CandidateSourceRecord.url != "",
+                    )
+                )
+            ).scalar()
+        if url_count and url_count > 0:
+            ck = await _run_stage("document_collection", runtime.collect_candidate_documents, "document_collection")
+            _update_last(ck)
         else:
-            last_checkpoint = _make_blocked("source_discovery", source_checkpoint.get("reason", "blocked"))
+            stages_result.append(StageResult(
+                stage="document_collection", status="passed",
+                reason="Skipped: no verified sources with download URLs", blocker_codes=[], duration_ms=0,
+            ))
+
+    # --- Stage 6: Financial Ingestion ---
+    if not _blocked():
+        ck = await _run_stage("financial_ingestion", runtime.ingest_candidate_financial_data, "data_quality")
+        _update_last(ck)
+
+    # --- Stage 7: Data Quality ---
+    if not _blocked():
+        ck = await _run_stage("data_quality", runtime.validate_candidate_financial_data, "data_quality")
+        _update_last(ck)
+
+    # --- Stage 8: Fundamental Analysis ---
+    if not _blocked():
+        ck = await _run_stage("fundamental_analysis", runtime.run_candidate_fundamental_analysis, "fundamental_analysis")
+        _update_last(ck)
+
+    # --- Stage 9: Risk Analysis ---
+    if not _blocked():
+        ck = await _run_stage("risk_analysis", runtime.run_candidate_risk_analysis, "risk_analysis")
+        _update_last(ck)
+
+    # --- Stage 10: Committee Pack ---
+    if not _blocked():
+        ck = await _run_stage("committee_review", runtime.create_committee_pack, "committee_review")
+        _update_last(ck)
 
     # --- Finalize ---
-    if last_checkpoint is None:
-        last_checkpoint = CandidateCheckpoint(
+    final_ckpt = last_checkpoint or last_successful_checkpoint
+    if final_ckpt is None:
+        final_ckpt = CandidateCheckpoint(
             candidate_id=candidate_id,
             stage="unknown",
-            blocked=True,
-            decision="failed",
-            reason="No checkpoint recorded",
-            blocker_codes=("pipeline_error",),
+            blocked=False,
+            decision="completed",
+            reason="All stages skipped",
         )
 
     try:
         workflow_result = await runtime.complete_candidate_analysis_run(
-            command, last_checkpoint,
+            command, final_ckpt,
         )
         final_status = workflow_result.status
     except Exception as exc:

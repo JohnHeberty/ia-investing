@@ -916,7 +916,7 @@ class ProductionCandidateRuntime:
         from collections import defaultdict
 
         from connectors.cvm._financials import FinancialEntry, StatementType, get_dfp, parse_value_status
-        from database.models.data_foundation import DataSource, SourceObject, SourceObjectVersion
+        from database.models.data_foundation import DataSource, SourceLicense, SourceObject, SourceObjectVersion
         from database.models.financial_facts import FinancialFact, ReportingPeriod
         from ia_investing.application.financial_facts import FinancialFactInput, FinancialFactRepository
 
@@ -964,12 +964,23 @@ class ProductionCandidateRuntime:
             ds_code = "cvm_dfp"
             ds = (await session.execute(sa.select(DataSource).where(DataSource.code == ds_code))).scalar_one_or_none()
             if ds is None:
+                lic = (await session.execute(sa.select(SourceLicense).where(SourceLicense.code == "cvm_open_data"))).scalar_one_or_none()
+                if lic is None:
+                    lic = SourceLicense(
+                        code="cvm_open_data",
+                        name="CVM Dados Abertos",
+                        terms_url="https://dados.cvm.gov.br/",
+                        permits_redistribution=True,
+                    )
+                    session.add(lic)
+                    await session.flush()
                 ds = DataSource(
                     code=ds_code,
                     name="CVM DFP - Demonstrativos Financeiros Padronizados",
                     base_url="https://dados.cvm.gov.br/dados/CIA_ABERTA/DOC/DFP/DADOS/",
                     owner_role="system",
                     schema_version="v1",
+                    license_id=lic.id,
                 )
                 session.add(ds)
                 await session.flush()
