@@ -87,6 +87,62 @@ def _provider_for_runner() -> AgentProvider:
     return MockProvider()
 
 
+# ---------------------------------------------------------------------------
+# Self-correction retry for governed agents
+# ---------------------------------------------------------------------------
+
+_RETRYABLE_CODES = {
+    "empty_findings", "missing_risk_factors", "missing_risk_acknowledgment",
+    "risk_rating_inconsistent", "volatility_rating_mismatch",
+    "approval_confidence_too_low", "insufficient_citation_coverage",
+    "risk_rating_inconsistent", "volatility_rating_mismatch",
+}
+
+_FEEDBACK_TEMPLATES = {
+    "empty_findings": (
+        "Sua resposta não contém findings. Adicione ao menos 1 finding com: "
+        "kind ('fact' ou 'inference'), statement (texto da análise), "
+        "confidence (decimal 0-1), citations (lista de citations)."
+    ),
+    "missing_risk_factors": (
+        "O campo 'risk_factors' está vazio. Liste ao menos 1 fator de risco "
+        "descrevendo um risco concreto para esta empresa."
+    ),
+    "missing_risk_acknowledgment": (
+        "O campo 'risk_acknowledgment' está vazio ou nulo. "
+        "Escreva uma frase curta reconhecendo os principais riscos."
+    ),
+    "approval_confidence_too_low": (
+        "Confidence de aprovação abaixo de 0.6. "
+        "Se não tem confiança suficiente, use 'defer' ou 'reject' em vez de 'approve'."
+    ),
+}
+
+
+def _is_retryable(error_code: str) -> bool:
+    if error_code in _RETRYABLE_CODES:
+        return True
+    if "validation" in error_code.lower():
+        return True
+    if "pydantic" in error_code.lower():
+        return True
+    return False
+
+
+def _build_feedback(error_code: str, error_detail: str, attempt: int) -> str:
+    template = _FEEDBACK_TEMPLATES.get(error_code, "")
+    if not template:
+        template = f"Erro de validação: {error_detail}"
+    return (
+        f"[TENTATIVA {attempt} — CORRIJA O ERRO ABAIXO]\n\n"
+        f"Código do erro: {error_code}\n"
+        f"Detalhes: {error_detail}\n\n"
+        f"Instrução: {template}\n\n"
+        f"Responda novamente com um JSON válido que atenda a TODOS os campos obrigatórios do schema. "
+        f"Não inclua texto fora do JSON."
+    )
+
+
 async def _execute_governed_agent(
     db: DatabaseRuntime,
     capability: str,
@@ -96,57 +152,84 @@ async def _execute_governed_agent(
     knowledge_cutoff: datetime,
     actor_id: str = "candidate_runtime",
     agent_run_id: str | None = None,
+    max_retries: int = 2,
 ) -> AgentResult:
-    """Execute an agent through the governed runtime path (AgentRuntimeService + AgentExecutionService)."""
-    async with db.session() as session:
-        service = AgentRuntimeService(session)
-        run = await service.create_run(
-            organization_id=organization_id,
-            capability=capability,
-            case_id=None,
-            input_payload=input_data,
-            data_as_of=data_as_of,
-            knowledge_cutoff=knowledge_cutoff,
-            actor_id=actor_id,
-            permissions=frozenset({"agent_runs:create"}),
-            workflow_id=f"candidate_{capability}",
-            idempotency_key=uuid.uuid4().hex,
-        )
-        run_id = run.id
-        await session.commit()
+    """Execute an agent through the governed runtime path with self-correction retry.
 
-    async with db.session() as session:
-        provider = _provider_for_runner()
-        metadata = {
-            "org_id": str(organization_id),
-            "workflow_id": f"candidate_{capability}",
-        }
-        if agent_run_id:
-            metadata["agent_run_id"] = agent_run_id
-        executed = await AgentExecutionService(session, provider).execute(run_id, metadata=metadata)
-        await session.commit()
+    On guardrail/validation failures, feeds the error back to the LLM
+    as a new input payload and retries up to `max_retries` times.
+    """
+    last_result: AgentResult | None = None
+    current_input = dict(input_data)
 
-    if executed.status == "succeeded":
-        return AgentResult(
+    for attempt in range(1 + max_retries):
+        retry_suffix = f"_retry_{attempt}" if attempt > 0 else ""
+
+        async with db.session() as session:
+            service = AgentRuntimeService(session)
+            run = await service.create_run(
+                organization_id=organization_id,
+                capability=capability,
+                case_id=None,
+                input_payload=current_input,
+                data_as_of=data_as_of,
+                knowledge_cutoff=knowledge_cutoff,
+                actor_id=actor_id,
+                permissions=frozenset({"agent_runs:create"}),
+                workflow_id=f"candidate_{capability}{retry_suffix}",
+                idempotency_key=uuid.uuid4().hex,
+            )
+            run_id = run.id
+            await session.commit()
+
+        async with db.session() as session:
+            provider = _provider_for_runner()
+            metadata = {
+                "org_id": str(organization_id),
+                "workflow_id": f"candidate_{capability}{retry_suffix}",
+            }
+            if agent_run_id:
+                metadata["agent_run_id"] = agent_run_id
+            executed = await AgentExecutionService(session, provider).execute(run_id, metadata=metadata)
+            await session.commit()
+
+        if executed.status == "succeeded":
+            return AgentResult(
+                agent_name=capability,
+                output_data=executed.output_payload,
+                model_used=str(executed.prompt_tokens) + "/" + str(executed.completion_tokens),
+                tokens_prompt=executed.prompt_tokens or 0,
+                tokens_completion=executed.completion_tokens or 0,
+                cost_usd=float(executed.cost_usd) if executed.cost_usd else 0.0,
+                duration_ms=executed.duration_ms or 0.0,
+                status="completed",
+            )
+
+        last_result = AgentResult(
             agent_name=capability,
-            output_data=executed.output_payload,
-            model_used=str(executed.prompt_tokens) + "/" + str(executed.completion_tokens),
-            tokens_prompt=executed.prompt_tokens or 0,
-            tokens_completion=executed.completion_tokens or 0,
-            cost_usd=float(executed.cost_usd) if executed.cost_usd else 0.0,
-            duration_ms=executed.duration_ms or 0.0,
-            status="completed",
+            output_data=None,
+            model_used="",
+            tokens_prompt=0,
+            tokens_completion=0,
+            cost_usd=0.0,
+            duration_ms=0.0,
+            status="failed",
+            error_message=executed.error_detail or executed.error_code or "unknown error",
         )
-    return AgentResult(
-        agent_name=capability,
-        output_data=None,
-        model_used="",
-        tokens_prompt=0,
-        tokens_completion=0,
-        cost_usd=0.0,
-        duration_ms=0.0,
-        status="failed",
-        error_message=executed.error_detail or executed.error_code or "unknown error",
+
+        error_code = executed.error_code or ""
+        if attempt < max_retries and _is_retryable(error_code):
+            feedback = _build_feedback(error_code, executed.error_detail or "", attempt + 1)
+            current_input = dict(input_data)
+            current_input["_correction_feedback"] = feedback
+            current_input["_correction_attempt"] = attempt + 1
+            continue
+        break
+
+    return last_result or AgentResult(
+        agent_name=capability, output_data=None, model_used="", tokens_prompt=0,
+        tokens_completion=0, cost_usd=0.0, duration_ms=0.0, status="failed",
+        error_message="Max retries exhausted",
     )
 
 
@@ -1291,6 +1374,7 @@ class ProductionCandidateRuntime:
             repo = CandidateRepository(session, command.organization_id)
             c = await repo.get_candidate(command.candidate_id)
             if c is not None:
+                current_version = c.lock_version + 1
                 session.add(
                     CandidateEventRecord(
                         candidate_id=c.id,
@@ -1299,7 +1383,7 @@ class ProductionCandidateRuntime:
                         actor_type="system",
                         actor_id="candidate_runtime",
                         occurred_at=_now(),
-                        aggregate_version=c.lock_version,
+                        aggregate_version=current_version,
                         payload={
                             "model_used": result.model_used,
                             "output": result.output_data if isinstance(result.output_data, dict) else {},
@@ -1308,8 +1392,11 @@ class ProductionCandidateRuntime:
                         },
                     )
                 )
-                c.lock_version += 1
-                await session.commit()
+                c.lock_version = current_version
+                try:
+                    await session.commit()
+                except Exception:
+                    await session.rollback()
         return _stage_passed(
             command,
             "fundamental_analysis",
@@ -1353,6 +1440,7 @@ class ProductionCandidateRuntime:
             repo = CandidateRepository(session, command.organization_id)
             c = await repo.get_candidate(command.candidate_id)
             if c is not None:
+                current_version = c.lock_version + 1
                 session.add(
                     CandidateEventRecord(
                         candidate_id=c.id,
@@ -1361,7 +1449,7 @@ class ProductionCandidateRuntime:
                         actor_type="system",
                         actor_id="candidate_runtime",
                         occurred_at=_now(),
-                        aggregate_version=c.lock_version,
+                        aggregate_version=current_version,
                         payload={
                             "model_used": result.model_used,
                             "output": result.output_data if isinstance(result.output_data, dict) else {},
@@ -1370,8 +1458,11 @@ class ProductionCandidateRuntime:
                         },
                     )
                 )
-                c.lock_version += 1
-                await session.commit()
+                c.lock_version = current_version
+                try:
+                    await session.commit()
+                except Exception:
+                    await session.rollback()
         return _stage_passed(
             command,
             "risk_analysis",
@@ -1463,6 +1554,7 @@ class ProductionCandidateRuntime:
             repo = CandidateRepository(db_session, command.organization_id)
             c = await repo.get_candidate(command.candidate_id)
             if c is not None:
+                current_version = c.lock_version + 1
                 db_session.add(
                     CandidateEventRecord(
                         candidate_id=c.id,
@@ -1471,7 +1563,7 @@ class ProductionCandidateRuntime:
                         actor_type="system",
                         actor_id="candidate_runtime",
                         occurred_at=_now(),
-                        aggregate_version=c.lock_version,
+                        aggregate_version=current_version,
                         payload={
                             "model_used": result.model_used,
                             "decision": decision_value,
@@ -1479,8 +1571,11 @@ class ProductionCandidateRuntime:
                         },
                     )
                 )
-                c.lock_version += 1
-                await db_session.commit()
+                c.lock_version = current_version
+                try:
+                    await db_session.commit()
+                except Exception:
+                    await db_session.rollback()
         return _stage_passed(
             command,
             "committee_review",

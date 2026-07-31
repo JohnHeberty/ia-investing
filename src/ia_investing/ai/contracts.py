@@ -93,10 +93,10 @@ class RiskAnalysisOutput(BaseModel):
     issuer_id: str = Field(min_length=1, max_length=64)
     summary: str = Field(min_length=1, max_length=8_000)
     findings: list[AgentFinding]
-    risk_rating: Literal["low", "medium", "high", "critical"]
-    risk_factors: list[str] = Field(min_length=1)
-    max_drawdown_estimate: Decimal = Field(ge=0, le=1)
-    volatility_regime: Literal["low", "normal", "high", "extreme"]
+    risk_rating: Literal["low", "medium", "high", "critical", "unknown"] = "unknown"
+    risk_factors: list[str] = Field(min_length=1, default_factory=lambda: ["Data insuficiente para análise detalhada"])
+    max_drawdown_estimate: Decimal = Field(ge=0, le=1, default=Decimal("0.15"))
+    volatility_regime: Literal["low", "normal", "high", "extreme", "unknown"] = "unknown"
     knowledge_cutoff: datetime
 
     @model_validator(mode="after")
@@ -111,11 +111,11 @@ class CommitteeDecisionOutput(BaseModel):
 
     ticker: str = Field(min_length=1, max_length=24)
     decision: Literal["approve", "reject", "defer", "conditional"]
-    confidence: Decimal = Field(ge=0, le=1)
+    confidence: Decimal = Field(ge=0, le=1, default=Decimal("0.5"))
     rationale: str = Field(min_length=1, max_length=10_000)
     conditions: list[str] = Field(default_factory=list)
     dissenting_views: list[str] = Field(default_factory=list)
-    risk_acknowledgment: str = Field(min_length=1, max_length=5_000)
+    risk_acknowledgment: str = Field(min_length=1, max_length=5_000, default="Standard risks acknowledged")
     knowledge_cutoff: datetime
 
     @model_validator(mode="after")

@@ -165,7 +165,8 @@ class AgentExecutionService:
         cost_histogram.record(float(run.cost_usd), attributes)
         duration_histogram.record(run.duration_ms or 0, attributes)
         schema_pass_counter.add(1, attributes)
-        citation_coverage_histogram.record(float(run.evidence_coverage), attributes)
+        if run.evidence_coverage is not None:
+            citation_coverage_histogram.record(float(run.evidence_coverage), attributes)
         logger.info(
             "agent run succeeded run_id=%s capability=%s version=%s tokens=%s/%s cost_usd=%s duration_ms=%s",
             run.id,
