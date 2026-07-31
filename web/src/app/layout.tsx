@@ -10,6 +10,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "IA Investing OS", template: "%s · IA Investing OS" },
   description: "Estação institucional de pesquisa, risco e carteiras-modelo",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
