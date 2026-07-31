@@ -1,12 +1,15 @@
 """Risk overview and macro indicators endpoints — exposes real data from
 institutional_risk_snapshots, risk_breaches, stress_scenarios, stress_results,
 macro_indicators, and institutional_risk_policies.
+
+Note: Macro indicators are global (not org-filtered) because macro data
+(SELIC, IPCA, USD/BRL) is shared across all organizations.
 """
 
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime
-from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
@@ -16,6 +19,8 @@ from sqlalchemy import text
 
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
+
+_MAX_SNAPSHOTS = 100
 
 router = APIRouter(prefix="/api/v1/risk", tags=["risk-overview"])
 
@@ -138,54 +143,90 @@ async def get_risk_overview(
             breach_count=0,
         ))
 
-    breaches = []
-    if snapshot_ids:
+    snapshot_ids = snapshot_ids[:_MAX_SNAPSHOTS]
+
+    async def _fetch_breaches() -> list[dict]:
+        if not snapshot_ids:
+            return []
         placeholders = ", ".join(f":sid{i}" for i in range(len(snapshot_ids)))
         params = {f"sid{i}": str(sid) for i, sid in enumerate(snapshot_ids)}
-        breaches_result = await session.execute(
+        result = await session.execute(
             text(f"""
-                SELECT id, limit_name, limit_type, observed_value, limit_value, status
+                SELECT id, risk_snapshot_id, limit_name, limit_type,
+                       observed_value, limit_value, status
                 FROM risk_breaches
                 WHERE risk_snapshot_id IN ({placeholders})
                 ORDER BY created_at DESC
             """),
             params,
         )
-        for row in breaches_result.fetchall():
-            breaches.append(RiskBreachItem(
-                id=row[0], limit_name=row[1], limit_type=row[2],
-                observed_value=float(row[3]) if row[3] is not None else 0,
-                limit_value=float(row[4]) if row[4] is not None else 0,
-                status=row[5],
-            ))
+        return [
+            {
+                "id": row[0], "snapshot_id": row[1],
+                "limit_name": row[2], "limit_type": row[3],
+                "observed_value": float(row[4]) if row[4] is not None else 0,
+                "limit_value": float(row[5]) if row[5] is not None else 0,
+                "status": row[6],
+            }
+            for row in result.fetchall()
+        ]
 
+    async def _fetch_stress() -> list[dict]:
+        result = await session.execute(
+            text("""
+                SELECT sr.id, ss.logical_id, sr.pnl_impact, sr.nav_impact_ratio
+                FROM stress_results sr
+                JOIN stress_scenarios ss ON ss.id = sr.scenario_id
+                JOIN institutional_risk_snapshots s ON s.id = sr.risk_snapshot_id
+                JOIN institutional_portfolio_versions v ON v.id = s.portfolio_version_id
+                JOIN model_portfolios mp ON mp.id = v.portfolio_id
+                WHERE mp.organization_id = :org_id
+                ORDER BY sr.id DESC
+                LIMIT 20
+            """),
+            {"org_id": str(auth.organization_id)},
+        )
+        return [
+            {
+                "id": row[0], "name": row[1],
+                "pnl_impact": float(row[2]) if row[2] is not None else None,
+                "nav_impact_ratio": float(row[3]) if row[3] is not None else None,
+            }
+            for row in result.fetchall()
+        ]
+
+    breach_rows, stress_rows = await asyncio.gather(
+        _fetch_breaches(), _fetch_stress(),
+    )
+
+    breach_by_snapshot: dict[UUID, int] = {}
+    for b in breach_rows:
+        sid = b["snapshot_id"]
+        breach_by_snapshot[sid] = breach_by_snapshot.get(sid, 0) + 1
+
+    breaches = []
     for snap in snapshots:
-        snap.breach_count = sum(1 for b in breaches if True)
+        snap.breach_count = breach_by_snapshot.get(snap.id, 0)
+        for b in breach_rows:
+            if b["snapshot_id"] == snap.id:
+                breaches.append(RiskBreachItem(
+                    id=b["id"], limit_name=b["limit_name"],
+                    limit_type=b["limit_type"],
+                    observed_value=b["observed_value"],
+                    limit_value=b["limit_value"],
+                    status=b["status"],
+                ))
 
     hard_breaches = [b for b in breaches if b.limit_type == "hard" and b.status == "open"]
     soft_breaches = [b for b in breaches if b.limit_type == "soft" and b.status == "open"]
 
-    stress_result = await session.execute(
-        text("""
-            SELECT sr.id, ss.logical_id, sr.pnl_impact, sr.nav_impact_ratio
-            FROM stress_results sr
-            JOIN stress_scenarios ss ON ss.id = sr.scenario_id
-            JOIN institutional_risk_snapshots s ON s.id = sr.risk_snapshot_id
-            JOIN institutional_portfolio_versions v ON v.id = s.portfolio_version_id
-            JOIN model_portfolios mp ON mp.id = v.portfolio_id
-            WHERE mp.organization_id = :org_id
-            ORDER BY sr.id DESC
-            LIMIT 20
-        """),
-        {"org_id": str(auth.organization_id)},
-    )
     stress_scenarios = [
         StressScenarioItem(
-            id=row[0], name=row[1],
-            pnl_impact=float(row[2]) if row[2] is not None else None,
-            nav_impact_ratio=float(row[3]) if row[3] is not None else None,
+            id=s["id"], name=s["name"],
+            pnl_impact=s["pnl_impact"],
+            nav_impact_ratio=s["nav_impact_ratio"],
         )
-        for row in stress_result.fetchall()
+        for s in stress_rows
     ]
 
     latest_volatility = snapshots[0].volatility if snapshots else None

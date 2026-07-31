@@ -24,7 +24,11 @@ logger = logging.getLogger(__name__)
 
 
 class _TTLCache:
-    """Simple thread-safe TTL cache with max size and LRU eviction."""
+    """Simple TTL cache with max size and LRU eviction.
+
+    Safe for single-event-loop async use (FastAPI/uvicorn).
+    NOT thread-safe — do not use from multiple OS threads.
+    """
 
     def __init__(self, max_size: int = 512, default_ttl: float = 3600.0):
         self._store: dict[str, tuple[float, Any]] = {}
