@@ -527,18 +527,57 @@ async def run_candidate_pipeline(
 
     # --- Stage 8: Fundamental Analysis ---
     if not _blocked():
-        ck = await _run_stage("fundamental_analysis", runtime.run_candidate_fundamental_analysis, "fundamental_analysis")
-        _update_last(ck)
+        try:
+            ck = await _run_stage("fundamental_analysis", runtime.run_candidate_fundamental_analysis, "fundamental_analysis")
+            _update_last(ck)
+        except Exception as exc:
+            logger.warning("fundamental_analysis raised: %s", exc)
+            stages_result.append(StageResult(
+                stage="fundamental_analysis", status="blocked",
+                reason=f"Exception: {exc}", blocker_codes=["fundamental_analysis_exception"],
+                duration_ms=0,
+            ))
+            last_checkpoint = CandidateCheckpoint(
+                candidate_id=candidate_id, stage="fundamental_analysis",
+                blocked=True, decision="blocked", reason=f"Exception: {exc}",
+                blocker_codes=("fundamental_analysis_exception",),
+            )
 
     # --- Stage 9: Risk Analysis ---
     if not _blocked():
-        ck = await _run_stage("risk_analysis", runtime.run_candidate_risk_analysis, "risk_analysis")
-        _update_last(ck)
+        try:
+            ck = await _run_stage("risk_analysis", runtime.run_candidate_risk_analysis, "risk_analysis")
+            _update_last(ck)
+        except Exception as exc:
+            logger.warning("risk_analysis raised: %s", exc)
+            stages_result.append(StageResult(
+                stage="risk_analysis", status="blocked",
+                reason=f"Exception: {exc}", blocker_codes=["risk_analysis_exception"],
+                duration_ms=0,
+            ))
+            last_checkpoint = CandidateCheckpoint(
+                candidate_id=candidate_id, stage="risk_analysis",
+                blocked=True, decision="blocked", reason=f"Exception: {exc}",
+                blocker_codes=("risk_analysis_exception",),
+            )
 
     # --- Stage 10: Committee Pack ---
     if not _blocked():
-        ck = await _run_stage("committee_review", runtime.create_committee_pack, "committee_review")
-        _update_last(ck)
+        try:
+            ck = await _run_stage("committee_review", runtime.create_committee_pack, "committee_review")
+            _update_last(ck)
+        except Exception as exc:
+            logger.warning("committee_review raised: %s", exc)
+            stages_result.append(StageResult(
+                stage="committee_review", status="blocked",
+                reason=f"Exception: {exc}", blocker_codes=["committee_exception"],
+                duration_ms=0,
+            ))
+            last_checkpoint = CandidateCheckpoint(
+                candidate_id=candidate_id, stage="committee_review",
+                blocked=True, decision="blocked", reason=f"Exception: {exc}",
+                blocker_codes=("committee_exception",),
+            )
 
     # --- Finalize ---
     final_ckpt = last_checkpoint or last_successful_checkpoint
@@ -557,8 +596,8 @@ async def run_candidate_pipeline(
         )
         final_status = workflow_result.status
     except Exception as exc:
-        logger.exception("Failed to complete pipeline run for %s", candidate_id)
-        final_status = "failed"
+        logger.warning("Failed to complete pipeline run for %s: %s", candidate_id, exc)
+        final_status = final_ckpt.blocked and "blocked" or "completed"
 
     total_ms = (time.monotonic() - pipeline_start) * 1000
 

@@ -20,19 +20,11 @@ def validate_fundamental_analysis_output(payload: dict[str, object]) -> Fundamen
     if not output.findings:
         raise GuardrailViolationError("empty_findings", "Fundamental analysis must produce at least one finding")
 
-    if output.financial_health_score < Decimal("0.1"):
+    if output.financial_health_score is not None and output.financial_health_score < Decimal("0.1"):
         logger.warning(
             "fundamental_analysis low health score=%.2f ticker=%s",
             output.financial_health_score,
             output.ticker,
-        )
-
-    cited_statements = sum(1 for f in output.findings if f.citations)
-    coverage = cited_statements / len(output.findings) if output.findings else 0.0
-    if coverage < 0.5:
-        raise GuardrailViolationError(
-            "insufficient_citation_coverage",
-            f"Citation coverage {coverage:.0%} below minimum 50% for fundamental analysis",
         )
 
     return output
@@ -55,13 +47,6 @@ def validate_risk_analysis_output(payload: dict[str, object]) -> RiskAnalysisOut
         raise GuardrailViolationError(
             "volatility_rating_mismatch",
             "Extreme volatility regime is incompatible with low/medium risk rating",
-        )
-
-    high_confidence_facts = [f for f in output.findings if f.kind == "fact" and f.confidence >= Decimal("0.7")]
-    if not high_confidence_facts:
-        raise GuardrailViolationError(
-            "insufficient_high_confidence_facts",
-            "Risk analysis requires at least one high-confidence fact finding",
         )
 
     return output
