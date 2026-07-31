@@ -93,7 +93,11 @@ export default function MissionControlPage() {
           <Link href="/portfolios" className="button secondary">
             Ver Carteiras
           </Link>
-          <Link href="/portfolios?create=true" className="button">
+          <Link
+            href="/portfolios?create=true"
+            className="button"
+            style={{ background: "transparent", color: "var(--accent)", border: "1px solid var(--accent)" }}
+          >
             + Nova Carteira
           </Link>
         </div>

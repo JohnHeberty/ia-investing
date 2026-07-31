@@ -130,9 +130,6 @@ export function useProposeRebalance() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
     },
-    onError: (error: Error) => {
-      console.error("[rebalance] propose failed:", error.message);
-    },
   });
 }
 
@@ -154,9 +151,6 @@ export function useApproveRebalance() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
-    },
-    onError: (error: Error) => {
-      console.error("[rebalance] approve failed:", error.message);
     },
   });
 }
@@ -180,9 +174,6 @@ export function useExecuteTradeStep() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
     },
-    onError: (error: Error) => {
-      console.error("[rebalance] execute step failed:", error.message);
-    },
   });
 }
 
@@ -196,9 +187,6 @@ export function useCompleteRebalance() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
-    },
-    onError: (error: Error) => {
-      console.error("[rebalance] complete failed:", error.message);
     },
   });
 }
@@ -221,9 +209,6 @@ export function useCancelRebalance() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["rebalance"] });
-    },
-    onError: (error: Error) => {
-      console.error("[rebalance] cancel failed:", error.message);
     },
   });
 }

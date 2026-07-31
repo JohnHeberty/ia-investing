@@ -86,7 +86,6 @@ export function useSSE(
         try {
           parsed = JSON.parse(message.data);
         } catch {
-          console.warn("[use-sse] malformed event data, skipping:", message.data);
           return;
         }
         onEventRef.current({

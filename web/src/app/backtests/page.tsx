@@ -62,9 +62,13 @@ function BacktestsContent() {
   }
 
   const hasRuns = runs.length > 0;
-  const medianSharpe = hasRuns
-    ? runs.map(r => Number(r.sharpeRatio)).filter(n => Number.isFinite(n)).sort((a, b) => a - b)[Math.floor(runs.length / 2)]
-    : null;
+  const medianSharpe = (() => {
+    if (!hasRuns) return null;
+    const values = runs.map(r => Number(r.sharpeRatio)).filter(n => Number.isFinite(n));
+    if (values.length === 0) return null;
+    values.sort((a, b) => a - b);
+    return values[Math.floor(values.length / 2)];
+  })();
 
   return (
     <>
