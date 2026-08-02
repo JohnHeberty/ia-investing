@@ -1,24 +1,23 @@
 {
     "$schema": "https://opencode.ai/config.json",
-    "model": "litellm/qwen",
-    "small_model": "litellm/qwen",
     "lsp": true,
+    "model": "qwen-local/ornith",
+    "small_model": "qwen-local/ornith",
     "provider": {
         "litellm": {
             "npm": "@ai-sdk/openai-compatible",
             "name": "LiteLLM Gateway",
             "options": {
-                "baseURL": "http://100.91.54.69:4000/v1",
+                "baseURL": "https://llm.loadstask.com/v1",
                 "apiKey": "sk-litellm-master"
             },
             "models": {
-                "qwen": {
-                    "name": "qwen",
+                "ornith": {
+                    "name": "Ornith 35B Q4_K_M (llama.cpp)",
                     "limit": {
-                        "context": 98304,
-                        "output": 8192
+                        "context": 131072,
+                        "output": 32768
                     },
-                    "tools": true,
                     "reasoning": true,
                     "interleaved": {
                         "field": "reasoning_content"
@@ -37,8 +36,11 @@
     ],
     "compaction": {
         "auto": true,
-        "prune": true,
-        "reserved": 8192
+        "prune": false,
+        "keep": {
+            "tokens": 16000
+        },
+        "buffer": 24000
     },
     "watcher": {
         "ignore": [
@@ -47,8 +49,9 @@
             "dist/**",
             "build/**",
             ".git/**",
-            ".next/**",
-            ".nuxt/**",
+            "__pycache__/",
+            "*.pyc",
+            ".ipynb_checkpoints/",
             "coverage/**",
             "logs/**",
             "*.log",
@@ -98,8 +101,7 @@
         ]
     },
     "instructions": [
-        "AGENTS.md",
-        "web/AGENTS.md"
+        "AGENTS.md"
     ],
     "permission": {
         "read": "allow",
