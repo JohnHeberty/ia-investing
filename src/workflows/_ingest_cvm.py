@@ -17,6 +17,7 @@ class IngestCVMInput:
     statement_type: str
     issuer_id: str = ""
     scale_factor: int = 1000
+    schedule_id: str = ""
 
 
 @dataclass(slots=True)
@@ -89,5 +90,24 @@ class IngestCVMWorkflow:
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
+
+        if input.schedule_id:
+            await workflow.execute_activity(
+                "record_schedule_run",
+                {
+                    "schedule_id": input.schedule_id,
+                    "workflow_id": workflow.info().workflow_id,
+                    "status": "completed",
+                    "started_at": workflow.info().start_time.isoformat(),
+                    "result_summary": {
+                        "issuer_id": input.issuer_id,
+                        "statement_type": input.statement_type,
+                        "year": input.year,
+                        "records_inserted": stored_count,
+                        "errors": len(errors),
+                    },
+                },
+                start_to_close_timeout=timedelta(seconds=10),
+            )
 
         return output

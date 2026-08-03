@@ -13,6 +13,7 @@ with workflow.unsafe.imports_passed_through():
 class PaperReconciliationInput:
     portfolio_id: str
     organization_id: str
+    schedule_id: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,4 +36,22 @@ class PaperReconciliationWorkflow:
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
+
+        if command.schedule_id:
+            await workflow.execute_activity(
+                "record_schedule_run",
+                {
+                    "schedule_id": command.schedule_id,
+                    "workflow_id": workflow.info().workflow_id,
+                    "status": "completed",
+                    "started_at": workflow.info().start_time.isoformat(),
+                    "result_summary": {
+                        "portfolio_id": command.portfolio_id,
+                        "break_count": result.get("break_count", 0),
+                        "blocking_count": result.get("blocking_count", 0),
+                    },
+                },
+                start_to_close_timeout=timedelta(seconds=10),
+            )
+
         return PaperReconciliationResult(**result)

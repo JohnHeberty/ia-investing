@@ -9,6 +9,7 @@ from .paper_operations import PAPER_OPERATION_ACTIVITIES
 from .portfolio_construction import PORTFOLIO_CONSTRUCTION_ACTIVITIES
 from .portfolio_ranking import PORTFOLIO_RANKING_ACTIVITIES
 from .research_mock import RESEARCH_MOCK_ACTIVITIES
+from .schedule_history import SCHEDULE_HISTORY_ACTIVITIES
 from .thesis_review import THESIS_REVIEW_ACTIVITIES
 
 __all__ = [
@@ -23,5 +24,6 @@ __all__ = [
     "PORTFOLIO_CONSTRUCTION_ACTIVITIES",
     "PORTFOLIO_RANKING_ACTIVITIES",
     "RESEARCH_MOCK_ACTIVITIES",
+    "SCHEDULE_HISTORY_ACTIVITIES",
     "THESIS_REVIEW_ACTIVITIES",
 ]

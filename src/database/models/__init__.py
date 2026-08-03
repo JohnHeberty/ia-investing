@@ -106,6 +106,7 @@ from .news import (  # noqa: F401
     NewsSource,
 )
 from .operations import Operation  # noqa: F401
+from .schedule_history import ScheduleRunHistory  # noqa: F401
 from .paper_execution import (  # noqa: F401
     ChallengerEvaluation,
     ExecutionModelVersion,

@@ -14,6 +14,7 @@ class PaperValuationInput:
     portfolio_id: str
     portfolio_version_id: str
     organization_id: str
+    schedule_id: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,11 +44,42 @@ class PaperValuationWorkflow:
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
         if reconciliation["blocking_count"]:
+            if command.schedule_id:
+                await workflow.execute_activity(
+                    "record_schedule_run",
+                    {
+                        "schedule_id": command.schedule_id,
+                        "workflow_id": workflow.info().workflow_id,
+                        "status": "failed",
+                        "started_at": workflow.info().start_time.isoformat(),
+                        "error_message": "blocking reconciliation break prevents NAV publication",
+                    },
+                    start_to_close_timeout=timedelta(seconds=10),
+                )
             raise RuntimeError("blocking reconciliation break prevents NAV publication")
+
         publication = await workflow.execute_activity(
             "publish_paper_nav",
             args=[command.portfolio_version_id, command.organization_id, as_of],
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
+
+        if command.schedule_id:
+            await workflow.execute_activity(
+                "record_schedule_run",
+                {
+                    "schedule_id": command.schedule_id,
+                    "workflow_id": workflow.info().workflow_id,
+                    "status": "completed",
+                    "started_at": workflow.info().start_time.isoformat(),
+                    "result_summary": {
+                        "portfolio_id": command.portfolio_id,
+                        "nav": publication.get("nav", ""),
+                        "revision": publication.get("revision", 0),
+                    },
+                },
+                start_to_close_timeout=timedelta(seconds=10),
+            )
+
         return PaperValuationResult(**publication)

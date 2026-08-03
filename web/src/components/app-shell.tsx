@@ -6,6 +6,7 @@ import {
   BriefcaseBusiness,
   ChartNoAxesCombined,
   CircleGauge,
+  Clock,
   Database,
   FileCheck2,
   Gavel,
@@ -49,6 +50,7 @@ const operations: NavItem[] = [
   ["/data-quality", "Qualidade", Database, "quality_incidents:manage"],
   ["/backtests", "Backtests", ChartNoAxesCombined, null],
   ["/audit", "Auditoria", FileCheck2, "audit:read"],
+  ["/schedules", "Agendamentos", Clock, "schedules:read"],
 ];
 
 const NavGroup = React.memo(function NavGroup({ label, items }: { label: string; items: NavItem[] }) {

@@ -60,6 +60,7 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
         "publish_paper_nav",
         "optimize_model_portfolio",
         "persist_portfolio_ranking_snapshot",
+        "record_schedule_run",
     }
     assert {
         activity.__temporal_activity_definition.name for activity in ACTIVITIES_BY_CAPABILITY[Capability.DATA_INGESTION]
@@ -69,4 +70,10 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
         "run_accounting_validations",
         "store_financial_statements",
         "publish_event",
+        "record_schedule_run",
     }
+    research_activities = {
+        activity.__temporal_activity_definition.name
+        for activity in ACTIVITIES_BY_CAPABILITY[Capability.RESEARCH_AGENTS]
+    }
+    assert "record_schedule_run" in research_activities

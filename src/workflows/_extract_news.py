@@ -18,6 +18,7 @@ class ExtractNewsInput:
     max_results: int = 20
     analyze_limit: int = 10
     organization_id: str = ""
+    schedule_id: str = ""
 
 
 @workflow.defn(name="ExtractNewsWorkflow")
@@ -44,9 +45,24 @@ class ExtractNewsWorkflow:
         elif isinstance(fetched, list):
             fetched_count = len(fetched)
 
-        return {
+        result = {
             "issuer_id": command.issuer_id,
             "fetched_count": fetched_count,
             "analyzed_count": analysis.get("analyzed", 0) if isinstance(analysis, dict) else 0,
             "results": analysis.get("results", []) if isinstance(analysis, dict) else [],
         }
+
+        if command.schedule_id:
+            await workflow.execute_activity(
+                "record_schedule_run",
+                {
+                    "schedule_id": command.schedule_id,
+                    "workflow_id": workflow.info().workflow_id,
+                    "status": "completed",
+                    "started_at": workflow.info().start_time.isoformat(),
+                    "result_summary": result,
+                },
+                start_to_close_timeout=timedelta(seconds=10),
+            )
+
+        return result

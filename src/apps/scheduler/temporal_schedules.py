@@ -18,6 +18,9 @@ from temporalio.client import (
 from temporalio.contrib.opentelemetry import TracingInterceptor
 
 from ia_investing.orchestration.workflows import (  # type: ignore[attr-defined]
+    DispatchOperationsWorkflow,
+    ExtractNewsInput,
+    ExtractNewsWorkflow,
     IngestCVMInput,
     IngestCVMWorkflow,
     PaperRebalanceInput,
@@ -48,19 +51,21 @@ def cvm_schedule_definition(
     every: timedelta = timedelta(days=1),
     task_queue: str = "data-ingestion",
 ) -> ScheduleDefinition:
+    schedule_id = f"cvm-dfp-{issuer_id}-{year}-{statement_type}".lower()
     workflow_input = IngestCVMInput(
         cnpj=cnpj,
         issuer_id=issuer_id,
         year=year,
         statement_type=statement_type,
+        schedule_id=schedule_id,
     )
     return ScheduleDefinition(
-        schedule_id=f"cvm-dfp-{issuer_id}-{year}-{statement_type}".lower(),
+        schedule_id=schedule_id,
         schedule=Schedule(
             action=ScheduleActionStartWorkflow(
                 IngestCVMWorkflow.run,
                 workflow_input,
-                id=f"cvm-dfp-{issuer_id}-{year}-{statement_type}",
+                id=schedule_id,
                 task_queue=task_queue,
             ),
             spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
@@ -82,13 +87,14 @@ def paper_reconciliation_schedule_definition(
 ) -> ScheduleDefinition:
     if not portfolio_id or not organization_id:
         raise ValueError("portfolio and organization IDs are required")
+    schedule_id = f"paper-reconciliation-{portfolio_id}".lower()
     return ScheduleDefinition(
-        schedule_id=f"paper-reconciliation-{portfolio_id}".lower(),
+        schedule_id=schedule_id,
         schedule=Schedule(
             action=ScheduleActionStartWorkflow(
                 PaperReconciliationWorkflow.run,
-                PaperReconciliationInput(portfolio_id, organization_id),
-                id=f"paper-reconciliation-{portfolio_id}",
+                PaperReconciliationInput(portfolio_id, organization_id, schedule_id=schedule_id),
+                id=schedule_id,
                 task_queue=task_queue,
             ),
             spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
@@ -111,13 +117,14 @@ def paper_valuation_schedule_definition(
 ) -> ScheduleDefinition:
     if not portfolio_id or not portfolio_version_id or not organization_id:
         raise ValueError("portfolio, version, and organization IDs are required")
+    schedule_id = f"paper-valuation-{portfolio_id}".lower()
     return ScheduleDefinition(
-        schedule_id=f"paper-valuation-{portfolio_id}".lower(),
+        schedule_id=schedule_id,
         schedule=Schedule(
             action=ScheduleActionStartWorkflow(
                 PaperValuationWorkflow.run,
-                PaperValuationInput(portfolio_id, portfolio_version_id, organization_id),
-                id=f"paper-valuation-{portfolio_id}",
+                PaperValuationInput(portfolio_id, portfolio_version_id, organization_id, schedule_id=schedule_id),
+                id=schedule_id,
                 task_queue=task_queue,
             ),
             spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
@@ -160,10 +167,102 @@ def paper_rebalance_schedule_definition(
     )
 
 
-async def reconcile_schedules(client: Client, definitions: list[ScheduleDefinition]) -> dict[str, str]:
+def news_collection_schedule_definition(
+    *,
+    issuer_id: str,
+    every: timedelta = timedelta(hours=4),
+    max_results: int = 20,
+    analyze_limit: int = 10,
+    task_queue: str = "research-agents",
+) -> ScheduleDefinition:
+    schedule_id = f"news-collection-{issuer_id}".lower()
+    return ScheduleDefinition(
+        schedule_id=schedule_id,
+        schedule=Schedule(
+            action=ScheduleActionStartWorkflow(
+                ExtractNewsWorkflow.run,
+                ExtractNewsInput(
+                    issuer_id=issuer_id,
+                    max_results=max_results,
+                    analyze_limit=analyze_limit,
+                    schedule_id=schedule_id,
+                ),
+                id=schedule_id,
+                task_queue=task_queue,
+            ),
+            spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
+            policy=SchedulePolicy(
+                overlap=ScheduleOverlapPolicy.SKIP,
+                catchup_window=timedelta(hours=1),
+                pause_on_failure=True,
+            ),
+        ),
+    )
+
+
+def news_dedup_schedule_definition(
+    *,
+    every: timedelta = timedelta(hours=24),
+    task_queue: str = "research-agents",
+) -> ScheduleDefinition:
+    schedule_id = "news-dedup-cleanup"
+    return ScheduleDefinition(
+        schedule_id=schedule_id,
+        schedule=Schedule(
+            action=ScheduleActionStartWorkflow(
+                DispatchOperationsWorkflow.run,
+                {"batch_size": 50, "schedule_id": schedule_id},
+                id=schedule_id,
+                task_queue=task_queue,
+            ),
+            spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
+            policy=SchedulePolicy(
+                overlap=ScheduleOverlapPolicy.SKIP,
+                catchup_window=timedelta(hours=1),
+                pause_on_failure=True,
+            ),
+        ),
+    )
+
+
+def outbox_recovery_schedule_definition(
+    *,
+    every: timedelta = timedelta(minutes=30),
+    task_queue: str = "research-agents",
+) -> ScheduleDefinition:
+    schedule_id = "outbox-dispatch-recovery"
+    return ScheduleDefinition(
+        schedule_id=schedule_id,
+        schedule=Schedule(
+            action=ScheduleActionStartWorkflow(
+                DispatchOperationsWorkflow.run,
+                {"batch_size": 50, "schedule_id": schedule_id},
+                id=schedule_id,
+                task_queue=task_queue,
+            ),
+            spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
+            policy=SchedulePolicy(
+                overlap=ScheduleOverlapPolicy.SKIP,
+                catchup_window=timedelta(minutes=15),
+                pause_on_failure=True,
+            ),
+        ),
+    )
+
+
+_PRESERVE_PREFIXES = ("equity-exploration-",)
+
+
+async def reconcile_schedules(
+    client: Client,
+    definitions: list[ScheduleDefinition],
+    preserve_prefixes: tuple[str, ...] = _PRESERVE_PREFIXES,
+) -> dict[str, str]:
     results: dict[str, str] = {}
+    known_ids: set[str] = set()
 
     for definition in definitions:
+        known_ids.add(definition.schedule_id)
         try:
             await client.create_schedule(definition.schedule_id, definition.schedule)
             results[definition.schedule_id] = "created"
@@ -175,19 +274,73 @@ async def reconcile_schedules(client: Client, definitions: list[ScheduleDefiniti
 
             await handle.update(_updater)
             results[definition.schedule_id] = "updated"
+
+    # Delete stale schedules not in definitions (preserving externally managed prefixes)
+    try:
+        iterator = await client.list_schedules()  # type: ignore[attr-defined]
+        async for desc in iterator:
+            if desc.id in known_ids:
+                continue
+            if any(desc.id.startswith(p) for p in preserve_prefixes):
+                continue
+            try:
+                handle = client.get_schedule_handle(desc.id)
+                await handle.delete()
+                results[desc.id] = "deleted"
+            except Exception:
+                logger.warning("Failed to delete stale schedule %s", desc.id)
+    except Exception:
+        logger.warning("Failed to list schedules for stale cleanup")
+
     return results
 
 
-async def reconcile_configured_schedules() -> dict[str, str]:
+async def reconcile_configured_schedules(client: Client | None = None) -> dict[str, str]:
     settings = get_settings()
-    if settings.telemetry.enabled:
-        setup_telemetry("ia-investing-scheduler", settings.telemetry.otlp_endpoint)
-    client = await Client.connect(
-        settings.temporal.address,
-        namespace=settings.temporal.namespace,
-        interceptors=[TracingInterceptor()] if settings.telemetry.enabled else [],
-    )
+    if client is None:
+        if settings.telemetry.enabled:
+            setup_telemetry("ia-investing-scheduler", settings.telemetry.otlp_endpoint)
+        client = await Client.connect(
+            settings.temporal.address,
+            namespace=settings.temporal.namespace,
+            interceptors=[TracingInterceptor()] if settings.telemetry.enabled else [],
+        )
     definitions: list[ScheduleDefinition] = []
+
+    # --- Default schedules (always created) ---
+    definitions.append(
+        news_dedup_schedule_definition(
+            every=timedelta(hours=settings.scheduler.news_dedup_interval_hours),
+        )
+    )
+    definitions.append(
+        outbox_recovery_schedule_definition(
+            every=timedelta(minutes=settings.scheduler.outbox_recovery_interval_minutes),
+        )
+    )
+
+    # --- News collection per issuer ---
+    import sqlalchemy as sa
+
+    from database.core import session_scope
+    from database.models.catalog import Ticker
+
+    async with session_scope() as session:
+        issuer_ids = (
+            await session.execute(
+                sa.select(Ticker.issuer_id).where(Ticker.issuer_id.is_not(None)).distinct()
+            )
+        ).scalars().all()
+
+    for issuer_id in issuer_ids:
+        definitions.append(
+            news_collection_schedule_definition(
+                issuer_id=str(issuer_id),
+                every=timedelta(hours=settings.scheduler.news_collection_interval_hours),
+            )
+        )
+
+    # --- Conditional schedules (require env vars) ---
     if settings.scheduler.cvm_cnpj and settings.scheduler.cvm_issuer_id:
         definitions.append(
             cvm_schedule_definition(
@@ -228,6 +381,5 @@ async def reconcile_configured_schedules() -> dict[str, str]:
                 ),
             ]
         )
-    if not definitions:
-        raise ValueError("at least one scheduler definition must be configured")
+
     return await reconcile_schedules(client, definitions)

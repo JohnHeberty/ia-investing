@@ -58,4 +58,6 @@ export const queryKeys = {
   rebalanceProposals: () => k("rebalanceProposals"),
   auditLogs: () => k("auditLogs"),
   auditTrail: () => k("auditTrail"),
+  schedules: () => k("schedules"),
+  scheduleRuns: (scheduleId: string, limit?: number) => k("scheduleRuns", scheduleId, limit),
 };

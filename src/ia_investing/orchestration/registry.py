@@ -9,8 +9,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from workflows._extract_news import ExtractNewsWorkflow
-
 from ia_investing.candidate_intelligence.bootstrap import candidate_intelligence_enabled
 from ia_investing.orchestration.activities.agent_runtime import AGENT_RUNTIME_ACTIVITIES
 from ia_investing.orchestration.activities.candidate_dispatch import CANDIDATE_DISPATCH_ACTIVITIES
@@ -24,7 +22,9 @@ from ia_investing.orchestration.activities.portfolio_construction import (
     PORTFOLIO_CONSTRUCTION_ACTIVITIES,
 )
 from ia_investing.orchestration.activities.portfolio_ranking import PORTFOLIO_RANKING_ACTIVITIES
+from ia_investing.orchestration.activities.schedule_history import SCHEDULE_HISTORY_ACTIVITIES
 from workflows._dispatch_operations import DispatchOperationsWorkflow
+from workflows._extract_news import ExtractNewsWorkflow
 from workflows._ingest_cvm import IngestCVMWorkflow
 from workflows._paper_rebalance import PaperRebalanceWorkflow
 from workflows._paper_reconciliation import PaperReconciliationWorkflow
@@ -69,9 +69,7 @@ CAPABILITIES: dict[str, CapabilityDefinition] = {
     "data-ingestion": CapabilityDefinition(
         task_queue="data-ingestion",
         workflows=(IngestCVMWorkflow,),
-        # IngestCVMWorkflow publishes its completion event without overriding
-        # the activity task queue, so publish_event must be registered here.
-        activities=DATA_INGESTION_ACTIVITIES + NOTIFICATION_ACTIVITIES,
+        activities=DATA_INGESTION_ACTIVITIES + NOTIFICATION_ACTIVITIES + SCHEDULE_HISTORY_ACTIVITIES,
     ),
     "research-agents": CapabilityDefinition(
         task_queue="research-agents",
@@ -81,6 +79,7 @@ CAPABILITIES: dict[str, CapabilityDefinition] = {
             + OPERATION_DISPATCH_ACTIVITIES
             + NEWS_EXTRACTION_ACTIVITIES
             + _CANDIDATE_ACTIVITIES
+            + SCHEDULE_HISTORY_ACTIVITIES
         ),
     ),
     "portfolio-risk": CapabilityDefinition(
@@ -93,7 +92,12 @@ CAPABILITIES: dict[str, CapabilityDefinition] = {
             PaperReconciliationWorkflow,
             PortfolioRankingWorkflow,
         ),
-        activities=(PORTFOLIO_CONSTRUCTION_ACTIVITIES + PAPER_OPERATION_ACTIVITIES + PORTFOLIO_RANKING_ACTIVITIES),
+        activities=(
+            PORTFOLIO_CONSTRUCTION_ACTIVITIES
+            + PAPER_OPERATION_ACTIVITIES
+            + PORTFOLIO_RANKING_ACTIVITIES
+            + SCHEDULE_HISTORY_ACTIVITIES
+        ),
     ),
     "notifications": CapabilityDefinition(
         task_queue="notifications",

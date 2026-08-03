@@ -121,6 +121,10 @@ class SchedulerSettings(BaseModel):
     paper_portfolio_version_id: str | None = None
     paper_rebalance_input_sha256: str | None = None
 
+    news_collection_interval_hours: int = Field(default=4, ge=1, le=168)
+    news_dedup_interval_hours: int = Field(default=24, ge=1, le=168)
+    outbox_recovery_interval_minutes: int = Field(default=30, ge=5, le=1440)
+
 
 class WorkerSettings(BaseModel):
     capability: Literal[

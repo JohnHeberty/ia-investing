@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
+import { Toaster } from "sonner";
 
 import { AuthProvider } from "@/components/auth-provider";
 
@@ -15,6 +16,19 @@ export function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>{children}</AuthProvider>
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "var(--surface-2)",
+            border: "1px solid var(--line)",
+            color: "var(--text)",
+            fontSize: 13,
+          },
+        }}
+        richColors
+        closeButton
+      />
     </QueryClientProvider>
   );
 }
