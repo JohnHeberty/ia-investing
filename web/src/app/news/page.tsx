@@ -7,6 +7,7 @@ import type { Route } from "next";
 import {
   NewsDataContext,
   useNewsData,
+  useNewsValue,
   useSourceMutations,
 } from "@/hooks/use-news";
 import type { NewsDataValue } from "@/hooks/use-news";
@@ -292,7 +293,7 @@ export default function NewsPage() {
 }
 
 function NewsDataProvider() {
-  const value = useNewsData();
+  const value = useNewsValue();
   return (
     <NewsDataContext.Provider value={value}>
       <NewsContent />
