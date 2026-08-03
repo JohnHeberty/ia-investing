@@ -2,6 +2,8 @@
 
 import { Suspense } from "react";
 import { Newspaper, TrendingUp, TrendingDown } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
 import { useNews } from "@/hooks/use-news";
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton } from "@/components/data-state-components";
@@ -38,7 +40,12 @@ function NewsContent() {
   return (
     <div className="section-gap">
       <header className="page-head">
-        <div className="eyebrow"><Newspaper size={14} /> Fontes &amp; Impacto</div>
+        <div className="eyebrow">
+          <Newspaper size={14} /> Fontes &amp; Impacto
+          <Link href={"/news/sources" as Route} style={{ marginLeft: 16, color: "var(--accent)", fontSize: 13 }}>
+            Gerenciar fontes
+          </Link>
+        </div>
         <h1>Noticias</h1>
         <p className="subtitle">
           Coleta automatica de RSS, classificacao de impacto e monitoramento de tese.
@@ -133,7 +140,9 @@ function NewsContent() {
                 {events.slice(0, 50).map((event) => (
                   <tr key={event.id}>
                     <td>
-                      <Badge tone="neutral">{event.event_type ?? "—"}</Badge>
+                      <Link href={`/news/events/${event.id}` as Route} style={{ color: "var(--accent)", textDecoration: "none" }}>
+                        <Badge tone="neutral">{event.event_type ?? "—"}</Badge>
+                      </Link>
                     </td>
                     <td>
                       <Badge tone={directionTone(event.direction_hint)}>
