@@ -274,7 +274,7 @@ export function useScheduleLastRuns(scheduleIds: string[]) {
 export type TriggerPhase = "idle" | "starting" | "running" | "completed" | "failed" | "timeout";
 
 const POLL_INTERVAL = 2_000;
-const TIMEOUT_MS = 120_000;
+const TIMEOUT_MS = 30_000;
 
 export function useScheduleTrigger(scheduleId: string, description: string, items: ScheduleSummary[]) {
   const queryClient = useQueryClient();
@@ -289,23 +289,26 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
   useEffect(() => {
     if (phase === "idle") return;
 
-    if (phase === "starting" || phase === "running") {
-      if (runningCount > 0 && phase === "starting") {
-        setPhase("running");
-      } else if (phase === "running" && runningCount === 0) {
-        if (currentLastRunAt && currentLastRunAt !== lastRunAtRef.current) {
-          const lastStatus = schedule?.last_run_status;
-          setPhase(lastStatus === "failed" ? "failed" : "completed");
-        }
-      }
-    }
-
-    if (phase === "starting" || phase === "running") {
-      if (Date.now() - startedAtRef.current > TIMEOUT_MS) {
-        setPhase("timeout");
+    if (phase === "starting" && runningCount > 0) {
+      setPhase("running");
+    } else if (phase === "running" && runningCount === 0) {
+      if (currentLastRunAt && currentLastRunAt !== lastRunAtRef.current) {
+        const lastStatus = schedule?.last_run_status;
+        setPhase(lastStatus === "failed" ? "failed" : "completed");
       }
     }
   }, [phase, runningCount, currentLastRunAt, schedule?.last_run_status]);
+
+  useEffect(() => {
+    if (phase !== "starting" && phase !== "running") return;
+    const interval = setInterval(() => {
+      if (Date.now() - startedAtRef.current > TIMEOUT_MS) {
+        setPhase("timeout");
+        clearInterval(interval);
+      }
+    }, 1_000);
+    return () => clearInterval(interval);
+  }, [phase]);
 
   useEffect(() => {
     if (phase === "completed") {
