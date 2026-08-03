@@ -123,6 +123,9 @@ export async function POST(request: NextRequest) {
       "approval:read",
       "approval:decide",
       "market_data:read",
+      "news:read",
+      "news:write",
+      "news:manage",
     ],
   });
 
