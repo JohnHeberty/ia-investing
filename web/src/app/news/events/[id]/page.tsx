@@ -56,10 +56,10 @@ function EventDetailContent({ eventId }: { eventId: string }) {
           {" / Evento"}
         </div>
         <h1>Detalhe do Evento</h1>
-        <p className="subtitle">
+        <div className="subtitle">
           Evento detectado via analise de noticias.
           <AsOfIndicator />
-        </p>
+        </div>
       </header>
 
       <div className="grid grid-4">

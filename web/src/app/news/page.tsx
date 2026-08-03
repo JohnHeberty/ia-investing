@@ -42,10 +42,10 @@ function NewsContent() {
           </Link>
         </div>
         <h1>Noticias</h1>
-        <p className="subtitle">
+        <div className="subtitle">
           Coleta automatica de RSS, classificacao de impacto e monitoramento de tese.
           <AsOfIndicator />
-        </p>
+        </div>
       </header>
 
       <div className="grid grid-4">

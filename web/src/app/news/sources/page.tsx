@@ -84,10 +84,10 @@ function SourcesContent() {
       <header className="page-head">
         <div className="eyebrow"><Newspaper size={14} /> Cadastro</div>
         <h1>Fontes RSS</h1>
-        <p className="subtitle">
+        <div className="subtitle">
           Gerencie as fontes de noticias e visualize metricas de coleta.
           <AsOfIndicator />
-        </p>
+        </div>
       </header>
 
       {stats && (
