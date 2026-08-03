@@ -387,3 +387,204 @@ async def list_detected_events(
         })
 
     return events, total
+
+
+async def get_detected_event(
+    session: AsyncSession, event_id: UUID
+) -> dict[str, Any] | None:
+    """Get a detected event with its impacts."""
+    event = await session.get(DetectedEvent, event_id)
+    if event is None:
+        return None
+
+    impacts = (await session.execute(
+        sa.select(EventImpact).where(EventImpact.event_id == event_id)
+    )).scalars().all()
+
+    return {
+        "id": str(event.id),
+        "news_item_id": str(event.news_item_id) if event.news_item_id else None,
+        "issuer_id": str(event.issuer_id) if event.issuer_id else None,
+        "event_type": event.event_type,
+        "description": event.description,
+        "materiality_score": event.materiality_score,
+        "direction_hint": event.direction_hint,
+        "time_horizon": event.time_horizon,
+        "affected_metrics": event.affected_metrics,
+        "created_at": event.created_at.isoformat() if event.created_at else None,
+        "impacts": [
+            {
+                "id": str(imp.id),
+                "thesis_id": str(imp.thesis_id) if imp.thesis_id else None,
+                "impact_score": imp.impact_score,
+                "confidence": imp.confidence,
+                "reasoning": imp.reasoning,
+                "thesis_effect": imp.thesis_effect,
+                "created_at": imp.created_at.isoformat() if imp.created_at else None,
+            }
+            for imp in impacts
+        ],
+    }
+
+
+async def list_news_sources(
+    session: AsyncSession,
+    is_active: bool | None = None,
+) -> list[dict[str, Any]]:
+    """List all news sources."""
+    query = sa.select(NewsSource)
+    if is_active is not None:
+        query = query.where(NewsSource.is_active == is_active)
+    result = await session.execute(query.order_by(NewsSource.name))
+    return [
+        {
+            "id": str(row.id),
+            "name": row.name,
+            "url_pattern": row.url_pattern,
+            "trust_level": row.trust_level,
+            "source_type": row.source_type,
+            "is_active": row.is_active,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in result.scalars()
+    ]
+
+
+async def create_news_source(
+    session: AsyncSession,
+    name: str,
+    url_pattern: str | None = None,
+    source_type: str | None = None,
+    trust_level: int = 3,
+) -> dict[str, Any]:
+    """Create a new news source."""
+    source = NewsSource(
+        name=name,
+        url_pattern=url_pattern,
+        source_type=source_type,
+        trust_level=trust_level,
+        is_active=True,
+    )
+    session.add(source)
+    await session.flush()
+    return {
+        "id": str(source.id),
+        "name": source.name,
+        "url_pattern": source.url_pattern,
+        "trust_level": source.trust_level,
+        "source_type": source.source_type,
+        "is_active": source.is_active,
+    }
+
+
+async def get_news_stats(session: AsyncSession) -> dict[str, Any]:
+    """Get aggregated news statistics."""
+    total_items = (await session.execute(
+        sa.select(sa.func.count(NewsItem.id))
+    )).scalar() or 0
+
+    processed_items = (await session.execute(
+        sa.select(sa.func.count(NewsItem.id)).where(NewsItem.is_processed == True)  # noqa: E712
+    )).scalar() or 0
+
+    total_events = (await session.execute(
+        sa.select(sa.func.count(DetectedEvent.id))
+    )).scalar() or 0
+
+    positive_events = (await session.execute(
+        sa.select(sa.func.count(DetectedEvent.id)).where(
+            DetectedEvent.direction_hint == "positive"
+        )
+    )).scalar() or 0
+
+    negative_events = (await session.execute(
+        sa.select(sa.func.count(DetectedEvent.id)).where(
+            DetectedEvent.direction_hint == "negative"
+        )
+    )).scalar() or 0
+
+    total_impacts = (await session.execute(
+        sa.select(sa.func.count(EventImpact.id))
+    )).scalar() or 0
+
+    total_sources = (await session.execute(
+        sa.select(sa.func.count(NewsSource.id)).where(NewsSource.is_active == True)  # noqa: E712
+    )).scalar() or 0
+
+    return {
+        "total_items": total_items,
+        "processed_items": processed_items,
+        "unprocessed_items": total_items - processed_items,
+        "total_events": total_events,
+        "positive_events": positive_events,
+        "negative_events": negative_events,
+        "neutral_events": total_events - positive_events - negative_events,
+        "total_impacts": total_impacts,
+        "active_sources": total_sources,
+    }
+
+
+async def get_portfolio_impacts(
+    session: AsyncSession,
+    limit: int = 50,
+) -> list[dict[str, Any]]:
+    """Cross-reference news impacts with portfolio positions."""
+    from database.models.portfolio_models import Portfolio, Position
+
+    recent_events = (await session.execute(
+        sa.select(DetectedEvent)
+        .where(DetectedEvent.created_at >= sa.func.now() - __import__("datetime").timedelta(days=7))
+        .order_by(DetectedEvent.materiality_score.desc().nullslast())
+        .limit(limit)
+    )).scalars().all()
+
+    if not recent_events:
+        return []
+
+    issuer_ids = {e.issuer_id for e in recent_events if e.issuer_id}
+
+    positions = (await session.execute(
+        sa.select(
+            Position.issuer_id,
+            Position.portfolio_id,
+            Position.quantity,
+            Position.ticker_symbol,
+            Portfolio.name.label("portfolio_name"),
+        )
+        .join(Portfolio, Portfolio.id == Position.portfolio_id)
+        .where(
+            Position.issuer_id.in_(issuer_ids),
+        )
+    )).all()
+
+    issuer_portfolios: dict[str, list[dict[str, Any]]] = {}
+    for pos in positions:
+        key = str(pos.issuer_id)
+        if key not in issuer_portfolios:
+            issuer_portfolios[key] = []
+        issuer_portfolios[key].append({
+            "portfolio_id": str(pos.portfolio_id),
+            "portfolio_name": pos.portfolio_name,
+            "quantity": float(pos.quantity) if pos.quantity else 0,
+            "ticker_symbol": pos.ticker_symbol,
+        })
+
+    results = []
+    for event in recent_events:
+        if not event.issuer_id:
+            continue
+        key = str(event.issuer_id)
+        if key in issuer_portfolios:
+            for port_info in issuer_portfolios[key]:
+                results.append({
+                    "event_id": str(event.id),
+                    "event_type": event.event_type,
+                    "materiality_score": event.materiality_score,
+                    "direction_hint": event.direction_hint,
+                    "issuer_id": key,
+                    "portfolio_id": port_info["portfolio_id"],
+                    "portfolio_name": port_info["portfolio_name"],
+                    "event_created_at": event.created_at.isoformat() if event.created_at else None,
+                })
+
+    return results

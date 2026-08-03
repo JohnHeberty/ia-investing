@@ -118,7 +118,7 @@ class EventImpact(Base):
         sa.ForeignKey("detected_events.id", ondelete="CASCADE"),
         nullable=False,
     )
-    thesis_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("investment_theses.id", ondelete="SET NULL"))
+    thesis_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("research_theses.id", ondelete="SET NULL"))
 
     impact_score: Mapped[float | None] = mapped_column(sa.Float)  # -1.0 a +1.0
     confidence: Mapped[float | None] = mapped_column(sa.Float)
