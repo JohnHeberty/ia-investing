@@ -32,6 +32,14 @@ from schemas._news import NewsAnalysis
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_SOURCE_TRUST_LEVEL = 3
+DEFAULT_MAX_RESULTS = 20
+DEFAULT_LIST_LIMIT = 50
+DEFAULT_PORTFOLIO_IMPACT_LIMIT = 50
+NEWS_DEDUP_WINDOW_DAYS = 7
+LLM_ANALYSIS_TIMEOUT_S = 30.0
+LLM_BODY_CHAR_LIMIT = 2000
+
 _NEWS_SYSTEM_PROMPT = """\
 Você é um analista de notícias financeiras especializado no mercado brasileiro.
 Analise a notícia fornecida e retorne um JSON com a seguinte estrutura:
@@ -63,7 +71,7 @@ async def _get_or_create_source(session: AsyncSession, source_name: str) -> News
     if source is None:
         source = NewsSource(
             name=source_name,
-            trust_level=3,
+            trust_level=DEFAULT_SOURCE_TRUST_LEVEL,
             source_type="rss",
             is_active=True,
         )
@@ -84,7 +92,7 @@ async def _load_existing_hashes(session: AsyncSession) -> set[str]:
     result = await session.execute(
         sa.select(NewsItem.raw_data["content_hash"].as_string()).where(
             NewsItem.raw_data["content_hash"].isnot(None),
-            NewsItem.created_at >= sa.func.now() - timedelta(days=7),
+            NewsItem.created_at >= sa.func.now() - timedelta(days=NEWS_DEDUP_WINDOW_DAYS),
         )
     )
     return {row[0] for row in result if row[0]}
@@ -142,7 +150,7 @@ async def _persist_articles(
 async def fetch_and_persist_news_items(
     issuer_id: UUID,
     session: AsyncSession,
-    max_results: int = 20,
+    max_results: int = DEFAULT_MAX_RESULTS,
 ) -> list[dict[str, Any]]:
     """Fetch RSS articles for an issuer's tickers and persist new items.
 
@@ -213,7 +221,7 @@ async def generate_llm_news_analysis(title: str, body: str) -> NewsAnalysis | No
 
         user_msg = f"""Título: {title}
 
-Corpo: {body[:2000]}"""
+Corpo: {body[:LLM_BODY_CHAR_LIMIT]}"""
 
         request = ChatCompletionRequest(
             messages=[
@@ -227,7 +235,7 @@ Corpo: {body[:2000]}"""
 
         response = await asyncio.wait_for(
             provider.gateway.chat_completion(request),
-            timeout=30.0,
+            timeout=LLM_ANALYSIS_TIMEOUT_S,
         )
         content = response.content
 
@@ -239,7 +247,7 @@ Corpo: {body[:2000]}"""
 
         return None
     except TimeoutError:
-        logger.warning("LLM news analysis timed out after 30s")
+        logger.warning("LLM news analysis timed out after %.0fs", LLM_ANALYSIS_TIMEOUT_S)
         return None
     except Exception as exc:
         logger.warning("LLM news analysis failed: %s", exc)
@@ -251,9 +259,7 @@ async def _resolve_issuer_ids_from_tickers(session: AsyncSession, affected_issue
     tickers = list({item.get("ticker", "") for item in affected_issuers if item.get("ticker")})
     if not tickers:
         return []
-    result = await session.execute(
-        sa.select(Ticker.issuer_id).where(Ticker.symbol.in_(tickers)).distinct()
-    )
+    result = await session.execute(sa.select(Ticker.issuer_id).where(Ticker.symbol.in_(tickers)).distinct())
     return [row[0] for row in result]
 
 
@@ -271,9 +277,7 @@ async def analyze_news_item(
         return {"status": "not_found", "news_item_id": str(news_item_id)}
 
     existing = (
-        await session.execute(
-            sa.select(DetectedEvent.id).where(DetectedEvent.news_item_id == news_item_id).limit(1)
-        )
+        await session.execute(sa.select(DetectedEvent.id).where(DetectedEvent.news_item_id == news_item_id).limit(1))
     ).scalar_one_or_none()
     if existing is not None:
         logger.info("News item %s already analyzed (event %s), skipping", news_item_id, existing)
@@ -368,28 +372,32 @@ async def list_news_items(
     session: AsyncSession,
     issuer_id: UUID | None = None,
     is_processed: bool | None = None,
-    limit: int = 50,
+    limit: int = DEFAULT_LIST_LIMIT,
     offset: int = 0,
 ) -> tuple[list[dict[str, Any]], int]:
     """List news items with optional filtering. Returns (items, total)."""
-    query = sa.select(NewsItem, NewsSource.name.label("source_name")).join(
-        NewsSource, NewsSource.id == NewsItem.source_id, isouter=True
-    ).distinct()
-    count_query = sa.select(sa.func.count(sa.distinct(NewsItem.id)))
+    base = sa.select(NewsItem.id).distinct()
+    if issuer_id is not None:
+        base = base.join(NewsEntityLink, NewsEntityLink.news_item_id == NewsItem.id).where(
+            NewsEntityLink.issuer_id == issuer_id
+        )
+    if is_processed is not None:
+        base = base.where(NewsItem.is_processed.is_(is_processed))
 
+    count_query = sa.select(sa.func.count()).select_from(base.subquery())
+    total = (await session.execute(count_query)).scalar() or 0
+
+    query = (
+        sa.select(NewsItem, NewsSource.name.label("source_name"))
+        .join(NewsSource, NewsSource.id == NewsItem.source_id, isouter=True)
+        .distinct()
+    )
     if issuer_id is not None:
         query = query.join(NewsEntityLink, NewsEntityLink.news_item_id == NewsItem.id).where(
             NewsEntityLink.issuer_id == issuer_id
         )
-        count_query = count_query.join(NewsEntityLink, NewsEntityLink.news_item_id == NewsItem.id).where(
-            NewsEntityLink.issuer_id == issuer_id
-        )
-
     if is_processed is not None:
         query = query.where(NewsItem.is_processed.is_(is_processed))
-        count_query = count_query.where(NewsItem.is_processed.is_(is_processed))
-
-    total = (await session.execute(count_query)).scalar() or 0
 
     result = await session.execute(query.order_by(NewsItem.created_at.desc()).limit(limit).offset(offset))
     items = []
@@ -418,7 +426,7 @@ async def list_news_items(
 async def list_detected_events(
     session: AsyncSession,
     issuer_id: UUID | None = None,
-    limit: int = 50,
+    limit: int = DEFAULT_LIST_LIMIT,
     offset: int = 0,
 ) -> tuple[list[dict[str, Any]], int]:
     """List detected events with optional issuer filtering."""
@@ -514,9 +522,13 @@ async def create_news_source(
     name: str,
     url_pattern: str | None = None,
     source_type: str | None = None,
-    trust_level: int = 3,
+    trust_level: int = DEFAULT_SOURCE_TRUST_LEVEL,
 ) -> dict[str, Any]:
-    """Create a new news source."""
+    """Create a new news source. Raises ValueError on duplicate name."""
+    existing = (await session.execute(sa.select(NewsSource).where(NewsSource.name == name))).scalar_one_or_none()
+    if existing is not None:
+        raise ValueError(f"A source with name '{name}' already exists")
+
     source = NewsSource(
         name=name,
         url_pattern=url_pattern,
@@ -540,9 +552,7 @@ async def get_news_stats(session: AsyncSession) -> dict[str, Any]:
     """Get aggregated news statistics using separate subqueries to avoid cartesian products."""
     total_items = (await session.execute(sa.select(sa.func.count(NewsItem.id)))).scalar() or 0
     processed_items = (
-        await session.execute(
-            sa.select(sa.func.count(NewsItem.id)).where(NewsItem.is_processed.is_(True))
-        )
+        await session.execute(sa.select(sa.func.count(NewsItem.id)).where(NewsItem.is_processed.is_(True)))
     ).scalar() or 0
 
     total_events = (await session.execute(sa.select(sa.func.count(DetectedEvent.id)))).scalar() or 0
@@ -559,9 +569,7 @@ async def get_news_stats(session: AsyncSession) -> dict[str, Any]:
 
     total_impacts = (await session.execute(sa.select(sa.func.count(EventImpact.id)))).scalar() or 0
     active_sources = (
-        await session.execute(
-            sa.select(sa.func.count(NewsSource.id)).where(NewsSource.is_active.is_(True))
-        )
+        await session.execute(sa.select(sa.func.count(NewsSource.id)).where(NewsSource.is_active.is_(True)))
     ).scalar() or 0
 
     return {
@@ -579,7 +587,7 @@ async def get_news_stats(session: AsyncSession) -> dict[str, Any]:
 
 async def get_portfolio_impacts(
     session: AsyncSession,
-    limit: int = 50,
+    limit: int = DEFAULT_PORTFOLIO_IMPACT_LIMIT,
 ) -> list[dict[str, Any]]:
     """Cross-reference news impacts with portfolio positions."""
     from database.models.portfolio_models import Portfolio, Position
@@ -588,7 +596,7 @@ async def get_portfolio_impacts(
         (
             await session.execute(
                 sa.select(DetectedEvent)
-                .where(DetectedEvent.created_at >= sa.func.now() - timedelta(days=7))
+                .where(DetectedEvent.created_at >= sa.func.now() - timedelta(days=NEWS_DEDUP_WINDOW_DAYS))
                 .order_by(DetectedEvent.materiality_score.desc().nullslast())
                 .limit(limit)
             )

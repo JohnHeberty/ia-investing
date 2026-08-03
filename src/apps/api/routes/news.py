@@ -6,13 +6,14 @@ from datetime import datetime
 from typing import Any
 from uuid import UUID
 
+import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, require_permission
 from database.core import get_async_session
-from database.models.news import NewsItem
+from database.models.news import NewsItem, NewsSource
 from ia_investing.news.service import (
     analyze_news_item,
     create_news_source,
@@ -142,15 +143,13 @@ async def get_news_item(
     _auth: AuthContext = Depends(require_permission("news:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> NewsItemV1:
-    import sqlalchemy as sa
-
-    from database.models.news import NewsSource
-
-    row = (await session.execute(
-        sa.select(NewsItem, NewsSource.name.label("source_name"))
-        .join(NewsSource, NewsSource.id == NewsItem.source_id, isouter=True)
-        .where(NewsItem.id == item_id)
-    )).first()
+    row = (
+        await session.execute(
+            sa.select(NewsItem, NewsSource.name.label("source_name"))
+            .join(NewsSource, NewsSource.id == NewsItem.source_id, isouter=True)
+            .where(NewsItem.id == item_id)
+        )
+    ).first()
     if row is None:
         raise HTTPException(status_code=404, detail="News item not found")
     item, source_name = row
@@ -258,13 +257,16 @@ async def create_source(
     _auth: AuthContext = Depends(require_permission("news:manage")),
     session: AsyncSession = Depends(get_async_session),
 ) -> NewsSourceV1:
-    source = await create_news_source(
-        session,
-        name=body.name,
-        url_pattern=body.url_pattern,
-        source_type=body.source_type,
-        trust_level=body.trust_level,
-    )
+    try:
+        source = await create_news_source(
+            session,
+            name=body.name,
+            url_pattern=body.url_pattern,
+            source_type=body.source_type,
+            trust_level=body.trust_level,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return NewsSourceV1.model_validate(source)
 
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { createContext, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bffFetch, queryKeys } from "@/lib/api-client";
 import type { DataState } from "@/components/domain";
@@ -54,21 +55,43 @@ export interface NewsStats {
   active_sources: number;
 }
 
-export function useNews() {
+export interface NewsDataValue {
+  items: NewsItem[];
+  events: DetectedEvent[];
+  sources: NewsSource[];
+  stats: NewsStats | undefined;
+  totalItems: number;
+  totalEvents: number;
+  processedCount: number;
+  unprocessedCount: number;
+  positiveEvents: number;
+  negativeEvents: number;
+  isLoading: boolean;
+  isError: boolean;
+  error: unknown;
+  dataState: DataState;
+  refetch: () => Promise<unknown[]>;
+}
+
+export const NewsDataContext = createContext<NewsDataValue | null>(null);
+
+export function useNewsData(): NewsDataValue {
+  const ctx = useContext(NewsDataContext);
+  if (!ctx) throw new Error("useNewsData must be inside NewsDataProvider");
+  return ctx;
+}
+
+function useNewsQueries() {
   const itemsQuery = useQuery({
     queryKey: queryKeys.newsItems(),
-    queryFn: async () => {
-      return await bffFetch<{ items: NewsItem[]; total: number }>("/api/v1/news/items?limit=100");
-    },
+    queryFn: () => bffFetch<{ items: NewsItem[]; total: number }>("/api/v1/news/items?limit=100"),
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
 
   const eventsQuery = useQuery({
     queryKey: queryKeys.newsEvents(),
-    queryFn: async () => {
-      return await bffFetch<{ items: DetectedEvent[]; total: number }>("/api/v1/news/events?limit=100");
-    },
+    queryFn: () => bffFetch<{ items: DetectedEvent[]; total: number }>("/api/v1/news/events?limit=100"),
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
@@ -84,6 +107,12 @@ export function useNews() {
     queryFn: () => bffFetch<NewsStats>("/api/v1/news/stats"),
     staleTime: 30_000,
   });
+
+  return { itemsQuery, eventsQuery, sourcesQuery, statsQuery };
+}
+
+export function useNewsValue(): NewsDataValue {
+  const { itemsQuery, eventsQuery, sourcesQuery, statsQuery } = useNewsQueries();
 
   const items = itemsQuery.data?.items ?? [];
   const events = eventsQuery.data?.items ?? [];
@@ -124,6 +153,11 @@ export function useNews() {
     dataState,
     refetch: () => Promise.all([itemsQuery.refetch(), eventsQuery.refetch()]),
   };
+}
+
+/** @deprecated Use useNewsData() inside NewsDataProvider instead */
+export function useNews(): NewsDataValue {
+  return useNewsValue();
 }
 
 export function useSourceMutations() {

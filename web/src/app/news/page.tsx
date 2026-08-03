@@ -4,13 +4,19 @@ import { Suspense } from "react";
 import { Newspaper, TrendingUp, TrendingDown, Plus, Check, X } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
-import { useNews, useSourceMutations } from "@/hooks/use-news";
+import {
+  NewsDataContext,
+  useNewsData,
+  useSourceMutations,
+} from "@/hooks/use-news";
+import type { NewsDataValue } from "@/hooks/use-news";
 import { directionTone } from "@/lib/news-helpers";
 import { AsOfIndicator, Badge, DomainTabs, Metric } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton } from "@/components/data-state-components";
 
 function FeedTab() {
-  const { items, events, totalItems, totalEvents, processedCount, unprocessedCount, positiveEvents, negativeEvents } = useNews();
+  const { items, totalItems, totalEvents, processedCount, unprocessedCount, positiveEvents, negativeEvents } =
+    useNewsData();
 
   return (
     <>
@@ -69,8 +75,8 @@ function FeedTab() {
                       )}
                     </td>
                     <td>
-                      <Badge tone={item.is_processed ? "good" : "warn"}>
-                        {item.is_processed ? "Processado" : "Pendente"}
+                      <Badge tone={item.is_processed === true ? "good" : item.is_processed === false ? "warn" : "neutral"}>
+                        {item.is_processed === true ? "Processado" : item.is_processed === false ? "Pendente" : "Desconhecido"}
                       </Badge>
                     </td>
                   </tr>
@@ -85,7 +91,7 @@ function FeedTab() {
 }
 
 function EventsTab() {
-  const { events, totalEvents, positiveEvents, negativeEvents } = useNews();
+  const { events, totalEvents, positiveEvents, negativeEvents } = useNewsData();
 
   return (
     <>
@@ -152,7 +158,7 @@ function EventsTab() {
 }
 
 function SourcesTab() {
-  const { sources, stats } = useNews();
+  const { sources, stats } = useNewsData();
   const { createMutation } = useSourceMutations();
 
   const trustBadge = (level: number | null) => {
@@ -196,6 +202,12 @@ function SourcesTab() {
           </div>
         </div>
 
+        {createMutation.isError && (
+          <div role="alert" style={{ padding: "8px 12px", marginBottom: 16, background: "var(--red)", color: "var(--bg)", borderRadius: 6, fontSize: 12 }}>
+            Erro ao criar fonte: {createMutation.error instanceof Error ? createMutation.error.message : "tente novamente"}
+          </div>
+        )}
+
         {sources.length === 0 ? (
           <div className="subtitle">Nenhuma fonte cadastrada. Use os botoes acima para adicionar.</div>
         ) : (
@@ -238,14 +250,14 @@ function SourcesTab() {
 }
 
 function NewsContent() {
-  const { isLoading, isError, error } = useNews();
+  const newsValue = useNewsData();
 
-  if (isLoading) {
+  if (newsValue.isLoading) {
     return <LoadingSkeleton lines={8} />;
   }
 
-  if (isError) {
-    return <DataStatePanel state="error" title="Erro ao carregar noticias" detail={error instanceof Error ? error.message : String(error ?? "Erro desconhecido")} />;
+  if (newsValue.isError) {
+    return <DataStatePanel state="error" title="Erro ao carregar noticias" detail={newsValue.error instanceof Error ? newsValue.error.message : String(newsValue.error ?? "Erro desconhecido")} />;
   }
 
   return (
@@ -274,7 +286,16 @@ function NewsContent() {
 export default function NewsPage() {
   return (
     <Suspense fallback={<LoadingSkeleton lines={8} />}>
-      <NewsContent />
+      <NewsDataProvider />
     </Suspense>
+  );
+}
+
+function NewsDataProvider() {
+  const value = useNewsData();
+  return (
+    <NewsDataContext.Provider value={value}>
+      <NewsContent />
+    </NewsDataContext.Provider>
   );
 }
