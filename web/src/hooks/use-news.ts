@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bffFetch, queryKeys } from "@/lib/api-client";
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
@@ -32,6 +32,28 @@ export interface DetectedEvent {
   created_at: string | null;
 }
 
+export interface NewsSource {
+  id: string;
+  name: string;
+  url_pattern: string | null;
+  trust_level: number | null;
+  source_type: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+}
+
+export interface NewsStats {
+  total_items: number;
+  processed_items: number;
+  unprocessed_items: number;
+  total_events: number;
+  positive_events: number;
+  negative_events: number;
+  neutral_events: number;
+  total_impacts: number;
+  active_sources: number;
+}
+
 export function useNews() {
   const itemsQuery = useQuery({
     queryKey: queryKeys.newsItems(),
@@ -51,8 +73,22 @@ export function useNews() {
     refetchOnWindowFocus: false,
   });
 
+  const sourcesQuery = useQuery({
+    queryKey: queryKeys.newsSources(),
+    queryFn: () => bffFetch<NewsSource[]>("/api/v1/news/sources"),
+    staleTime: 60_000,
+  });
+
+  const statsQuery = useQuery({
+    queryKey: queryKeys.newsStats(),
+    queryFn: () => bffFetch<NewsStats>("/api/v1/news/stats"),
+    staleTime: 30_000,
+  });
+
   const items = itemsQuery.data?.items ?? [];
   const events = eventsQuery.data?.items ?? [];
+  const sources = sourcesQuery.data ?? [];
+  const stats = statsQuery.data;
   const totalItems = itemsQuery.data?.total ?? 0;
   const totalEvents = eventsQuery.data?.total ?? 0;
 
@@ -74,6 +110,8 @@ export function useNews() {
   return {
     items,
     events,
+    sources,
+    stats,
     totalItems,
     totalEvents,
     processedCount,
@@ -86,4 +124,23 @@ export function useNews() {
     dataState,
     refetch: () => Promise.all([itemsQuery.refetch(), eventsQuery.refetch()]),
   };
+}
+
+export function useSourceMutations() {
+  const queryClient = useQueryClient();
+
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; source_type: string; trust_level: number }) =>
+      bffFetch<NewsSource>("/api/v1/news/sources", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.newsSources() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.newsStats() });
+    },
+  });
+
+  return { createMutation };
 }
