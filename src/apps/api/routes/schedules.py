@@ -5,7 +5,7 @@ import hashlib
 import json
 import logging
 import re
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -40,6 +40,16 @@ _SCHEDULE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
 _SCHEDULE_ID_MAX_LEN = 200
 
 
+_SCHEDULE_AUDIT_MAP: dict[str, str] = {
+    "trigger": "execute",
+    "pause": "execute",
+    "resume": "execute",
+    "delete": "delete",
+    "update": "update",
+    "create": "create",
+}
+
+
 async def _log_schedule_audit(
     session: AsyncSession,
     auth: AuthContext,
@@ -50,6 +60,7 @@ async def _log_schedule_audit(
     from database.models.audit import AuditLogEntry
 
     tenant_id = auth.organization_id or UUID(int=0)
+    audit_action = _SCHEDULE_AUDIT_MAP.get(action, "execute")
 
     prev_hash_result = await session.execute(
         sa.select(AuditLogEntry.hash)
@@ -59,14 +70,14 @@ async def _log_schedule_audit(
     )
     prev_hash = prev_hash_result.scalar_one_or_none()
 
-    now = datetime.now()
+    now = datetime.now(UTC)
     changes = meta or {}
     metadata = {"schedule_id": schedule_id}
     raw = (
         str(prev_hash or "")
         + now.isoformat()
         + str(actor_uuid(auth) or "")
-        + action
+        + audit_action
         + "schedule"
         + ""
         + json.dumps(changes, sort_keys=True, default=str)
@@ -77,7 +88,7 @@ async def _log_schedule_audit(
     entry = AuditLogEntry(
         tenant_id=tenant_id,
         actor_id=actor_uuid(auth),
-        action=action,
+        action=audit_action,
         resource_type="schedule",
         resource_id=None,
         changes=changes,
