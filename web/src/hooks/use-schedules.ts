@@ -271,9 +271,10 @@ export function useScheduleLastRuns(scheduleIds: string[]) {
   };
 }
 
-export type TriggerPhase = "idle" | "starting" | "running" | "completed" | "failed" | "timeout";
+export type TriggerPhase = "idle" | "starting" | "completed" | "failed" | "timeout";
 
-const STARTING_TIMEOUT_MS = 30_000;
+const TRIGGER_POLL_MS = 3_000;
+const TRIGGER_TIMEOUT_MS = 60_000;
 
 export function useScheduleTrigger(scheduleId: string, description: string, items: ScheduleSummary[]) {
   const queryClient = useQueryClient();
@@ -282,32 +283,38 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
   const startedAtRef = useRef<number>(0);
 
   const schedule = items.find((s) => s.schedule_id === scheduleId);
-  const runningCount = schedule?.running_workflows ?? 0;
   const currentLastRunAt = schedule?.last_run_at ?? null;
 
   useEffect(() => {
-    if (phase === "idle") return;
-
-    if (phase === "starting" && runningCount > 0) {
-      setPhase("running");
-    } else if (phase === "running" && runningCount === 0) {
-      if (currentLastRunAt && currentLastRunAt !== lastRunAtRef.current) {
-        const lastStatus = schedule?.last_run_status;
-        setPhase(lastStatus === "failed" ? "failed" : "completed");
-      }
-    }
-  }, [phase, runningCount, currentLastRunAt, schedule?.last_run_status]);
-
-  useEffect(() => {
     if (phase !== "starting") return;
-    const interval = setInterval(() => {
-      if (Date.now() - startedAtRef.current > STARTING_TIMEOUT_MS) {
+
+    const interval = setInterval(async () => {
+      if (Date.now() - startedAtRef.current > TRIGGER_TIMEOUT_MS) {
         setPhase("timeout");
         clearInterval(interval);
+        return;
       }
-    }, 1_000);
+
+      if (currentLastRunAt && currentLastRunAt !== lastRunAtRef.current) {
+        try {
+          const runs = await bffFetch<ScheduleRun[]>(
+            `/api/v1/schedules/${scheduleId}/runs?limit=1`,
+          );
+          const latest = runs[0];
+          if (latest) {
+            setPhase(latest.status === "failed" ? "failed" : "completed");
+            clearInterval(interval);
+            return;
+          }
+        } catch {
+          setPhase("completed");
+          clearInterval(interval);
+        }
+      }
+    }, TRIGGER_POLL_MS);
+
     return () => clearInterval(interval);
-  }, [phase]);
+  }, [phase, currentLastRunAt, scheduleId]);
 
   useEffect(() => {
     if (phase === "completed") {
@@ -321,7 +328,7 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
       return () => clearTimeout(t);
     }
     if (phase === "timeout") {
-      toast.warning(`Worker pode não estar rodando — ${description}`);
+      toast.warning(`Execução pode não ter sido processada — ${description}`);
       const t = setTimeout(() => setPhase("idle"), 3000);
       return () => clearTimeout(t);
     }

@@ -243,7 +243,6 @@ function ScheduleRow({
             <RefreshCw size={12} className={isTriggerBusy ? "animate-spin" : ""} />
             {phase === "idle" ? "Executar"
               : phase === "starting" ? "Iniciando..."
-              : phase === "running" ? "Executando..."
               : phase === "completed" ? "Concluído!"
               : phase === "failed" ? "Falhou!"
               : "Sem resposta"}

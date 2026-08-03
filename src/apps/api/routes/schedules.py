@@ -297,8 +297,6 @@ def _parse_schedule_description(description: Any) -> dict[str, Any]:
     if recent_actions:
         last_action = recent_actions[-1]
         result["last_run_at"] = _safe_get(last_action, "started_at")
-        action_exec = _safe_get(last_action, "action")
-        result["last_run_status"] = "completed" if action_exec else "unknown"
 
     return result
 
