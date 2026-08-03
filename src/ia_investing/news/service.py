@@ -10,10 +10,12 @@ import asyncio
 import hashlib
 import json
 import logging
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from connectors.news import NewsArticle, fetch_google_news_rss, fetch_reuters_rss
@@ -56,9 +58,7 @@ def _content_hash(title: str, url: str) -> str:
 
 
 async def _get_or_create_source(session: AsyncSession, source_name: str) -> NewsSource:
-    result = await session.execute(
-        sa.select(NewsSource).where(NewsSource.name == source_name)
-    )
+    result = await session.execute(sa.select(NewsSource).where(NewsSource.name == source_name))
     source = result.scalar_one_or_none()
     if source is None:
         source = NewsSource(
@@ -67,61 +67,45 @@ async def _get_or_create_source(session: AsyncSession, source_name: str) -> News
             source_type="rss",
             is_active=True,
         )
-        session.add(source)
-        await session.flush()
+        savepoint = await session.begin_nested()
+        try:
+            session.add(source)
+            await session.flush()
+            await savepoint.commit()
+        except IntegrityError:
+            await savepoint.rollback()
+            result = await session.execute(sa.select(NewsSource).where(NewsSource.name == source_name))
+            source = result.scalar_one()
     return source
 
 
-async def fetch_and_persist_news_items(
-    issuer_id: UUID,
-    session: AsyncSession,
-    max_results: int = 20,
-) -> list[dict[str, Any]]:
-    """Fetch RSS articles for an issuer's tickers and persist new items.
-
-    Returns list of newly persisted news item dicts.
-    """
-    tickers = (await session.execute(
-        sa.select(Ticker.symbol).where(Ticker.issuer_id == issuer_id)
-    )).scalars().all()
-
-    if not tickers:
-        logger.info("No tickers found for issuer %s", issuer_id)
-        return []
-
-    all_articles: list[NewsArticle] = []
-    for symbol in tickers:
-        try:
-            articles = await fetch_google_news_rss(symbol, max_results=max_results // len(tickers) + 5)
-            all_articles.extend(articles)
-        except Exception as exc:
-            logger.warning("Failed to fetch Google News for %s: %s", symbol, exc)
-        try:
-            articles = await fetch_reuters_rss(symbol, max_results=max_results // len(tickers) + 5)
-            all_articles.extend(articles)
-        except Exception as exc:
-            logger.warning("Failed to fetch Reuters for %s: %s", symbol, exc)
-
-    if not all_articles:
-        return []
-
-    existing_hashes = set()
+async def _load_existing_hashes(session: AsyncSession) -> set[str]:
+    """Load content hashes from the last 7 days for dedup."""
     result = await session.execute(
         sa.select(NewsItem.raw_data["content_hash"].as_string()).where(
-            NewsItem.raw_data["content_hash"].isnot(None)
+            NewsItem.raw_data["content_hash"].isnot(None),
+            NewsItem.created_at >= sa.func.now() - timedelta(days=7),
         )
     )
-    for row in result:
-        if row[0]:
-            existing_hashes.add(row[0])
+    return {row[0] for row in result if row[0]}
 
+
+async def _persist_articles(
+    session: AsyncSession,
+    all_articles: list[NewsArticle],
+    existing_hashes: set[str],
+) -> list[dict[str, Any]]:
+    """Persist new articles, deduplicating by content hash. Returns persisted items."""
     persisted: list[dict[str, Any]] = []
+    source_cache: dict[str, NewsSource] = {}
     for article in all_articles:
         content_hash = _content_hash(article.title, article.url)
         if content_hash in existing_hashes:
             continue
 
-        source = await _get_or_create_source(session, article.source)
+        if article.source not in source_cache:
+            source_cache[article.source] = await _get_or_create_source(session, article.source)
+        source = source_cache[article.source]
         item = NewsItem(
             source_id=source.id,
             title=article.title,
@@ -133,17 +117,66 @@ async def fetch_and_persist_news_items(
             raw_data={"content_hash": content_hash},
             is_processed=False,
         )
-        session.add(item)
+        savepoint = await session.begin_nested()
+        try:
+            session.add(item)
+            await session.flush()
+            await savepoint.commit()
+        except IntegrityError:
+            await savepoint.rollback()
+            existing_hashes.add(content_hash)
+            continue
         existing_hashes.add(content_hash)
-        persisted.append({
-            "id": item.id,
-            "title": article.title,
-            "url": article.url,
-            "source": article.source,
-            "published_at": article.published_at.isoformat(),
-        })
+        persisted.append(
+            {
+                "id": item.id,
+                "title": article.title,
+                "url": article.url,
+                "source": article.source,
+                "published_at": article.published_at.isoformat() if article.published_at else None,
+            }
+        )
+    return persisted
 
-    await session.flush()
+
+async def fetch_and_persist_news_items(
+    issuer_id: UUID,
+    session: AsyncSession,
+    max_results: int = 20,
+) -> list[dict[str, Any]]:
+    """Fetch RSS articles for an issuer's tickers and persist new items.
+
+    Returns list of newly persisted news item dicts.
+    """
+    tickers = (await session.execute(sa.select(Ticker.symbol).where(Ticker.issuer_id == issuer_id))).scalars().all()
+
+    if not tickers:
+        logger.info("No tickers found for issuer %s", issuer_id)
+        return []
+
+    all_articles: list[NewsArticle] = []
+
+    async def _safe_fetch(fetch_fn: Any, symbol: str) -> list[NewsArticle]:
+        try:
+            return await fetch_fn(symbol, max_results=max_results // len(tickers) + 5)
+        except Exception as exc:
+            logger.warning("Failed to fetch %s for %s: %s", fetch_fn.__name__, symbol, exc)
+            return []
+
+    fetch_tasks = []
+    for symbol in tickers:
+        fetch_tasks.append(_safe_fetch(fetch_google_news_rss, symbol))
+        fetch_tasks.append(_safe_fetch(fetch_reuters_rss, symbol))
+
+    results = await asyncio.gather(*fetch_tasks)
+    for articles in results:
+        all_articles.extend(articles)
+
+    if not all_articles:
+        return []
+
+    existing_hashes = await _load_existing_hashes(session)
+    persisted = await _persist_articles(session, all_articles, existing_hashes)
     logger.info("Persisted %d new news items for issuer %s", len(persisted), issuer_id)
     return persisted
 
@@ -155,12 +188,14 @@ async def generate_llm_news_analysis(title: str, body: str) -> NewsAnalysis | No
     """
     try:
         from ia_investing.settings import get_settings
+
         settings = get_settings()
 
         if settings.ai.provider == "mock":
             return None
 
         from ia_investing.ai.gateway import ChatCompletionRequest, ChatMessage, create_gateway_provider
+
         gw = settings.ai.gateway
 
         if not gw.base_url or not gw.api_key.get_secret_value():
@@ -211,15 +246,13 @@ Corpo: {body[:2000]}"""
         return None
 
 
-async def _resolve_issuer_ids_from_tickers(
-    session: AsyncSession, affected_issuers: list[dict[str, Any]]
-) -> list[UUID]:
+async def _resolve_issuer_ids_from_tickers(session: AsyncSession, affected_issuers: list[dict[str, Any]]) -> list[UUID]:
     """Resolve ticker symbols to issuer UUIDs."""
-    tickers = [item.get("ticker", "") for item in affected_issuers if item.get("ticker")]
+    tickers = list({item.get("ticker", "") for item in affected_issuers if item.get("ticker")})
     if not tickers:
         return []
     result = await session.execute(
-        sa.select(Ticker.issuer_id, Ticker.symbol).where(Ticker.symbol.in_(tickers))
+        sa.select(Ticker.issuer_id).where(Ticker.symbol.in_(tickers)).distinct()
     )
     return [row[0] for row in result]
 
@@ -235,7 +268,16 @@ async def analyze_news_item(
     item = await session.get(NewsItem, news_item_id)
     if item is None:
         logger.warning("News item %s not found", news_item_id)
-        return None
+        return {"status": "not_found", "news_item_id": str(news_item_id)}
+
+    existing = (
+        await session.execute(
+            sa.select(DetectedEvent.id).where(DetectedEvent.news_item_id == news_item_id).limit(1)
+        )
+    ).scalar_one_or_none()
+    if existing is not None:
+        logger.info("News item %s already analyzed (event %s), skipping", news_item_id, existing)
+        return {"status": "already_analyzed", "news_item_id": str(news_item_id), "event_id": str(existing)}
 
     title = item.title or ""
     body = item.body or ""
@@ -243,9 +285,14 @@ async def analyze_news_item(
     if analysis is None:
         return {"status": "llm_unavailable", "news_item_id": str(news_item_id)}
 
-    affected_issuer_ids = await _resolve_issuer_ids_from_tickers(
-        session, [{"ticker": t} for t in (analysis.model_dump().get("affected_issuers") or [])]
-    )
+    affected_issuer_ids = await _resolve_issuer_ids_from_tickers(session, analysis.affected_issuers or [])
+
+    if not affected_issuer_ids:
+        logger.info(
+            "News item %s: no issuer matched for tickers %s — creating unresolved event",
+            news_item_id,
+            [i.get("ticker") for i in (analysis.affected_issuers or [])],
+        )
 
     event = DetectedEvent(
         news_item_id=news_item_id,
@@ -268,12 +315,20 @@ async def analyze_news_item(
         )
         session.add(link)
 
-    active_theses = (await session.execute(
-        sa.select(ResearchThesis.id).where(
-            ResearchThesis.issuer_id.in_(affected_issuer_ids),
-            ResearchThesis.status == "active",
+    active_theses: list[UUID] = []
+    if affected_issuer_ids:
+        active_theses = list(
+            (
+                await session.execute(
+                    sa.select(ResearchThesis.id).where(
+                        ResearchThesis.issuer_id.in_(affected_issuer_ids),
+                        ResearchThesis.status == "active",
+                    )
+                )
+            )
+            .scalars()
+            .all()
         )
-    )).scalars().all()
 
     for thesis_id in active_theses:
         impact = EventImpact(
@@ -292,7 +347,10 @@ async def analyze_news_item(
 
     logger.info(
         "Analyzed news item %s: event_type=%s verdict=%s materiality=%.2f",
-        news_item_id, analysis.event_type, analysis.verdict, analysis.materiality_score,
+        news_item_id,
+        analysis.event_type,
+        analysis.verdict,
+        analysis.materiality_score,
     )
     return {
         "status": "analyzed",
@@ -314,8 +372,10 @@ async def list_news_items(
     offset: int = 0,
 ) -> tuple[list[dict[str, Any]], int]:
     """List news items with optional filtering. Returns (items, total)."""
-    query = sa.select(NewsItem)
-    count_query = sa.select(sa.func.count(NewsItem.id))
+    query = sa.select(NewsItem, NewsSource.name.label("source_name")).join(
+        NewsSource, NewsSource.id == NewsItem.source_id, isouter=True
+    ).distinct()
+    count_query = sa.select(sa.func.count(sa.distinct(NewsItem.id)))
 
     if issuer_id is not None:
         query = query.join(NewsEntityLink, NewsEntityLink.news_item_id == NewsItem.id).where(
@@ -326,28 +386,31 @@ async def list_news_items(
         )
 
     if is_processed is not None:
-        query = query.where(NewsItem.is_processed == is_processed)
-        count_query = count_query.where(NewsItem.is_processed == is_processed)
+        query = query.where(NewsItem.is_processed.is_(is_processed))
+        count_query = count_query.where(NewsItem.is_processed.is_(is_processed))
 
     total = (await session.execute(count_query)).scalar() or 0
 
-    result = await session.execute(
-        query.order_by(NewsItem.created_at.desc()).limit(limit).offset(offset)
-    )
+    result = await session.execute(query.order_by(NewsItem.created_at.desc()).limit(limit).offset(offset))
     items = []
-    for row in result.scalars():
-        items.append({
-            "id": str(row.id),
-            "title": row.title,
-            "body": row.body,
-            "url": row.url,
-            "source_id": str(row.source_id),
-            "published_at": row.published_at.isoformat() if row.published_at else None,
-            "language": row.language,
-            "sentiment_score": row.sentiment_score,
-            "is_processed": row.is_processed,
-            "created_at": row.created_at.isoformat() if row.created_at else None,
-        })
+    for row in result:
+        item = row[0]
+        source_name = row[1]
+        items.append(
+            {
+                "id": str(item.id),
+                "title": item.title,
+                "body": item.body,
+                "url": item.url,
+                "source_id": str(item.source_id),
+                "source_name": source_name,
+                "published_at": item.published_at.isoformat() if item.published_at else None,
+                "language": item.language,
+                "sentiment_score": item.sentiment_score,
+                "is_processed": item.is_processed,
+                "created_at": item.created_at.isoformat() if item.created_at else None,
+            }
+        )
 
     return items, total
 
@@ -368,38 +431,34 @@ async def list_detected_events(
 
     total = (await session.execute(count_query)).scalar() or 0
 
-    result = await session.execute(
-        query.order_by(DetectedEvent.created_at.desc()).limit(limit).offset(offset)
-    )
+    result = await session.execute(query.order_by(DetectedEvent.created_at.desc()).limit(limit).offset(offset))
     events = []
     for row in result.scalars():
-        events.append({
-            "id": str(row.id),
-            "news_item_id": str(row.news_item_id) if row.news_item_id else None,
-            "issuer_id": str(row.issuer_id) if row.issuer_id else None,
-            "event_type": row.event_type,
-            "description": row.description,
-            "materiality_score": row.materiality_score,
-            "direction_hint": row.direction_hint,
-            "time_horizon": row.time_horizon,
-            "affected_metrics": row.affected_metrics,
-            "created_at": row.created_at.isoformat() if row.created_at else None,
-        })
+        events.append(
+            {
+                "id": str(row.id),
+                "news_item_id": str(row.news_item_id) if row.news_item_id else None,
+                "issuer_id": str(row.issuer_id) if row.issuer_id else None,
+                "event_type": row.event_type,
+                "description": row.description,
+                "materiality_score": row.materiality_score,
+                "direction_hint": row.direction_hint,
+                "time_horizon": row.time_horizon,
+                "affected_metrics": row.affected_metrics,
+                "created_at": row.created_at.isoformat() if row.created_at else None,
+            }
+        )
 
     return events, total
 
 
-async def get_detected_event(
-    session: AsyncSession, event_id: UUID
-) -> dict[str, Any] | None:
+async def get_detected_event(session: AsyncSession, event_id: UUID) -> dict[str, Any] | None:
     """Get a detected event with its impacts."""
     event = await session.get(DetectedEvent, event_id)
     if event is None:
         return None
 
-    impacts = (await session.execute(
-        sa.select(EventImpact).where(EventImpact.event_id == event_id)
-    )).scalars().all()
+    impacts = (await session.execute(sa.select(EventImpact).where(EventImpact.event_id == event_id))).scalars().all()
 
     return {
         "id": str(event.id),
@@ -478,38 +537,32 @@ async def create_news_source(
 
 
 async def get_news_stats(session: AsyncSession) -> dict[str, Any]:
-    """Get aggregated news statistics."""
-    total_items = (await session.execute(
-        sa.select(sa.func.count(NewsItem.id))
-    )).scalar() or 0
-
-    processed_items = (await session.execute(
-        sa.select(sa.func.count(NewsItem.id)).where(NewsItem.is_processed == True)  # noqa: E712
-    )).scalar() or 0
-
-    total_events = (await session.execute(
-        sa.select(sa.func.count(DetectedEvent.id))
-    )).scalar() or 0
-
-    positive_events = (await session.execute(
-        sa.select(sa.func.count(DetectedEvent.id)).where(
-            DetectedEvent.direction_hint == "positive"
+    """Get aggregated news statistics using separate subqueries to avoid cartesian products."""
+    total_items = (await session.execute(sa.select(sa.func.count(NewsItem.id)))).scalar() or 0
+    processed_items = (
+        await session.execute(
+            sa.select(sa.func.count(NewsItem.id)).where(NewsItem.is_processed.is_(True))
         )
-    )).scalar() or 0
+    ).scalar() or 0
 
-    negative_events = (await session.execute(
-        sa.select(sa.func.count(DetectedEvent.id)).where(
-            DetectedEvent.direction_hint == "negative"
+    total_events = (await session.execute(sa.select(sa.func.count(DetectedEvent.id)))).scalar() or 0
+    positive_events = (
+        await session.execute(
+            sa.select(sa.func.count(DetectedEvent.id)).where(DetectedEvent.direction_hint == "positive")
         )
-    )).scalar() or 0
+    ).scalar() or 0
+    negative_events = (
+        await session.execute(
+            sa.select(sa.func.count(DetectedEvent.id)).where(DetectedEvent.direction_hint == "negative")
+        )
+    ).scalar() or 0
 
-    total_impacts = (await session.execute(
-        sa.select(sa.func.count(EventImpact.id))
-    )).scalar() or 0
-
-    total_sources = (await session.execute(
-        sa.select(sa.func.count(NewsSource.id)).where(NewsSource.is_active == True)  # noqa: E712
-    )).scalar() or 0
+    total_impacts = (await session.execute(sa.select(sa.func.count(EventImpact.id)))).scalar() or 0
+    active_sources = (
+        await session.execute(
+            sa.select(sa.func.count(NewsSource.id)).where(NewsSource.is_active.is_(True))
+        )
+    ).scalar() or 0
 
     return {
         "total_items": total_items,
@@ -520,7 +573,7 @@ async def get_news_stats(session: AsyncSession) -> dict[str, Any]:
         "negative_events": negative_events,
         "neutral_events": total_events - positive_events - negative_events,
         "total_impacts": total_impacts,
-        "active_sources": total_sources,
+        "active_sources": active_sources,
     }
 
 
@@ -531,43 +584,56 @@ async def get_portfolio_impacts(
     """Cross-reference news impacts with portfolio positions."""
     from database.models.portfolio_models import Portfolio, Position
 
-    recent_events = (await session.execute(
-        sa.select(DetectedEvent)
-        .where(DetectedEvent.created_at >= sa.func.now() - __import__("datetime").timedelta(days=7))
-        .order_by(DetectedEvent.materiality_score.desc().nullslast())
-        .limit(limit)
-    )).scalars().all()
+    recent_events = (
+        (
+            await session.execute(
+                sa.select(DetectedEvent)
+                .where(DetectedEvent.created_at >= sa.func.now() - timedelta(days=7))
+                .order_by(DetectedEvent.materiality_score.desc().nullslast())
+                .limit(limit)
+            )
+        )
+        .scalars()
+        .all()
+    )
 
     if not recent_events:
         return []
 
     issuer_ids = {e.issuer_id for e in recent_events if e.issuer_id}
 
-    positions = (await session.execute(
-        sa.select(
-            Position.issuer_id,
-            Position.portfolio_id,
-            Position.quantity,
-            Position.ticker_symbol,
-            Portfolio.name.label("portfolio_name"),
+    if not issuer_ids:
+        return []
+
+    positions = (
+        await session.execute(
+            sa.select(
+                Position.issuer_id,
+                Position.portfolio_id,
+                Position.quantity,
+                Position.ticker_symbol,
+                Portfolio.name.label("portfolio_name"),
+            )
+            .join(Portfolio, Portfolio.id == Position.portfolio_id)
+            .where(
+                Position.issuer_id.in_(issuer_ids),
+            )
         )
-        .join(Portfolio, Portfolio.id == Position.portfolio_id)
-        .where(
-            Position.issuer_id.in_(issuer_ids),
-        )
-    )).all()
+    ).all()
 
     issuer_portfolios: dict[str, list[dict[str, Any]]] = {}
     for pos in positions:
         key = str(pos.issuer_id)
         if key not in issuer_portfolios:
             issuer_portfolios[key] = []
-        issuer_portfolios[key].append({
-            "portfolio_id": str(pos.portfolio_id),
-            "portfolio_name": pos.portfolio_name,
-            "quantity": float(pos.quantity) if pos.quantity else 0,
-            "ticker_symbol": pos.ticker_symbol,
-        })
+        issuer_portfolios[key].append(
+            {
+                "portfolio_id": str(pos.portfolio_id),
+                "portfolio_name": pos.portfolio_name,
+                "quantity": str(pos.quantity) if pos.quantity else "0",
+                "ticker_symbol": pos.ticker_symbol,
+            }
+        )
 
     results = []
     for event in recent_events:
@@ -576,15 +642,17 @@ async def get_portfolio_impacts(
         key = str(event.issuer_id)
         if key in issuer_portfolios:
             for port_info in issuer_portfolios[key]:
-                results.append({
-                    "event_id": str(event.id),
-                    "event_type": event.event_type,
-                    "materiality_score": event.materiality_score,
-                    "direction_hint": event.direction_hint,
-                    "issuer_id": key,
-                    "portfolio_id": port_info["portfolio_id"],
-                    "portfolio_name": port_info["portfolio_name"],
-                    "event_created_at": event.created_at.isoformat() if event.created_at else None,
-                })
+                results.append(
+                    {
+                        "event_id": str(event.id),
+                        "event_type": event.event_type,
+                        "materiality_score": event.materiality_score,
+                        "direction_hint": event.direction_hint,
+                        "issuer_id": key,
+                        "portfolio_id": port_info["portfolio_id"],
+                        "portfolio_name": port_info["portfolio_name"],
+                        "event_created_at": event.created_at.isoformat() if event.created_at else None,
+                    }
+                )
 
-    return results
+    return results[:limit]

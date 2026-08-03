@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
@@ -21,9 +22,7 @@ async def fetch_news_items(issuer_id: str, max_results: int = 20) -> list[dict[s
         from ia_investing.news.service import fetch_and_persist_news_items
 
         async with session_scope() as session:
-            items = await fetch_and_persist_news_items(
-                UUID(issuer_id), session, max_results=max_results
-            )
+            items = await fetch_and_persist_news_items(UUID(issuer_id), session, max_results=max_results)
             return items
 
 
@@ -47,13 +46,19 @@ async def batch_analyze_news(issuer_id: str, limit: int = 10) -> dict[str, Any]:
         from ia_investing.news.service import analyze_news_item, list_news_items
 
         async with session_scope() as session:
-            items, total = await list_news_items(
-                session, issuer_id=UUID(issuer_id), is_processed=False, limit=limit
-            )
+            items, total = await list_news_items(session, issuer_id=UUID(issuer_id), is_processed=False, limit=limit)
             results = []
             for item in items:
-                result = await analyze_news_item(UUID(item["id"]), session)
-                results.append(result)
+                savepoint = await session.begin_nested()
+                try:
+                    result = await analyze_news_item(UUID(item["id"]), session)
+                    await savepoint.commit()
+                    if result is not None:
+                        results.append(result)
+                except Exception as exc:
+                    await savepoint.rollback()
+                    logger.warning("Failed to analyze news item %s: %s", item["id"], exc)
+                    results.append({"status": "failed", "news_item_id": item["id"]})
             return {
                 "issuer_id": issuer_id,
                 "total_unprocessed": total,
@@ -76,14 +81,20 @@ async def detect_event_duplicates(event_id: str) -> dict[str, Any]:
             if event is None:
                 return {"event_id": event_id, "is_duplicate": False}
 
-            similar = (await session.execute(
-                sa.select(DetectedEvent).where(
-                    DetectedEvent.id != event.id,
-                    DetectedEvent.event_type == event.event_type,
-                    DetectedEvent.issuer_id == event.issuer_id,
-                    DetectedEvent.created_at >= event.created_at - __import__("datetime").timedelta(hours=24),
+            similar = (
+                (
+                    await session.execute(
+                        sa.select(DetectedEvent).where(
+                            DetectedEvent.id != event.id,
+                            DetectedEvent.event_type == event.event_type,
+                            DetectedEvent.issuer_id == event.issuer_id,
+                            DetectedEvent.created_at >= event.created_at - timedelta(hours=24),
+                        )
+                    )
                 )
-            )).scalars().first()
+                .scalars()
+                .first()
+            )
 
             if similar:
                 dup = EventDuplicate(

@@ -38,9 +38,15 @@ class ExtractNewsWorkflow:
             retry_policy=EXTERNAL_IO_RETRY_POLICY,
         )
 
+        fetched_count = 0
+        if isinstance(fetched, dict):
+            fetched_count = len(fetched.get("items", []))
+        elif isinstance(fetched, list):
+            fetched_count = len(fetched)
+
         return {
             "issuer_id": command.issuer_id,
-            "fetched_count": len(fetched) if isinstance(fetched, list) else 0,
+            "fetched_count": fetched_count,
             "analyzed_count": analysis.get("analyzed", 0) if isinstance(analysis, dict) else 0,
             "results": analysis.get("results", []) if isinstance(analysis, dict) else [],
         }

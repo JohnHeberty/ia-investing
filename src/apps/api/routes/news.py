@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, require_permission
 from database.core import get_async_session
+from database.models.news import NewsItem
 from ia_investing.news.service import (
     analyze_news_item,
     create_news_source,
@@ -35,6 +36,7 @@ class NewsItemV1(BaseModel):
     body: str | None
     url: str | None
     source_id: UUID
+    source_name: str | None = None
     published_at: datetime | None
     language: str | None
     sentiment_score: float | None
@@ -81,6 +83,34 @@ class AnalyzeResponseV1(BaseModel):
     thesis_effect: str | None = None
 
 
+class EventImpactV1(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    thesis_id: UUID | None = None
+    impact_score: float | None = None
+    confidence: float | None = None
+    reasoning: str | None = None
+    thesis_effect: str | None = None
+    created_at: datetime | None = None
+
+
+class EventDetailV1(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    news_item_id: UUID | None = None
+    issuer_id: UUID | None = None
+    event_type: str | None = None
+    description: str | None = None
+    materiality_score: float | None = None
+    direction_hint: str | None = None
+    time_horizon: str | None = None
+    affected_metrics: dict[str, Any] | None = None
+    created_at: datetime | None = None
+    impacts: list[EventImpactV1] = []
+
+
 class FetchResponseV1(BaseModel):
     persisted: list[dict[str, Any]]
     count: int
@@ -99,7 +129,7 @@ async def get_news_items(
         session, issuer_id=issuer_id, is_processed=is_processed, limit=limit, offset=offset
     )
     return NewsListResponseV1(
-        items=[NewsItemV1(**item) for item in items],
+        items=[NewsItemV1.model_validate(item) for item in items],
         total=total,
         limit=limit,
         offset=offset,
@@ -112,11 +142,31 @@ async def get_news_item(
     _auth: AuthContext = Depends(require_permission("news:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> NewsItemV1:
-    items, _ = await list_news_items(session, limit=200)
-    for item in items:
-        if item["id"] == str(item_id):
-            return NewsItemV1(**item)
-    raise HTTPException(status_code=404, detail="News item not found")
+    import sqlalchemy as sa
+
+    from database.models.news import NewsSource
+
+    row = (await session.execute(
+        sa.select(NewsItem, NewsSource.name.label("source_name"))
+        .join(NewsSource, NewsSource.id == NewsItem.source_id, isouter=True)
+        .where(NewsItem.id == item_id)
+    )).first()
+    if row is None:
+        raise HTTPException(status_code=404, detail="News item not found")
+    item, source_name = row
+    return NewsItemV1(
+        id=item.id,
+        title=item.title,
+        body=item.body,
+        url=item.url,
+        source_id=item.source_id,
+        source_name=source_name,
+        published_at=item.published_at,
+        language=item.language,
+        sentiment_score=item.sentiment_score,
+        is_processed=item.is_processed,
+        created_at=item.created_at,
+    )
 
 
 @router.post("/fetch/{issuer_id}", response_model=FetchResponseV1)
@@ -139,7 +189,9 @@ async def analyze_news(
     result = await analyze_news_item(item_id, session)
     if result is None:
         raise HTTPException(status_code=503, detail="LLM analysis unavailable")
-    return AnalyzeResponseV1(**result)
+    if result.get("status") == "not_found":
+        raise HTTPException(status_code=404, detail="News item not found")
+    return AnalyzeResponseV1.model_validate(result)
 
 
 @router.get("/events", response_model=EventsListResponseV1)
@@ -150,27 +202,25 @@ async def get_events(
     _auth: AuthContext = Depends(require_permission("news:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> EventsListResponseV1:
-    events, total = await list_detected_events(
-        session, issuer_id=issuer_id, limit=limit, offset=offset
-    )
+    events, total = await list_detected_events(session, issuer_id=issuer_id, limit=limit, offset=offset)
     return EventsListResponseV1(
-        items=[DetectedEventV1(**e) for e in events],
+        items=[DetectedEventV1.model_validate(e) for e in events],
         total=total,
         limit=limit,
         offset=offset,
     )
 
 
-@router.get("/events/{event_id}")
+@router.get("/events/{event_id}", response_model=EventDetailV1)
 async def get_event_detail(
     event_id: UUID,
     _auth: AuthContext = Depends(require_permission("news:read")),
     session: AsyncSession = Depends(get_async_session),
-) -> dict[str, Any]:
+) -> EventDetailV1:
     result = await get_detected_event(session, event_id)
     if result is None:
         raise HTTPException(status_code=404, detail="Event not found")
-    return result
+    return EventDetailV1.model_validate(result)
 
 
 class NewsSourceV1(BaseModel):
@@ -199,7 +249,7 @@ async def get_sources(
     session: AsyncSession = Depends(get_async_session),
 ) -> list[NewsSourceV1]:
     sources = await list_news_sources(session, is_active=is_active)
-    return [NewsSourceV1(**s) for s in sources]
+    return [NewsSourceV1.model_validate(s) for s in sources]
 
 
 @router.post("/sources", response_model=NewsSourceV1)
@@ -215,7 +265,7 @@ async def create_source(
         source_type=body.source_type,
         trust_level=body.trust_level,
     )
-    return NewsSourceV1(**source)
+    return NewsSourceV1.model_validate(source)
 
 
 class NewsStatsResponseV1(BaseModel):
@@ -236,7 +286,7 @@ async def get_stats(
     session: AsyncSession = Depends(get_async_session),
 ) -> NewsStatsResponseV1:
     stats = await get_news_stats(session)
-    return NewsStatsResponseV1(**stats)
+    return NewsStatsResponseV1.model_validate(stats)
 
 
 class PortfolioImpactV1(BaseModel):
@@ -259,4 +309,4 @@ async def get_portfolio_impacts_endpoint(
     session: AsyncSession = Depends(get_async_session),
 ) -> list[PortfolioImpactV1]:
     impacts = await get_portfolio_impacts(session, limit=limit)
-    return [PortfolioImpactV1(**i) for i in impacts]
+    return [PortfolioImpactV1.model_validate(i) for i in impacts]

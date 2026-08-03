@@ -5,6 +5,7 @@ import { Newspaper, TrendingUp, TrendingDown } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useNews } from "@/hooks/use-news";
+import { directionTone } from "@/lib/news-helpers";
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton } from "@/components/data-state-components";
 
@@ -28,14 +29,8 @@ function NewsContent() {
   }
 
   if (isError) {
-    return <DataStatePanel state="error" title="Erro ao carregar noticias" detail={String(error ?? "Erro desconhecido")} />;
+    return <DataStatePanel state="error" title="Erro ao carregar noticias" detail={error instanceof Error ? error.message : String(error ?? "Erro desconhecido")} />;
   }
-
-  const directionTone = (hint: string | null) => {
-    if (hint === "positive") return "good";
-    if (hint === "negative") return "bad";
-    return "neutral";
-  };
 
   return (
     <div className="section-gap">
@@ -84,7 +79,7 @@ function NewsContent() {
                 {items.slice(0, 50).map((item) => (
                   <tr key={item.id}>
                     <td>
-                      {item.url ? (
+                      {item.url && /^https?:\/\//.test(item.url) ? (
                         <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
                           {item.title ?? "—"}
                         </a>
@@ -92,14 +87,14 @@ function NewsContent() {
                         item.title ?? "—"
                       )}
                     </td>
-                    <td>{item.source_id.slice(0, 8)}...</td>
+                    <td>{item.source_name ?? "—"}</td>
                     <td>
                       {item.published_at
                         ? new Date(item.published_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
                         : "—"}
                     </td>
                     <td>
-                      {item.sentiment_score !== null ? (
+                      {item.sentiment_score !== null && Number.isFinite(item.sentiment_score) ? (
                         <Badge tone={item.sentiment_score > 0.1 ? "good" : item.sentiment_score < -0.1 ? "bad" : "neutral"}>
                           {item.sentiment_score.toFixed(2)}
                         </Badge>
@@ -152,7 +147,7 @@ function NewsContent() {
                       </Badge>
                     </td>
                     <td style={{ fontFamily: "var(--font-mono)" }}>
-                      {event.materiality_score !== null ? event.materiality_score.toFixed(2) : "—"}
+                      {event.materiality_score !== null && Number.isFinite(event.materiality_score) ? event.materiality_score.toFixed(2) : "—"}
                     </td>
                     <td>
                       <Badge tone="neutral">{event.time_horizon ?? "—"}</Badge>

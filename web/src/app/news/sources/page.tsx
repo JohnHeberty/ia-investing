@@ -33,13 +33,13 @@ function SourcesContent() {
   const queryClient = useQueryClient();
 
   const sourcesQuery = useQuery({
-    queryKey: ["newsSources"],
+    queryKey: queryKeys.newsSources(),
     queryFn: () => bffFetch<NewsSource[]>("/api/v1/news/sources"),
     staleTime: 60_000,
   });
 
   const statsQuery = useQuery({
-    queryKey: ["newsStats"],
+    queryKey: queryKeys.newsStats(),
     queryFn: () => bffFetch<NewsStats>("/api/v1/news/stats"),
     staleTime: 30_000,
   });
@@ -52,16 +52,17 @@ function SourcesContent() {
         body: JSON.stringify(data),
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["newsSources"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.newsSources() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.newsStats() });
     },
   });
 
-  if (sourcesQuery.isLoading || statsQuery.isLoading) {
-    return <LoadingSkeleton lines={8} />;
-  }
-
   if (sourcesQuery.isError || statsQuery.isError) {
     return <DataStatePanel state="error" title="Erro ao carregar fontes" detail="Falha ao buscar dados." />;
+  }
+
+  if (sourcesQuery.isLoading || statsQuery.isLoading) {
+    return <LoadingSkeleton lines={8} />;
   }
 
   const sources = sourcesQuery.data ?? [];
@@ -142,8 +143,8 @@ function SourcesContent() {
                     <td><Badge tone="neutral">{source.source_type ?? "—"}</Badge></td>
                     <td>{trustBadge(source.trust_level)}</td>
                     <td>
-                      <Badge tone={source.is_active ? "good" : "bad"}>
-                        {source.is_active ? <><Check size={12} /> Ativo</> : <><X size={12} /> Inativo</>}
+                      <Badge tone={source.is_active === true ? "good" : source.is_active === false ? "bad" : "neutral"}>
+                        {source.is_active === true ? <><Check size={12} /> Ativo</> : source.is_active === false ? <><X size={12} /> Inativo</> : "Desconhecido"}
                       </Badge>
                     </td>
                     <td>

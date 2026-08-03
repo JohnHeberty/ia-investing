@@ -6,7 +6,8 @@ import { Newspaper, TrendingUp, TrendingDown, ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { Route } from "next";
-import { bffFetch } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
+import { directionTone, effectTone } from "@/lib/news-helpers";
 import { AsOfIndicator, Badge } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton } from "@/components/data-state-components";
 
@@ -36,26 +37,14 @@ interface EventDetail {
 
 function EventDetailContent({ eventId }: { eventId: string }) {
   const { data: event, isLoading, isError, error } = useQuery({
-    queryKey: ["newsEvent", eventId],
+    queryKey: queryKeys.newsEvent(eventId),
     queryFn: () => bffFetch<EventDetail>(`/api/v1/news/events/${eventId}`),
     staleTime: 30_000,
   });
 
   if (isLoading) return <LoadingSkeleton lines={12} />;
-  if (isError) return <DataStatePanel state="error" title="Erro ao carregar evento" detail={String(error)} />;
+  if (isError) return <DataStatePanel state="error" title="Erro ao carregar evento" detail={error instanceof Error ? error.message : String(error)} />;
   if (!event) return <DataStatePanel state="missing" title="Evento nao encontrado" detail="ID invalido." />;
-
-  const directionTone = (hint: string | null) => {
-    if (hint === "positive") return "good";
-    if (hint === "negative") return "bad";
-    return "neutral";
-  };
-
-  const effectTone = (effect: string | null) => {
-    if (effect === "strengthen") return "good";
-    if (effect === "weaken") return "bad";
-    return "neutral";
-  };
 
   return (
     <div className="section-gap">
@@ -109,19 +98,19 @@ function EventDetailContent({ eventId }: { eventId: string }) {
         <div className="card card-pad">
           <h2 style={{ margin: "0 0 12px" }}>Metricas Afetadas</h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {Array.isArray(event.affected_metrics.metrics)
-              ? (event.affected_metrics.metrics as string[]).map((m, i) => (
-                  <Badge key={i} tone="neutral">{m}</Badge>
+            {Array.isArray(event.affected_metrics?.metrics)
+              ? (event.affected_metrics.metrics as unknown[]).map((m, i) => (
+                  <Badge key={i} tone="neutral">{typeof m === "string" ? m : String(m)}</Badge>
                 ))
               : <span className="subtitle">Nenhuma metrica identificada</span>
             }
           </div>
-          {Array.isArray(event.affected_metrics.key_claims) && event.affected_metrics.key_claims.length > 0 && (
+          {Array.isArray(event.affected_metrics?.key_claims) && event.affected_metrics.key_claims.length > 0 && (
             <div style={{ marginTop: 16 }}>
               <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Claims chave</h3>
               <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {(event.affected_metrics.key_claims as string[]).map((claim, i) => (
-                  <li key={i} style={{ color: "var(--muted)", fontSize: 13, marginBottom: 4 }}>{claim}</li>
+                {(event.affected_metrics.key_claims as unknown[]).map((claim, i) => (
+                  <li key={i} style={{ color: "var(--muted)", fontSize: 13, marginBottom: 4 }}>{typeof claim === "string" ? claim : String(claim)}</li>
                 ))}
               </ul>
             </div>

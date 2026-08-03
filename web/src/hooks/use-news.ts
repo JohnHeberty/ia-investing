@@ -11,6 +11,7 @@ export interface NewsItem {
   body: string | null;
   url: string | null;
   source_id: string;
+  source_name: string | null;
   published_at: string | null;
   language: string | null;
   sentiment_score: number | null;
@@ -55,8 +56,8 @@ export function useNews() {
   const totalItems = itemsQuery.data?.total ?? 0;
   const totalEvents = eventsQuery.data?.total ?? 0;
 
-  const processedCount = items.filter((i) => i.is_processed).length;
-  const unprocessedCount = items.filter((i) => !i.is_processed).length;
+  const processedCount = items.filter((i) => i.is_processed === true).length;
+  const unprocessedCount = items.filter((i) => i.is_processed === false).length;
 
   const positiveEvents = events.filter((e) => e.direction_hint === "positive").length;
   const negativeEvents = events.filter((e) => e.direction_hint === "negative").length;
@@ -83,9 +84,6 @@ export function useNews() {
     isError,
     error: itemsQuery.error ?? eventsQuery.error,
     dataState,
-    refetch: () => {
-      void itemsQuery.refetch();
-      void eventsQuery.refetch();
-    },
+    refetch: () => Promise.all([itemsQuery.refetch(), eventsQuery.refetch()]),
   };
 }
