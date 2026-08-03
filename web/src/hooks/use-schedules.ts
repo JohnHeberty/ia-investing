@@ -22,7 +22,6 @@ export interface ScheduleSummary {
     cron_expressions: unknown[];
   } | null;
   state: { paused: boolean; remaining_actions: number } | null;
-  running_workflows: number;
   last_run_at: string | null;
   last_run_status: string | null;
 }
@@ -236,41 +235,6 @@ export function useScheduleRuns(scheduleId: string | null) {
   };
 }
 
-export function useScheduleLastRuns(scheduleIds: string[]) {
-  const query = useQuery({
-    queryKey: ["schedule-last-runs", ...scheduleIds.sort()],
-    queryFn: async () => {
-      const results: Record<string, { lastRunAt: string | null; status: string | null; runCount: number; failCount: number }> = {};
-      await Promise.all(
-        scheduleIds.map(async (id) => {
-          try {
-            const runs = await bffFetch<ScheduleRun[]>(`/api/v1/schedules/${id}/runs?limit=10`);
-            const lastRun = runs[0] ?? null;
-            results[id] = {
-              lastRunAt: lastRun?.started_at ?? null,
-              status: lastRun?.status ?? null,
-              runCount: runs.length,
-              failCount: runs.filter((r) => r.status === "failed").length,
-            };
-          } catch {
-            results[id] = { lastRunAt: null, status: null, runCount: 0, failCount: 0 };
-          }
-        }),
-      );
-      return results;
-    },
-    staleTime: 5_000,
-    refetchInterval: 5_000,
-    refetchOnWindowFocus: true,
-    enabled: scheduleIds.length > 0,
-  });
-
-  return {
-    lastRuns: query.data ?? {},
-    isLoading: query.isLoading,
-  };
-}
-
 export type TriggerPhase = "idle" | "starting" | "completed" | "failed" | "timeout";
 
 const TRIGGER_POLL_MS = 3_000;
@@ -307,8 +271,7 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
             return;
           }
         } catch {
-          setPhase("completed");
-          clearInterval(interval);
+          // Network error — will retry on next tick
         }
       }
     }, TRIGGER_POLL_MS);

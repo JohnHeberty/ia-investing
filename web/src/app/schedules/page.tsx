@@ -190,8 +190,8 @@ function ScheduleRow({
         </span>
       </td>
       <td>
-        <Badge tone={schedule.paused ? "warn" : schedule.running_workflows > 0 ? "neutral" : "good"}>
-          {schedule.paused ? "Pausado" : schedule.running_workflows > 0 ? "Executando" : "Ativo"}
+        <Badge tone={schedule.paused ? "warn" : "good"}>
+          {schedule.paused ? "Pausado" : "Ativo"}
         </Badge>
       </td>
       <td>
