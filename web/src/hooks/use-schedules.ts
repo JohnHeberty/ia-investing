@@ -273,8 +273,7 @@ export function useScheduleLastRuns(scheduleIds: string[]) {
 
 export type TriggerPhase = "idle" | "starting" | "running" | "completed" | "failed" | "timeout";
 
-const POLL_INTERVAL = 2_000;
-const TIMEOUT_MS = 30_000;
+const STARTING_TIMEOUT_MS = 30_000;
 
 export function useScheduleTrigger(scheduleId: string, description: string, items: ScheduleSummary[]) {
   const queryClient = useQueryClient();
@@ -300,9 +299,9 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
   }, [phase, runningCount, currentLastRunAt, schedule?.last_run_status]);
 
   useEffect(() => {
-    if (phase !== "starting" && phase !== "running") return;
+    if (phase !== "starting") return;
     const interval = setInterval(() => {
-      if (Date.now() - startedAtRef.current > TIMEOUT_MS) {
+      if (Date.now() - startedAtRef.current > STARTING_TIMEOUT_MS) {
         setPhase("timeout");
         clearInterval(interval);
       }
@@ -322,7 +321,7 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
       return () => clearTimeout(t);
     }
     if (phase === "timeout") {
-      toast.warning(`Execução pode não estar rodando — ${description}`);
+      toast.warning(`Worker pode não estar rodando — ${description}`);
       const t = setTimeout(() => setPhase("idle"), 3000);
       return () => clearTimeout(t);
     }
@@ -330,17 +329,22 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
 
   const trigger = useCallback(async () => {
     const idempotencyKey = `trigger-${scheduleId}`;
-    await bffFetch<{ schedule_id: string; message: string }>(
-      `/api/v1/schedules/${scheduleId}/trigger`,
-      { method: "POST", headers: { "Idempotency-Key": idempotencyKey } },
-    );
-    queryClient.invalidateQueries({ queryKey: queryKeys.schedules() });
-    queryClient.invalidateQueries({ queryKey: queryKeys.scheduleRuns(scheduleId, 20) });
+    try {
+      await bffFetch<{ schedule_id: string; message: string }>(
+        `/api/v1/schedules/${scheduleId}/trigger`,
+        { method: "POST", headers: { "Idempotency-Key": idempotencyKey } },
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.schedules() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.scheduleRuns(scheduleId, 20) });
 
-    lastRunAtRef.current = currentLastRunAt;
-    startedAtRef.current = Date.now();
-    setPhase("starting");
-    toast.success(`Execução iniciada — ${description}`);
+      lastRunAtRef.current = currentLastRunAt;
+      startedAtRef.current = Date.now();
+      setPhase("starting");
+      toast.success(`Execução iniciada — ${description}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Falha ao iniciar execução — ${description}: ${msg}`);
+    }
   }, [scheduleId, description, currentLastRunAt, queryClient]);
 
   return { trigger, phase };

@@ -246,7 +246,7 @@ function ScheduleRow({
               : phase === "running" ? "Executando..."
               : phase === "completed" ? "Concluído!"
               : phase === "failed" ? "Falhou!"
-              : "Verificando..."}
+              : "Sem resposta"}
           </button>
           {!schedule.is_default && (
             <button
