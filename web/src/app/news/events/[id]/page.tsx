@@ -62,7 +62,7 @@ function EventDetailContent({ eventId }: { eventId: string }) {
         </div>
       </header>
 
-      <div className="grid grid-4">
+      <section className="grid grid-4 section-gap" aria-label="Metricas do evento">
         <article className="card metric">
           <div className="metric-label">Tipo</div>
           <div className="metric-value"><Badge tone="neutral">{event.event_type ?? "—"}</Badge></div>
@@ -87,15 +87,15 @@ function EventDetailContent({ eventId }: { eventId: string }) {
           <div className="metric-label">Horizonte</div>
           <div className="metric-value"><Badge tone="neutral">{event.time_horizon ?? "—"}</Badge></div>
         </article>
-      </div>
+      </section>
 
-      <div className="card card-pad">
+      <div className="card card-pad section-gap">
         <h2 style={{ margin: "0 0 12px" }}>Descricao</h2>
         <p style={{ color: "var(--text)", lineHeight: 1.6 }}>{event.description ?? "Sem descricao disponivel."}</p>
       </div>
 
       {event.affected_metrics && (
-        <div className="card card-pad">
+        <div className="card card-pad section-gap">
           <h2 style={{ margin: "0 0 12px" }}>Metricas Afetadas</h2>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
             {Array.isArray(event.affected_metrics?.metrics)
@@ -118,7 +118,7 @@ function EventDetailContent({ eventId }: { eventId: string }) {
         </div>
       )}
 
-      <div className="card card-pad">
+      <div className="card card-pad section-gap">
         <h2 style={{ margin: "0 0 16px" }}>Impactos em Teses ({event.impacts.length})</h2>
         {event.impacts.length === 0 ? (
           <p className="subtitle">Nenhum impacto registrado para este evento.</p>

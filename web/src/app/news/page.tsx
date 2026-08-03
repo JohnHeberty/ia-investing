@@ -21,7 +21,7 @@ function FeedTab() {
 
   return (
     <>
-      <div className="grid grid-4">
+      <section className="grid grid-4 section-gap" aria-label="Metricas do feed">
         <Metric label="Itens coletados" value={String(totalItems)} note="noticias persistidas" />
         <Metric label="Eventos detectados" value={String(totalEvents)} note="classificados por LLM" />
         <Metric label="Processados" value={String(processedCount)} note={`${unprocessedCount} pendentes`} />
@@ -30,9 +30,9 @@ function FeedTab() {
           value={`${positiveEvents} / ${negativeEvents}`}
           note="positivos / negativos"
         />
-      </div>
+      </section>
 
-      <div className="card card-pad">
+      <div className="card card-pad section-gap">
         <h2 style={{ margin: "0 0 16px" }}>Itens Recentes</h2>
         {items.length === 0 ? (
           <div className="subtitle">Nenhum item coletado ainda.</div>
@@ -96,7 +96,7 @@ function EventsTab() {
 
   return (
     <>
-      <div className="grid grid-4">
+      <section className="grid grid-4 section-gap" aria-label="Metricas de eventos">
         <Metric label="Total" value={String(totalEvents)} note="eventos detectados" />
         <Metric label="Positivos" value={String(positiveEvents)} note="direction_hint=positive" />
         <Metric label="Negativos" value={String(negativeEvents)} note="direction_hint=negative" />
@@ -105,9 +105,9 @@ function EventsTab() {
           value={String(totalEvents - positiveEvents - negativeEvents)}
           note="demais classificacoes"
         />
-      </div>
+      </section>
 
-      <div className="card card-pad">
+      <div className="card card-pad section-gap">
         <h2 style={{ margin: "0 0 16px" }}>Todos os Eventos</h2>
         {events.length === 0 ? (
           <div className="subtitle">Nenhum evento detectado ainda.</div>
@@ -172,15 +172,15 @@ function SourcesTab() {
   return (
     <>
       {stats && (
-        <div className="grid grid-4">
+        <section className="grid grid-4 section-gap" aria-label="Metricas de fontes">
           <Metric label="Fontes ativas" value={String(stats.active_sources)} note="RSS configuradas" />
           <Metric label="Itens coletados" value={String(stats.total_items)} note={`${stats.unprocessed_items} pendentes`} />
           <Metric label="Eventos" value={String(stats.total_events)} note={`${stats.positive_events} pos / ${stats.negative_events} neg`} />
           <Metric label="Impactos" value={String(stats.total_impacts)} note="em teses ativas" />
-        </div>
+        </section>
       )}
 
-      <div className="card card-pad">
+      <div className="card card-pad section-gap">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h2 style={{ margin: 0 }}>Fontes Cadastradas</h2>
           <div style={{ display: "flex", gap: 8 }}>
