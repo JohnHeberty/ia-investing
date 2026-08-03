@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 import re
 from datetime import datetime, timedelta
@@ -47,15 +49,43 @@ async def _log_schedule_audit(
 ) -> None:
     from database.models.audit import AuditLogEntry
 
+    tenant_id = auth.organization_id or UUID(int=0)
+
+    prev_hash_result = await session.execute(
+        sa.select(AuditLogEntry.hash)
+        .where(AuditLogEntry.tenant_id == tenant_id)
+        .order_by(AuditLogEntry.timestamp.desc())
+        .limit(1)
+    )
+    prev_hash = prev_hash_result.scalar_one_or_none()
+
+    now = datetime.now()
+    changes = meta or {}
+    metadata = {"schedule_id": schedule_id}
+    raw = (
+        str(prev_hash or "")
+        + now.isoformat()
+        + str(actor_uuid(auth) or "")
+        + action
+        + "schedule"
+        + ""
+        + json.dumps(changes, sort_keys=True, default=str)
+        + json.dumps(metadata, sort_keys=True)
+    )
+    entry_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
     entry = AuditLogEntry(
-        tenant_id=auth.organization_id or UUID(int=0),
+        tenant_id=tenant_id,
         actor_id=actor_uuid(auth),
         action=action,
         resource_type="schedule",
         resource_id=None,
-        changes=meta or {},
-        meta_data={"schedule_id": schedule_id},
+        changes=changes,
+        meta_data=metadata,
         http_method=action.upper() if action in ("pause", "resume", "trigger", "delete", "update") else None,
+        hash_prev=prev_hash,
+        hash=entry_hash,
+        timestamp=now,
     )
     session.add(entry)
 
