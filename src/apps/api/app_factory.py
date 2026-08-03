@@ -29,14 +29,15 @@ from apps.api.routes.instruments import router as instruments_router
 from apps.api.routes.investment_candidates import exploration_router
 from apps.api.routes.investment_candidates import router as investment_candidates_router
 from apps.api.routes.issuers import router as issuers_router
+from apps.api.routes.market_data import router as market_data_router
 from apps.api.routes.metrics import router as metrics_router
+from apps.api.routes.news import router as news_router
 from apps.api.routes.operations import router as operations_router
 from apps.api.routes.paper_execution import router as paper_execution_router
 from apps.api.routes.policy import macro_router
 from apps.api.routes.policy import router as policy_router
 from apps.api.routes.portfolio import router as portfolio_router
 from apps.api.routes.portfolio_recommendations import router as portfolio_recommendations_router
-from apps.api.routes.market_data import router as market_data_router
 from apps.api.routes.quality import router as quality_router
 from apps.api.routes.readiness import router as readiness_router
 from apps.api.routes.rebalance import router as rebalance_router
@@ -104,6 +105,7 @@ _AUTH_ROUTERS = [
     exploration_router,
     quality_router,
     metrics_router,
+    news_router,
     research_router,
     agent_runtime_router,
     institutional_router,

@@ -9,11 +9,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
+from workflows._extract_news import ExtractNewsWorkflow
+
 from ia_investing.candidate_intelligence.bootstrap import candidate_intelligence_enabled
 from ia_investing.orchestration.activities.agent_runtime import AGENT_RUNTIME_ACTIVITIES
 from ia_investing.orchestration.activities.candidate_dispatch import CANDIDATE_DISPATCH_ACTIVITIES
 from ia_investing.orchestration.activities.candidate_intelligence import CANDIDATE_INTELLIGENCE_ACTIVITIES
 from ia_investing.orchestration.activities.data_ingestion import DATA_INGESTION_ACTIVITIES
+from ia_investing.orchestration.activities.news_extraction import NEWS_EXTRACTION_ACTIVITIES
 from ia_investing.orchestration.activities.notifications import NOTIFICATION_ACTIVITIES
 from ia_investing.orchestration.activities.operation_dispatch import OPERATION_DISPATCH_ACTIVITIES
 from ia_investing.orchestration.activities.paper_operations import PAPER_OPERATION_ACTIVITIES
@@ -72,8 +75,13 @@ CAPABILITIES: dict[str, CapabilityDefinition] = {
     ),
     "research-agents": CapabilityDefinition(
         task_queue="research-agents",
-        workflows=(RunAgentWorkflow, DispatchOperationsWorkflow, *_CANDIDATE_WORKFLOWS),
-        activities=AGENT_RUNTIME_ACTIVITIES + OPERATION_DISPATCH_ACTIVITIES + _CANDIDATE_ACTIVITIES,
+        workflows=(RunAgentWorkflow, DispatchOperationsWorkflow, ExtractNewsWorkflow, *_CANDIDATE_WORKFLOWS),
+        activities=(
+            AGENT_RUNTIME_ACTIVITIES
+            + OPERATION_DISPATCH_ACTIVITIES
+            + NEWS_EXTRACTION_ACTIVITIES
+            + _CANDIDATE_ACTIVITIES
+        ),
     ),
     "portfolio-risk": CapabilityDefinition(
         task_queue="portfolio-risk",

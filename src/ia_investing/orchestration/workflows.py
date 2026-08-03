@@ -5,6 +5,8 @@ from workflows import (  # noqa: F401  # intentional legacy re-export for ia_inv
     ApprovalGateResult,
     ApprovalGateWorkflow,
     DiscoverStocksWorkflow,
+    ExtractNewsInput,
+    ExtractNewsWorkflow,
     IngestCVMInput,
     IngestCVMOutput,
     IngestCVMWorkflow,

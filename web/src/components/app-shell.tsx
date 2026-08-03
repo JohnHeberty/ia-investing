@@ -12,6 +12,7 @@ import {
   Landmark,
   LogOut,
   Moon,
+  Newspaper,
   Radar,
   RefreshCw,
   TrendingUp,
@@ -41,6 +42,7 @@ const primary: NavItem[] = [
 const operations: NavItem[] = [
   ["/policy", "Política", Gavel, "policy:read"],
   ["/macro", "Macro", TrendingUp, "macro:read"],
+  ["/news", "Noticias", Newspaper, "news:read"],
   ["/paper", "Paper trading", BriefcaseBusiness, "portfolio:read"],
   ["/rebalance", "Rebalance", RefreshCw, "rebalance:*"],
   ["/agents", "Agents", Activity, "agent_runs:read"],

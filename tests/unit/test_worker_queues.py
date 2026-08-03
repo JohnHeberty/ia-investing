@@ -2,6 +2,7 @@ from apps.worker.main import ACTIVITIES_BY_CAPABILITY, WORKFLOWS_BY_CAPABILITY
 from ia_investing.orchestration import TASK_QUEUES, Capability
 from workflows import (
     DispatchOperationsWorkflow,
+    ExtractNewsWorkflow,
     IngestCVMWorkflow,
     PaperRebalanceWorkflow,
     PaperReconciliationWorkflow,
@@ -13,9 +14,9 @@ from workflows import (
 )
 from workflows.candidate_dispatch import CandidateOutboxDispatchWorkflow
 from workflows.candidate_intelligence import (
+    AutonomousEquityExplorationWorkflow,
     CandidateAnalysisWorkflow,
     CandidateSourceValidationWorkflow,
-    AutonomousEquityExplorationWorkflow,
     ScheduledEquityExplorationWorkflow,
 )
 
@@ -35,6 +36,7 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
     assert WORKFLOWS_BY_CAPABILITY[Capability.RESEARCH_AGENTS] == (
         RunAgentWorkflow,
         DispatchOperationsWorkflow,
+        ExtractNewsWorkflow,
         CandidateOutboxDispatchWorkflow,
         CandidateAnalysisWorkflow,
         CandidateSourceValidationWorkflow,

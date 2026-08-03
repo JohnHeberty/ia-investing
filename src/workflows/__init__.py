@@ -11,6 +11,7 @@ from workflows._analyze_news import AnalyzeNewsWorkflow  # noqa: E402
 from workflows._approval_gate import ApprovalGateInput, ApprovalGateResult, ApprovalGateWorkflow  # noqa: E402
 from workflows._discover import DiscoverStocksWorkflow  # noqa: E402
 from workflows._dispatch_operations import DispatchOperationsWorkflow  # noqa: E402
+from workflows._extract_news import ExtractNewsInput, ExtractNewsWorkflow  # noqa: E402
 from workflows._ingest_cvm import IngestCVMInput, IngestCVMOutput, IngestCVMWorkflow  # noqa: E402
 from workflows._paper_rebalance import PaperRebalanceInput, PaperRebalanceResult, PaperRebalanceWorkflow  # noqa: E402
 from workflows._paper_reconciliation import (  # noqa: E402
@@ -58,6 +59,8 @@ __all__ = [
     "CandidateSourceValidationWorkflow",
     "DiscoverStocksWorkflow",
     "DispatchOperationsWorkflow",
+    "ExtractNewsInput",
+    "ExtractNewsWorkflow",
     "IngestCVMInput",
     "IngestCVMOutput",
     "IngestCVMWorkflow",
