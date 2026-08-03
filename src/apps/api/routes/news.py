@@ -17,6 +17,7 @@ from database.models.news import NewsItem, NewsSource
 from ia_investing.news.service import (
     analyze_news_item,
     create_news_source,
+    delete_news_source,
     fetch_and_persist_news_items,
     get_detected_event,
     get_news_stats,
@@ -24,6 +25,7 @@ from ia_investing.news.service import (
     list_detected_events,
     list_news_items,
     list_news_sources,
+    update_news_source,
 )
 
 router = APIRouter(prefix="/api/v1/news", tags=["news"])
@@ -241,6 +243,14 @@ class SourceCreateRequestV1(BaseModel):
     trust_level: int = 3
 
 
+class SourceUpdateRequestV1(BaseModel):
+    name: str | None = None
+    url_pattern: str | None = None
+    source_type: str | None = None
+    trust_level: int | None = None
+    is_active: bool | None = None
+
+
 @router.get("/sources", response_model=list[NewsSourceV1])
 async def get_sources(
     is_active: bool | None = Query(default=None),
@@ -268,6 +278,41 @@ async def create_source(
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     return NewsSourceV1.model_validate(source)
+
+
+@router.put("/sources/{source_id}", response_model=NewsSourceV1)
+async def update_source(
+    source_id: UUID,
+    body: SourceUpdateRequestV1,
+    _auth: AuthContext = Depends(require_permission("news:manage")),
+    session: AsyncSession = Depends(get_async_session),
+) -> NewsSourceV1:
+    try:
+        updated = await update_news_source(
+            session,
+            source_id=source_id,
+            name=body.name,
+            url_pattern=body.url_pattern,
+            source_type=body.source_type,
+            trust_level=body.trust_level,
+            is_active=body.is_active,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Source not found")
+    return NewsSourceV1.model_validate(updated)
+
+
+@router.delete("/sources/{source_id}", status_code=204)
+async def delete_source(
+    source_id: UUID,
+    _auth: AuthContext = Depends(require_permission("news:manage")),
+    session: AsyncSession = Depends(get_async_session),
+) -> None:
+    deleted = await delete_news_source(session, source_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Source not found")
 
 
 class NewsStatsResponseV1(BaseModel):

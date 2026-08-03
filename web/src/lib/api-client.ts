@@ -28,6 +28,7 @@ export async function bffFetch<T>(path: string, init?: RequestInit): Promise<T> 
     const body = await res.text().catch(() => "");
     throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
   }
+  if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
 }
 

@@ -548,6 +548,58 @@ async def create_news_source(
     }
 
 
+async def update_news_source(
+    session: AsyncSession,
+    source_id: UUID,
+    name: str | None = None,
+    url_pattern: str | None = None,
+    source_type: str | None = None,
+    trust_level: int | None = None,
+    is_active: bool | None = None,
+) -> dict[str, Any] | None:
+    """Update a news source. Returns None if not found."""
+    source = await session.get(NewsSource, source_id)
+    if source is None:
+        return None
+
+    if name is not None and name != source.name:
+        existing = (
+            await session.execute(sa.select(NewsSource).where(NewsSource.name == name, NewsSource.id != source_id))
+        ).scalar_one_or_none()
+        if existing is not None:
+            raise ValueError(f"A source with name '{name}' already exists")
+        source.name = name
+
+    if url_pattern is not None:
+        source.url_pattern = url_pattern
+    if source_type is not None:
+        source.source_type = source_type
+    if trust_level is not None:
+        source.trust_level = trust_level
+    if is_active is not None:
+        source.is_active = is_active
+
+    await session.flush()
+    return {
+        "id": str(source.id),
+        "name": source.name,
+        "url_pattern": source.url_pattern,
+        "trust_level": source.trust_level,
+        "source_type": source.source_type,
+        "is_active": source.is_active,
+    }
+
+
+async def delete_news_source(session: AsyncSession, source_id: UUID) -> bool:
+    """Delete a news source. Returns False if not found."""
+    source = await session.get(NewsSource, source_id)
+    if source is None:
+        return False
+    await session.delete(source)
+    await session.flush()
+    return True
+
+
 async def get_news_stats(session: AsyncSession) -> dict[str, Any]:
     """Get aggregated news statistics using separate subqueries to avoid cartesian products."""
     total_items = (await session.execute(sa.select(sa.func.count(NewsItem.id)))).scalar() or 0

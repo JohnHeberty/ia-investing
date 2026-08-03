@@ -1,7 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
-import { Newspaper, TrendingUp, TrendingDown, Plus, Check, X } from "lucide-react";
+import { Suspense, useState } from "react";
+import { Newspaper, TrendingUp, TrendingDown, Plus, Check, X, Pencil, Trash2 } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import {
@@ -10,10 +10,11 @@ import {
   useNewsValue,
   useSourceMutations,
 } from "@/hooks/use-news";
-import type { NewsDataValue } from "@/hooks/use-news";
+import type { NewsDataValue, NewsSource } from "@/hooks/use-news";
 import { directionTone } from "@/lib/news-helpers";
 import { AsOfIndicator, Badge, DomainTabs, Metric } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton } from "@/components/data-state-components";
+import { SourceFormModal } from "@/components/source-form-modal";
 
 function FeedTab() {
   const { items, totalItems, totalEvents, processedCount, unprocessedCount, positiveEvents, negativeEvents } =
@@ -160,7 +161,41 @@ function EventsTab() {
 
 function SourcesTab() {
   const { sources, stats } = useNewsData();
-  const { createMutation } = useSourceMutations();
+  const { createMutation, updateMutation, deleteMutation } = useSourceMutations();
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingSource, setEditingSource] = useState<NewsSource | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleCreate = () => {
+    setEditingSource(null);
+    setModalOpen(true);
+  };
+
+  const handleEdit = (source: NewsSource) => {
+    setEditingSource(source);
+    setModalOpen(true);
+  };
+
+  const handleDelete = async (id: string, name: string) => {
+    if (!confirm(`Excluir a fonte "${name}"?`)) return;
+    setDeletingId(id);
+    try {
+      await deleteMutation.mutateAsync(id);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleSubmit = (data: { name: string; source_type?: string; url_pattern?: string; trust_level?: number }) => {
+    if (editingSource) {
+      updateMutation.mutate({ id: editingSource.id, ...data }, { onSuccess: () => setModalOpen(false) });
+    } else {
+      createMutation.mutate(data, { onSuccess: () => setModalOpen(false) });
+    }
+  };
+
+  const activeMutation = editingSource ? updateMutation : createMutation;
 
   const trustBadge = (level: number | null) => {
     if (level === null) return <Badge tone="neutral">—</Badge>;
@@ -183,34 +218,13 @@ function SourcesTab() {
       <div className="card card-pad section-gap">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h2 style={{ margin: 0 }}>Fontes Cadastradas</h2>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              className="button"
-              onClick={() => createMutation.mutate({ name: "Google News - Brasil", source_type: "rss_google", trust_level: 3 })}
-              disabled={createMutation.isPending}
-              type="button"
-            >
-              <Plus size={14} /> Google News
-            </button>
-            <button
-              className="button"
-              onClick={() => createMutation.mutate({ name: "Reuters - Brasil", source_type: "rss_reuters", trust_level: 3 })}
-              disabled={createMutation.isPending}
-              type="button"
-            >
-              <Plus size={14} /> Reuters
-            </button>
-          </div>
+          <button className="button" onClick={handleCreate} type="button">
+            <Plus size={14} /> Nova Fonte
+          </button>
         </div>
 
-        {createMutation.isError && (
-          <div role="alert" style={{ padding: "8px 12px", marginBottom: 16, background: "var(--red)", color: "var(--bg)", borderRadius: 6, fontSize: 12 }}>
-            Erro ao criar fonte: {createMutation.error instanceof Error ? createMutation.error.message : "tente novamente"}
-          </div>
-        )}
-
         {sources.length === 0 ? (
-          <div className="subtitle">Nenhuma fonte cadastrada. Use os botoes acima para adicionar.</div>
+          <div className="subtitle">Nenhuma fonte cadastrada. Clique em &quot;Nova Fonte&quot; para adicionar.</div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table className="table">
@@ -221,6 +235,7 @@ function SourcesTab() {
                   <th>Confianca</th>
                   <th>Status</th>
                   <th>Criado em</th>
+                  <th style={{ width: 80 }}></th>
                 </tr>
               </thead>
               <tbody>
@@ -239,6 +254,30 @@ function SourcesTab() {
                         ? new Date(source.created_at).toLocaleDateString("pt-BR")
                         : "—"}
                     </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                        <button
+                          className="button"
+                          onClick={() => handleEdit(source)}
+                          disabled={deleteMutation.isPending}
+                          type="button"
+                          title="Editar"
+                          style={{ padding: "4px 8px" }}
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          className="button"
+                          onClick={() => handleDelete(source.id, source.name)}
+                          disabled={deletingId === source.id}
+                          type="button"
+                          title="Excluir"
+                          style={{ padding: "4px 8px", color: "var(--red)" }}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -246,6 +285,15 @@ function SourcesTab() {
           </div>
         )}
       </div>
+
+      <SourceFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        source={editingSource}
+        onSubmit={handleSubmit}
+        isPending={activeMutation.isPending}
+        error={activeMutation.error instanceof Error ? activeMutation.error : null}
+      />
     </>
   );
 }
