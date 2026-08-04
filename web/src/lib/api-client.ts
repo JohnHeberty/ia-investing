@@ -17,6 +17,9 @@ export async function bffFetch<T>(path: string, init?: RequestInit): Promise<T> 
     if (token) {
       headers["x-csrf-token"] = token;
     }
+    if (init?.body && typeof init.body === "string" && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
   }
 
   const res = await fetch(`/api/backend${path}`, {
