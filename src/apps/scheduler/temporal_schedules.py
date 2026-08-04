@@ -194,7 +194,7 @@ def news_collection_schedule_definition(
             policy=SchedulePolicy(
                 overlap=ScheduleOverlapPolicy.SKIP,
                 catchup_window=timedelta(hours=1),
-                pause_on_failure=True,
+                pause_on_failure=False,
             ),
         ),
     )
@@ -327,10 +327,10 @@ async def reconcile_configured_schedules(client: Client | None = None) -> dict[s
 
     async with session_scope() as session:
         issuer_ids = (
-            await session.execute(
-                sa.select(Ticker.issuer_id).where(Ticker.issuer_id.is_not(None)).distinct()
-            )
-        ).scalars().all()
+            (await session.execute(sa.select(Ticker.issuer_id).where(Ticker.issuer_id.is_not(None)).distinct()))
+            .scalars()
+            .all()
+        )
 
     for issuer_id in issuer_ids:
         definitions.append(
