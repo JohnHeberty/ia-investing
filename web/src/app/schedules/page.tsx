@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useState } from "react";
+import { toast } from "sonner";
 
 import { Badge, Metric } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
@@ -209,11 +210,7 @@ function ScheduleRow({
       </td>
       <td style={{ fontSize: 12 }}>
         {schedule.last_run_at ? (
-          <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-            <Badge tone={schedule.last_run_status === "failed" ? "warn" : "good"}>
-              {schedule.last_run_status === "failed" ? "falhou" : "OK"}
-            </Badge>
-          </span>
+          <span style={{ color: "var(--muted)" }}>registrado</span>
         ) : (
           <span style={{ color: "var(--muted)" }}>—</span>
         )}
@@ -229,7 +226,7 @@ function ScheduleRow({
             disabled={isMutating}
             aria-label={schedule.paused ? "Retomar" : "Pausar"}
           >
-            {schedule.paused ? <Play size={12} /> : <Pause size={12} />}
+            {isMutating ? <RefreshCw size={12} className="animate-spin" /> : schedule.paused ? <Play size={12} /> : <Pause size={12} />}
             {schedule.paused ? "Retomar" : "Pausar"}
           </button>
           <button
@@ -322,7 +319,12 @@ function RunsPanel({ scheduleId }: { scheduleId: string }) {
                 </td>
                 <td style={{ fontSize: 12, fontFamily: "var(--font-mono)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {run.result_summary
-                    ? JSON.stringify(run.result_summary)
+                    ? typeof run.result_summary === "object"
+                      ? Object.entries(run.result_summary as Record<string, unknown>)
+                          .slice(0, 3)
+                          .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
+                          .join(", ")
+                      : String(run.result_summary)
                     : "—"}
                 </td>
                 <td style={{ fontSize: 12, color: run.error_message ? "var(--red)" : "var(--muted)" }}>
@@ -522,12 +524,20 @@ export default function SchedulesPage() {
     try {
       if (paused) await resume(scheduleId);
       else await pause(scheduleId);
-    } catch { /* errors surfaced by mutation state */ }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Falha ao ${paused ? "retomar" : "pausar"} agendamento: ${msg}`);
+    }
   }, [pause, resume]);
 
   const handleDelete = useCallback(async (scheduleId: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
-    try { await deleteSchedule(scheduleId); } catch { /* errors surfaced by mutation state */ }
+    try {
+      await deleteSchedule(scheduleId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Falha ao excluir agendamento: ${msg}`);
+    }
   }, [deleteSchedule]);
 
   const handleUpdateInterval = useCallback(async (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => {
@@ -609,7 +619,7 @@ export default function SchedulesPage() {
 
       <section className="grid grid-4 section-gap">
         <Metric label="Total" value={String(count)} note="agendamentos" />
-        <Metric label="Ativos" value={String(activeCount)} note="em execução" />
+        <Metric label="Ativos" value={String(activeCount)} note="agendamentos" />
         <Metric label="Pausados" value={String(pausedCount)} note="pausados" />
         <Metric label="Categorias" value={String(Object.keys(grouped).length)} note="grupos" />
       </section>
