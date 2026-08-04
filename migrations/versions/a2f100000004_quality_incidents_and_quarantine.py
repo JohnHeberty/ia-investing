@@ -5,7 +5,6 @@ Revises: a2f100000003
 """
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from alembic import op
@@ -91,29 +90,6 @@ def upgrade() -> None:
             "source_object_version_id",
             name="uq_quality_incidents_rule_source_version",
         ),
-    )
-    op.bulk_insert(
-        sa.table(
-            "quality_rules",
-            sa.column("id", sa.UUID()),
-            sa.column("code", sa.String()),
-            sa.column("version", sa.Integer()),
-            sa.column("severity", sa.String()),
-            sa.column("is_material", sa.Boolean()),
-            sa.column("tolerance", postgresql.JSONB()),
-            sa.column("valid_from", sa.DateTime(timezone=True)),
-        ),
-        [
-            {
-                "id": "40000000-0000-0000-0000-000000000001",
-                "code": "balance_sheet_balances",
-                "version": 1,
-                "severity": "critical",
-                "is_material": True,
-                "tolerance": {"relative": "0.001"},
-                "valid_from": datetime(2026, 7, 18, tzinfo=UTC),
-            }
-        ],
     )
     op.create_index(op.f("ix_quality_incidents_quality_rule_id"), "quality_incidents", ["quality_rule_id"])
     op.create_index(

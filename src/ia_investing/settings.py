@@ -72,7 +72,7 @@ class AIGatewaySettings(BaseModel):
 
 
 class AISettings(BaseModel):
-    provider: Literal["mock", "gateway", "litellm"] = "mock"
+    provider: Literal["mock", "gateway", "litellm"] = "gateway"
     gateway: AIGatewaySettings = Field(default_factory=AIGatewaySettings)
 
 

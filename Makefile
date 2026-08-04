@@ -1,4 +1,4 @@
-.PHONY: lint typecheck test test-integration test-all build docker-up docker-down docker-test format check
+.PHONY: lint typecheck test test-integration test-all build docker-up docker-down docker-test format check init
 
 lint:
 	ruff check .
@@ -26,6 +26,10 @@ test-cov:
 build:
 	uv sync --all-extras
 	cd web && npm ci && npm run build
+
+init:
+	alembic upgrade head
+	uv run python scripts/seed_initial_data.py
 
 docker-up:
 	docker compose --profile dev up -d

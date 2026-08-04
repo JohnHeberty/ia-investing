@@ -21,7 +21,6 @@ from temporalio.exceptions import ApplicationError
 from database.models.operations import Operation
 from ia_investing.ai.execution import AgentExecutionService
 from ia_investing.ai.gateway import GatewayProvider, create_gateway_provider
-from ia_investing.ai.provider import MockProvider
 from ia_investing.application.agent_runtime import AgentRuntimeService
 from ia_investing.application.calibration_engine import CalibrationEngine
 from ia_investing.platform.database import DatabaseRuntime
@@ -54,10 +53,8 @@ class ExecuteAgentCommand(BaseModel):
         return value
 
 
-def _provider() -> MockProvider | GatewayProvider:
+def _provider() -> GatewayProvider:
     settings = get_settings()
-    if settings.ai.provider == "mock":
-        return MockProvider()
     if settings.ai.provider in ("gateway", "litellm"):
         gw = settings.ai.gateway
         return create_gateway_provider(
@@ -71,7 +68,7 @@ def _provider() -> MockProvider | GatewayProvider:
             tpm=gw.tpm,
         )
     raise ApplicationError(
-        "AI gateway provider is not implemented by the current provider adapter",
+        f"AI provider {settings.ai.provider!r} is not supported — set AI__PROVIDER to 'gateway' or 'litellm'",
         type="ConfigurationError",
         non_retryable=True,
     )

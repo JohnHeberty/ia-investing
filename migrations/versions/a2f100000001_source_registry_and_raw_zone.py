@@ -5,7 +5,6 @@ Revises: fd3d46f598f2
 """
 
 from collections.abc import Sequence
-from datetime import UTC, datetime
 
 import sqlalchemy as sa
 from alembic import op
@@ -146,99 +145,6 @@ def upgrade() -> None:
         sa.UniqueConstraint("workflow_id", "attempt_number", name="uq_ingestion_attempts_workflow_attempt"),
     )
     op.create_index(op.f("ix_ingestion_attempts_source_object_id"), "ingestion_attempts", ["source_object_id"])
-    op.bulk_insert(
-        sa.table(
-            "source_licenses",
-            sa.column("id", sa.UUID()),
-            sa.column("code", sa.String()),
-            sa.column("name", sa.String()),
-            sa.column("terms_url", sa.Text()),
-            sa.column("permits_redistribution", sa.Boolean()),
-        ),
-        [
-            {
-                "id": "20000000-0000-0000-0000-000000000001",
-                "code": "CVM-OFFICIAL",
-                "name": "Dados oficiais CVM — revisão jurídica obrigatória",
-                "terms_url": "https://dados.cvm.gov.br/",
-                "permits_redistribution": False,
-            },
-            {
-                "id": "20000000-0000-0000-0000-000000000002",
-                "code": "B3-OFFICIAL",
-                "name": "Dados oficiais B3 — contrato/licença aplicável",
-                "terms_url": "https://www.b3.com.br/",
-                "permits_redistribution": False,
-            },
-        ],
-    )
-    op.bulk_insert(
-        sa.table(
-            "data_sources",
-            sa.column("id", sa.UUID()),
-            sa.column("code", sa.String()),
-            sa.column("name", sa.String()),
-            sa.column("base_url", sa.Text()),
-            sa.column("owner_role", sa.String()),
-            sa.column("credential_reference", sa.String()),
-            sa.column("schema_version", sa.String()),
-            sa.column("rate_limit_per_minute", sa.Integer()),
-            sa.column("license_id", sa.UUID()),
-            sa.column("is_active", sa.Boolean()),
-            sa.column("created_at", sa.DateTime(timezone=True)),
-        ),
-        [
-            {
-                "id": "21000000-0000-0000-0000-000000000001",
-                "code": "CVM",
-                "name": "Comissão de Valores Mobiliários",
-                "base_url": "https://dados.cvm.gov.br/",
-                "owner_role": "data-steward-cvm",
-                "credential_reference": None,
-                "schema_version": "open-data-v1",
-                "rate_limit_per_minute": 30,
-                "license_id": "20000000-0000-0000-0000-000000000001",
-                "is_active": True,
-                "created_at": datetime(2026, 7, 18, tzinfo=UTC),
-            },
-            {
-                "id": "21000000-0000-0000-0000-000000000002",
-                "code": "B3",
-                "name": "B3 S.A.",
-                "base_url": "https://www.b3.com.br/",
-                "owner_role": "data-steward-b3",
-                "credential_reference": "secret://data-sources/b3",
-                "schema_version": "contract-v1",
-                "rate_limit_per_minute": 10,
-                "license_id": "20000000-0000-0000-0000-000000000002",
-                "is_active": True,
-                "created_at": datetime(2026, 7, 18, tzinfo=UTC),
-            },
-        ],
-    )
-    op.bulk_insert(
-        sa.table(
-            "source_slas",
-            sa.column("id", sa.UUID()),
-            sa.column("source_id", sa.UUID()),
-            sa.column("expected_frequency_minutes", sa.Integer()),
-            sa.column("freshness_grace_minutes", sa.Integer()),
-        ),
-        [
-            {
-                "id": "22000000-0000-0000-0000-000000000001",
-                "source_id": "21000000-0000-0000-0000-000000000001",
-                "expected_frequency_minutes": 1440,
-                "freshness_grace_minutes": 360,
-            },
-            {
-                "id": "22000000-0000-0000-0000-000000000002",
-                "source_id": "21000000-0000-0000-0000-000000000002",
-                "expected_frequency_minutes": 1440,
-                "freshness_grace_minutes": 360,
-            },
-        ],
-    )
 
 
 def downgrade() -> None:

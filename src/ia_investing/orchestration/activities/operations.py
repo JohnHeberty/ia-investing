@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
-from uuid import NAMESPACE_URL, UUID, uuid5
+from uuid import UUID
 
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +11,6 @@ from temporalio.exceptions import ApplicationError
 
 from database.core import session_scope
 from database.models.operations import Operation
-from ia_investing.ai import ALL_AGENTS
 from ia_investing.orchestration.activities._telemetry import activity_span
 
 
@@ -43,20 +42,6 @@ async def _set_state(
 async def set_operation_running(operation_id: str) -> None:
     with activity_span("set_operation_running"):
         await _set_state(operation_id, state="running")
-
-
-@activity.defn(name="run_configured_agent")
-def run_configured_agent(agent_name: str, input_data: dict[str, Any]) -> dict[str, Any]:
-    with activity_span("run_configured_agent"):
-        if agent_name not in ALL_AGENTS:
-            raise ApplicationError("unknown agent", type="DataValidationError", non_retryable=True)
-        run_id = str(uuid5(NAMESPACE_URL, f"ia-investing/mock/{agent_name}/{input_data!r}"))
-        return {
-            "agent_run_id": run_id,
-            "agent_name": agent_name,
-            "provider": "mock",
-            "output": {"status": "mocked", "input_keys": sorted(input_data)},
-        }
 
 
 @activity.defn(name="complete_operation")
@@ -96,7 +81,6 @@ async def cancel_operation(operation_id: str, reason: str = "cancelled") -> None
 
 OPERATION_ACTIVITIES = (
     set_operation_running,
-    run_configured_agent,
     complete_operation,
     fail_operation,
     cancel_operation,
