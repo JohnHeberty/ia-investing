@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 import os
 import sys
-import traceback
 import types
 import warnings
 from collections.abc import Sequence
@@ -57,8 +56,7 @@ class LegacyImportGuard:
         if _STRICT:
             raise ImportError(f"Legacy imports are forbidden in strict mode: {message}")
 
-        stack = "".join(traceback.format_stack(limit=6)[:-2])
-        logger.warning("Legacy import: %s\n%s", fullname, stack)
+        logger.debug("Legacy import: %s", fullname)
         warnings.warn(
             message,
             DeprecationWarning,
