@@ -23,7 +23,6 @@ export interface ScheduleSummary {
   } | null;
   state: { paused: boolean; remaining_actions: number } | null;
   last_run_at: string | null;
-  last_run_status: string | null;
 }
 
 export interface ScheduleRun {
@@ -248,6 +247,8 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
 
   const schedule = items.find((s) => s.schedule_id === scheduleId);
   const currentLastRunAt = schedule?.last_run_at ?? null;
+  const currentLastRunAtRef = useRef(currentLastRunAt);
+  currentLastRunAtRef.current = currentLastRunAt;
 
   useEffect(() => {
     if (phase !== "starting") return;
@@ -259,14 +260,15 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
         return;
       }
 
-      if (currentLastRunAt && currentLastRunAt !== lastRunAtRef.current) {
+      const latest = currentLastRunAtRef.current;
+      if (latest && latest !== lastRunAtRef.current) {
         try {
           const runs = await bffFetch<ScheduleRun[]>(
             `/api/v1/schedules/${scheduleId}/runs?limit=1`,
           );
-          const latest = runs[0];
-          if (latest) {
-            setPhase(latest.status === "failed" ? "failed" : "completed");
+          const first = runs[0];
+          if (first) {
+            setPhase(first.status === "failed" ? "failed" : "completed");
             clearInterval(interval);
             return;
           }
@@ -277,7 +279,7 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
     }, TRIGGER_POLL_MS);
 
     return () => clearInterval(interval);
-  }, [phase, currentLastRunAt, scheduleId]);
+  }, [phase, scheduleId]);
 
   useEffect(() => {
     if (phase === "completed") {

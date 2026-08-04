@@ -158,7 +158,7 @@ function ScheduleRow({
   onDelete,
   onUpdateInterval,
   parseDuration,
-  isMutating,
+  isOwnMutating,
 }: {
   schedule: ScheduleSummary;
   items: ScheduleSummary[];
@@ -166,7 +166,7 @@ function ScheduleRow({
   onDelete: (scheduleId: string) => void;
   onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => void;
   parseDuration: (every: string) => string;
-  isMutating: boolean;
+  isOwnMutating: boolean;
 }) {
   const { trigger, phase } = useScheduleTrigger(schedule.schedule_id, schedule.description, items);
   const nextRun = schedule.next_action_time
@@ -200,7 +200,7 @@ function ScheduleRow({
           schedule={schedule}
           onUpdateInterval={onUpdateInterval}
           parseDuration={parseDuration}
-          isMutating={isMutating}
+          isMutating={isOwnMutating}
         />
       </td>
       <td style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
@@ -223,10 +223,10 @@ function ScheduleRow({
             style={{ fontSize: 11, padding: "4px 10px" }}
             onClick={() => onTogglePause(schedule.schedule_id, schedule.paused)}
             type="button"
-            disabled={isMutating}
+            disabled={isOwnMutating}
             aria-label={schedule.paused ? "Retomar" : "Pausar"}
           >
-            {isMutating ? <RefreshCw size={12} className="animate-spin" /> : schedule.paused ? <Play size={12} /> : <Pause size={12} />}
+            {isOwnMutating ? <RefreshCw size={12} className="animate-spin" /> : schedule.paused ? <Play size={12} /> : <Pause size={12} />}
             {schedule.paused ? "Retomar" : "Pausar"}
           </button>
           <button
@@ -234,7 +234,7 @@ function ScheduleRow({
             style={{ fontSize: 11, padding: "4px 10px" }}
             onClick={() => trigger()}
             type="button"
-            disabled={isMutating || isTriggerBusy}
+            disabled={isOwnMutating || isTriggerBusy}
             aria-label="Executar agora"
           >
             <RefreshCw size={12} className={isTriggerBusy ? "animate-spin" : ""} />
@@ -250,7 +250,7 @@ function ScheduleRow({
               style={{ fontSize: 11, padding: "4px 10px", color: "var(--red)" }}
               onClick={() => onDelete(schedule.schedule_id)}
               type="button"
-              disabled={isMutating}
+              disabled={isOwnMutating}
               aria-label="Excluir"
             >
               <Trash2 size={12} />
@@ -359,7 +359,7 @@ function CategoryGroup({
   onDelete,
   onUpdateInterval,
   parseDuration,
-  isMutating,
+  mutatingId,
 }: {
   category: string;
   schedules: ScheduleSummary[];
@@ -370,7 +370,7 @@ function CategoryGroup({
   onDelete: (scheduleId: string) => void;
   onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => void;
   parseDuration: (every: string) => string;
-  isMutating: boolean;
+  mutatingId: string | null;
 }) {
   const [expandedRuns, setExpandedRuns] = useState<Set<string>>(new Set());
   const isExpanded = expandedCategories.has(category);
@@ -446,7 +446,7 @@ function CategoryGroup({
                     onDelete={onDelete}
                     onUpdateInterval={onUpdateInterval}
                     parseDuration={parseDuration}
-                    isMutating={isMutating}
+                    isOwnMutating={mutatingId === s.schedule_id}
                   />
                 ))}
               </tbody>
@@ -454,7 +454,7 @@ function CategoryGroup({
           </div>
 
           <div style={{ marginTop: 8 }}>
-            {schedules.map((s) => (
+            {schedules.filter((s) => s.last_run_at).map((s) => (
               <div key={`runs-${s.schedule_id}`}>
                 <button
                   type="button"
@@ -510,6 +510,7 @@ export default function SchedulesPage() {
 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["news", "portfolio", "data", "operations", "research", "other"]));
   const [reconcileMsg, setReconcileMsg] = useState<string | null>(null);
+  const [mutatingId, setMutatingId] = useState<string | null>(null);
 
   const toggleCategory = useCallback((cat: string) => {
     setExpandedCategories((prev) => {
@@ -521,27 +522,38 @@ export default function SchedulesPage() {
   }, []);
 
   const handleTogglePause = useCallback(async (scheduleId: string, paused: boolean) => {
+    setMutatingId(scheduleId);
     try {
       if (paused) await resume(scheduleId);
       else await pause(scheduleId);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error(`Falha ao ${paused ? "retomar" : "pausar"} agendamento: ${msg}`);
+    } finally {
+      setMutatingId(null);
     }
   }, [pause, resume]);
 
   const handleDelete = useCallback(async (scheduleId: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
+    setMutatingId(scheduleId);
     try {
       await deleteSchedule(scheduleId);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error(`Falha ao excluir agendamento: ${msg}`);
+    } finally {
+      setMutatingId(null);
     }
   }, [deleteSchedule]);
 
   const handleUpdateInterval = useCallback(async (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => {
-    try { await updateInterval({ scheduleId, ...value }); } catch { /* errors surfaced by mutation state */ }
+    try {
+      await updateInterval({ scheduleId, ...value });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Falha ao atualizar intervalo: ${msg}`);
+    }
   }, [updateInterval]);
 
   const handleReconcile = useCallback(async () => {
@@ -618,8 +630,8 @@ export default function SchedulesPage() {
       {dataState === "stale" && <StaleWarning />}
 
       <section className="grid grid-4 section-gap">
-        <Metric label="Total" value={String(count)} note="agendamentos" />
-        <Metric label="Ativos" value={String(activeCount)} note="agendamentos" />
+        <Metric label="Total" value={String(count)} note="schedules" />
+        <Metric label="Ativos" value={String(activeCount)} note="rodando" />
         <Metric label="Pausados" value={String(pausedCount)} note="pausados" />
         <Metric label="Categorias" value={String(Object.keys(grouped).length)} note="grupos" />
       </section>
@@ -662,7 +674,7 @@ export default function SchedulesPage() {
               onDelete={handleDelete}
               onUpdateInterval={handleUpdateInterval}
               parseDuration={parseDuration}
-              isMutating={isMutating}
+              mutatingId={mutatingId}
             />
           ))}
         </div>

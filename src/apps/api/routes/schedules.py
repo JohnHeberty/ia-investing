@@ -140,7 +140,6 @@ class ScheduleSummaryV1(BaseModel):
     state: dict[str, Any] | None = None
     running_workflows: int = 0
     last_run_at: datetime | None = None
-    last_run_status: str | None = None
 
 
 class ScheduleDetailV1(BaseModel):
@@ -285,7 +284,6 @@ def _parse_schedule_description(description: Any) -> dict[str, Any]:
         "created_at": _safe_get(info_obj, "created_at"),
         "last_updated_at": _safe_get(info_obj, "last_updated_at"),
         "last_run_at": None,
-        "last_run_status": None,
         "info": {
             "running_workflows": _safe_get(info_obj, "running_workflows", 0),
         }
@@ -345,7 +343,6 @@ async def list_schedules(
             state=data.get("state"),
             running_workflows=data.get("info", {}).get("running_workflows", 0) if data.get("info") else 0,
             last_run_at=data.get("last_run_at"),
-            last_run_status=data.get("last_run_status"),
         )
         all_schedules.append(summary)
     all_schedules.sort(key=lambda s: (s.category, s.schedule_id))
