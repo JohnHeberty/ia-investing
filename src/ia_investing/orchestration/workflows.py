@@ -4,8 +4,8 @@ from workflows import (  # noqa: F401  # intentional legacy re-export for ia_inv
     ApprovalGateInput,
     ApprovalGateResult,
     ApprovalGateWorkflow,
-    DispatchOperationsWorkflow,
     DiscoverStocksWorkflow,
+    DispatchOperationsWorkflow,
     ExtractNewsInput,
     ExtractNewsWorkflow,
     IngestCVMInput,
@@ -32,7 +32,4 @@ from workflows import (  # noqa: F401  # intentional legacy re-export for ia_inv
     PortfolioOptimizationWorkflow,
     RunAgentInput,
     RunAgentWorkflow,
-    ThesisReviewInput,
-    ThesisReviewResult,
-    ThesisReviewWorkflow,
 )

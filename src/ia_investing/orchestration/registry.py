@@ -1,7 +1,6 @@
 """Explicit Temporal worker capability registry.
 
-Only workflows and activities listed here are executable. Phase-one mock
-activities are intentionally excluded from all production-capable workers.
+Only workflows and activities listed here are executable.
 """
 
 from __future__ import annotations

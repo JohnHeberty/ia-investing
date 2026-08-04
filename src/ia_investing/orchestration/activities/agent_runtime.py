@@ -1,9 +1,8 @@
 """Temporal activities for the governed, versioned agent runtime.
 
-This module replaces the phase-one `research_mock` execution path. It creates a
-pinned run, persists tenant and point-in-time context, executes the configured
-provider, validates the structured output, and returns only a safe public
-summary.
+It creates a pinned run, persists tenant and point-in-time context, executes
+the configured provider, validates the structured output, and returns only a
+safe public summary.
 """
 
 from __future__ import annotations

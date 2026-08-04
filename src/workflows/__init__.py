@@ -34,11 +34,6 @@ from workflows._portfolio_optimization import (  # noqa: E402
 )
 from workflows._portfolio_ranking import PortfolioRankingWorkflow  # noqa: E402
 from workflows._run_agent import RunAgentInput, RunAgentWorkflow  # noqa: E402
-from workflows._thesis_review import (  # noqa: E402
-    ThesisReviewInput,
-    ThesisReviewResult,
-    ThesisReviewWorkflow,
-)
 from workflows.candidate_dispatch import CandidateOutboxDispatchWorkflow  # noqa: E402
 from workflows.candidate_intelligence import (  # noqa: E402
     AutonomousEquityExplorationWorkflow,
@@ -87,7 +82,4 @@ __all__ = [
     "RunAgentInput",
     "RunAgentWorkflow",
     "ScheduledEquityExplorationWorkflow",
-    "ThesisReviewInput",
-    "ThesisReviewResult",
-    "ThesisReviewWorkflow",
 ]

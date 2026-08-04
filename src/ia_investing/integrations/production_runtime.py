@@ -28,7 +28,7 @@ from database.models.market_data import MarketBar, MarketQuote
 from ia_investing.ai._runner import AgentResult
 from ia_investing.ai.execution import AgentExecutionService
 from ia_investing.ai.gateway import create_gateway_provider
-from ia_investing.ai.provider import AgentProvider, MockProvider
+from ia_investing.ai.provider import AgentProvider
 from ia_investing.application.agent_runtime import AgentRuntimeService
 from ia_investing.application.candidate_repository import CandidateRepository
 from ia_investing.application.instruments import InstrumentMasterService
@@ -70,8 +70,6 @@ def _extract_text_from_html(raw: bytes) -> str:
 
 def _provider_for_runner() -> AgentProvider:
     settings = get_settings()
-    if settings.ai.provider == "mock":
-        return MockProvider()
     if settings.ai.provider in ("gateway", "litellm"):
         gw = settings.ai.gateway
         return create_gateway_provider(
@@ -84,7 +82,9 @@ def _provider_for_runner() -> AgentProvider:
             rpm=gw.rpm,
             tpm=gw.tpm,
         )
-    return MockProvider()
+    raise ValueError(
+        f"AI provider {settings.ai.provider!r} is not supported — set AI__PROVIDER to 'gateway' or 'litellm'"
+    )
 
 
 # ---------------------------------------------------------------------------
