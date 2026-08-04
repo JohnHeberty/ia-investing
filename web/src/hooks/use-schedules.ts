@@ -159,7 +159,7 @@ export function useSchedules() {
         `/api/v1/schedules/${scheduleId}/update-interval`,
         {
           method: "PUT",
-          headers: { "Idempotency-Key": `update-${scheduleId}` },
+          headers: { "Idempotency-Key": `update-${scheduleId}-${Date.now()}` },
           body: JSON.stringify({
             every_minutes: everyMinutes ?? null,
             every_hours: everyHours ?? null,

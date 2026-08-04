@@ -56,6 +56,7 @@ function IntervalEditor({
   isMutating: boolean;
 }) {
   const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [value, setValue] = useState(0);
   const [unit, setUnit] = useState("hours");
 
@@ -68,13 +69,20 @@ function IntervalEditor({
     setEditing(true);
   }, [interval]);
 
-  const save = useCallback(() => {
+  const save = useCallback(async () => {
     const payload =
       unit === "days" ? { everyDays: value } :
       unit === "hours" ? { everyHours: value } :
       { everyMinutes: value };
-    onUpdateInterval(schedule.schedule_id, payload);
-    setEditing(false);
+    setSaving(true);
+    try {
+      await onUpdateInterval(schedule.schedule_id, payload);
+      setEditing(false);
+    } catch {
+      // Editor stays open on failure — toast already shown by handleUpdateInterval
+    } finally {
+      setSaving(false);
+    }
   }, [unit, value, schedule.schedule_id, onUpdateInterval]);
 
   const cancel = useCallback(() => {
@@ -95,12 +103,14 @@ function IntervalEditor({
             if (e.key === "Enter") save();
             if (e.key === "Escape") cancel();
           }}
+          disabled={saving}
         />
         <select
           className="form-input"
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
           style={{ fontSize: 12, padding: "2px 4px", width: 70 }}
+          disabled={saving}
         >
           <option value="minutes">min</option>
           <option value="hours">horas</option>
@@ -110,17 +120,18 @@ function IntervalEditor({
           className="button"
           style={{ padding: "2px 6px", fontSize: 11 }}
           onClick={save}
-          disabled={isMutating}
+          disabled={saving}
           type="button"
           aria-label="Salvar"
         >
-          <Check size={12} />
+          {saving ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
         </button>
         <button
           className="button"
           style={{ padding: "2px 6px", fontSize: 11 }}
           onClick={cancel}
           type="button"
+          disabled={saving}
           aria-label="Cancelar"
         >
           <X size={12} />
@@ -553,6 +564,7 @@ export default function SchedulesPage() {
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error(`Falha ao atualizar intervalo: ${msg}`);
+      throw err;
     }
   }, [updateInterval]);
 
