@@ -70,6 +70,22 @@ function parseDuration(every: string): string {
 }
 
 export function parseIntervalValue(every: string): { value: number; unit: string } {
+  const isoMatch = every.match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/i);
+  if (isoMatch) {
+    const d = isoMatch[1] ? parseInt(isoMatch[1]) : 0;
+    const h = isoMatch[2] ? parseInt(isoMatch[2]) : 0;
+    const m = isoMatch[3] ? parseInt(isoMatch[3]) : 0;
+    if (d > 0) return { value: d, unit: "days" };
+    if (h > 0 && m === 0) return { value: h, unit: "hours" };
+    if (m > 0) return { value: m, unit: "minutes" };
+  }
+  const dayTimeMatch = every.match(/^(\d+)\s+day[s]?,?\s*(?:(\d+):(\d+):(\d+))?/i);
+  if (dayTimeMatch) {
+    const d = parseInt(dayTimeMatch[1]);
+    const h = dayTimeMatch[2] ? parseInt(dayTimeMatch[2]) : 0;
+    if (h >= 12) return { value: d + 1, unit: "days" };
+    return { value: d, unit: "days" };
+  }
   const dayMatch = every.match(/^(\d+)\s+day/);
   if (dayMatch) return { value: parseInt(dayMatch[1]), unit: "days" };
   const timeMatch = every.match(/^(\d+):(\d+):(\d+)/);
@@ -80,15 +96,6 @@ export function parseIntervalValue(every: string): { value: number; unit: string
     if (h > 0 && m === 0) return { value: h, unit: "hours" };
     if (h === 0 && m > 0) return { value: m, unit: "minutes" };
     if (h > 0 && m > 0) return { value: h * 60 + m, unit: "minutes" };
-  }
-  const isoMatch = every.match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?/i);
-  if (isoMatch) {
-    const d = isoMatch[1] ? parseInt(isoMatch[1]) : 0;
-    const h = isoMatch[2] ? parseInt(isoMatch[2]) : 0;
-    const m = isoMatch[3] ? parseInt(isoMatch[3]) : 0;
-    if (d > 0) return { value: d, unit: "days" };
-    if (h > 0 && m === 0) return { value: h, unit: "hours" };
-    if (m > 0) return { value: m, unit: "minutes" };
   }
   return { value: 4, unit: "hours" };
 }

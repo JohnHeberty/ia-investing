@@ -48,12 +48,10 @@ function IntervalEditor({
   schedule,
   onUpdateInterval,
   parseDuration,
-  isMutating,
 }: {
   schedule: ScheduleSummary;
-  onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => void;
+  onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => Promise<void>;
   parseDuration: (every: string) => string;
-  isMutating: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -175,7 +173,7 @@ function ScheduleRow({
   items: ScheduleSummary[];
   onTogglePause: (scheduleId: string, paused: boolean) => void;
   onDelete: (scheduleId: string) => void;
-  onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => void;
+  onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => Promise<void>;
   parseDuration: (every: string) => string;
   isOwnMutating: boolean;
 }) {
@@ -211,7 +209,6 @@ function ScheduleRow({
           schedule={schedule}
           onUpdateInterval={onUpdateInterval}
           parseDuration={parseDuration}
-          isMutating={isOwnMutating}
         />
       </td>
       <td style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
@@ -379,7 +376,7 @@ function CategoryGroup({
   toggleCategory: (cat: string) => void;
   onTogglePause: (scheduleId: string, paused: boolean) => void;
   onDelete: (scheduleId: string) => void;
-  onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => void;
+  onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => Promise<void>;
   parseDuration: (every: string) => string;
   mutatingId: string | null;
 }) {
