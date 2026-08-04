@@ -102,6 +102,7 @@ async def _persist_articles(
     session: AsyncSession,
     all_articles: list[NewsArticle],
     existing_hashes: set[str],
+    issuer_id: UUID | None = None,
 ) -> list[dict[str, Any]]:
     """Persist new articles, deduplicating by content hash. Returns persisted items."""
     persisted: list[dict[str, Any]] = []
@@ -129,6 +130,13 @@ async def _persist_articles(
         try:
             session.add(item)
             await session.flush()
+            if issuer_id is not None:
+                link = NewsEntityLink(
+                    news_item_id=item.id,
+                    issuer_id=issuer_id,
+                    relevance_score=1.0,
+                )
+                session.add(link)
             await savepoint.commit()
         except IntegrityError:
             await savepoint.rollback()
@@ -184,7 +192,7 @@ async def fetch_and_persist_news_items(
         return []
 
     existing_hashes = await _load_existing_hashes(session)
-    persisted = await _persist_articles(session, all_articles, existing_hashes)
+    persisted = await _persist_articles(session, all_articles, existing_hashes, issuer_id=issuer_id)
     logger.info("Persisted %d new news items for issuer %s", len(persisted), issuer_id)
     return persisted
 
@@ -287,6 +295,9 @@ async def analyze_news_item(
     body = item.body or ""
     analysis = await generate_llm_news_analysis(title, body)
     if analysis is None:
+        item.is_processed = True
+        item.raw_data = {**(item.raw_data or {}), "llm_failed": True}
+        await session.flush()
         return {"status": "llm_unavailable", "news_item_id": str(news_item_id)}
 
     affected_issuer_ids = await _resolve_issuer_ids_from_tickers(session, analysis.affected_issuers or [])

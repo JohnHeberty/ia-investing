@@ -42,23 +42,34 @@ async def analyze_single_news_item(news_item_id: str) -> dict[str, Any]:
 async def batch_analyze_news(issuer_id: str, limit: int = 10) -> dict[str, Any]:
     """Analyze unprocessed news items for an issuer."""
     with activity_span("batch_analyze_news"):
+        import sqlalchemy as sa
+
         from database.core import session_scope
-        from ia_investing.news.service import analyze_news_item, list_news_items
+        from database.models.news import NewsItem
+        from ia_investing.news.service import analyze_news_item
 
         async with session_scope() as session:
-            items, total = await list_news_items(session, issuer_id=UUID(issuer_id), is_processed=False, limit=limit)
+            result = await session.execute(
+                sa.select(NewsItem.id)
+                .where(NewsItem.is_processed.is_(False))
+                .order_by(NewsItem.created_at.desc())
+                .limit(limit)
+            )
+            item_ids = list(result.scalars().all())
+            total = len(item_ids)
+
             results = []
-            for item in items:
+            for item_id in item_ids:
                 savepoint = await session.begin_nested()
                 try:
-                    result = await analyze_news_item(UUID(item["id"]), session)
+                    analysis = await analyze_news_item(item_id, session)
                     await savepoint.commit()
-                    if result is not None:
-                        results.append(result)
+                    if analysis is not None:
+                        results.append(analysis)
                 except Exception as exc:
                     await savepoint.rollback()
-                    logger.warning("Failed to analyze news item %s: %s", item["id"], exc)
-                    results.append({"status": "failed", "news_item_id": item["id"]})
+                    logger.warning("Failed to analyze news item %s: %s", item_id, exc)
+                    results.append({"status": "failed", "news_item_id": str(item_id)})
             return {
                 "issuer_id": issuer_id,
                 "total_unprocessed": total,
