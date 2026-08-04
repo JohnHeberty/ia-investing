@@ -40,11 +40,11 @@ class NewsItemV1(BaseModel):
     url: str | None
     source_id: UUID
     source_name: str | None = None
-    published_at: datetime | None
-    language: str | None
-    sentiment_score: float | None
-    is_processed: bool | None
-    created_at: datetime | None
+    published_at: datetime | None = None
+    language: str | None = None
+    sentiment_score: float | None = None
+    is_processed: bool | None = None
+    created_at: datetime | None = None
 
 
 class NewsListResponseV1(BaseModel):
@@ -65,8 +65,8 @@ class DetectedEventV1(BaseModel):
     materiality_score: float | None
     direction_hint: str | None
     time_horizon: str | None
-    affected_metrics: dict[str, Any] | None
-    created_at: datetime | None
+    affected_metrics: dict[str, Any] | None = None
+    created_at: datetime | None = None
 
 
 class EventsListResponseV1(BaseModel):
@@ -233,7 +233,7 @@ class NewsSourceV1(BaseModel):
     trust_level: int | None
     source_type: str | None
     is_active: bool | None
-    created_at: datetime | None
+    created_at: datetime | None = None
 
 
 class SourceCreateRequestV1(BaseModel):
