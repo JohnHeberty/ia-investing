@@ -439,7 +439,8 @@ async def get_schedule(
     _validate_schedule_id(schedule_id)
     description = None
     try:
-        description = await client.describe_schedule(schedule_id)  # type: ignore[attr-defined]
+        handle = client.get_schedule_handle(schedule_id)
+        description = await handle.describe()
     except Exception as exc:
         _handle_temporal_error(exc, schedule_id)
     assert description is not None
