@@ -15,12 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 @activity.defn(name="fetch_news_items")
-async def fetch_news_items(issuer_id: str, max_results: int = 20) -> list[dict[str, Any]]:
+async def fetch_news_items(params: dict[str, Any]) -> list[dict[str, Any]]:
     """Fetch RSS news items for an issuer and persist to DB."""
     with activity_span("fetch_news_items"):
         from database.core import session_scope
         from ia_investing.news.service import fetch_and_persist_news_items
 
+        issuer_id = params["issuer_id"]
+        max_results = params.get("max_results", 20)
         async with session_scope() as session:
             items = await fetch_and_persist_news_items(UUID(issuer_id), session, max_results=max_results)
             return items
@@ -39,7 +41,7 @@ async def analyze_single_news_item(news_item_id: str) -> dict[str, Any]:
 
 
 @activity.defn(name="batch_analyze_news")
-async def batch_analyze_news(issuer_id: str, limit: int = 10) -> dict[str, Any]:
+async def batch_analyze_news(params: dict[str, Any]) -> dict[str, Any]:
     """Analyze unprocessed news items for an issuer."""
     with activity_span("batch_analyze_news"):
         import sqlalchemy as sa
@@ -47,6 +49,9 @@ async def batch_analyze_news(issuer_id: str, limit: int = 10) -> dict[str, Any]:
         from database.core import session_scope
         from database.models.news import NewsItem
         from ia_investing.news.service import analyze_news_item
+
+        issuer_id = params.get("issuer_id", "")
+        limit = params.get("limit", 10)
 
         async with session_scope() as session:
             result = await session.execute(

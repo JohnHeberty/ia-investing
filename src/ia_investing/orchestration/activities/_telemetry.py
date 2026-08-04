@@ -37,11 +37,13 @@ activity_errors = _meter.create_counter(
 
 def get_correlation_id() -> str:
     try:
-        headers = activity.info().headers  # type: ignore[attr-defined]
-        raw = headers.get("x-correlation-id")
-        if raw:
-            return raw[0].decode() if isinstance(raw[0], bytes) else str(raw[0])
-    except RuntimeError:
+        info = activity.info()
+        headers = getattr(info, "headers", None)
+        if headers:
+            raw = headers.get("x-correlation-id")
+            if raw:
+                return raw[0].decode() if isinstance(raw[0], bytes) else str(raw[0])
+    except (RuntimeError, AttributeError):
         pass
     return str(uuid4())
 
