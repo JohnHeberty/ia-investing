@@ -507,7 +507,7 @@ async def update_schedule_interval(
         handle = client.get_schedule_handle(schedule_id)
 
         async def _updater(_input: Any) -> ScheduleUpdate:
-            sched = _input.schedule
+            sched = _input.description.schedule
             old_spec = sched.spec
             new_intervals = [ScheduleIntervalSpec(every=every)]
             sched.spec = ScheduleSpec(
