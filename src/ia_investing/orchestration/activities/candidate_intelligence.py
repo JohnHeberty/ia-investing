@@ -363,13 +363,13 @@ async def validate_candidate_sources(command: CandidateWorkflowInput) -> Candida
         return await _runtime().validate_candidate_sources(command)
 
 
-@activity.defn()
+@activity.defn
 async def collect_candidate_documents(command: CandidateWorkflowInput) -> CandidateCheckpoint:
     with _telemetry.activity_span("candidate.collect_documents") as _:
         return await _runtime().collect_candidate_documents(command)
 
 
-@activity.defn()
+@activity.defn
 async def ingest_candidate_financial_data(command: CandidateWorkflowInput) -> CandidateCheckpoint:
     with _telemetry.activity_span("candidate.ingest_financials") as _:
         return await _runtime().ingest_candidate_financial_data(command)

@@ -12,6 +12,7 @@ from uuid import UUID
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
+from temporalio import activity
 
 from connectors.base import HttpClient
 from database.models.catalog import Issuer
@@ -95,7 +96,6 @@ _RETRYABLE_CODES = {
     "empty_findings", "missing_risk_factors", "missing_risk_acknowledgment",
     "risk_rating_inconsistent", "volatility_rating_mismatch",
     "approval_confidence_too_low", "insufficient_citation_coverage",
-    "risk_rating_inconsistent", "volatility_rating_mismatch",
 }
 
 _FEEDBACK_TEMPLATES = {
@@ -122,11 +122,8 @@ _FEEDBACK_TEMPLATES = {
 def _is_retryable(error_code: str) -> bool:
     if error_code in _RETRYABLE_CODES:
         return True
-    if "validation" in error_code.lower():
-        return True
-    if "pydantic" in error_code.lower():
-        return True
-    return False
+    error_lower = error_code.lower()
+    return "validation" in error_lower or "pydantic" in error_lower
 
 
 def _build_feedback(error_code: str, error_detail: str, attempt: int) -> str:
@@ -190,6 +187,7 @@ async def _execute_governed_agent(
             }
             if agent_run_id:
                 metadata["agent_run_id"] = agent_run_id
+            activity.heartbeat({"stage": "llm_call", "capability": capability, "attempt": attempt})
             executed = await AgentExecutionService(session, provider).execute(run_id, metadata=metadata)
             await session.commit()
 
@@ -461,6 +459,7 @@ class ProductionCandidateRuntime:
                     )
 
                     if issuer.cnpj:
+                        activity.heartbeat({"stage": "cvm_lookup", "cnpj": issuer.cnpj})
                         cvm_profile = await self._cvm.lookup_by_cnpj(issuer.cnpj)
                         if cvm_profile is not None:
                             evidence: dict[str, object] = {
@@ -742,6 +741,7 @@ class ProductionCandidateRuntime:
                 )
 
             try:
+                activity.heartbeat({"stage": "validating_source", "url": source.url})
                 response = await self._http.get(source.url)
             except Exception as exc:
                 logger.warning("validate_source %s: %s", source.url, exc)
@@ -922,6 +922,7 @@ class ProductionCandidateRuntime:
         stored_to_s3 = 0
         version = start_version
         for source in sources:
+            activity.heartbeat({"stage": "collecting", "collected": collected, "failed": failed, "total": len(sources)})
             if not source.url:
                 continue
             try:
@@ -1047,7 +1048,11 @@ class ProductionCandidateRuntime:
             ds_code = "cvm_dfp"
             ds = (await session.execute(sa.select(DataSource).where(DataSource.code == ds_code))).scalar_one_or_none()
             if ds is None:
-                lic = (await session.execute(sa.select(SourceLicense).where(SourceLicense.code == "cvm_open_data"))).scalar_one_or_none()
+                lic = (
+                    await session.execute(
+                        sa.select(SourceLicense).where(SourceLicense.code == "cvm_open_data")
+                    )
+                ).scalar_one_or_none()
                 if lic is None:
                     lic = SourceLicense(
                         code="cvm_open_data",
@@ -1078,7 +1083,13 @@ class ProductionCandidateRuntime:
                 consolidation = "consolidated" if stmt.value.endswith("_con") else "individual"
                 statement_name = stmt.value.rsplit("_", 1)[0].upper()
 
-                for entry in entries:
+                for idx, entry in enumerate(entries):
+                    activity.heartbeat({
+                        "stage": "ingesting",
+                        "statement": stmt.value,
+                        "progress": f"{idx}/{len(entries)}",
+                        "total": total_entries,
+                    })
                     try:
                         period_end = date.fromisoformat(entry.dt_referencia)
                     except (ValueError, TypeError):

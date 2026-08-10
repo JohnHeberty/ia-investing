@@ -175,9 +175,6 @@ async def create_and_execute_agent_run(raw_command: dict[str, Any]) -> dict[str,
                         str(executed.evidence_coverage) if executed.evidence_coverage is not None else None
                     ),
                 }
-                operation = await session.get(Operation, operation_id)
-                if operation is None or operation.organization_id != command.organization_id:
-                    raise RuntimeError("operation disappeared during agent execution")
                 operation.state = "succeeded" if executed.status == "succeeded" else "failed"
                 operation.result_data = result  # type: ignore[assignment]
                 operation.error_code = executed.error_code
