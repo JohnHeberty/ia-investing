@@ -330,6 +330,7 @@ class ExplorationSuggestionRecord(Base):
 
     promoted_candidate: Mapped[InvestmentCandidateRecord | None] = relationship(
         primaryjoin="ExplorationSuggestionRecord.promoted_candidate_id == InvestmentCandidateRecord.id",
+        foreign_keys="ExplorationSuggestionRecord.promoted_candidate_id",
         lazy="selectin",
     )
 
