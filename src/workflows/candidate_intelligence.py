@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timedelta
 from uuid import UUID
 
@@ -57,8 +58,28 @@ AGENT_RETRY = RetryPolicy(
 
 @workflow.defn(name="CandidateAnalysisWorkflow")
 class CandidateAnalysisWorkflow:
+    def __init__(self) -> None:
+        self._cancelled = False
+
+    @workflow.signal
+    async def cancel(self) -> None:
+        self._cancelled = True
+
     @workflow.run
     async def run(self, command: CandidateWorkflowInput) -> CandidateWorkflowResult:
+        try:
+            return await self._run_inner(command)
+        except asyncio.CancelledError:
+            checkpoint = CandidateCheckpoint(
+                candidate_id=command.candidate_id,
+                stage="cancelled",
+                blocked=True,
+                decision="cancel",
+                reason="Workflow cancelled by operator.",
+            )
+            return await self._complete(command, checkpoint)
+
+    async def _run_inner(self, command: CandidateWorkflowInput) -> CandidateWorkflowResult:
         identity = await workflow.execute_activity(
             resolve_candidate_identity,
             command,

@@ -153,11 +153,11 @@ async def dispatch_candidate_intelligence_events(
                 except WorkflowAlreadyStartedError:
                     pass
                 except ValueError as exc:
-                    # Invalid durable payloads require operator repair; leave unpublished for visibility.
                     activity.logger.error(
-                        "invalid candidate-intelligence outbox event",
+                        "invalid candidate-intelligence outbox event — marking as dead",
                         extra={"event_id": str(event.id), "event_type": event.event_type, "error": str(exc)},
                     )
+                    event.published_at = datetime(1970, 1, 1, tzinfo=UTC)
                     invalid += 1
                     continue
                 except Exception:
