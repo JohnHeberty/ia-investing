@@ -154,7 +154,7 @@ function RiskContent() {
         />
         <Metric
           label="Fontes saudáveis"
-          value={`${healthyCount}/${totalSources}`}
+          value={totalSources > 0 ? `${healthyCount}/${totalSources}` : "\u2014"}
           note="SLAs dentro da janela"
         />
         <Metric

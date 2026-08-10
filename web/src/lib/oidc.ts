@@ -55,20 +55,6 @@ export async function verifyJwt(token: string): Promise<JwtClaims> {
   return payload as JwtClaims;
 }
 
-/**
- * Decode a JWT payload WITHOUT signature verification.
- * Use only when the token was received over a trusted channel (e.g., just-exchanged from IdP over HTTPS)
- * and you only need to read claims before full verification.
- *
- * @deprecated Use verifyJwt() instead for security-sensitive operations.
- */
-export function decodeJwtPayload(token: string): JwtClaims {
-  const payload = token.split(".")[1];
-  if (!payload) throw new Error("Invalid JWT: no payload");
-  const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
-  return JSON.parse(json) as JwtClaims;
-}
-
 export function oidcConfig(): OidcConfig {
   return {
     clientId: process.env.OIDC_CLIENT_ID ?? "",

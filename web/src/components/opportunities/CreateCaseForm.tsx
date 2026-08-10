@@ -6,8 +6,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 
-import { commandHeaders } from "@/lib/api";
-import { queryKeys } from "@/lib/api-client";
+import { bffFetch, queryKeys } from "@/lib/api-client";
 
 const newCaseSchema = z.object({
   title: z.string().min(3, "Título deve ter pelo menos 3 caracteres"),
@@ -69,9 +68,9 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
           return;
         }
 
-        const response = await fetch("/api/backend/api/v1/research/cases", {
+        const result = await bffFetch<{ id: string }>("/api/v1/research/cases", {
           method: "POST",
-          headers: commandHeaders(idempotencyKey),
+          headers: { "X-Idempotency-Key": idempotencyKey },
           body: JSON.stringify({
             title: values.title,
             instrument_id: values.instrument,
@@ -81,11 +80,8 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
           }),
         });
 
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}));
-          throw new Error(
-            (body as { detail?: string }).detail ?? "Erro ao criar caso",
-          );
+        if (!result?.id) {
+          throw new Error("Erro ao criar caso");
         }
 
         setSubmitSuccess(true);
