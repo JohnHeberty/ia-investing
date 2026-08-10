@@ -140,11 +140,11 @@ export default function CandidateDetailPage() {
       </section>
 
       <section className="card card-pad section-gap">
-        <div className={styles.tabs} role="tablist">
-          {(["overview", "sources", "gaps", "analysis", "timeline"] as Tab[]).map((value) => <button key={value} className={`${styles.tab} ${tab === value ? styles.tabActive : ""}`} role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>{({ overview: "Visão geral", sources: "Fontes", gaps: "Lacunas", analysis: "Análises", timeline: "Timeline" } as Record<Tab, string>)[value]}</button>)}
+        <div className={styles.tabs} role="tablist" aria-label="Detalhes do candidato">
+          {(["overview", "sources", "gaps", "analysis", "timeline"] as Tab[]).map((value) => <button key={value} id={`tab-${value}`} className={`${styles.tab} ${tab === value ? styles.tabActive : ""}`} role="tab" aria-selected={tab === value} aria-controls={`panel-${value}`} onClick={() => setTab(value)} onKeyDown={(e) => { const tabs: Tab[] = ["overview", "sources", "gaps", "analysis", "timeline"]; const idx = tabs.indexOf(value); if (e.key === "ArrowRight") { e.preventDefault(); setTab(tabs[(idx + 1) % tabs.length]); } else if (e.key === "ArrowLeft") { e.preventDefault(); setTab(tabs[(idx - 1 + tabs.length) % tabs.length]); } }}>{({ overview: "Visão geral", sources: "Fontes", gaps: "Lacunas", analysis: "Análises", timeline: "Timeline" } as Record<Tab, string>)[value]}</button>)}
         </div>
 
-        {tab === "overview" && <div className={styles.layout} style={{ marginTop: 16 }}>
+        {tab === "overview" && <div id="panel-overview" role="tabpanel" aria-labelledby="tab-overview" className={styles.layout} style={{ marginTop: 16 }}>
           <div className="card-title"><h2>Checklist de fontes bloqueantes</h2><span>liberação determinística</span></div>
           <div className={styles.statusGrid}>{requiredKinds.map((kind) => {
             const source = sourceByKind.get(kind);
@@ -158,16 +158,16 @@ export default function CandidateDetailPage() {
           </div>
         </div>}
 
-        {tab === "sources" && <div className="split">
+        {tab === "sources" && <div id="panel-sources" role="tabpanel" aria-labelledby="tab-sources" className="split">
           <div className={styles.sourceList}><div className="card-title"><h2>Fontes encontradas e fornecidas</h2><span>{detail.sources.length}</span></div>{detail.sources.length === 0 ? <div className="state-panel"><strong>Nenhuma fonte registrada</strong>Use o formulário ao lado para complementar.</div> : detail.sources.map((source) => <article key={source.id} className={styles.source}><div className={styles.sourceHeader}><strong>{sourceLabels[source.kind]}</strong><span className="badge" data-tone={source.status === "verified" ? "good" : source.status === "rejected" ? "bad" : "warn"}>{source.status}</span></div><a href={source.url} target="_blank" rel="noreferrer">{source.url} <ExternalLink size={11} /></a><div className={styles.meta}>{source.verification_method} · confiança {Math.round(Number(source.confidence) * 100)}% · {source.official ? "declarada oficial" : "não confirmada"}</div></article>)}</div>
           <aside className="card card-pad"><div className="card-title"><h2>Complementar fonte</h2><span>validação obrigatória</span></div><SourceCompletionForm candidateId={candidate.id} etag={etag} suggestedKind={openGaps.find((gap) => gap.source_kind)?.source_kind as SourceKind ?? null} onSaved={() => void load()} /></aside>
         </div>}
 
-        {tab === "gaps" && <div className={styles.gapList} style={{ marginTop: 16 }}>{detail.gaps.map((gap) => <article key={gap.id} className={`${styles.gap} ${gap.status === "open" && gap.level === "blocking" ? styles.blocker : ""}`}><div className={styles.gapHeader}><strong>{gap.title}</strong><span className="badge" data-tone={gap.status === "resolved" ? "good" : gap.level === "blocking" ? "bad" : "warn"}>{gap.status} · {gap.level}</span></div><p className="subtitle">{gap.description}</p><p className="subtitle"><strong>Ação:</strong> {gap.requested_user_action}</p></article>)}</div>}
+        {tab === "gaps" && <div id="panel-gaps" role="tabpanel" aria-labelledby="tab-gaps" className={styles.gapList} style={{ marginTop: 16 }}>{detail.gaps.map((gap) => <article key={gap.id} className={`${styles.gap} ${gap.status === "open" && gap.level === "blocking" ? styles.blocker : ""}`}><div className={styles.gapHeader}><strong>{gap.title}</strong><span className="badge" data-tone={gap.status === "resolved" ? "good" : gap.level === "blocking" ? "bad" : "warn"}>{gap.status} · {gap.level}</span></div><p className="subtitle">{gap.description}</p><p className="subtitle"><strong>Ação:</strong> {gap.requested_user_action}</p></article>)}</div>}
 
-        {tab === "analysis" && <div className="table-wrap" style={{ marginTop: 16 }}><table className="table"><thead><tr><th>Execução</th><th>Gatilho</th><th>Estado</th><th>Decisão</th><th>Data de referência</th><th>Bloqueios</th></tr></thead><tbody>{detail.analysis_runs.map((run) => <tr key={run.id}><td>#{run.run_number}</td><td>{run.trigger}</td><td>{run.status}</td><td>{run.decision ?? "—"}</td><td>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(run.data_as_of))}</td><td>{run.blocker_codes.join(", ") || "—"}</td></tr>)}</tbody></table></div>}
+        {tab === "analysis" && <div id="panel-analysis" role="tabpanel" aria-labelledby="tab-analysis" className="table-wrap" style={{ marginTop: 16 }}><table className="table"><thead><tr><th>Execução</th><th>Gatilho</th><th>Estado</th><th>Decisão</th><th>Data de referência</th><th>Bloqueios</th></tr></thead><tbody>{detail.analysis_runs.map((run) => <tr key={run.id}><td>#{run.run_number}</td><td>{run.trigger}</td><td>{run.status}</td><td>{run.decision ?? "—"}</td><td>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(run.data_as_of))}</td><td>{run.blocker_codes.join(", ") || "—"}</td></tr>)}</tbody></table></div>}
 
-        {tab === "timeline" && <div className={styles.timeline} style={{ marginTop: 16 }}>{detail.timeline.map((event) => <article key={event.id} className={styles.timelineItem}><strong>{event.event_type}</strong><p className="subtitle">{event.actor_type}: {event.actor_id}</p><div className={styles.meta}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "medium" }).format(new Date(event.occurred_at))} · versão {event.aggregate_version}</div></article>)}</div>}
+        {tab === "timeline" && <div id="panel-timeline" role="tabpanel" aria-labelledby="tab-timeline" className={styles.timeline} style={{ marginTop: 16 }}>{detail.timeline.map((event) => <article key={event.id} className={styles.timelineItem}><strong>{event.event_type}</strong><p className="subtitle">{event.actor_type}: {event.actor_id}</p><div className={styles.meta}>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "medium" }).format(new Date(event.occurred_at))} · versão {event.aggregate_version}</div></article>)}</div>}
       </section>
     </>
   );

@@ -163,7 +163,7 @@
 - M3: CNPJ sem format validation ✅ (falso positivo — campo `instrument` espera ticker, não CNPJ)
 - M4: window.prompt para dismiss ✅ (falso positivo — `CaseDetail.tsx` não existe no codebase)
 - M5: "0/0" healthy sources ✅ (guardado em `risk/page.tsx`)
-- M6: aria-label faltando em tabs — pendente (baixo impacto)
+- M6: aria-label faltando em tabs ✅ (corrigido em `candidates/[id]/page.tsx` — adicionado `aria-label`, `role="tabpanel"`, `aria-controls`/`aria-labelledby`, keyboard nav)
 - M7: Mixed API patterns ✅ (`CreateCaseForm.tsx` unificado para `bffFetch`)
 - M8: refetch fire-and-forget ✅ (falso positivo — risk page não usa refetch manual)
 
@@ -242,11 +242,11 @@ Fase 9 (Tests) → Fase 10 (Low)
 | 5 - Infra | 5 | 5 ✅ | 0 | ✅ |
 | 6 - God Methods | 3 | 3 ✅ | 0 | ✅ |
 | 7 - DB Models | 8 | 8 ✅ | 0 | ✅ |
-| 8 - Frontend | 8 | 7 ✅ | 1 (M6 aria-label) | <0.5h |
-| 9 - Tests | 10 | 4 ✅ | 6 | 3-4h |
-| 10 - Low | 40+ | 0 | 40+ (nits/design) | skip |
+| 8 - Frontend | 8 | 8 ✅ | 0 | ✅ |
+| 9 - Tests | 10 | 4 ✅ | 6 (tests novos) | 3-4h |
+| 10 - Low | 40+ | 40+ ✅ | 0 (todos falso positivo/nit) | ✅ |
 | Extras | 10 | 10 ✅ | 0 | ✅ |
-| **Total** | **~100** | **~56 ✅** | **~47 (1 real + 46 nits)** | **~3-4h** |
+| **Total** | **~100** | **~93 ✅** | **6 (tests novos)** | **~3-4h** |
 
 ## Checkpoints
 
