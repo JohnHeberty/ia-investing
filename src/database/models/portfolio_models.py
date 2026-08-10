@@ -27,9 +27,7 @@ class Portfolio(Base):
     initial_capital: Mapped[Decimal] = mapped_column(sa.Numeric(20, 4))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     __table_args__ = (sa.UniqueConstraint("organization_id", "name", name="uq_portfolios_org_name"),)
 
@@ -55,11 +53,9 @@ class Position(Base):
     avg_cost_per_share: Mapped[Decimal] = mapped_column(sa.Numeric(14, 6))
     current_price: Mapped[Decimal] = mapped_column(sa.Numeric(14, 6))
 
-    weight_pct: Mapped[float] = mapped_column(sa.Float)
+    weight_pct: Mapped[Decimal] = mapped_column(sa.Numeric(8, 6))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"Position(ticker_symbol={self.ticker_symbol!r}, quantity={self.quantity})"
@@ -84,9 +80,7 @@ class Transaction(Base):
     status: Mapped[str] = mapped_column(sa.String(20))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"Transaction(side={self.side!r}, ticker_symbol={self.ticker_symbol!r}, status={self.status!r})"
@@ -103,12 +97,10 @@ class PortfolioConstraint(Base):
 
     constraint_type: Mapped[str] = mapped_column(sa.String(50))
     target: Mapped[str] = mapped_column(sa.String(100))
-    limit_value: Mapped[float] = mapped_column(sa.Float)
+    limit_value: Mapped[Decimal] = mapped_column(sa.Numeric(14, 6))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"PortfolioConstraint(constraint_type={self.constraint_type!r}, target={self.target!r})"
@@ -133,9 +125,7 @@ class RiskSnapshot(Base):
     volatility_annualized: Mapped[Decimal] = mapped_column(sa.Numeric(10, 6))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"RiskSnapshot(sharpe_ratio={self.sharpe_ratio}, max_drawdown_pct={self.max_drawdown_pct})"

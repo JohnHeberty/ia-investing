@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.data_foundation import DataSource, SourceLicense, SourceSLA
 
 

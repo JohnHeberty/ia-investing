@@ -8,8 +8,8 @@ JSONB is more efficient for querying array elements and avoids the
 known PostgreSQL issue where ARRAY type is lost across views.
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "20260728_06"
 down_revision: str | None = "20260728_05"

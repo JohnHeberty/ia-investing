@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import structlog
 import pytest
+import structlog
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from starlette.testclient import TestClient

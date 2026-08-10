@@ -14,7 +14,7 @@ from apps.api._etag import parse_etag
 from apps.api.dependencies import get_operation_service
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
-from database.models.portfolio_domain import ModelPortfolio, InstitutionalBacktestRun
+from database.models.portfolio_domain import InstitutionalBacktestRun, ModelPortfolio
 from ia_investing.application.backtests import InstitutionalBacktestService
 from ia_investing.application.institutional_portfolio import (
     InstitutionalPortfolioService,

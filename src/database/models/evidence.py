@@ -47,6 +47,7 @@ class DocumentChunk(Base):
             postgresql_using="hnsw",
             postgresql_ops={"embedding": "vector_cosine_ops"},
             postgresql_where=sa.text("embedding IS NOT NULL"),
+            postgresql_with={"m": 16, "ef_construction": 200},
         ),
         sa.UniqueConstraint(
             "source_object_version_id", "content_sha256", "ordinal", name="uq_document_chunks_source_hash_ordinal"

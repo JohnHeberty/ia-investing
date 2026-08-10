@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from data_quality._models import ValidationResult
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.data_governance import QualityIncident, QualityRule, QuarantineRecord
 
 _meter = metrics.get_meter("ia_investing.data_quality")

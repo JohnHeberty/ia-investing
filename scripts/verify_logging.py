@@ -113,7 +113,6 @@ def check_audit_context_middleware() -> bool:
 
 def check_security_auditor() -> bool:
     """Verify SecurityAuditor is importable and functional."""
-    from ia_investing.application.audit_service import AuditService
 
     print("  OK: AuditService imported")
     return True

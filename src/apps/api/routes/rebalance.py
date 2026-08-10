@@ -36,8 +36,9 @@ class CancelRequest(BaseModel):
 
 async def get_rebalance_service(
     session: AsyncSession = Depends(get_async_session),
+    auth: AuthContext = Depends(require_permission("rebalance:*")),
 ) -> RebalanceService:
-    return RebalanceService(session)
+    return RebalanceService(session, organization_id=auth.organization_id)
 
 
 RebalanceSvc = Annotated[RebalanceService, Depends(get_rebalance_service)]

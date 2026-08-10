@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from apps.api._errors import map_error
 from apps.api.dependencies import get_execution_service
-from apps.api.security import safe_uuid,  AuthContext, require_permission
+from apps.api.security import AuthContext, require_permission, safe_uuid
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.execution_service import (  # type: ignore[attr-defined]
     ExecutionService,

@@ -16,7 +16,7 @@ from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from apps.api.dependencies import SessionDep, get_temporal_client
 from apps.api.security import Principal, require_permission
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.operations import Operation, OperationDispatchOutbox
 from ia_investing.application.mission_control import MissionControlService
 from ia_investing.contracts.v1 import MissionControlResponse, PortfolioRankItem

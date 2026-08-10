@@ -5,8 +5,8 @@ Revises: 20260728_03
 Create Date: 2026-07-28
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "20260728_04"
 down_revision: str | None = "20260728_merge"
@@ -38,7 +38,7 @@ DEAD_TABLES = [
 
 def upgrade() -> None:
     for table in DEAD_TABLES:
-        op.execute(f"DROP TABLE IF EXISTS {table} CASCADE")  # noqa: S608
+        op.execute(f"DROP TABLE IF EXISTS {table} CASCADE")
 
 
 def downgrade() -> None:

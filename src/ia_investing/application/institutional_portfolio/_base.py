@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.instrument_master import Listing
 from database.models.market_data import FxRate, MarketBar
 from ia_investing.domain.identity import InstitutionalAccessContext

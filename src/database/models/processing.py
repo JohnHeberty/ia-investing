@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
@@ -22,12 +23,10 @@ class DocumentProcessingLog(Base):
     step_name: Mapped[str | None] = mapped_column(sa.String(100))  # "download", "hash_check", "parse", "validate"
     status: Mapped[str | None] = mapped_column(sa.String(20))  # "started", "success", "failed"
     error_message: Mapped[str | None] = mapped_column(sa.Text)
-    duration_seconds: Mapped[float | None] = mapped_column(sa.Float)
+    duration_seconds: Mapped[Decimal | None] = mapped_column(sa.Numeric(12, 6))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"DocumentProcessingLog(step_name={self.step_name!r}, status={self.status!r})"
@@ -49,12 +48,10 @@ class DocumentDuplicate(Base):
     )
 
     similarity_method: Mapped[str | None] = mapped_column(sa.String(50))  # "sha256", "fuzzy_title"
-    similarity_score: Mapped[float | None] = mapped_column(sa.Float)
+    similarity_score: Mapped[Decimal | None] = mapped_column(sa.Numeric(8, 6))
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"DocumentDuplicate(similarity_method={self.similarity_method!r})"
@@ -75,9 +72,7 @@ class DocumentEvent(Base):
     payload: Mapped[dict[str, object] | None] = mapped_column(JSONB)
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"DocumentEvent(event_type={self.event_type!r})"

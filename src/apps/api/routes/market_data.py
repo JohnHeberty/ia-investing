@@ -10,8 +10,8 @@ from apps.api.security import AuthContext, get_auth_context
 from ia_investing.market_data import (
     get_current_price,
     get_current_prices,
-    get_fundamentals,
     get_financial_statements,
+    get_fundamentals,
     get_historical_prices,
 )
 

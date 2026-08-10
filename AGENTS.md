@@ -7,7 +7,7 @@ Application code lives under `src/`; deployable entry points are in `src/apps/`.
 ## Build, Test, and Development Commands
 
 - `uv sync --all-extras` installs Python 3.12 runtime and development dependencies.
-- `Copy-Item .env.example .env` creates local configuration on PowerShell; never commit the populated file.
+- `cp .env.example .env` (bash) or `Copy-Item .env.example .env` (PowerShell) creates local configuration; never commit the populated file.
 - `docker compose --profile dev up -d` starts PostgreSQL, MinIO, Temporal, migrations, API, and workers.
 - `docker compose --profile observability up -d` adds the persistent telemetry collector and MLflow.
 - `alembic upgrade head` applies database migrations.

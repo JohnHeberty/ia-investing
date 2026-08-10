@@ -5,8 +5,6 @@ Revises: 20260727_02, 20260728_03
 Create Date: 2026-07-28
 """
 
-from alembic import op
-import sqlalchemy as sa
 
 revision: str = "20260728_merge"
 down_revision: tuple = ("20260727_02", "20260728_03")

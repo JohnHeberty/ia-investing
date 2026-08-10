@@ -6,7 +6,7 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.readiness import (
     ReadinessControl,
     ReadinessDecision,

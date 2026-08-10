@@ -9,8 +9,8 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "20260728_03"
 down_revision: str | None = "20260728_02"
@@ -37,7 +37,7 @@ def _upgrade_table(table: str) -> None:
     conn.execute(sa.text(f"UPDATE {table} SET created_at = NOW() WHERE created_at IS NULL"))  # noqa: S608
     conn.execute(
         sa.text(
-            f"ALTER TABLE {table} ALTER COLUMN created_at SET NOT NULL"  # noqa: S608
+            f"ALTER TABLE {table} ALTER COLUMN created_at SET NOT NULL"
         )
     )
 

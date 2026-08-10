@@ -11,7 +11,7 @@ from opentelemetry import trace
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from apps.api.security import safe_uuid, AuthContext, require_permission
+from apps.api.security import AuthContext, require_permission, safe_uuid
 from database.core import get_async_session
 from database.models.agent_runtime import AgentRuntimeRun
 from ia_investing.application._audit_mixin import AuditMixin

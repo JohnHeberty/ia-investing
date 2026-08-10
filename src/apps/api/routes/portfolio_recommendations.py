@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 from datetime import datetime
-from decimal import Decimal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -85,7 +84,7 @@ async def get_portfolio_recommendations(
             scores = await compute_scores(ticker)
             all_scores[ticker] = scores
         except Exception:
-            all_scores[ticker] = {dim: 0.5 for dim in SCORING_WEIGHTS}
+            all_scores[ticker] = dict.fromkeys(SCORING_WEIGHTS, 0.5)
 
     rec = build_portfolio_recommendation(
         portfolio_id=str(portfolio_id),

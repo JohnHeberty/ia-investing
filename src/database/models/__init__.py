@@ -106,7 +106,6 @@ from .news import (  # noqa: F401
     NewsSource,
 )
 from .operations import Operation  # noqa: F401
-from .schedule_history import ScheduleRunHistory  # noqa: F401
 from .paper_execution import (  # noqa: F401
     ChallengerEvaluation,
     ExecutionModelVersion,
@@ -196,6 +195,7 @@ from .research import (  # noqa: F401
     ResearchQuestion,
 )
 from .review import ResearchAssessment, ReviewDecision, ReviewRequest  # noqa: F401
+from .schedule_history import ScheduleRunHistory  # noqa: F401
 from .system_prompts import SystemPrompt  # noqa: F401
 from .thesis_domain import (  # noqa: F401
     ResearchThesis,

@@ -11,8 +11,8 @@ that has created_at but no updated_at. Excludes:
 - Immutable/audit tables where mutation tracking is inappropriate
 """
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 revision: str = "20260728_05"
 down_revision: str | None = "20260728_04"

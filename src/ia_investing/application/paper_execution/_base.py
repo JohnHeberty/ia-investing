@@ -6,7 +6,7 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.paper_execution import PaperKillSwitch, PaperOrder, ReconciliationBreak, TradeIntent
 from database.models.portfolio_domain import ModelPortfolio
 from database.models.research import DomainOutboxEvent

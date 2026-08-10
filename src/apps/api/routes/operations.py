@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Response
 from pydantic import BaseModel, ConfigDict, Field
 
 from apps.api.dependencies import get_operation_service
-from apps.api.security import AuthContext, require_permission, safe_uuid
+from apps.api.security import AuthContext, require_permission
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.operations import AgentRunCommand, IdempotencyConflictError, OperationService
 from ia_investing.contracts.v1 import OperationAcceptedV1, OperationStatusV1

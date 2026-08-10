@@ -19,7 +19,6 @@ from ia_investing.integrations.production_runtime import ProductionCandidateRunt
 from ia_investing.orchestration.activities.candidate_intelligence import (
     CandidateCheckpoint,
     CandidateWorkflowInput,
-    SourceDiscoveryCheckpoint,
 )
 from ia_investing.platform.database.runtime import DatabaseRuntime
 
@@ -50,8 +49,9 @@ async def _update_candidate_status(
     candidate_id: UUID,
     new_status: str,
 ) -> None:
-    from database.models.investment_candidates import InvestmentCandidateRecord
     import sqlalchemy as sa
+
+    from database.models.investment_candidates import InvestmentCandidateRecord
 
     async with db.session() as session:
         candidate = (
@@ -85,8 +85,9 @@ async def _record_event(
     stage_name: str,
     checkpoint: CandidateCheckpoint,
 ) -> None:
-    from database.models.investment_candidates import CandidateEventRecord, InvestmentCandidateRecord
     import sqlalchemy as sa
+
+    from database.models.investment_candidates import CandidateEventRecord, InvestmentCandidateRecord
 
     async with db.session() as session:
         candidate = (
@@ -134,9 +135,9 @@ async def run_candidate_pipeline(
     stages_result: list[StageResult] = []
 
     import sqlalchemy as sa
+
     from database.models.investment_candidates import (
         CandidateAnalysisRunRecord,
-        CandidateEventRecord,
         CandidateGapRecord,
         CandidateSourceRecord,
         InvestmentCandidateRecord,
@@ -227,7 +228,7 @@ async def run_candidate_pipeline(
                 stage=name,
                 blocked=False,
                 decision="skipped",
-                reason=f"Skipped by request",
+                reason="Skipped by request",
             )
 
         if new_status and new_status != current_status:
@@ -597,7 +598,7 @@ async def run_candidate_pipeline(
         final_status = workflow_result.status
     except Exception as exc:
         logger.warning("Failed to complete pipeline run for %s: %s", candidate_id, exc)
-        final_status = final_ckpt.blocked and "blocked" or "completed"
+        final_status = (final_ckpt.blocked and "blocked") or "completed"
 
     total_ms = (time.monotonic() - pipeline_start) * 1000
 

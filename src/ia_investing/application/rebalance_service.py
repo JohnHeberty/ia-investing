@@ -8,7 +8,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.portfolio import Position
+from database.models.portfolio import Portfolio, Position
 from database.models.portfolio_mandates import ModelPortfolio
 from database.models.rebalance import DriftSnapshot, RebalanceProposal, RebalanceTrade
 from ia_investing.domain.portfolio_machine import (
@@ -25,8 +25,9 @@ MIN_LIQUIDITY_THRESHOLD = Decimal("100000")
 
 
 class RebalanceService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, organization_id: uuid.UUID | None = None) -> None:
         self._session = session
+        self._organization_id = organization_id
 
     async def calculate_rebalance(
         self,
@@ -250,12 +251,17 @@ class RebalanceService:
             weight = float(pos.get("weight_pct", 0) or 0)
             current_allocations[ticker] = weight
 
-        latest_snapshot = await self._session.execute(
+        snapshot_stmt = (
             sa.select(DriftSnapshot)
             .where(DriftSnapshot.portfolio_id == portfolio_id)
             .order_by(DriftSnapshot.snapshot_date.desc())
             .limit(1)
         )
+        if self._organization_id is not None:
+            snapshot_stmt = snapshot_stmt.join(ModelPortfolio, ModelPortfolio.id == DriftSnapshot.portfolio_id).where(
+                ModelPortfolio.organization_id == self._organization_id
+            )
+        latest_snapshot = await self._session.execute(snapshot_stmt)
         snapshot = latest_snapshot.scalar_one_or_none()
         target_allocations = snapshot.allocations if snapshot else {}
 
@@ -272,11 +278,16 @@ class RebalanceService:
         }
 
     async def get_history(self, portfolio_id: uuid.UUID) -> list[dict[str, Any]]:
-        result = await self._session.execute(
+        stmt = (
             sa.select(RebalanceProposal)
             .where(RebalanceProposal.portfolio_id == portfolio_id)
             .order_by(RebalanceProposal.created_at.desc())
         )
+        if self._organization_id is not None:
+            stmt = stmt.join(ModelPortfolio, ModelPortfolio.id == RebalanceProposal.portfolio_id).where(
+                ModelPortfolio.organization_id == self._organization_id
+            )
+        result = await self._session.execute(stmt)
         proposals = list(result.scalars().all())
         return [await self._proposal_to_dict(p.id) for p in proposals]
 
@@ -286,6 +297,10 @@ class RebalanceService:
         portfolio_id: uuid.UUID | None = None,
     ) -> list[dict[str, Any]]:
         stmt = sa.select(RebalanceProposal).order_by(RebalanceProposal.created_at.desc())
+        if self._organization_id is not None:
+            stmt = stmt.join(ModelPortfolio, ModelPortfolio.id == RebalanceProposal.portfolio_id).where(
+                ModelPortfolio.organization_id == self._organization_id
+            )
         if status:
             stmt = stmt.where(RebalanceProposal.status == status)
         if portfolio_id:
@@ -297,6 +312,8 @@ class RebalanceService:
 
     async def _get_portfolio(self, portfolio_id: uuid.UUID) -> dict[str, Any]:
         stmt = sa.select(ModelPortfolio).where(ModelPortfolio.id == portfolio_id)
+        if self._organization_id is not None:
+            stmt = stmt.where(ModelPortfolio.organization_id == self._organization_id)
         result = await self._session.execute(stmt)
         model = result.scalar_one_or_none()
         if model is None:
@@ -310,6 +327,10 @@ class RebalanceService:
 
     async def _get_positions(self, portfolio_id: uuid.UUID) -> list[dict[str, Any]]:
         stmt = sa.select(Position).where(Position.portfolio_id == portfolio_id)
+        if self._organization_id is not None:
+            stmt = stmt.join(Portfolio, Portfolio.id == Position.portfolio_id).where(
+                Portfolio.organization_id == self._organization_id
+            )
         result = await self._session.execute(stmt)
         positions = list(result.scalars().all())
         return [
@@ -323,6 +344,10 @@ class RebalanceService:
 
     async def _get_proposal(self, proposal_id: uuid.UUID) -> RebalanceProposal:
         stmt = sa.select(RebalanceProposal).where(RebalanceProposal.id == proposal_id)
+        if self._organization_id is not None:
+            stmt = stmt.join(ModelPortfolio, ModelPortfolio.id == RebalanceProposal.portfolio_id).where(
+                ModelPortfolio.organization_id == self._organization_id
+            )
         result = await self._session.execute(stmt)
         proposal = result.scalar_one_or_none()
         if proposal is None:

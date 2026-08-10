@@ -7,7 +7,7 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.research import DomainOutboxEvent
 from database.models.review import ResearchAssessment, ReviewDecision, ReviewRequest
 

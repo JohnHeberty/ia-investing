@@ -25,6 +25,7 @@ class StrategyMandate(Base):
     status: Mapped[str] = mapped_column(sa.String(20), default="draft")
     created_by: Mapped[str] = mapped_column(sa.String(255))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     __table_args__ = (
         sa.UniqueConstraint(

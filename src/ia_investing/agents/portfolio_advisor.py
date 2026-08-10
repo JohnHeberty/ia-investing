@@ -1,5 +1,4 @@
-"""
-Portfolio Advisor Agent — recommends adjustments to portfolios based on
+"""Portfolio Advisor Agent — recommends adjustments to portfolios based on
 9-dimension scoring (fundamental, momentum, valuation, risk, analyst,
 leverage, growth, liquidity, earnings) with optional LLM-generated analysis.
 """
@@ -15,7 +14,6 @@ from typing import Any
 
 from ia_investing.market_data import (
     get_analyst_data,
-    get_esg_data,
     get_fundamentals,
     get_historical_prices,
 )
@@ -598,7 +596,7 @@ def build_portfolio_recommendation(
         if all_scores and ticker in all_scores:
             scores = all_scores[ticker]
         else:
-            scores = {dim: 0.5 for dim in SCORING_WEIGHTS}
+            scores = dict.fromkeys(SCORING_WEIGHTS, 0.5)
 
         composite = calculate_position_score(scores)
 
@@ -756,7 +754,7 @@ async def generate_llm_analysis(
         if settings.ai.provider == "mock":
             return None
 
-        from ia_investing.ai.gateway import create_gateway_provider, ChatCompletionRequest, ChatMessage
+        from ia_investing.ai.gateway import ChatCompletionRequest, ChatMessage, create_gateway_provider
         gw = settings.ai.gateway
 
         if not gw.base_url or not gw.api_key.get_secret_value():
@@ -813,7 +811,7 @@ Responda em JSON:
             return json.loads(content[json_start:json_end])
 
         return None
-    except asyncio.TimeoutError:
+    except TimeoutError:
         logger.warning("LLM analysis timed out after 30s, falling back to rule-based")
         return None
     except Exception as exc:

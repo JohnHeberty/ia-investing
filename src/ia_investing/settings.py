@@ -109,6 +109,10 @@ class SecuritySettings(BaseModel):
     oidc_scope: str = "openid profile email offline_access"
     session_secret_key: str = ""
     csrf_secret_key: str = ""
+    allowed_redirect_hosts: list[str] = Field(
+        default_factory=lambda: ["localhost", "127.0.0.1"],
+        description="Hostnames allowed for post-login redirect targets",
+    )
 
 
 class SchedulerSettings(BaseModel):

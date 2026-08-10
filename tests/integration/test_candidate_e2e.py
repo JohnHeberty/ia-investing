@@ -205,7 +205,7 @@ async def test_candidate(
     await session.execute(
         sa.delete(CandidateAnalysisRunRecord).where(CandidateAnalysisRunRecord.candidate_id == test_candidate_id)
     )
-    
+
     # Delete any existing candidate with the same ticker (to avoid uq_candidate_active_ticker constraint)
     await session.execute(
         sa.delete(InvestmentCandidateRecord).where(
@@ -215,7 +215,7 @@ async def test_candidate(
             )
         )
     )
-    
+
     # Delete existing candidate by id if present
     existing_candidate = await session.execute(
         sa.select(InvestmentCandidateRecord).where(InvestmentCandidateRecord.id == test_candidate_id)
@@ -224,7 +224,7 @@ async def test_candidate(
     if existing_candidate:
         await session.delete(existing_candidate)
         await session.flush()
-    
+
     # Also delete any candidate events for this candidate (unique constraint on candidate_id + aggregate_version)
     await session.execute(
         sa.delete(CandidateEventRecord).where(
@@ -306,10 +306,7 @@ async def test_agent_registry(session: AsyncSession) -> UUID:
 
     # Clean up existing records to ensure fresh state (reverse dependency order)
     from database.models.agent_runtime import (
-        AgentArtifact,
-        AgentCapability,
         AgentRuntimeRun,
-        AgentVersion,
     )
 
     # Delete runtime runs first (they reference versions)

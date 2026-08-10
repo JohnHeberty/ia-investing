@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
@@ -21,9 +22,7 @@ class NewsSource(Base):
 
     is_active: Mapped[bool | None] = mapped_column(sa.Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"NewsSource(name={self.name!r}, trust_level={self.trust_level})"
@@ -46,14 +45,12 @@ class NewsItem(Base):
     retrieved_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 
     language: Mapped[str | None] = mapped_column(sa.String(10))
-    sentiment_score: Mapped[float | None] = mapped_column(sa.Float)
+    sentiment_score: Mapped[Decimal | None] = mapped_column(sa.Numeric(6, 4))
 
     raw_data: Mapped[dict[str, object] | None] = mapped_column(JSONB)
     is_processed: Mapped[bool | None] = mapped_column(sa.Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"NewsItem(title={self.title!r}, published_at={self.published_at!r})"
@@ -71,11 +68,9 @@ class NewsEntityLink(Base):
         sa.ForeignKey("issuers.id", ondelete="SET NULL"),
     )
 
-    relevance_score: Mapped[float | None] = mapped_column(sa.Float)
+    relevance_score: Mapped[Decimal | None] = mapped_column(sa.Numeric(6, 4))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"NewsEntityLink(relevance_score={self.relevance_score})"
@@ -95,16 +90,14 @@ class DetectedEvent(Base):
     event_type: Mapped[str | None] = mapped_column(sa.String(50))  # "earnings", "guidance", "ma", "regulation"
     description: Mapped[str | None] = mapped_column(sa.Text)
 
-    materiality_score: Mapped[float | None] = mapped_column(sa.Float)
+    materiality_score: Mapped[Decimal | None] = mapped_column(sa.Numeric(6, 4))
     direction_hint: Mapped[str | None] = mapped_column(sa.String(20))  # "positive", "negative", "neutral"
     time_horizon: Mapped[str | None] = mapped_column(sa.String(20))
 
     affected_metrics: Mapped[dict[str, object] | None] = mapped_column(JSONB)
     agent_run_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("agent_runs.id", ondelete="SET NULL"))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"DetectedEvent(event_type={self.event_type!r}, direction_hint={self.direction_hint!r})"
@@ -120,15 +113,13 @@ class EventImpact(Base):
     )
     thesis_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("research_theses.id", ondelete="SET NULL"))
 
-    impact_score: Mapped[float | None] = mapped_column(sa.Float)  # -1.0 a +1.0
-    confidence: Mapped[float | None] = mapped_column(sa.Float)
+    impact_score: Mapped[Decimal | None] = mapped_column(sa.Numeric(6, 4))  # -1.0 a +1.0
+    confidence: Mapped[Decimal | None] = mapped_column(sa.Numeric(6, 4))
     reasoning: Mapped[str | None] = mapped_column(sa.Text)
 
     thesis_effect: Mapped[str | None] = mapped_column(sa.String(20))  # "strengthen", "weaken", "neutral"
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"EventImpact(impact_score={self.impact_score}, thesis_effect={self.thesis_effect!r})"
@@ -148,11 +139,11 @@ class EventDuplicate(Base):
     )
 
     similarity_method: Mapped[str | None] = mapped_column(sa.String(50))
-    similarity_score: Mapped[float | None] = mapped_column(sa.Float)
+    similarity_score: Mapped[Decimal | None] = mapped_column(sa.Numeric(8, 6))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    __table_args__ = (sa.CheckConstraint("original_id <> duplicate_id", name="no_self_duplicate"),)
 
     def __repr__(self) -> str:
         return f"EventDuplicate(similarity_method={self.similarity_method!r})"

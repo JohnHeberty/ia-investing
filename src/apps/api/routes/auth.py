@@ -27,11 +27,31 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
-ALLOWED_REDIRECT_HOSTS = frozenset({"localhost", "127.0.0.1"})
 HTTP_TIMEOUT = httpx.Timeout(30.0)
 
-# In-memory OIDC state store. In production, use Redis.
-_oidc_states: dict[str, dict[str, str]] = {}
+
+def _get_allowed_redirect_hosts() -> frozenset[str]:
+    settings = get_settings()
+    return frozenset(settings.security.allowed_redirect_hosts)
+
+
+# In-memory OIDC state store with TTL eviction. In production, use Redis.
+_oidc_states: dict[str, dict[str, object]] = {}
+_OIDC_STATE_TTL_SECONDS = 600  # 10 minutes
+
+
+def _evict_expired_states() -> None:
+    """Remove OIDC states older than _OIDC_STATE_TTL_SECONDS."""
+    import time
+
+    now = time.monotonic()
+    expired = [
+        k
+        for k, v in _oidc_states.items()
+        if "created_at" in v and now - v["created_at"] > _OIDC_STATE_TTL_SECONDS  # type: ignore[arg-type]
+    ]
+    for k in expired:
+        del _oidc_states[k]
 
 
 class LoginRequest(BaseModel):
@@ -130,7 +150,7 @@ def _safe_return_to(url: str | None) -> str:
     from urllib.parse import urlparse
 
     parsed = urlparse(url)
-    if parsed.hostname not in ALLOWED_REDIRECT_HOSTS:
+    if parsed.hostname not in _get_allowed_redirect_hosts():
         return "/"
     return url
 
@@ -181,7 +201,10 @@ async def authorize(
     verifier = secrets.token_urlsafe(48)
     challenge = hashlib.sha256(verifier.encode()).digest()
     code_challenge = base64.urlsafe_b64encode(challenge).rstrip(b"=").decode()
-    _oidc_states[state] = {"nonce": nonce, "verifier": verifier}
+    import time
+
+    _evict_expired_states()
+    _oidc_states[state] = {"nonce": nonce, "verifier": verifier, "created_at": time.monotonic()}
     return AuthorizeResponse(
         authorization_url=settings.oidc_authorization_url,
         client_id=settings.oidc_client_id,
@@ -202,6 +225,7 @@ async def callback(
 ) -> CallbackResponse:
     if not code or not state:
         raise HTTPException(status_code=400, detail="Missing authorization code or state")
+    _evict_expired_states()
     stored = _oidc_states.pop(state, None)
     if not stored:
         raise HTTPException(status_code=400, detail="Invalid or expired OIDC state")

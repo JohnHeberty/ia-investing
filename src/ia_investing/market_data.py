@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any
 
 import yfinance as yf

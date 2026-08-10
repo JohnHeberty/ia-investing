@@ -13,7 +13,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
 
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.operations import Operation, OperationDispatchOutbox
 from ia_investing.contracts.v1 import OperationAcceptedV1, OperationState, OperationStatusV1
 from ia_investing.orchestration.queues import TASK_QUEUES, Capability

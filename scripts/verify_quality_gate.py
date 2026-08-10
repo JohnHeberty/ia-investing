@@ -9,7 +9,7 @@ import sqlalchemy as sa
 
 from data_quality._models import ValidationResult
 from database.core import session_scope
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.data_foundation import SourceObjectVersion
 from database.models.data_governance import QualityIncident, QualityRule, QuarantineRecord
 from ia_investing.application.data_quality import QualityGovernanceService

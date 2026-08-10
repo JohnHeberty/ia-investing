@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime
+from decimal import Decimal
 from hashlib import sha256
 from typing import Any
 from uuid import UUID
@@ -49,15 +50,13 @@ class AuditLogEntry(Base):
     request_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True, index=True)
     http_method: Mapped[str | None] = mapped_column(sa.String(7), nullable=True)
     http_path: Mapped[str | None] = mapped_column(sa.String(500), nullable=True)
-    duration_ms: Mapped[float | None] = mapped_column(sa.Float, nullable=True)
+    duration_ms: Mapped[Decimal | None] = mapped_column(sa.Numeric(12, 3), nullable=True)
     status_code: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
     hash_prev: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
     hash: Mapped[str] = mapped_column(sa.String(64), nullable=False, unique=True)
     timestamp: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False, default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     __table_args__ = (
         sa.Index("ix_audit_log_tenant_timestamp", "tenant_id", "timestamp"),

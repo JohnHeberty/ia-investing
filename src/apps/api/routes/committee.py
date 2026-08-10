@@ -9,7 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from apps.api._errors import map_error
 from apps.api.dependencies import get_committee_service
-from apps.api.security import safe_uuid,  AuthContext, actor_uuid, require_permission
+from apps.api.security import AuthContext, actor_uuid, require_permission, safe_uuid
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.committee_service import (
     CommitteeService,

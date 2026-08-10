@@ -10,7 +10,7 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from database.models.research import DomainOutboxEvent, ResearchClaim
 from database.models.review import ReviewDecision
 from database.models.thesis_domain import (

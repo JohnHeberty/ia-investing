@@ -134,7 +134,17 @@ class Embedding(Base):
     entity_id: Mapped[UUID] = mapped_column(nullable=False)
     text_snippet: Mapped[str | None] = mapped_column(sa.Text)
     vector: Mapped[list[float] | None] = mapped_column(Vector(1536))
-    __table_args__ = (sa.Index("ix_embeddings_entity_id", "entity_id"),)
+    __table_args__ = (
+        sa.Index("ix_embeddings_entity_id", "entity_id"),
+        sa.Index(
+            "ix_embeddings_vector_hnsw",
+            "vector",
+            postgresql_using="hnsw",
+            postgresql_ops={"vector": "vector_cosine_ops"},
+            postgresql_where=sa.text("vector IS NOT NULL"),
+            postgresql_with={"m": 16, "ef_construction": 200},
+        ),
+    )
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
 

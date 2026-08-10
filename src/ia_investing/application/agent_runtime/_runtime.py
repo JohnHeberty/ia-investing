@@ -16,7 +16,7 @@ from database.models.agent_runtime import (
     AgentRuntimeToolCall,
     AgentVersion,
 )
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from ia_investing.application.agent_runtime._crypto import canonical_hash, sanitize_tool_payload
 
 

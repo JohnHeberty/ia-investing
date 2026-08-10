@@ -101,26 +101,26 @@ class InvestmentCandidateRecord(Base):
     analysis_runs: Mapped[list[CandidateAnalysisRunRecord]] = relationship(
         back_populates="candidate",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
     )
     candidate_sources: Mapped[list[CandidateSourceRecord]] = relationship(
         back_populates="candidate",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
     )
     candidate_gaps: Mapped[list[CandidateGapRecord]] = relationship(
         back_populates="candidate",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
     )
     candidate_events: Mapped[list[CandidateEventRecord]] = relationship(
         back_populates="candidate",
         cascade="all, delete-orphan",
-        lazy="selectin",
+        lazy="select",
     )
     exploration_suggestion: Mapped[ExplorationSuggestionRecord | None] = relationship(
         foreign_keys=[exploration_suggestion_id],
-        lazy="selectin",
+        lazy="select",
     )
 
 
@@ -322,7 +322,9 @@ class ExplorationSuggestionRecord(Base):
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), index=True)
     promoted_candidate_id: Mapped[UUID | None] = mapped_column(
-        sa.UUID(), nullable=True, index=True,
+        sa.UUID(),
+        nullable=True,
+        index=True,
     )
     dismissed_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     dismissed_by: Mapped[str | None] = mapped_column(sa.String(255))
@@ -331,7 +333,7 @@ class ExplorationSuggestionRecord(Base):
     promoted_candidate: Mapped[InvestmentCandidateRecord | None] = relationship(
         primaryjoin="ExplorationSuggestionRecord.promoted_candidate_id == InvestmentCandidateRecord.id",
         foreign_keys="ExplorationSuggestionRecord.promoted_candidate_id",
-        lazy="selectin",
+        lazy="select",
     )
 
     __table_args__ = (

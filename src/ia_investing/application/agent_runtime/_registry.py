@@ -12,7 +12,7 @@ from database.models.agent_runtime import (
     AgentCapability,
     AgentVersion,
 )
-from database.models.agents import AuditLog
+from database.models.audit_models import AuditLog
 from ia_investing.ai.artifacts import ArtifactLoader, CapabilityManifest, FileArtifact
 from ia_investing.application.agent_runtime._crypto import canonical_hash
 

@@ -49,9 +49,12 @@ async def _check_minio() -> str:
 
 
 async def _check_temporal() -> str:
+    from urllib.parse import urlparse
+
     settings = get_settings().temporal
-    host, port_str = settings.address.split(":", 1)
-    port = int(port_str)
+    parsed = urlparse(f"tcp://{settings.address}")
+    host = parsed.hostname or "localhost"
+    port = parsed.port or 7233
     try:
         _, writer = await asyncio.wait_for(asyncio.open_connection(host, port), timeout=3.0)
         writer.close()

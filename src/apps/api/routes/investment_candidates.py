@@ -20,7 +20,7 @@ from temporalio.client import (
 )
 
 from apps.api._etag import parse_etag
-from apps.api.security import safe_uuid,  AuthContext, get_auth_context
+from apps.api.security import AuthContext, get_auth_context, safe_uuid
 from database.core import get_async_session
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.investment_candidates import (
@@ -539,6 +539,7 @@ async def reanalyze_candidate(
 # Synchronous pipeline execution (no Temporal required)
 # ---------------------------------------------------------------------------
 
+
 class RunPipelineRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     skip_stages: list[str] = Field(default_factory=list)
@@ -657,7 +658,8 @@ async def create_exploration_schedule(
     try:
         await client.create_schedule(schedule_id, schedule)
     except Exception as exc:
-        if "already" in str(exc).lower():
+        exc_str = str(exc).lower()
+        if "already exists" in exc_str or "schedule already" in exc_str:
             raise HTTPException(status_code=409, detail="exploration schedule already exists") from exc
         raise HTTPException(status_code=503, detail="could not create Temporal exploration schedule") from exc
     return ExplorationScheduleV1(
