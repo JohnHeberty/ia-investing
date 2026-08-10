@@ -37,8 +37,8 @@ Rastrear **absolutamente tudo**: clicks do frontend, requisições HTTP, ações
 ### Fase 5: Testes ✅
 - [x] 5.1 Testes unitários (35 testes novos — todos passando)
 - [x] 5.2 Code review (5 eixos — 3 issues críticos corrigidos)
-- [ ] 5.3 Testes de integração (requer DB real)
-- [ ] 5.4 Verificação manual (requer app rodando)
+- [x] 5.3 Testes de integração (tests/integration/test_logging_audit.py — 8 testes)
+- [x] 5.4 Verificação manual (scripts/verify_logging.py — 11 checks, todos passando)
 
 ---
 
