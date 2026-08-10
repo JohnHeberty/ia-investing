@@ -95,10 +95,12 @@ class InvestmentCandidateApplicationService:
         payload = request.model_dump(mode="json") | {"data_as_of": data_as_of.isoformat()}
         digest = _request_hash(payload)
         existing = await self.session.scalar(
-            sa.select(InvestmentCandidateRecord).where(
+            sa.select(InvestmentCandidateRecord)
+            .where(
                 InvestmentCandidateRecord.organization_id == organization_id,
                 InvestmentCandidateRecord.idempotency_key == idempotency_key,
             )
+            .with_for_update()
         )
         if existing is not None:
             if existing.request_hash != digest:

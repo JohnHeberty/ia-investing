@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from temporalio import workflow
+from temporalio.common import RetryPolicy
 
 with workflow.unsafe.imports_passed_through():
     from ia_investing.domain.portfolio_decision import (
@@ -258,6 +259,11 @@ class PortfolioConstructionWorkflow:
                     "cancel_operation",
                     args=[self._operation_id, "Cancelled by user"],
                     start_to_close_timeout=timedelta(seconds=10),
+                    retry_policy=RetryPolicy(
+                        maximum_attempts=2,
+                        initial_interval=timedelta(seconds=1),
+                        backoff_coefficient=1.0,
+                    ),
                 )
 
     @workflow.query

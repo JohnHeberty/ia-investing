@@ -60,11 +60,11 @@ class BackendPortfolioOptimizationService:
         as_of: datetime,
         context: InstitutionalAccessContext,
     ) -> OptimizationRun:
-        portfolio = await self.session.get(ModelPortfolio, portfolio_id)
+        portfolio = await self.session.get(ModelPortfolio, portfolio_id, with_for_update=True)
         if portfolio is None:
             raise LookupError("portfolio not found")
         authorize(context, "portfolio:optimize", ResourceAttributes(portfolio.organization_id, portfolio.owner_team_id))
-        mandate = await self.session.get(StrategyMandate, portfolio.mandate_id)
+        mandate = await self.session.get(StrategyMandate, portfolio.mandate_id, with_for_update=True)
         if mandate is None:
             raise RuntimeError("portfolio mandate is missing")
         raw_ids = mandate.config.get("universe_definition", {}).get("instrument_ids", [])

@@ -13,6 +13,9 @@ from database.models.portfolio_domain import InstitutionalPortfolioVersion, Mode
 from database.models.portfolio_versions import CashSnapshot, PositionSnapshot
 from ia_investing.domain.identity import InstitutionalAccessContext
 from ia_investing.domain.paper_execution import (
+    DetectedBreak as DomainBreak,
+)
+from ia_investing.domain.paper_execution import (
     LedgerCashEntry,
     LedgerPositionEntry,
     ReconciliationFill,
@@ -23,9 +26,6 @@ from ia_investing.domain.paper_execution import (
     reconcile_cash,
     reconcile_execution,
     reconcile_positions,
-)
-from ia_investing.domain.paper_execution import (
-    DetectedBreak as DomainBreak,
 )
 
 from ._base import audit_entity
@@ -107,35 +107,7 @@ class ReconciliationService:
         row.resolution = {**resolution, "resolved_by": context.subject}
         row.resolved_at = datetime.now(UTC)
         if resolution.get("method") == "compensating_entry" and resolution.get("compensating_reference"):
-            portfolio = await self.session.get(ModelPortfolio, row.portfolio_id)
-            if portfolio is not None:
-                instrument_id: UUID | None = None
-                if row.rule in ("fill_missing_ledger", "fill_ledger_identity"):
-                    event_key = row.resource_key
-                    fill = await self.session.scalar(sa.select(PaperFill).where(PaperFill.event_key == event_key))
-                    if fill is not None:
-                        order = await self.session.get(PaperOrder, fill.order_id)
-                        if order is not None:
-                            intent = await self.session.get(TradeIntent, order.trade_intent_id)
-                            if intent is not None:
-                                instrument_id = intent.instrument_id
-                expected = row.expected or {}
-                actual = row.actual or {}
-                qty_delta = Decimal(str(actual.get("quantity", "0"))) - Decimal(str(expected.get("quantity", "0")))
-                amt_delta = Decimal(str(actual.get("amount", "0"))) - Decimal(str(expected.get("amount", "0")))
-                if qty_delta != 0 or amt_delta != 0:
-                    self.session.add(
-                        PortfolioLedgerEntry(
-                            portfolio_id=row.portfolio_id,
-                            instrument_id=instrument_id,
-                            entry_type="trade",
-                            currency=portfolio.base_currency,
-                            amount=-amt_delta,
-                            quantity=-qty_delta if qty_delta != 0 else None,
-                            occurred_at=datetime.now(UTC),
-                            source_reference=str(resolution["compensating_reference"]),
-                        )
-                    )
+            await self._create_compensating_entry(row, resolution)
         audit_entity(
             self.session,
             "reconciliation_break.resolve",
@@ -147,6 +119,43 @@ class ReconciliationService:
             row.resolution,
         )
         return row
+
+    async def _resolve_instrument_from_break(self, row: ReconciliationBreak) -> UUID | None:
+        if row.rule not in ("fill_missing_ledger", "fill_ledger_identity"):
+            return None
+        fill = await self.session.scalar(sa.select(PaperFill).where(PaperFill.event_key == row.resource_key))
+        if fill is None:
+            return None
+        order = await self.session.get(PaperOrder, fill.order_id)
+        if order is None:
+            return None
+        intent = await self.session.get(TradeIntent, order.trade_intent_id)
+        return intent.instrument_id if intent is not None else None
+
+    async def _create_compensating_entry(
+        self, row: ReconciliationBreak, resolution: dict[str, object]
+    ) -> None:
+        portfolio = await self.session.get(ModelPortfolio, row.portfolio_id)
+        if portfolio is None:
+            return
+        instrument_id = await self._resolve_instrument_from_break(row)
+        expected = row.expected or {}
+        actual = row.actual or {}
+        qty_delta = Decimal(str(actual.get("quantity", "0"))) - Decimal(str(expected.get("quantity", "0")))
+        amt_delta = Decimal(str(actual.get("amount", "0"))) - Decimal(str(expected.get("amount", "0")))
+        if qty_delta != 0 or amt_delta != 0:
+            self.session.add(
+                PortfolioLedgerEntry(
+                    portfolio_id=row.portfolio_id,
+                    instrument_id=instrument_id,
+                    entry_type="trade",
+                    currency=portfolio.base_currency,
+                    amount=-amt_delta,
+                    quantity=-qty_delta if qty_delta != 0 else None,
+                    occurred_at=datetime.now(UTC),
+                    source_reference=str(resolution["compensating_reference"]),
+                )
+            )
 
     async def _fetch_execution_data(self, portfolio: ModelPortfolio, as_of: datetime) -> ExecutionData:
         order_rows = (
