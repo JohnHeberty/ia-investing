@@ -130,9 +130,49 @@ async def detect_event_duplicates(event_id: str) -> dict[str, Any]:
             return {"event_id": event_id, "is_duplicate": False}
 
 
+MATERIALITY_ALERT_THRESHOLD = 0.7
+
+
+@activity.defn(name="check_alert_threshold")
+async def check_alert_threshold(params: dict[str, Any]) -> dict[str, Any]:
+    """Check if an analyzed news item exceeds materiality alert threshold.
+
+    Returns alert dict if threshold exceeded, empty dict otherwise.
+    """
+    with activity_span("check_alert_threshold"):
+        materiality_score = abs(float(params.get("materiality_score", 0)))
+        news_item_id = params["news_item_id"]
+        event_type = params.get("event_type", "unknown")
+        affected_issuers = params.get("affected_issuers", [])
+        direction_hint = params.get("direction_hint", "neutral")
+
+        if materiality_score >= MATERIALITY_ALERT_THRESHOLD:
+            alert = {
+                "alert": True,
+                "news_item_id": news_item_id,
+                "materiality_score": materiality_score,
+                "event_type": event_type,
+                "direction_hint": direction_hint,
+                "affected_issuers": affected_issuers,
+                "threshold": MATERIALITY_ALERT_THRESHOLD,
+            }
+            logger.warning(
+                "MATERIALITY_ALERT: item=%s score=%.2f type=%s direction=%s issuers=%s",
+                news_item_id,
+                materiality_score,
+                event_type,
+                direction_hint,
+                [i.get("ticker") if isinstance(i, dict) else i for i in affected_issuers],
+            )
+            return alert
+
+        return {"alert": False, "materiality_score": materiality_score}
+
+
 NEWS_EXTRACTION_ACTIVITIES = (
     fetch_news_items,
     analyze_single_news_item,
     batch_analyze_news,
     detect_event_duplicates,
+    check_alert_threshold,
 )

@@ -6,8 +6,6 @@ warnings.warn(
     stacklevel=2,
 )
 
-from workflows._analyze_filing import AnalyzeFilingWorkflow  # noqa: E402
-from workflows._analyze_news import AnalyzeNewsWorkflow  # noqa: E402
 from workflows._approval_gate import ApprovalGateInput, ApprovalGateResult, ApprovalGateWorkflow  # noqa: E402
 from workflows._discover import DiscoverStocksWorkflow  # noqa: E402
 from workflows._dispatch_operations import DispatchOperationsWorkflow  # noqa: E402
@@ -43,8 +41,6 @@ from workflows.candidate_intelligence import (  # noqa: E402
 )
 
 __all__ = [
-    "AnalyzeFilingWorkflow",
-    "AnalyzeNewsWorkflow",
     "ApprovalGateInput",
     "ApprovalGateResult",
     "ApprovalGateWorkflow",

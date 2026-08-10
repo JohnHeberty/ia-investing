@@ -39,5 +39,6 @@ Retorne estritamente o JSON no formato `NewsAnalysis`:
 - `thesis_effect`: strengthen, weaken ou no_change
 - `event_type`: tipo do evento
 - `affected_metrics`: lista de métricas afetadas
+- `affected_issuers`: lista de emissores afetados `[{"ticker": "PETR4", "relevance": 0.9}, ...]`
 - `time_horizon`: imediato | curto_prazo | médio_prazo | longo_prazo
 - `key_claims`: fatos centrais extraídos da notícia

@@ -5,9 +5,19 @@ import { getCsrfToken } from "./csrf";
  * Prepends /api/backend to the path.
  * Automatically adds CSRF token for mutating methods.
  */
+function generateRequestId(): string {
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Direct fetch through the BFF proxy.
+ * Prepends /api/backend to the path.
+ * Automatically adds CSRF token for mutating methods and X-Request-Id for tracing.
+ */
 export async function bffFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const method = (init?.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
+    "x-request-id": generateRequestId(),
     Accept: "application/json",
     ...(init?.headers as Record<string, string>),
   };
