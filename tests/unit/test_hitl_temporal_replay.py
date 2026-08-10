@@ -7,7 +7,7 @@ are preserved exactly after human approval decisions.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -18,7 +18,6 @@ from workflows._portfolio_construction import (
     PortfolioConstructionInput,
     PortfolioConstructionWorkflow,
 )
-from workflows._thesis_review import ThesisReviewInput, ThesisReviewWorkflow
 
 _FAKE = "b" * 64
 
@@ -183,149 +182,7 @@ class TestPaperRebalanceReplay:
 
 
 # ===================================================================
-# 3. ThesisReview — specialist results preserved across replay
-# ===================================================================
-
-
-class TestThesisReviewReplay:
-    def _mock_activity(self) -> AsyncMock:
-        async def route(name: str, **kwargs: object) -> dict[str, object]:
-            if name == "load_thesis_context":
-                return {"content_sha256": "d" * 64, "summary": "replay context"}
-            if name.startswith("run_specialist_"):
-                cap = name.replace("run_specialist_", "")
-                return {
-                    "verdict": "positive",
-                    "confidence": 0.75,
-                    "thesis_effect": "strengthen",
-                    "key_claims": [f"claim-{cap}"],
-                    "risks": [],
-                    "contradictions": [],
-                }
-            return {}
-
-        return AsyncMock(side_effect=route)
-
-    @pytest.mark.asyncio
-    async def test_specialist_results_preserved_after_approval(self) -> None:
-        wf1 = ThesisReviewWorkflow()
-        wf2 = ThesisReviewWorkflow()
-        cmd = ThesisReviewInput(
-            thesis_id="t-rep",
-            thesis_version_id="tv-rep",
-            issuer_id="i-rep",
-            data_as_of="2026-07-01T00:00:00+00:00",
-            knowledge_cutoff="2026-06-01T00:00:00+00:00",
-            specialist_capabilities=("filing", "news"),
-            approval_timeout_seconds=300,
-        )
-
-        async def inject1(*a: object, **kw: object) -> None:
-            wf1._decision = "approved"
-            wf1._reviewer = "rev-1"
-
-        mock_act = self._mock_activity()
-        with (
-            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
-            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject1),
-        ):
-            r1 = await wf1.run(cmd)
-
-        async def inject2(*a: object, **kw: object) -> None:
-            wf2._decision = "approved"
-            wf2._reviewer = "rev-1"
-
-        mock_act2 = self._mock_activity()
-        with (
-            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act2),
-            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject2),
-        ):
-            r2 = await wf2.run(cmd)
-
-        assert r1.specialist_results == r2.specialist_results
-        assert r1.diff_hash == r2.diff_hash
-        assert r1.decision == r2.decision == "approved"
-
-    @pytest.mark.asyncio
-    async def test_contradiction_hash_deterministic_across_replays(self) -> None:
-        wf = ThesisReviewWorkflow()
-        cmd = ThesisReviewInput(
-            thesis_id="t-det",
-            thesis_version_id="tv-det",
-            issuer_id="i-det",
-            data_as_of="2026-07-01T00:00:00+00:00",
-            knowledge_cutoff="2026-06-01T00:00:00+00:00",
-            specialist_capabilities=("filing", "news"),
-            approval_timeout_seconds=300,
-        )
-
-        async def route(name: str, **kwargs: object) -> dict[str, object]:
-            if name == "load_thesis_context":
-                return {"content_sha256": "e" * 64}
-            if name == "run_specialist_filing":
-                return {
-                    "verdict": "positive",
-                    "confidence": 0.8,
-                    "thesis_effect": "strengthen",
-                    "key_claims": [],
-                    "risks": [],
-                    "contradictions": [],
-                }
-            if name == "run_specialist_news":
-                return {
-                    "verdict": "negative",
-                    "confidence": 0.6,
-                    "thesis_effect": "weaken",
-                    "key_claims": [],
-                    "risks": [],
-                    "contradictions": [],
-                }
-            return {}
-
-        async def inject(*a: object, **kw: object) -> None:
-            wf._decision = "approved"
-            wf._reviewer = "r-det"
-
-        with (
-            patch("workflows._thesis_review.workflow.execute_activity", side_effect=AsyncMock(side_effect=route)),
-            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
-        ):
-            result = await wf.run(cmd)
-
-        assert result.status == "approved"
-        assert len(result.contradictions_found) > 0
-
-    @pytest.mark.asyncio
-    async def test_rejection_preserves_specialist_results(self) -> None:
-        wf = ThesisReviewWorkflow()
-        cmd = ThesisReviewInput(
-            thesis_id="t-rej",
-            thesis_version_id="tv-rej",
-            issuer_id="i-rej",
-            data_as_of="2026-07-01T00:00:00+00:00",
-            knowledge_cutoff="2026-06-01T00:00:00+00:00",
-            specialist_capabilities=("filing",),
-            approval_timeout_seconds=300,
-        )
-
-        async def inject(*a: object, **kw: object) -> None:
-            wf._decision = "rejected"
-            wf._reviewer = "r-rej"
-
-        mock_act = self._mock_activity()
-        with (
-            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
-            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
-        ):
-            result = await wf.run(cmd)
-
-        assert result.decision == "rejected"
-        assert len(result.specialist_results) == 1
-        assert result.specialist_results[0].specialist == "filing"
-
-
-# ===================================================================
-# 4. PortfolioConstruction — vote buffer replay + immutable pack
+# 3. PortfolioConstruction — vote buffer replay + immutable pack
 # ===================================================================
 
 

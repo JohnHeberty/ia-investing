@@ -322,8 +322,7 @@ class ExplorationSuggestionRecord(Base):
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True), index=True)
     promoted_candidate_id: Mapped[UUID | None] = mapped_column(
-        sa.Column("promoted_candidate_id", sa.UUID(), nullable=True),
-        index=True,
+        sa.UUID(), nullable=True, index=True,
     )
     dismissed_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     dismissed_by: Mapped[str | None] = mapped_column(sa.String(255))

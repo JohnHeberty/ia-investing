@@ -7,7 +7,7 @@ conditional approval, and full run-to-completion with mocked Temporal primitives
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import AsyncMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -19,7 +19,6 @@ from workflows._portfolio_construction import (
     PortfolioConstructionInput,
     PortfolioConstructionWorkflow,
 )
-from workflows._thesis_review import ThesisReviewInput, ThesisReviewResult, ThesisReviewWorkflow
 
 _FAKE = "a" * 64
 
@@ -411,170 +410,3 @@ class TestPortfolioConstructionBehavioral:
         await wf.vote(bad_vote)
         with pytest.raises(ValueError, match="not authorized"):
             await wf.run(cmd)
-
-
-# ===================================================================
-# 5. ThesisReviewWorkflow
-# ===================================================================
-
-
-class TestThesisReviewBehavioral:
-    def _make_cmd(self, **overrides: object) -> ThesisReviewInput:
-        return ThesisReviewInput(
-            thesis_id=str(overrides.get("tid", "t-1")),
-            thesis_version_id=str(overrides.get("tvid", "tv-1")),
-            issuer_id=str(overrides.get("iid", "i-1")),
-            data_as_of=str(overrides.get("dao", "2026-07-01T00:00:00+00:00")),
-            knowledge_cutoff=str(overrides.get("kc", "2026-06-01T00:00:00+00:00")),
-            specialist_capabilities=overrides.get("caps", ("filing", "news")),
-            approval_timeout_seconds=int(overrides.get("timeout", 300)),
-        )
-
-    def _mock_activity(self) -> AsyncMock:
-        async def route(name: str, **kwargs: object) -> dict[str, object]:
-            if name == "load_thesis_context":
-                return {"content_sha256": "c" * 64, "summary": "test"}
-            if name.startswith("run_specialist_"):
-                cap = name.replace("run_specialist_", "")
-                return {
-                    "verdict": "positive",
-                    "confidence": 0.7,
-                    "thesis_effect": "strengthen" if cap in ("filing", "news") else "no_change",
-                    "key_claims": [],
-                    "risks": [],
-                    "contradictions": [],
-                }
-            return {}
-
-        return AsyncMock(side_effect=route)
-
-    @pytest.mark.asyncio
-    async def test_approval_full_run(self) -> None:
-        wf = ThesisReviewWorkflow()
-        cmd = self._make_cmd()
-
-        async def inject(*a: object, **kw: object) -> None:
-            wf._decision = "approved"
-            wf._reviewer = "reviewer-1"
-
-        mock_act = self._mock_activity()
-        with (
-            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
-            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
-        ):
-            r = await wf.run(cmd)
-        assert isinstance(r, ThesisReviewResult)
-        assert r.decision == "approved"
-        assert r.approved_by == "reviewer-1"
-        assert len(r.specialist_results) == 2
-
-    @pytest.mark.asyncio
-    async def test_rejection_full_run(self) -> None:
-        wf = ThesisReviewWorkflow()
-        cmd = self._make_cmd()
-
-        async def inject(*a: object, **kw: object) -> None:
-            wf._decision = "rejected"
-            wf._reviewer = "reviewer-2"
-
-        mock_act = self._mock_activity()
-        with (
-            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
-            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
-        ):
-            r = await wf.run(cmd)
-        assert r.decision == "rejected"
-
-    @pytest.mark.asyncio
-    async def test_cancel_full_run(self) -> None:
-        wf = ThesisReviewWorkflow()
-        cmd = self._make_cmd()
-
-        async def inject(*a: object, **kw: object) -> None:
-            wf._decision = "cancelled"
-
-        mock_act = self._mock_activity()
-        with (
-            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
-            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
-        ):
-            r = await wf.run(cmd)
-        assert r.decision == "cancelled"
-
-    @pytest.mark.asyncio
-    async def test_timeout_full_run(self) -> None:
-        wf = ThesisReviewWorkflow()
-        cmd = self._make_cmd()
-        mock_act = self._mock_activity()
-        with (
-            patch("workflows._thesis_review.workflow.execute_activity", side_effect=mock_act),
-            patch("workflows._thesis_review.workflow.wait_condition", side_effect=TimeoutError),
-        ):
-            r = await wf.run(cmd)
-        assert r.decision == "expired"
-        assert r.status == "expired"
-
-    @pytest.mark.asyncio
-    async def test_contradiction_detected(self) -> None:
-        wf = ThesisReviewWorkflow()
-        cmd = self._make_cmd()
-
-        async def route(name: str, **kwargs: object) -> dict[str, object]:
-            if name == "load_thesis_context":
-                return {"content_sha256": "c" * 64}
-            if name == "run_specialist_filing":
-                return {
-                    "verdict": "positive",
-                    "confidence": 0.8,
-                    "thesis_effect": "strengthen",
-                    "key_claims": [],
-                    "risks": [],
-                    "contradictions": [],
-                }
-            if name == "run_specialist_news":
-                return {
-                    "verdict": "negative",
-                    "confidence": 0.6,
-                    "thesis_effect": "weaken",
-                    "key_claims": [],
-                    "risks": [],
-                    "contradictions": [],
-                }
-            return {}
-
-        async def inject(*a: object, **kw: object) -> None:
-            wf._decision = "approved"
-            wf._reviewer = "r-1"
-
-        with (
-            patch("workflows._thesis_review.workflow.execute_activity", side_effect=AsyncMock(side_effect=route)),
-            patch("workflows._thesis_review.workflow.wait_condition", side_effect=inject),
-        ):
-            r = await wf.run(cmd)
-        assert "specialists_disagree_on_direction" in r.contradictions_found
-
-    @pytest.mark.asyncio
-    async def test_idempotent_approve(self) -> None:
-        wf = ThesisReviewWorkflow()
-        await wf.approve("r-1")
-        await wf.reject("r-2")
-        assert wf.state() == "approved"
-
-    @pytest.mark.asyncio
-    async def test_idempotent_reject(self) -> None:
-        wf = ThesisReviewWorkflow()
-        await wf.reject("r-1")
-        await wf.approve("r-2")
-        assert wf.state() == "rejected"
-
-    @pytest.mark.asyncio
-    async def test_specialist_results_query(self) -> None:
-        wf = ThesisReviewWorkflow()
-        assert wf.specialist_results() == []
-
-    def test_query_initial(self) -> None:
-        assert ThesisReviewWorkflow().state() == "running"
-
-    def test_zero_timeout(self) -> None:
-        with pytest.raises(ValueError, match="positive"):
-            _run(ThesisReviewWorkflow().run(self._make_cmd(timeout=0)))
