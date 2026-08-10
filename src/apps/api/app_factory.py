@@ -206,6 +206,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     install_problem_handlers(app)
 
+    @app.get("/healthz", include_in_schema=False)
+    async def _liveness() -> dict[str, str]:
+        return {"status": "ok"}
+
     @app.exception_handler(RateLimitExceededError)
     async def _rate_limit_handler(request: Request, exc: RateLimitExceededError) -> Response:
         from starlette.responses import JSONResponse

@@ -168,7 +168,7 @@ class CommitteeService:
         actor_id: UUID | None = None,
         actor_subject: str | None = None,
     ) -> CommitteeVote:
-        db_session = await self._session.get(CommitteeSession, session_id)
+        db_session = await self._session.get(CommitteeSession, session_id, with_for_update=True)
         if db_session is None:
             raise LookupError(f"Committee session {session_id} not found")
 
