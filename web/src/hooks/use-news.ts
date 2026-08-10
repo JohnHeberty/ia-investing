@@ -55,6 +55,17 @@ export interface NewsStats {
   active_sources: number;
 }
 
+export interface PortfolioImpact {
+  event_id: string;
+  event_type: string | null;
+  materiality_score: number | null;
+  direction_hint: string | null;
+  issuer_id: string;
+  portfolio_id: string;
+  portfolio_name: string;
+  event_created_at: string | null;
+}
+
 export interface NewsDataValue {
   items: NewsItem[];
   events: DetectedEvent[];
@@ -195,4 +206,13 @@ export function useSourceMutations() {
   });
 
   return { createMutation, updateMutation, deleteMutation };
+}
+
+export function useNewsPortfolioImpacts() {
+  return useQuery({
+    queryKey: [...queryKeys.newsItems(), "portfolio-impacts"],
+    queryFn: () => bffFetch<PortfolioImpact[]>("/api/v1/news/portfolio-impacts"),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
 }
