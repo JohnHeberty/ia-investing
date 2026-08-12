@@ -88,7 +88,7 @@ function AuditContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Métricas de auditoria">
+      <section className="grid grid-4 section-gap" aria-label="Métricas de auditoria" aria-live="polite">
         <Metric
           label="Eventos hoje"
           value={formattedCount}
@@ -116,7 +116,7 @@ function AuditContent() {
 
       {/* Audit events table */}
       {auditEvents.length > 0 ? (
-        <section className="card card-pad section-gap">
+        <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Eventos recentes</h2>
             <span>{auditEvents.length} evento{auditEvents.length !== 1 ? "s" : ""}</span>

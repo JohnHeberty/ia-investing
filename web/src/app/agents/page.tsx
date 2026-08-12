@@ -92,7 +92,7 @@ function AgentsContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Métricas de agents">
+      <section className="grid grid-4 section-gap" aria-label="Métricas de agents" aria-live="polite">
         <Metric
           label="Runs hoje"
           value={String(count)}
@@ -150,7 +150,7 @@ function AgentsContent() {
       </section>
 
       {runs.length > 0 && (
-        <section className="card card-pad section-gap">
+        <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Runs recentes</h2>
             <span>{count} execuções</span>

@@ -60,14 +60,14 @@ export default function CandidateQueuePage() {
 
       {showCreate && <CandidateCreateForm onClose={() => setShowCreate(false)} />}
 
-      <section className="grid grid-4 section-gap">
+      <section className="grid grid-4 section-gap" aria-live="polite">
         <article className="card metric"><div className="metric-label">Na visão atual</div><div className="metric-value">{metrics.total}</div><div className="metric-note">candidatos</div></article>
         <article className="card metric"><div className="metric-label">Precisam de você</div><div className="metric-value warning">{metrics.waiting}</div><div className="metric-note">lacunas ou fontes</div></article>
         <article className="card metric"><div className="metric-label">Prontos para decisão</div><div className="metric-value">{metrics.committee}</div><div className="metric-note">em comitê</div></article>
         <article className="card metric"><div className="metric-label">Elegíveis</div><div className="metric-value positive">{metrics.approved}</div><div className="metric-note">aprovados</div></article>
       </section>
 
-      <section className="card card-pad section-gap">
+      <section className="card card-pad section-gap" aria-live="polite">
         <div className={styles.toolbar}>
           <div className="card-title" style={{ marginBottom: 0 }}><h2>Fila de investigação</h2><span>{items.length} registros</span></div>
           <div className={styles.actions}>

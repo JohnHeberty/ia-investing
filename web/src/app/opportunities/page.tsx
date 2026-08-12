@@ -162,7 +162,7 @@ function OpportunitiesContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores de oportunidades">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores de oportunidades" aria-live="polite">
         <Metric
           label="Novas"
           value={String(openCases)}
@@ -238,7 +238,7 @@ function OpportunitiesContent() {
             </div>
           </section>
 
-          <section className="card card-pad section-gap">
+          <section className="card card-pad section-gap" aria-live="polite">
             <div className="card-title">
               <h2>Casos de pesquisa</h2>
               <span>{count} registro{count !== 1 ? "s" : ""}</span>

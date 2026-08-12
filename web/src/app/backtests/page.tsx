@@ -91,7 +91,7 @@ function BacktestsContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Métricas de backtest">
+      <section className="grid grid-4 section-gap" aria-label="Métricas de backtest" aria-live="polite">
         <Metric
           label="Runs concluídos"
           value={hasRuns ? String(completedRuns) : "—"}
@@ -118,7 +118,7 @@ function BacktestsContent() {
 
       {/* Runs table */}
       {hasRuns ? (
-        <section className="card card-pad section-gap">
+        <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Runs de backtest</h2>
             <span>{count} run{count !== 1 ? "s" : ""}</span>

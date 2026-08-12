@@ -62,7 +62,7 @@ function EventDetailContent({ eventId }: { eventId: string }) {
         </div>
       </header>
 
-      <section className="grid grid-4 section-gap" aria-label="Metricas do evento">
+      <section className="grid grid-4 section-gap" aria-label="Metricas do evento" aria-live="polite">
         <article className="card metric">
           <div className="metric-label">Tipo</div>
           <div className="metric-value"><Badge tone="neutral">{event.event_type ?? "—"}</Badge></div>
@@ -118,7 +118,7 @@ function EventDetailContent({ eventId }: { eventId: string }) {
         </div>
       )}
 
-      <div className="card card-pad section-gap">
+      <div className="card card-pad section-gap" aria-live="polite">
         <h2 style={{ margin: "0 0 16px" }}>Impactos em Teses ({event.impacts.length})</h2>
         {event.impacts.length === 0 ? (
           <p className="subtitle">Nenhum impacto registrado para este evento.</p>

@@ -139,7 +139,7 @@ function RiskContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores de risco">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores de risco" aria-live="polite">
         <Metric
           label="Hard breaches"
           value={String(hardBreaches.length)}
@@ -259,7 +259,7 @@ function RiskContent() {
       )}
 
       {breaches.length > 0 && (
-        <section className="card card-pad section-gap">
+        <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Breaches registrados</h2>
             <span>{breaches.length} total</span>

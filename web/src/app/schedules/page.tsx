@@ -591,7 +591,7 @@ export default function SchedulesPage() {
             <p className="subtitle">Gerenciar cron jobs e periodicidades do sistema.</p>
           </div>
         </div>
-        <section className="grid grid-4 section-gap">
+      <section className="grid grid-4 section-gap" aria-live="polite">
           <div className="card metric"><LoadingSkeleton lines={4} /></div>
           <div className="card metric"><LoadingSkeleton lines={4} /></div>
           <div className="card metric"><LoadingSkeleton lines={4} /></div>

@@ -125,7 +125,7 @@ export default function RebalancePage() {
       )}
 
       {!isLoading && driftQuery.data && (
-        <section className="card card-pad">
+        <section className="card card-pad" aria-live="polite">
           <div className="card-title"><h2>Desvios atuais vs. alvo</h2></div>
           <div style={{ marginBottom: 16, display: "flex", gap: 24, fontSize: 14 }}>
             <div>
@@ -142,7 +142,7 @@ export default function RebalancePage() {
       )}
 
       {!isLoading && proposalsQuery.data && (
-        <section className="card card-pad">
+        <section className="card card-pad" aria-live="polite">
           <div className="card-title"><h2>Propostas</h2></div>
           {proposalsQuery.data.length === 0 ? (
             <p style={{ fontSize: 14, color: "var(--muted)" }}>Nenhuma proposta de rebalanceamento para esta carteira.</p>

@@ -91,7 +91,7 @@ function DataQualityContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Métricas de qualidade">
+      <section className="grid grid-4 section-gap" aria-label="Métricas de qualidade" aria-live="polite">
         <Metric
           label="Fontes saudáveis"
           value={totalSources > 0 ? `${healthySources}/${totalSources}` : "\u2014"}
@@ -161,7 +161,7 @@ function DataQualityContent() {
       </section>
 
       {sources.length > 0 && (
-        <section className="card card-pad section-gap">
+        <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Saúde das fontes</h2>
             <span>{totalSources} fontes</span>
@@ -243,7 +243,7 @@ function DataQualityContent() {
       )}
 
       {incidents.length > 0 && (
-        <section className="card card-pad section-gap">
+        <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Incidentes de qualidade</h2>
             <span>{incidents.length} incidente{incidents.length !== 1 ? "s" : ""}</span>

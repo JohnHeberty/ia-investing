@@ -103,7 +103,7 @@ export default function MissionControlPage() {
         </div>
       </header>
 
-      <section className="grid grid-4 section-gap">
+      <section className="grid grid-4 section-gap" aria-live="polite">
         <div className="card metric">
           <div className="metric-label">Carteiras</div>
           <div className="metric-value">{count}</div>

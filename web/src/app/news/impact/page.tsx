@@ -49,7 +49,7 @@ function ImpactContent() {
         </div>
       </header>
 
-      <section className="grid grid-4 section-gap" aria-label="Metricas de impacto">
+      <section className="grid grid-4 section-gap" aria-label="Metricas de impacto" aria-live="polite">
         <Metric label="Eventos" value={String(totalEvents)} note="detectados por LLM" />
         <Metric label="Positivos" value={String(positiveEvents)} note="direction_hint=positive" />
         <Metric label="Negativos" value={String(negativeEvents)} note="direction_hint=negative" />
@@ -117,7 +117,7 @@ function ImpactContent() {
         )}
       </div>
 
-      <div className="card card-pad section-gap">
+      <div className="card card-pad section-gap" aria-live="polite">
         <h2 style={{ margin: "0 0 16px" }}>Impacto por Ativo nos Portfolios</h2>
         {impactsLoading ? (
           <LoadingSkeleton lines={4} />

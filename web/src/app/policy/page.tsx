@@ -89,7 +89,7 @@ function PolicyContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap">
+      <section className="grid grid-4 section-gap" aria-live="polite">
         <Metric
           label="Eventos materiais"
           value={hasLiveEvents ? String(materialEvents.length) : "—"}
@@ -114,7 +114,7 @@ function PolicyContent() {
         />
       </section>
 
-      <section className="card card-pad section-gap">
+      <section className="card card-pad section-gap" aria-live="polite">
         <div className="card-title">
           <h2>Legislative tracker</h2>
           <span>estágio ≠ probabilidade ≠ impacto</span>

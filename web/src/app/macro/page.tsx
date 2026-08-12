@@ -92,7 +92,7 @@ function MacroContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores macro">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores macro" aria-live="polite">
         <Metric
           label="SELIC"
           value={selicValue}
@@ -121,7 +121,7 @@ function MacroContent() {
 
       {/* Series detail table */}
       {macroSeries.length > 0 ? (
-        <section className="card card-pad section-gap">
+        <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Séries monitoradas</h2>
             <span>{totalSeries} série{totalSeries !== 1 ? "s" : ""}</span>

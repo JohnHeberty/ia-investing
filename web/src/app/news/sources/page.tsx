@@ -76,7 +76,7 @@ function SourcesContent() {
       </header>
 
       {stats && (
-        <section className="grid grid-4 section-gap" aria-label="Metricas de fontes">
+        <section className="grid grid-4 section-gap" aria-label="Metricas de fontes" aria-live="polite">
           <Metric label="Fontes ativas" value={String(stats.active_sources)} note="RSS configuradas" />
           <Metric label="Itens coletados" value={String(stats.total_items)} note={`${stats.unprocessed_items} pendentes`} />
           <Metric label="Eventos" value={String(stats.total_events)} note={`${stats.positive_events} pos / ${stats.negative_events} neg`} />
@@ -84,7 +84,7 @@ function SourcesContent() {
         </section>
       )}
 
-      <div className="card card-pad section-gap">
+      <div className="card card-pad section-gap" aria-live="polite">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <h2 style={{ margin: 0 }}>Fontes Cadastradas</h2>
           <button className="button" onClick={handleCreate} type="button">

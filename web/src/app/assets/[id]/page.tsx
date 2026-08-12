@@ -135,7 +135,7 @@ function AssetContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores do ativo">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores do ativo" aria-live="polite">
         <Metric
           label="Valor justo"
           value={instrument.fair_value ?? "—"}
@@ -160,7 +160,7 @@ function AssetContent() {
       </section>
 
       {/* Evidence coverage detail */}
-      <section className="card card-pad section-gap">
+      <section className="card card-pad section-gap" aria-live="polite">
         <div className="card-title">
           <h2>Cobertura de evidências</h2>
           <button

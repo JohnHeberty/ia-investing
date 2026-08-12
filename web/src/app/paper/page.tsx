@@ -88,7 +88,7 @@ function PaperContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap">
+      <section className="grid grid-4 section-gap" aria-live="polite">
         <Metric
           label="Intents aprovados"
           value={hasLiveOrders ? String(approvedIntents) : "—"}
@@ -113,7 +113,7 @@ function PaperContent() {
         />
       </section>
 
-      <section className="card card-pad section-gap">
+      <section className="card card-pad section-gap" aria-live="polite">
         <div className="card-title">
           <h2>Order lifecycle</h2>
           <Badge tone="warn">PAPER</Badge>

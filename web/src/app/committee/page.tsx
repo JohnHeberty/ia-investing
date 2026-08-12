@@ -88,7 +88,7 @@ function CommitteeContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores do comitê">
+      <section className="grid grid-4 section-gap" aria-label="Indicadores do comitê" aria-live="polite">
         <Metric
           label="Na agenda"
           value={String(pendingDecisions.length)}
@@ -173,7 +173,7 @@ function CommitteeContent() {
           />
         </div>
       ) : (
-        <section className="section-gap flex flex-col" style={{ gap: 12 }}>
+        <section className="section-gap flex flex-col" style={{ gap: 12 }} aria-live="polite">
           {decisions.map((d) => (
             <ApprovalCard
               key={d.id}
