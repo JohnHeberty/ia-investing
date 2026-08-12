@@ -663,7 +663,8 @@ class InvestmentCandidateApplicationService:
                 InvestmentCandidateRecord,
                 suggestion.promoted_candidate_id,
             )
-            assert existing is not None
+            if existing is None:
+                raise LookupError("promoted candidate not found")
             return existing
         if suggestion.status != "new":
             raise ValueError("only new suggestions can be promoted")

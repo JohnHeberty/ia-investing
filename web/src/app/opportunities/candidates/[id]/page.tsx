@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ExternalLink, RefreshCw } from "lucide-react";
 import { CandidateStatusBadge } from "@/components/candidates/candidate-status";
 import { SourceCompletionForm } from "@/components/candidates/source-completion-form";
-import { getCandidate, requestCandidateReanalysis, runCandidatePipeline, type CandidateDetail, type SourceKind, type PipelineResult } from "@/lib/candidate-api";
+import { getCandidate, requestCandidateReanalysis, runCandidatePipeline, resolveCandidateGap, type CandidateDetail, type SourceKind, type PipelineResult } from "@/lib/candidate-api";
 import styles from "@/components/candidates/candidate-intelligence.module.css";
 
 type Tab = "overview" | "sources" | "gaps" | "analysis" | "timeline";
@@ -34,6 +34,9 @@ export default function CandidateDetailPage() {
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editingGapId, setEditingGapId] = useState<string | null>(null);
+  const [resolveNotes, setResolveNotes] = useState("");
+  const [resolving, setResolving] = useState(false);
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -91,6 +94,22 @@ export default function CandidateDetailPage() {
       setError(caught instanceof Error ? caught.message : "Falha ao executar pipeline");
     } finally {
       setPipelineLoading(false);
+    }
+  }
+
+  async function resolveGap(gapId: string) {
+    if (!detail || resolveNotes.length < 3) return;
+    setResolving(true);
+    setError(null);
+    try {
+      await resolveCandidateGap(detail.candidate.id, gapId, etag, resolveNotes);
+      setEditingGapId(null);
+      setResolveNotes("");
+      await load();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Falha ao resolver lacuna");
+    } finally {
+      setResolving(false);
     }
   }
 
@@ -163,7 +182,7 @@ export default function CandidateDetailPage() {
           <aside className="card card-pad"><div className="card-title"><h2>Complementar fonte</h2><span>validação obrigatória</span></div><SourceCompletionForm candidateId={candidate.id} etag={etag} suggestedKind={openGaps.find((gap) => gap.source_kind)?.source_kind as SourceKind ?? null} onSaved={() => void load()} /></aside>
         </div>}
 
-        {tab === "gaps" && <div id="panel-gaps" role="tabpanel" aria-labelledby="tab-gaps" className={styles.gapList} style={{ marginTop: 16 }}>{detail.gaps.map((gap) => <article key={gap.id} className={`${styles.gap} ${gap.status === "open" && gap.level === "blocking" ? styles.blocker : ""}`}><div className={styles.gapHeader}><strong>{gap.title}</strong><span className="badge" data-tone={gap.status === "resolved" ? "good" : gap.level === "blocking" ? "bad" : "warn"}>{gap.status} · {gap.level}</span></div><p className="subtitle">{gap.description}</p><p className="subtitle"><strong>Ação:</strong> {gap.requested_user_action}</p></article>)}</div>}
+        {tab === "gaps" && <div id="panel-gaps" role="tabpanel" aria-labelledby="tab-gaps" className={styles.gapList} style={{ marginTop: 16 }}>{detail.gaps.map((gap) => <article key={gap.id} className={`${styles.gap} ${gap.status === "open" && gap.level === "blocking" ? styles.blocker : ""}`}><div className={styles.gapHeader}><strong>{gap.title}</strong><span className="badge" data-tone={gap.status === "resolved" ? "good" : gap.level === "blocking" ? "bad" : "warn"}>{gap.status} · {gap.level}</span></div><p className="subtitle">{gap.description}</p><p className="subtitle"><strong>Ação:</strong> {gap.requested_user_action}</p>{gap.status === "open" && editingGapId !== gap.id && (<button className="button" style={{ marginTop: 8 }} onClick={() => { setEditingGapId(gap.id); setResolveNotes(""); }}>Resolver</button>)}{editingGapId === gap.id && (<form onSubmit={(e) => { e.preventDefault(); void resolveGap(gap.id); }} className={styles.resolveForm}><textarea className="form-input" value={resolveNotes} onChange={(e) => setResolveNotes(e.target.value)} placeholder="Notas de resolução (mínimo 3 caracteres)..." aria-required="true" rows={3} /><div className={styles.resolveActions}><button type="submit" className="button" disabled={resolveNotes.length < 3 || resolving}>{resolving ? "Salvando..." : "Salvar"}</button><button type="button" className="button secondary" onClick={() => { setEditingGapId(null); setResolveNotes(""); }}>Cancelar</button></div></form>)}{gap.status === "resolved" && gap.resolution_notes && (<div className={styles.resolvedInfo}><p className="subtitle"><strong>Resolvido por:</strong> {gap.resolved_by}</p><p className="subtitle"><strong>Em:</strong> {gap.resolved_at ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "medium", timeStyle: "medium" }).format(new Date(gap.resolved_at)) : "—"}</p><p className="subtitle"><strong>Notas:</strong> {gap.resolution_notes}</p></div>)}</article>)}</div>}
 
         {tab === "analysis" && <div id="panel-analysis" role="tabpanel" aria-labelledby="tab-analysis" className="table-wrap" style={{ marginTop: 16 }}><table className="table"><thead><tr><th>Execução</th><th>Gatilho</th><th>Estado</th><th>Decisão</th><th>Data de referência</th><th>Bloqueios</th></tr></thead><tbody>{detail.analysis_runs.map((run) => <tr key={run.id}><td>#{run.run_number}</td><td>{run.trigger}</td><td>{run.status}</td><td>{run.decision ?? "—"}</td><td>{new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(run.data_as_of))}</td><td>{run.blocker_codes.join(", ") || "—"}</td></tr>)}</tbody></table></div>}
 

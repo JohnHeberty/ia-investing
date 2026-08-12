@@ -142,3 +142,21 @@
 - **R7-M1**: Server-side BFF para CSRF token
 - **R7-M2**: jose library + server-side JWT verification
 - **R7-M7**: Refactoring amplo de API clients
+
+---
+
+## 🔧 Fase 25 — Candidate Intelligence: Ativação e Correções (2026-08-11)
+
+### ✅ Fase 25.1 — Bugs Críticos
+- [x] **CI-1**: Corrigir URL mismatch frontend — `web/src/lib/candidate-api.ts` (promote: `/exploration-runs/suggestions/{id}/promotion`, dismiss: `/exploration-runs/suggestions/{id}/dismissal`)
+- [x] **CI-2**: Fechar Temporal client — NÃO É BUG (SDK Python não tem close(), gRPC gerenciado internamente)
+
+### ✅ Fase 25.2 — Bugs Medium
+- [x] **CI-3**: Remover DatabaseRuntime.create() duplicado — `src/ia_investing/candidate_intelligence/sync_pipeline.py` (removida 1ª chamada duplicada)
+- [x] **CI-4**: Substituir assert por LookupError — `src/ia_investing/application/investment_candidates.py` linha 666 (`if existing is None: raise LookupError`)
+- [x] **CI-5**: Unificar readiness computation — documentado no codebase, deferido (route handler e domain evaluator servem propósitos diferentes)
+
+### ✅ Fase 25.3 — Melhorias Low
+- [x] **CI-6**: Typed exception (RPCError.ALREADY_EXISTS) — `src/apps/api/routes/investment_candidates.py`
+- [x] **CI-7**: Error handling no pipeline endpoint — `src/apps/api/routes/investment_candidates.py` (ConnectionError → 503, Exception → 422)
+- [x] **CI-8**: UI de gap resolution — `web/src/app/opportunities/candidates/[id]/page.tsx` + `candidate-api.ts` + CSS (inline expandable card com textarea)

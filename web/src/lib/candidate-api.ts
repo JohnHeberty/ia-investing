@@ -95,6 +95,11 @@ export interface CandidateGap {
   status: string;
   source_kind: string | null;
   requested_user_action: string;
+  code: string;
+  created_at: string;
+  resolved_at: string | null;
+  resolved_by: string | null;
+  resolution_notes: string | null;
 }
 
 export interface AnalysisRun {
@@ -251,7 +256,7 @@ export function createExplorationSchedule(input: {
 }
 
 export function promoteExplorationSuggestion(id: string): Promise<Candidate> {
-  return api<Candidate>(`/exploration-suggestions/${id}/promote`, {
+  return api<Candidate>(`/exploration-runs/suggestions/${id}/promotion`, {
     method: "POST",
   });
 }
@@ -260,7 +265,7 @@ export function dismissExplorationSuggestion(
   id: string,
   reason: string,
 ): Promise<void> {
-  return api<void>(`/exploration-suggestions/${id}/dismiss`, {
+  return api<void>(`/exploration-runs/suggestions/${id}/dismissal`, {
     method: "POST",
     body: JSON.stringify({ reason }),
   });
@@ -290,4 +295,20 @@ export function runCandidatePipeline(
     method: "POST",
     body: JSON.stringify({ skip_stages: skipStages }),
   });
+}
+
+export function resolveCandidateGap(
+  candidateId: string,
+  gapId: string,
+  etag: string,
+  notes: string,
+): Promise<CandidateGap> {
+  return api<CandidateGap>(
+    `/investment-candidates/${candidateId}/gaps/${gapId}/resolution`,
+    {
+      method: "POST",
+      headers: { "If-Match": etag },
+      body: JSON.stringify({ notes }),
+    },
+  );
 }

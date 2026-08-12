@@ -147,10 +147,6 @@ async def run_candidate_pipeline(
         _get_database_url(),
     )
 
-    db = DatabaseRuntime.create(
-        _get_database_url(),
-    )
-
     async with db.session() as session:
         candidate = (
             await session.execute(

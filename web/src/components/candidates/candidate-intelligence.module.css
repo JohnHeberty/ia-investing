@@ -18,6 +18,9 @@
 .sourceHeader, .gapHeader { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
 .source a { color: var(--blue); overflow-wrap: anywhere; font-size: 11px; }
 .meta { color: var(--muted-2); font: 9px var(--font-mono); margin-top: 6px; }
+.resolveForm { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.resolveActions { display: flex; gap: 8px; }
+.resolvedInfo { margin-top: 8px; padding: 8px; border-radius: 6px; background: var(--surface-1); opacity: 0.8; }
 .error { border: 1px solid var(--red); color: var(--red); padding: 10px; border-radius: 9px; }
 .success { border: 1px solid var(--accent); color: var(--accent); padding: 10px; border-radius: 9px; }
 .tabs { display: flex; gap: 5px; border-bottom: 1px solid var(--line); overflow-x: auto; }

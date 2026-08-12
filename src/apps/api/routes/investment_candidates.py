@@ -18,6 +18,7 @@ from temporalio.client import (
     ScheduleSpec,
     ScheduleState,
 )
+from temporalio.service import RPCError, RPCStatusCode
 
 from apps.api._etag import parse_etag
 from apps.api.security import AuthContext, get_auth_context, safe_uuid
@@ -284,6 +285,16 @@ def organization_id(auth: AuthContext) -> UUID:
 
 
 def detail_response(detail: CandidateDetail, response: Response) -> CandidateDetailV1:
+    """Build the API response for candidate detail.
+
+    NOTE: This function computes readiness inline using a simplified algorithm.
+    The domain ``ReadinessEvaluator`` in ``candidate_intelligence/readiness.py``
+    provides a more comprehensive evaluation including operational dimensions
+    and gap-based blockers. The two implementations are intentionally separate:
+    this one works with ORM models for the API layer, while the domain evaluator
+    is used by the orchestrator for pipeline decisions. If you change one,
+    consider whether the other needs updating too.
+    """
     candidate = detail.candidate
     response.headers["ETag"] = f'"{candidate.lock_version}"'
 
@@ -580,11 +591,16 @@ async def run_candidate_pipeline_endpoint(
         run_candidate_pipeline,
     )
 
-    result = await run_candidate_pipeline(
-        candidate_id=candidate_id,
-        organization_id=organization_id(auth),
-        skip_stages=body.skip_stages if body else [],
-    )
+    try:
+        result = await run_candidate_pipeline(
+            candidate_id=candidate_id,
+            organization_id=organization_id(auth),
+            skip_stages=body.skip_stages if body else [],
+        )
+    except ConnectionError as exc:
+        raise HTTPException(status_code=503, detail=f"infrastructure error: {exc}") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"pipeline execution failed: {exc}") from exc
 
     return PipelineResultV1(
         candidate_id=result.candidate_id,
@@ -657,9 +673,8 @@ async def create_exploration_schedule(
     )
     try:
         await client.create_schedule(schedule_id, schedule)
-    except Exception as exc:
-        exc_str = str(exc).lower()
-        if "already exists" in exc_str or "schedule already" in exc_str:
+    except RPCError as exc:
+        if exc.status == RPCStatusCode.ALREADY_EXISTS:
             raise HTTPException(status_code=409, detail="exploration schedule already exists") from exc
         raise HTTPException(status_code=503, detail="could not create Temporal exploration schedule") from exc
     return ExplorationScheduleV1(
