@@ -71,7 +71,7 @@ export default function MissionControlPage() {
         </header>
         <div className="state-panel" data-state="error" role="alert">
           <strong>Erro ao carregar dashboard</strong>
-          <p className="mono text-sm mt-8" style={{ wordBreak: "break-all" }}>
+          <p className="mono text-sm mt-8 truncate">
             {error?.message || "Erro desconhecido — verifique o console do navegador (F12)"}
           </p>
         </div>
@@ -95,8 +95,7 @@ export default function MissionControlPage() {
           </Link>
           <Link
             href="/portfolios?create=true"
-            className="button"
-            style={{ background: "transparent", color: "var(--accent)", border: "1px solid var(--accent)" }}
+            className="button secondary text-accent border-accent"
           >
             + Nova Carteira
           </Link>
@@ -159,20 +158,19 @@ export default function MissionControlPage() {
                 <Link
                   key={portfolio.id}
                   href={`/portfolios/${portfolio.id}`}
-                  className="flex items-center justify-between"
-                  style={{ padding: "14px 0", borderBottom: "1px solid var(--line-soft)", textDecoration: "none", color: "inherit" }}
+                  className="flex items-center justify-between portfolio-row"
                 >
                   <div>
-                    <div className="fw-500 text-sm" style={{ fontSize: 14 }}>{portfolio.name}</div>
-                    <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                    <div className="fw-500 text-14">{portfolio.name}</div>
+                    <div className="muted text-12 mt-2">
                       {positions.length} posições · {portfolio.base_currency}
                     </div>
                   </div>
-                  <div style={{ textAlign: "right" }}>
-                    <div className="mono" style={{ fontSize: 14 }}>
+                  <div className="text-right">
+                    <div className="mono text-14">
                       {money.format(value)}
                     </div>
-                    <div className={`mono ${pnl >= 0 ? "positive" : "negative"}`} style={{ fontSize: 12 }}>
+                    <div className={`mono text-12 ${pnl >= 0 ? "positive" : "negative"}`}>
                       {pnl >= 0 ? "+" : ""}{pnlPercent.toFixed(2)}%
                     </div>
                   </div>
@@ -187,50 +185,50 @@ export default function MissionControlPage() {
         <div className="card-title">
           <h2>Funcionalidades Disponíveis</h2>
         </div>
-        <div className="grid grid-3 mt-16" style={{ gap: 12 }}>
-          <Link href="/portfolios" style={{ textDecoration: "none", color: "inherit" }}>
-            <div className="card" style={{ padding: 16, cursor: "pointer" }}>
-              <div className="fw-500" style={{ marginBottom: 4 }}>📊 Carteiras</div>
+        <div className="grid grid-3 mt-16 gap-12">
+          <Link href="/portfolios" className="no-underline text-inherit">
+            <div className="card feature-tile">
+              <div className="fw-500 feature-tile-title">📊 Carteiras</div>
               <div className="muted text-sm">
                 Gerenciar carteiras e posições
               </div>
             </div>
           </Link>
-          <Link href="/rebalance" style={{ textDecoration: "none", color: "inherit" }}>
-            <div className="card" style={{ padding: 16, cursor: "pointer" }}>
-              <div className="fw-500" style={{ marginBottom: 4 }}>⚖️ Rebalance</div>
+          <Link href="/rebalance" className="no-underline text-inherit">
+            <div className="card feature-tile">
+              <div className="fw-500 feature-tile-title">⚖️ Rebalance</div>
               <div className="muted text-sm">
                 Análise de drift e rebalanceamento
               </div>
             </div>
           </Link>
-          <Link href="/risk" style={{ textDecoration: "none", color: "inherit" }}>
-            <div className="card" style={{ padding: 16, cursor: "pointer" }}>
-              <div className="fw-500" style={{ marginBottom: 4 }}>🛡️ Risco</div>
+          <Link href="/risk" className="no-underline text-inherit">
+            <div className="card feature-tile">
+              <div className="fw-500 feature-tile-title">🛡️ Risco</div>
               <div className="muted text-sm">
                 Monitoramento de risco
               </div>
             </div>
           </Link>
-          <Link href="/opportunities" style={{ textDecoration: "none", color: "inherit" }}>
-            <div className="card" style={{ padding: 16, cursor: "pointer" }}>
-              <div className="fw-500" style={{ marginBottom: 4 }}>🎯 Oportunidades</div>
+          <Link href="/opportunities" className="no-underline text-inherit">
+            <div className="card feature-tile">
+              <div className="fw-500 feature-tile-title">🎯 Oportunidades</div>
               <div className="muted text-sm">
                 Análise de candidatos
               </div>
             </div>
           </Link>
-          <Link href="/committee" style={{ textDecoration: "none", color: "inherit" }}>
-            <div className="card" style={{ padding: 16, cursor: "pointer" }}>
-              <div className="fw-500" style={{ marginBottom: 4 }}>🏛️ Comitê</div>
+          <Link href="/committee" className="no-underline text-inherit">
+            <div className="card feature-tile">
+              <div className="fw-500 feature-tile-title">🏛️ Comitê</div>
               <div className="muted text-sm">
                 Decisões de investimento
               </div>
             </div>
           </Link>
-          <Link href="/data-quality" style={{ textDecoration: "none", color: "inherit" }}>
-            <div className="card" style={{ padding: 16, cursor: "pointer" }}>
-              <div className="fw-500" style={{ marginBottom: 4 }}>✅ Qualidade</div>
+          <Link href="/data-quality" className="no-underline text-inherit">
+            <div className="card feature-tile">
+              <div className="fw-500 feature-tile-title">✅ Qualidade</div>
               <div className="muted text-sm">
                 Monitoramento de dados
               </div>

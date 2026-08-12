@@ -24,7 +24,7 @@ function LoginForm() {
   }, [loading, user, router, returnTo]);
 
   if (loading) {
-    return <div className="subtitle" style={{ textAlign: "center" }}>Verificando sessão…</div>;
+    return <div className="subtitle text-center">Verificando sessão…</div>;
   }
 
   if (user) {
@@ -71,10 +71,9 @@ function LoginForm() {
           />
         </div>
         <button
-          className="btn btn-primary"
+          className="btn btn-primary login-btn"
           type="submit"
           disabled={submitting || !email}
-          style={{ width: "100%", marginTop: 8 }}
         >
           {submitting ? "Entrando…" : "Entrar"}
         </button>
@@ -85,9 +84,9 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="card card-pad" style={{ maxWidth: 430, width: "100%", margin: "0 16px" }}>
+    <div className="card card-pad login-card">
       <div className="eyebrow">Identidade institucional</div>
-      <Suspense fallback={<div className="subtitle" style={{ textAlign: "center" }}>Carregando…</div>}>
+      <Suspense fallback={<div className="subtitle text-center">Carregando…</div>}>
         <LoginForm />
       </Suspense>
     </div>

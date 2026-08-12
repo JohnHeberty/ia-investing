@@ -125,13 +125,13 @@ function DataQualityContent() {
               {staleSources > 0 ? "Atenção" : "Saudável"}
             </Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             {staleSources > 0
               ? `${staleSources} fonte${staleSources !== 1 ? "s" : ""} excedeu${staleSources !== 1 ? "ram" : ""} a janela de freshness.`
               : "Todas as fontes estão dentro das SLAs de freshness."}
           </p>
           {neverSucceededSources > 0 && (
-            <p style={{ color: "var(--red)", fontSize: 11, marginTop: 6 }}>
+            <p className="text-xs text-red" style={{ marginTop: 6 }}>
               {neverSucceededSources} fonte{neverSucceededSources !== 1 ? "s" : ""} nunca retornou sucesso.
             </p>
           )}
@@ -141,7 +141,7 @@ function DataQualityContent() {
             <h2>Fatos e métricas</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Missing e parse_error permanecem explícitos; zero só representa valor reportado.
             Zero nunca substitui dado ausente.
           </p>
@@ -153,7 +153,7 @@ function DataQualityContent() {
               {openIncidents > 0 ? "Abertos" : "Resolvidos"}
             </Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Transitions exigem autorização, razão, auditoria e waiver com expiração.
             {openIncidents > 0 && ` ${openIncidents} incidente${openIncidents !== 1 ? "s" : ""} aberto${openIncidents !== 1 ? "s" : ""}.`}
           </p>
@@ -189,7 +189,7 @@ function DataQualityContent() {
 
                   return (
                     <tr key={code}>
-                      <td style={{ fontWeight: 600 }}>{name}</td>
+                      <td className="fw-500">{name}</td>
                       <td className="rank">{code}</td>
                       <td>
                         <Badge
@@ -212,7 +212,7 @@ function DataQualityContent() {
                                 : "Inativa"}
                         </Badge>
                       </td>
-                      <td style={{ fontSize: 11, color: "var(--muted)" }}>
+                      <td className="text-xs text-muted">
                         {lastSuccess
                           ? new Date(lastSuccess).toLocaleString("pt-BR", {
                               day: "2-digit",
@@ -222,7 +222,7 @@ function DataQualityContent() {
                             })
                           : "—"}
                       </td>
-                      <td style={{ fontSize: 11, color: lastFailure ? "var(--red)" : "var(--muted)" }}>
+                      <td className="text-xs" style={{ color: lastFailure ? "var(--red)" : "var(--muted)" }}>
                         {lastFailure
                           ? new Date(lastFailure).toLocaleString("pt-BR", {
                               day: "2-digit",
@@ -263,7 +263,7 @@ function DataQualityContent() {
               <tbody>
                 {incidents.map((incident) => (
                   <tr key={incident.id}>
-                    <td className="rank">{incident.id.slice(0, 12)}</td>
+                    <td className="rank"><span title={incident.id}>{incident.id.slice(0, 12)}</span></td>
                     <td>
                       <Badge
                         tone={
@@ -286,11 +286,11 @@ function DataQualityContent() {
                         {incident.status === "open" ? "Aberto" : incident.status}
                       </Badge>
                     </td>
-                    <td style={{ fontSize: 11, color: "var(--muted)", maxWidth: 200 }}>
+                    <td className="text-xs text-muted" style={{ maxWidth: 200 }}>
                       {incident.impact_summary}
                     </td>
                     <td className="rank">{incident.owner_role}</td>
-                    <td style={{ fontSize: 11, color: "var(--muted)" }}>
+                    <td className="text-xs text-muted">
                       {new Date(incident.created_at).toLocaleString("pt-BR", {
                         day: "2-digit",
                         month: "short",

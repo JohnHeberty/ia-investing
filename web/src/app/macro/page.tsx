@@ -140,12 +140,12 @@ function MacroContent() {
               <tbody>
                 {macroSeries.map((series) => (
                   <tr key={series.id}>
-                    <td style={{ fontWeight: 600 }}>{series.name}</td>
-                    <td className="numeric" style={{ fontFamily: "var(--font-mono)" }}>
+                    <td className="fw-600">{series.name}</td>
+                    <td className="numeric mono">
                       {series.value ?? "—"}
                     </td>
-                    <td style={{ color: "var(--muted)", fontSize: 12 }}>{series.source}</td>
-                    <td style={{ color: "var(--muted)", fontSize: 12 }}>{series.frequency}</td>
+                    <td className="muted text-sm">{series.source}</td>
+                    <td className="muted text-sm">{series.frequency}</td>
                     <td>
                       <Badge
                         tone={
@@ -185,7 +185,7 @@ function MacroContent() {
             <h2>Revisões point-in-time</h2>
             <Badge tone="warn">Atenção</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="muted text-sm lh-relaxed">
             Cada revisão cria nova observação; valores anteriormente conhecidos permanecem
             reproduzíveis.
           </p>
@@ -197,7 +197,7 @@ function MacroContent() {
               {staleSeries > 0 ? "Atenção" : "Saudável"}
             </Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="muted text-sm lh-relaxed">
             Nenhum cenário é publicado enquanto séries obrigatórias estiverem stale ou missing.
           </p>
         </article>
@@ -206,7 +206,7 @@ function MacroContent() {
             <h2>Lineage</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="muted text-sm lh-relaxed">
             Definição da série, transformação, raw object e knowledge_at acompanham cada resultado.
           </p>
         </article>

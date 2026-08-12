@@ -18,12 +18,12 @@ import { StatusBadge } from "@/components/rebalance/shared";
 
 function LoadingSkeleton() {
   return (
-    <div style={{ display: "grid", gap: 16, padding: 24 }}>
-      <div style={{ height: 32, width: 256, borderRadius: 4, background: "var(--surface-3)", animation: "pulse 2s infinite" }} />
-      <div style={{ height: 16, width: 384, borderRadius: 4, background: "var(--surface-3)", animation: "pulse 2s infinite" }} />
-      <div style={{ display: "grid", gap: 16, gridTemplateColumns: "1fr 1fr" }}>
-        <div style={{ height: 192, borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)" }} />
-        <div style={{ height: 192, borderRadius: 10, border: "1px solid var(--line)", background: "var(--surface)" }} />
+    <div className="grid gap-16 p-24">
+      <div className="skeleton-bar h-32 w-256" />
+      <div className="skeleton-bar h-16 w-384" />
+      <div className="grid gap-16" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        <div className="skeleton-panel h-192" />
+        <div className="skeleton-panel h-192" />
       </div>
     </div>
   );
@@ -32,7 +32,7 @@ function LoadingSkeleton() {
 function ErrorState({ message }: { message: string }) {
   return (
     <main>
-      <h1 style={{ fontSize: 24, fontWeight: 600, color: "var(--text)" }}>Rebalanceamento</h1>
+      <h1 className="text-24 fw-600">Rebalanceamento</h1>
       <div className="state-panel section-gap" data-state="error" role="alert">
         <strong>Erro</strong>
         {message}
@@ -63,7 +63,7 @@ export default function RebalancePage() {
 
   if (selectedProposalId && proposalDetailQuery.data) {
     return (
-      <main style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <main className="flex flex-col gap-24">
         <header className="page-head">
           <div>
             <div className="eyebrow">Portfolio Intelligence</div>
@@ -76,7 +76,7 @@ export default function RebalancePage() {
   }
 
   return (
-    <main style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+    <main className="flex flex-col gap-24">
       <header className="page-head">
         <div>
           <div className="eyebrow">Portfolio Intelligence</div>
@@ -87,16 +87,9 @@ export default function RebalancePage() {
         </div>
       </header>
 
-      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 16 }}>
+      <div className="flex flex-wrap items-center gap-16">
         <select
-          style={{
-            borderRadius: 8,
-            border: "1px solid var(--line)",
-            background: "var(--surface)",
-            padding: "8px 16px",
-            fontSize: 14,
-            color: "var(--text)",
-          }}
+          className="select-styled"
           value={effectiveId}
           onChange={(e) => {
             setSelectedPortfolioId(e.target.value);
@@ -127,14 +120,14 @@ export default function RebalancePage() {
       {!isLoading && driftQuery.data && (
         <section className="card card-pad" aria-live="polite">
           <div className="card-title"><h2>Desvios atuais vs. alvo</h2></div>
-          <div style={{ marginBottom: 16, display: "flex", gap: 24, fontSize: 14 }}>
+          <div className="drift-info">
             <div>
-              <span style={{ color: "var(--muted)" }}>Desvio máximo: </span>
-              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{pct(driftQuery.data.max_drift)}</span>
+              <span className="text-muted">Desvio máximo: </span>
+              <span className="mono">{pct(driftQuery.data.max_drift)}</span>
             </div>
             <div>
-              <span style={{ color: "var(--muted)" }}>Desvio total: </span>
-              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{pct(driftQuery.data.total_drift)}</span>
+              <span className="text-muted">Desvio total: </span>
+              <span className="mono">{pct(driftQuery.data.total_drift)}</span>
             </div>
           </div>
           <DriftTable items={driftQuery.data.items} />
@@ -145,30 +138,20 @@ export default function RebalancePage() {
         <section className="card card-pad" aria-live="polite">
           <div className="card-title"><h2>Propostas</h2></div>
           {proposalsQuery.data.length === 0 ? (
-            <p style={{ fontSize: 14, color: "var(--muted)" }}>Nenhuma proposta de rebalanceamento para esta carteira.</p>
+            <p className="proposal-empty">Nenhuma proposta de rebalanceamento para esta carteira.</p>
           ) : (
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="flex flex-col gap-8">
               {proposalsQuery.data.map((p) => (
                 <button
                   key={p.id}
                   onClick={() => setSelectedProposalId(p.id)}
-                  className="event"
-                  style={{
-                    display: "flex",
-                    width: "100%",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    textAlign: "left",
-                    background: "none",
-                    cursor: "pointer",
-                    color: "inherit",
-                  }}
+                  className="event proposal-btn"
                 >
                   <div>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>
+                    <div className="proposal-title">
                       Proposta {p.id.slice(0, 8)}
                     </div>
-                    <div style={{ marginTop: 4, fontSize: 12, color: "var(--muted-2)" }}>
+                    <div className="proposal-meta">
                       {p.rationale.slice(0, 100)}{p.rationale.length > 100 ? "..." : ""}
                     </div>
                   </div>

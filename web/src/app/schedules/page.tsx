@@ -89,14 +89,13 @@ function IntervalEditor({
 
   if (editing) {
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+      <div className="flex items-center gap-4">
         <input
-          className="form-input"
+          className="form-input interval-input"
           type="number"
           min={1}
           value={value}
           onChange={(e) => setValue(parseInt(e.target.value) || 1)}
-          style={{ width: 60, fontSize: 12, padding: "2px 6px" }}
           onKeyDown={(e) => {
             if (e.key === "Enter") save();
             if (e.key === "Escape") cancel();
@@ -104,10 +103,9 @@ function IntervalEditor({
           disabled={saving}
         />
         <select
-          className="form-input"
+          className="form-input interval-select"
           value={unit}
           onChange={(e) => setUnit(e.target.value)}
-          style={{ fontSize: 12, padding: "2px 4px", width: 70 }}
           disabled={saving}
         >
           <option value="minutes">min</option>
@@ -115,8 +113,7 @@ function IntervalEditor({
           <option value="days">dias</option>
         </select>
         <button
-          className="button"
-          style={{ padding: "2px 6px", fontSize: 11 }}
+          className="button xs"
           onClick={save}
           disabled={saving}
           type="button"
@@ -125,8 +122,7 @@ function IntervalEditor({
           {saving ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
         </button>
         <button
-          className="button"
-          style={{ padding: "2px 6px", fontSize: 11 }}
+          className="button xs"
           onClick={cancel}
           type="button"
           disabled={saving}
@@ -140,14 +136,8 @@ function IntervalEditor({
 
   return (
     <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 4,
-        cursor: "pointer",
-        fontFamily: "var(--font-mono)",
-        fontSize: 13,
-      }}
+      className="flex items-center gap-4 cursor-pointer"
+      style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
       onClick={startEdit}
       onKeyDown={(e) => { if (e.key === "Enter") startEdit(); }}
       role="button"
@@ -187,15 +177,15 @@ function ScheduleRow({
   return (
     <tr>
       <td>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontWeight: 500, fontSize: 13 }}>{schedule.description || schedule.schedule_id}</span>
-          <span style={{ fontSize: 11, color: "var(--muted)", fontFamily: "var(--font-mono)" }}>
+        <div className="flex-col gap-4">
+          <span className="fw-500" style={{ fontSize: 13 }}>{schedule.description || schedule.schedule_id}</span>
+          <span className="text-xs muted mono">
             {schedule.schedule_id}
           </span>
         </div>
       </td>
       <td>
-        <span style={{ fontSize: 12, fontFamily: "var(--font-mono)", color: "var(--muted)" }}>
+        <span className="text-sm muted mono">
           {getWorkflowLabel(schedule.schedule_id)}
         </span>
       </td>
@@ -211,24 +201,23 @@ function ScheduleRow({
           parseDuration={parseDuration}
         />
       </td>
-      <td style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
+      <td className="text-sm mono">
         {schedule.last_run_at
           ? new Date(schedule.last_run_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
           : "—"}
       </td>
-      <td style={{ fontSize: 12 }}>
+      <td className="text-sm">
         {schedule.last_run_at ? (
-          <span style={{ color: "var(--muted)" }}>registrado</span>
+          <span className="text-muted">registrado</span>
         ) : (
-          <span style={{ color: "var(--muted)" }}>—</span>
+          <span className="text-muted">—</span>
         )}
       </td>
       <td style={{ fontSize: 13 }}>{nextRun ?? "—"}</td>
       <td>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div className="flex gap-6">
           <button
-            className="button"
-            style={{ fontSize: 11, padding: "4px 10px" }}
+            className="button xs"
             onClick={() => onTogglePause(schedule.schedule_id, schedule.paused)}
             type="button"
             disabled={isOwnMutating}
@@ -238,8 +227,7 @@ function ScheduleRow({
             {schedule.paused ? "Retomar" : "Pausar"}
           </button>
           <button
-            className="button"
-            style={{ fontSize: 11, padding: "4px 10px" }}
+            className="button xs"
             onClick={() => trigger()}
             type="button"
             disabled={isOwnMutating || isTriggerBusy}
@@ -254,8 +242,7 @@ function ScheduleRow({
           </button>
           {!schedule.is_default && (
             <button
-              className="button"
-              style={{ fontSize: 11, padding: "4px 10px", color: "var(--red)" }}
+              className="button xs danger"
               onClick={() => onDelete(schedule.schedule_id)}
               type="button"
               disabled={isOwnMutating}
@@ -282,7 +269,7 @@ function RunsPanel({ scheduleId }: { scheduleId: string }) {
 
   if (isError) {
     return (
-      <div style={{ padding: 16, fontSize: 13, color: "var(--red)" }}>
+      <div className="text-sm text-red" style={{ padding: 16 }}>
         Erro ao carregar execuções: {error?.message ?? "desconhecido"}
       </div>
     );
@@ -290,16 +277,16 @@ function RunsPanel({ scheduleId }: { scheduleId: string }) {
 
   if (runs.length === 0) {
     return (
-      <div style={{ padding: 16, fontSize: 13, color: "var(--muted)" }}>
+      <div className="text-sm text-muted" style={{ padding: 16 }}>
         Nenhuma execução registrada
       </div>
     );
   }
 
   return (
-    <div style={{ maxHeight: 300, overflowY: "auto" }}>
+    <div className="runs-panel-scroll">
       <div className="table-wrap">
-        <table className="table" style={{ width: "100%" }}>
+        <table className="table w-full">
           <thead>
             <tr>
               <th>Status</th>
@@ -317,15 +304,15 @@ function RunsPanel({ scheduleId }: { scheduleId: string }) {
                     {run.status}
                   </Badge>
                 </td>
-                <td style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
+                <td className="text-sm mono">
                   {new Date(run.started_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                 </td>
-                <td style={{ fontSize: 12, fontFamily: "var(--font-mono)" }}>
+                <td className="text-sm mono">
                   {run.finished_at
                     ? new Date(run.finished_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
                     : "—"}
                 </td>
-                <td style={{ fontSize: 12, fontFamily: "var(--font-mono)", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <td className="text-sm truncate mono" style={{ maxWidth: 200 }}>
                   {run.result_summary
                     ? typeof run.result_summary === "object"
                       ? Object.entries(run.result_summary as Record<string, unknown>)
@@ -335,7 +322,7 @@ function RunsPanel({ scheduleId }: { scheduleId: string }) {
                       : String(run.result_summary)
                     : "—"}
                 </td>
-                <td style={{ fontSize: 12, color: run.error_message ? "var(--red)" : "var(--muted)" }}>
+                <td className="text-sm" style={{ color: run.error_message ? "var(--red)" : "var(--muted)" }}>
                   {run.error_message ?? "—"}
                 </td>
               </tr>
@@ -345,8 +332,8 @@ function RunsPanel({ scheduleId }: { scheduleId: string }) {
       </div>
       {hasMore && (
         <button
-          className="button"
-          style={{ fontSize: 12, padding: "6px 12px", marginTop: 8, width: "100%" }}
+          className="button md w-full"
+          style={{ marginTop: 8 }}
           onClick={() => setPage((p) => p + 1)}
           type="button"
         >
@@ -394,44 +381,30 @@ function CategoryGroup({
   };
 
   return (
-    <div className="card card-pad section-gap" style={{ overflow: "hidden" }}>
+    <div className="card card-pad section-gap overflow-hidden">
       <button
         type="button"
         onClick={() => toggleCategory(category)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          width: "100%",
-          border: "none",
-          background: "none",
-          cursor: "pointer",
-          padding: 0,
-          textAlign: "left",
-        }}
+        className="category-toggle"
       >
         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         <div
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: CATEGORY_COLORS[category] ?? "#8eaaa0",
-          }}
+          className="category-dot"
+          style={{ background: CATEGORY_COLORS[category] ?? "#8eaaa0" }}
         />
-        <span style={{ fontWeight: 600, fontSize: 15 }}>
+        <span className="fw-500" style={{ fontSize: 15 }}>
           {CATEGORY_LABELS[category] ?? category}
         </span>
         <Badge tone="neutral">{schedules.length}</Badge>
-        <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: "auto" }}>
+        <span className="text-sm text-muted" style={{ marginLeft: "auto" }}>
           {activeCount} ativo{activeCount !== 1 ? "s" : ""}
         </span>
       </button>
 
       {isExpanded && (
-        <div style={{ marginTop: 16 }}>
+        <div className="mt-16">
           <div className="table-wrap">
-            <table className="table" style={{ width: "100%" }}>
+            <table className="table w-full">
               <thead>
                 <tr>
                   <th>Agendamento</th>
@@ -461,23 +434,13 @@ function CategoryGroup({
             </table>
           </div>
 
-          <div style={{ marginTop: 8 }}>
+          <div className="mt-8">
             {schedules.filter((s) => s.last_run_at).map((s) => (
               <div key={`runs-${s.schedule_id}`}>
                 <button
                   type="button"
                   onClick={() => toggleRunsPanel(s.schedule_id)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    border: "none",
-                    background: "none",
-                    cursor: "pointer",
-                    padding: "6px 0",
-                    fontSize: 12,
-                    color: "var(--muted)",
-                  }}
+                  className="runs-toggle"
                 >
                   <Clock size={12} />
                   Histórico de execuções — {s.description || s.schedule_id}
@@ -645,20 +608,19 @@ export default function SchedulesPage() {
         <Metric label="Categorias" value={String(Object.keys(grouped).length)} note="grupos" />
       </section>
 
-      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+      <div className="reconcile-bar">
         <button
-          className="button"
+          className="button md"
           onClick={handleReconcile}
           type="button"
           disabled={isReconciling}
-          style={{ fontSize: 12, padding: "6px 14px" }}
         >
-          <RefreshCw size={12} style={{ marginRight: 4 }} />
+          <RefreshCw size={12} className="mt-4" />
           {isReconciling ? "Reconciliando..." : "Reconciliar"}
         </button>
       </div>
       {reconcileMsg && (
-        <div style={{ fontSize: 12, color: "var(--accent)", marginBottom: 16, textAlign: "right" }}>
+        <div className="text-sm text-accent text-right mb-16">
           {reconcileMsg}
         </div>
       )}

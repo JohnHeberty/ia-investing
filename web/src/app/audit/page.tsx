@@ -157,18 +157,15 @@ function AuditContent() {
                               : event.type}
                       </Badge>
                     </td>
-                    <td style={{ fontSize: 12 }}>{event.actor}</td>
-                    <td style={{ fontSize: 12, color: "var(--muted)" }}>{event.target}</td>
+                    <td className="text-sm">{event.actor}</td>
+                    <td className="text-sm text-muted">{event.target}</td>
                     <td
-                      style={{
-                        fontFamily: "var(--font-mono)",
-                        fontSize: 11,
-                        color: "var(--muted)",
-                      }}
+                      className="text-xs muted"
+                      style={{ fontFamily: "var(--font-mono)" }}
                     >
                       {event.correlationId.slice(0, 12)}…
                     </td>
-                    <td style={{ fontSize: 12, color: "var(--muted)" }}>
+                    <td className="text-sm text-muted">
                       {event.timestamp
                         ? new Date(event.timestamp).toLocaleString("pt-BR", {
                             day: "2-digit",
@@ -189,7 +186,7 @@ function AuditContent() {
             </table>
           </div>
           {auditEvents.length > 15 && (
-            <div style={{ padding: "8px 12px", fontSize: 12, color: "var(--muted)", borderTop: "1px solid var(--line-soft)" }}>
+            <div className="text-sm text-muted" style={{ padding: "8px 12px", borderTop: "1px solid var(--line-soft)" }}>
               …e mais {auditEvents.length - 15} evento{auditEvents.length - 15 !== 1 ? "s" : ""}
             </div>
           )}
@@ -210,7 +207,7 @@ function AuditContent() {
             <h2>Pesquisa</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Cases, claims, evidence, reviews e teses preservam before/after hashes.
           </p>
         </article>
@@ -219,7 +216,7 @@ function AuditContent() {
             <h2>Carteiras</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Mandatos, proposals, decisões e NAV revisions são rastreáveis por organização.
           </p>
         </article>
@@ -230,7 +227,7 @@ function AuditContent() {
               {integrityFailures > 0 ? "Atenção" : "Saudável"}
             </Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Artefatos imutáveis, tool calls e incidentes mantêm versões originais.
           </p>
         </article>

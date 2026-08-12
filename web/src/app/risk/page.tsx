@@ -124,11 +124,11 @@ function RiskContent() {
                 {Math.round((healthyCount / totalSources) * 100)}% fontes institucionais
               </Badge>
             </div>
-            <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 8 }}>
+            <p className="text-sm muted mt-8">
               Dados de mercado (preços, fundamentais) são fornecidos via <strong>yfinance</strong> e estão disponíveis em tempo real.
               As fontes institucionais abaixo aguardam ativação do Temporal Worker para ingestão automática.
             </p>
-            <div style={{ marginTop: 12, display: "flex", flexWrap: "wrap", gap: 6 }}>
+            <div className="mt-12 flex flex-wrap gap-4">
               {sources.filter((s) => s.status !== "healthy").map((s) => (
                 <span key={String(s.code ?? s.name)} className="badge" data-tone="warn">
                   {String(s.name ?? s.code ?? "")}
@@ -173,28 +173,20 @@ function RiskContent() {
               {hardBreaches.length > 0 ? "Atenção" : "Saudável"}
             </Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="muted text-sm lh-relaxed">
             {hardBreaches.length > 0
               ? `${hardBreaches.length} exposição(ões) ultrapassou(ram) o hard limit.`
               : "Todos os limites de concentração estão dentro dos parâmetros."}
           </p>
           {hardBreaches.length > 0 && (
-            <div style={{ marginTop: 8 }}>
+            <div className="mt-8">
               {hardBreaches.map((b) => (
                 <div
                   key={b.id}
-                  style={{
-                    fontSize: 11,
-                    padding: "6px 8px",
-                    background: "var(--surface-2)",
-                    borderRadius: 6,
-                    marginBottom: 4,
-                    display: "flex",
-                    justifyContent: "space-between",
-                  }}
+                  className="breach-row"
                 >
                   <span>{b.limit_name}</span>
-                  <span style={{ fontFamily: "var(--font-mono)", color: "var(--red)" }}>
+                  <span className="mono text-red">
                     {b.observed_value} / {b.limit_value}
                   </span>
                 </div>
@@ -202,7 +194,7 @@ function RiskContent() {
             </div>
           )}
           {hardBreaches.length === 0 && (
-            <div style={{ marginTop: 8, fontSize: 11, color: "var(--muted)" }}>
+            <div className="mt-8 text-xs muted">
               {overview?.total_snapshots ?? 0} snapshots de risco registrados
             </div>
           )}
@@ -214,7 +206,7 @@ function RiskContent() {
               {overview?.snapshots?.[0]?.liquidity ? "Dados disponíveis" : "Sem dados"}
             </Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="muted text-sm lh-relaxed">
             {overview?.snapshots?.[0]?.liquidity
               ? `Dados de liquidez preservados no snapshot.`
               : "Dados de liquidez serão exibidos após execução de assessment de risco."}
@@ -229,13 +221,13 @@ function RiskContent() {
               </Badge>
             )}
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="muted text-sm lh-relaxed">
             {volatility !== null && volatility !== undefined
               ? <>Volatilidade: <strong>{(volatility * 100).toFixed(1)}%</strong> anualizada</>
               : "Dados de volatilidade serão exibidos após execução de assessment de risco."}
           </p>
           {drawdown !== null && drawdown !== undefined && (
-            <p style={{ color: "var(--red)", fontSize: 12, marginTop: 4 }}>
+            <p className="text-red text-sm mt-4">
               Max drawdown: {(drawdown * 100).toFixed(1)}%
             </p>
           )}
@@ -278,18 +270,17 @@ function RiskContent() {
               <tbody>
                 {breaches.map((b) => (
                   <tr key={b.id}>
-                    <td style={{ fontWeight: 600 }}>{b.limit_name}</td>
+                    <td className="fw-600">{b.limit_name}</td>
                     <td>
                       <Badge tone={b.limit_type === "hard" ? "bad" : "warn"}>
                         {b.limit_type}
                       </Badge>
                     </td>
-                    <td className="numeric" style={{ fontFamily: "var(--font-mono)" }}>
+                    <td className="numeric mono">
                       {b.limit_value}
                     </td>
                     <td
-                      className="numeric"
-                      style={{ fontFamily: "var(--font-mono)", color: "var(--red)" }}
+                      className="numeric mono text-red"
                     >
                       {b.observed_value}
                     </td>

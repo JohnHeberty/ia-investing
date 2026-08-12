@@ -63,7 +63,7 @@ export default function PortfoliosPage() {
       </header>
 
       {showCreateForm && (
-        <div style={{ marginBottom: 24 }}>
+        <div className="mb-16">
           <CreatePortfolioForm onClose={() => setShowCreateForm(false)} />
         </div>
       )}
@@ -73,46 +73,45 @@ export default function PortfoliosPage() {
           <strong>Nenhuma carteira encontrada</strong>
           <p>Crie sua primeira carteira para começar a gerenciar investimentos.</p>
           <button
-            className="button"
+            className="button mt-12"
             onClick={() => setShowCreateForm(true)}
-            style={{ marginTop: 12 }}
           >
             Criar Carteira
           </button>
         </div>
       ) : (
-        <div className="grid grid-3" style={{ gap: 16 }}>
+        <div className="grid grid-3 gap-16">
           {portfolios.map((portfolio) => (
             <Link
               key={portfolio.id}
               href={`/portfolios/${portfolio.id}`}
-              style={{ textDecoration: "none", color: "inherit" }}
+              className="no-underline text-inherit"
             >
-              <article className="card card-pad" style={{ cursor: "pointer", transition: "border-color 0.2s" }}>
+              <article className="card card-pad cursor-pointer transition-border">
                 <div className="card-title">
-                  <h2 style={{ fontSize: 16 }}>{portfolio.name}</h2>
+                  <h2 className="text-16">{portfolio.name}</h2>
                   <span className="badge" data-tone={portfolio.is_paper_trading ? "warn" : "good"}>
                     {portfolio.is_paper_trading ? "Paper" : "Live"}
                   </span>
                 </div>
 
-                <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                    <span style={{ color: "var(--muted)" }}>Moeda</span>
-                    <span style={{ color: "var(--text)", fontWeight: 500 }}>{portfolio.base_currency}</span>
+                <div className="flex flex-col gap-8 mt-12">
+                  <div className="detail-row">
+                    <span className="detail-row-label">Moeda</span>
+                    <span className="detail-row-value">{portfolio.base_currency}</span>
                   </div>
 
                   {portfolio.initial_capital && (
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
-                      <span style={{ color: "var(--muted)" }}>Capital Inicial</span>
-                      <span style={{ color: "var(--text)", fontWeight: 500 }}>
+                    <div className="detail-row">
+                      <span className="detail-row-label">Capital Inicial</span>
+                      <span className="detail-row-value">
                         {new Intl.NumberFormat("pt-BR", { style: "currency", currency: portfolio.base_currency }).format(portfolio.initial_capital)}
                       </span>
                     </div>
                   )}
 
                   {portfolio.description && (
-                    <p style={{ marginTop: 8, fontSize: 12, color: "var(--muted)", lineHeight: 1.5 }}>
+                    <p className="mt-8 text-12 text-muted leading-relaxed">
                       {portfolio.description.length > 100
                         ? `${portfolio.description.slice(0, 100)}...`
                         : portfolio.description}

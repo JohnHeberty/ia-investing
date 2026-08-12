@@ -30,29 +30,19 @@ function FunnelRow({
 }) {
   const pct = total > 0 ? (value / total) * 100 : 0;
   return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 12,
-        padding: "8px 0",
-        borderTop: "1px solid var(--line-soft)",
-        fontSize: 12,
-      }}
-    >
-      <span style={{ minWidth: 160, color: "var(--muted)" }}>{label}</span>
-      <div style={{ flex: 1, height: 8, background: "var(--surface-2)", borderRadius: 4, overflow: "hidden" }}>
+    <div className="funnel-row">
+      <span className="funnel-label">{label}</span>
+      <div className="funnel-bar">
         <div
+          className="h-full rounded-4"
           style={{
             width: `${pct}%`,
-            height: "100%",
             background:
               tone === "good" ? "var(--accent)" : tone === "warn" ? "var(--amber)" : "var(--muted-2)",
-            borderRadius: 4,
           }}
         />
       </div>
-      <span style={{ fontFamily: "var(--font-mono)", minWidth: 32, textAlign: "right" }}>
+      <span className="funnel-count">
         {value}
       </span>
     </div>
@@ -130,7 +120,7 @@ function OpportunitiesContent() {
             Triagem auditável por origem, materialidade e evidência disponível.
           </p>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <div className="flex items-center gap-12">
           <AsOfIndicator
             freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
           />
@@ -141,7 +131,7 @@ function OpportunitiesContent() {
               aria-label="Abrir novo caso de pesquisa"
               aria-expanded={showNewCaseForm}
             >
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <span className="inline-flex items-center gap-6">
                 <Plus size={14} />
                 Abrir novo caso
               </span>
@@ -199,24 +189,13 @@ function OpportunitiesContent() {
                   onClick={() => setShowNewCaseForm(true)}
                   aria-label="Abrir primeiro caso de pesquisa"
                 >
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                  <span className="inline-flex items-center gap-6">
                     <Plus size={14} />
                     Abrir primeiro caso
                   </span>
                 </button>
               ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "8px 12px",
-                    background: "var(--surface-2)",
-                    borderRadius: 6,
-                    fontSize: 12,
-                    color: "var(--muted)",
-                  }}
-                >
+                <div className="waiting-hint">
                   <FolderOpen size={14} />
                   <span>Aguardando sinais para abertura de casos</span>
                 </div>
@@ -231,7 +210,7 @@ function OpportunitiesContent() {
               <h2>Funil de pesquisa</h2>
               <span>{count} caso{count !== 1 ? "s" : ""} total</span>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div className="flex flex-col gap-8">
               <FunnelRow label="Abertos / Triados" value={openCases} total={count} tone="neutral" />
               <FunnelRow label="Em pesquisa" value={researchCases} total={count} tone="warn" />
               <FunnelRow label="Prontos para comitê" value={readyForCommittee} total={count} tone="good" />
@@ -269,7 +248,7 @@ function OpportunitiesContent() {
                 <h2>Sinais fundamentais</h2>
                 <Badge tone="good">Saudável</Badge>
               </div>
-              <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+              <p className="signal-card-desc">
                 Mudanças de métricas e valuation são calculadas sobre dados point-in-time.
               </p>
             </article>
@@ -278,7 +257,7 @@ function OpportunitiesContent() {
                 <h2>Eventos corporativos</h2>
                 <Badge tone="warn">Atenção</Badge>
               </div>
-              <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+              <p className="signal-card-desc">
                 Fatos relevantes são deduplicados e classificados antes da abertura de caso.
               </p>
             </article>
@@ -287,7 +266,7 @@ function OpportunitiesContent() {
                 <h2>Macro e política</h2>
                 <Badge tone="good">Saudável</Badge>
               </div>
-              <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+              <p className="signal-card-desc">
                 Impactos mostram mecanismo, horizonte, confidence e fontes oficiais.
               </p>
             </article>

@@ -9,6 +9,8 @@ import {
 import { StatusBadge, pct, dateTime } from "./shared";
 import { DriftTable } from "./DriftTable";
 import { TradesTable } from "./TradesTable";
+import { ProposalActions } from "./ProposalActions";
+import { ProposalProgress } from "./ProposalProgress";
 
 export function ProposalDetail({
   proposal,
@@ -29,11 +31,6 @@ export function ProposalDetail({
     else next.add(id);
     setSelectedTrades(next);
   };
-
-  const canApprove = proposal.status === "draft";
-  const canExecute = proposal.status === "approved" || proposal.status === "in_progress";
-  const canComplete = proposal.status === "in_progress" || proposal.status === "approved";
-  const canCancel = !["completed", "cancelled"].includes(proposal.status);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
@@ -81,87 +78,17 @@ export function ProposalDetail({
         <TradesTable trades={proposal.trades} selected={selectedTrades} onToggle={toggleTrade} />
       </section>
 
-      {proposal.execution_progress && (
-        <section className="card card-pad">
-          <div className="card-title"><h3>Progresso</h3></div>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ height: 8, flex: 1, overflow: "hidden", borderRadius: 999, background: "var(--surface-3)" }}>
-              <div
-                style={{ height: "100%", borderRadius: 999, background: "var(--accent)", transition: "all 0.3s", width: `${proposal.execution_progress.percent_complete}%` }}
-              />
-            </div>
-            <span style={{ fontSize: 14, color: "var(--muted)" }}>
-              {proposal.execution_progress.executed}/{proposal.execution_progress.total}
-            </span>
-          </div>
-          <div style={{ marginTop: 8, display: "flex", gap: 16, fontSize: 12, color: "var(--muted-2)" }}>
-            <span>{proposal.execution_progress.executed} executadas</span>
-            <span>{proposal.execution_progress.skipped} puladas</span>
-            <span>{proposal.execution_progress.failed} falhas</span>
-          </div>
-        </section>
-      )}
+      {proposal.execution_progress && <ProposalProgress progress={proposal.execution_progress} />}
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-        {canApprove && (
-          <button
-            onClick={() => approve.mutate({ proposalId: proposal.id })}
-            disabled={approve.isPending}
-            className="button"
-            style={{ background: "var(--blue)", color: "#fff", opacity: approve.isPending ? 0.5 : 1 }}
-          >
-            {approve.isPending ? "Aprovando..." : "Aprovar proposta"}
-          </button>
-        )}
-        {canExecute && selectedTrades.size > 0 && (
-          <button
-            onClick={() =>
-              execute.mutate({
-                proposalId: proposal.id,
-                tradeIds: Array.from(selectedTrades),
-              })
-            }
-            disabled={execute.isPending}
-            className="button"
-            style={{ opacity: execute.isPending ? 0.5 : 1 }}
-          >
-            {execute.isPending ? "Executando..." : `Executar ${selectedTrades.size} trade(s)`}
-          </button>
-        )}
-        {canComplete && (
-          <button
-            onClick={() => complete.mutate({ proposalId: proposal.id })}
-            disabled={complete.isPending}
-            className="button secondary"
-            style={{ borderColor: "var(--accent)", color: "var(--accent)", opacity: complete.isPending ? 0.5 : 1 }}
-          >
-            {complete.isPending ? "Finalizando..." : "Completar rebalanceamento"}
-          </button>
-        )}
-        {canCancel && (
-          <button
-            onClick={() => cancel.mutate({ proposalId: proposal.id, reason: "Cancelado pelo operador" })}
-            disabled={cancel.isPending}
-            className="button secondary"
-            style={{ borderColor: "var(--red)", color: "var(--red)", opacity: cancel.isPending ? 0.5 : 1 }}
-          >
-            {cancel.isPending ? "Cancelando..." : "Cancelar proposta"}
-          </button>
-        )}
-      </div>
-
-      {approve.isError && (
-        <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao aprovar: {approve.error.message}</p>
-      )}
-      {execute.isError && (
-        <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao executar: {execute.error.message}</p>
-      )}
-      {complete.isError && (
-        <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao finalizar: {complete.error.message}</p>
-      )}
-      {cancel.isError && (
-        <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao cancelar: {cancel.error.message}</p>
-      )}
+      <ProposalActions
+        proposal={proposal}
+        approve={approve}
+        execute={execute}
+        complete={complete}
+        cancel={cancel}
+        selectedTradeCount={selectedTrades.size}
+        selectedTradeIds={Array.from(selectedTrades)}
+      />
     </div>
   );
 }

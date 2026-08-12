@@ -127,7 +127,7 @@ function AssetContent() {
       </div>
 
       {isStale && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="mb-12">
           <StaleWarning
             lastUpdated={instrument.valid_as_of}
             source="instruments/resolve"
@@ -165,28 +165,16 @@ function AssetContent() {
           <h2>Cobertura de evidências</h2>
           <button
             onClick={() => setDrawerOpen(true)}
-            className="icon-button"
-            style={{
-              background: "var(--surface-2)",
-              border: "1px solid var(--line)",
-              borderRadius: 6,
-              padding: "4px 10px",
-              cursor: "pointer",
-              color: "var(--text)",
-              fontSize: 12,
-              display: "flex",
-              alignItems: "center",
-              gap: 4,
-            }}
+            className="icon-button source-btn"
             aria-label="Abrir fontes de dados"
           >
             <Database size={12} /> Fontes <ExternalLink size={10} />
           </button>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex-col gap-8">
           <ConfidenceBar value={evidencePct} label="Cobertura total" />
           {instrument.material_claims > 0 && (
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 4 }}>
+            <div className="flex gap-8 flex-wrap" style={{ marginTop: 4 }}>
               <EvidenceTag kind="fact">{instrument.material_claims} fatos verificados</EvidenceTag>
               <EvidenceTag kind="inference">inferências derivadas</EvidenceTag>
             </div>
@@ -203,53 +191,26 @@ function AssetContent() {
               {safetyMargin > 20 ? "Saudável" : safetyMargin > 0 ? "Atenção" : "Insuficiente"}
             </Badge>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
-            <div
-              style={{
-                flex: 1,
-                height: 24,
-                background: "var(--surface-2)",
-                borderRadius: 12,
-                overflow: "hidden",
-                position: "relative",
-              }}
-            >
+          <div className="flex items-center gap-12 mt-8">
+            <div className="progress-track">
               <div
+                className="progress-fill"
                 style={{
                   width: `${Math.min(100, Math.max(0, safetyMargin))}%`,
-                  height: "100%",
                   background:
                     safetyMargin > 20
                       ? "var(--accent)"
                       : safetyMargin > 0
                         ? "var(--amber)"
                         : "var(--red)",
-                  borderRadius: 12,
-                  transition: "width 0.3s ease",
                 }}
               />
-              <span
-                style={{
-                  position: "absolute",
-                  right: 8,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  fontSize: 11,
-                  fontFamily: "var(--font-mono)",
-                  color: "var(--text)",
-                }}
-              >
+              <span className="progress-label">
                 {safetyMargin.toFixed(1)}%
               </span>
             </div>
           </div>
-          <p
-            style={{
-              color: "var(--muted)",
-              fontSize: 11,
-              marginTop: 8,
-            }}
-          >
+          <p className="card-desc" style={{ marginTop: 8 }}>
             Diferença entre valor justo e preço observado. Margem positiva indica subvalorização
             no cenário base.
           </p>
@@ -263,7 +224,7 @@ function AssetContent() {
             <h2>Métricas e provenance</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Receita, dívida, margens e caixa exibem definição, linhagem de fatos, status e knowledge
             cutoff.
           </p>
@@ -273,7 +234,7 @@ function AssetContent() {
             <h2>Tese e valuation</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             A versão ativa liga assumptions aprovadas, cenários bear/base/bull e gatilhos de
             invalidação.
           </p>
@@ -283,7 +244,7 @@ function AssetContent() {
             <h2>Eventos e política</h2>
             <Badge tone="warn">Atenção</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Mudança regulatória em consulta pública está separada de norma vigente e aguarda
             corroboration.
           </p>

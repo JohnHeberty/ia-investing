@@ -121,22 +121,16 @@ function CommitteeContent() {
             {quorumMet ? "Quórum OK" : "Quórum pendente"}
           </Badge>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <div className="flex flex-col gap-8">
           <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              padding: "8px 0",
-              borderTop: "1px solid var(--line-soft)",
-              fontSize: 12,
-            }}
+            className="flex items-center gap-12 border-top text-sm"
+            style={{ padding: "8px 0" }}
           >
             <ShieldCheck
               size={14}
               style={{ color: quorumMet ? "var(--accent)" : "var(--amber)" }}
             />
-            <span style={{ color: "var(--muted)" }}>
+            <span className="muted">
               {quorumMet
                 ? `Quórum de ${quorumRequired} membros confirmado (${quorumCurrent} votos).`
                 : `Quórum mínimo de ${quorumRequired} membros — ${quorumCurrent} voto${quorumCurrent !== 1 ? "s" : ""} computado${quorumCurrent !== 1 ? "s" : ""}.`}
@@ -144,17 +138,11 @@ function CommitteeContent() {
           </div>
           {totalConflicts > 0 && (
             <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                padding: "8px 0",
-                borderTop: "1px solid var(--line-soft)",
-                fontSize: 12,
-              }}
+              className="flex items-center gap-12 border-top text-sm"
+              style={{ padding: "8px 0" }}
             >
-              <span style={{ color: "var(--amber)" }}>⚠</span>
-              <span style={{ color: "var(--muted)" }}>
+              <span className="text-amber">⚠</span>
+              <span className="muted">
                 {totalConflicts} conflito{totalConflicts !== 1 ? "s" : ""} declarado{totalConflicts !== 1 ? "s" : ""} —
                 membro{totalConflicts !== 1 ? "s" : ""} impedido{totalConflicts !== 1 ? "s" : ""} de votar na pauta relacionada.
               </span>
@@ -173,7 +161,7 @@ function CommitteeContent() {
           />
         </div>
       ) : (
-        <section className="section-gap flex flex-col" style={{ gap: 12 }} aria-live="polite">
+        <section className="section-gap flex flex-col gap-12" aria-live="polite">
           {decisions.map((d) => (
             <ApprovalCard
               key={d.id}
@@ -198,7 +186,7 @@ function CommitteeContent() {
             <h2>Decision pack</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="muted text-sm lh-relaxed">
             Tese, valuation, risco, proposta e evidence hashes foram congelados na versão
             submetida.
           </p>
@@ -210,7 +198,7 @@ function CommitteeContent() {
               {totalConflicts > 0 ? "Atenção" : "Saudável"}
             </Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="muted text-sm lh-relaxed">
             {totalConflicts > 0
               ? `${totalConflicts} voto${totalConflicts !== 1 ? "s" : ""} condicionado${totalConflicts !== 1 ? "s" : ""} requer${totalConflicts === 1 ? "" : "em"} limite adicional antes da ativação paper.`
               : "Todos os votos seguem o fluxo padrão sem conflitos declarados."}
@@ -221,7 +209,7 @@ function CommitteeContent() {
             <h2>Four-eyes</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="muted text-sm lh-relaxed">
             Autores não podem aprovar a própria proposta e votos após encerramento são rejeitados.
           </p>
         </article>

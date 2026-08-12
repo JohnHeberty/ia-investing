@@ -1,20 +1,20 @@
 "use client";
 
-import { Suspense, useState } from "react";
-import { Newspaper, TrendingUp, TrendingDown, Plus, Check, X, Pencil, Trash2 } from "lucide-react";
-import Link from "next/link";
-import type { Route } from "next";
+import { Suspense } from "react";
+import { Newspaper } from "lucide-react";
 import {
   NewsDataContext,
   useNewsData,
   useNewsValue,
-  useSourceMutations,
 } from "@/hooks/use-news";
-import type { NewsDataValue, NewsSource } from "@/hooks/use-news";
-import { directionTone } from "@/lib/news-helpers";
-import { AsOfIndicator, Badge, DomainTabs, Metric } from "@/components/domain";
+import { AsOfIndicator, DomainTabs, Metric } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton } from "@/components/data-state-components";
-import { SourceFormModal } from "@/components/source-form-modal";
+import { directionTone } from "@/lib/news-helpers";
+import { SourcesTable } from "@/components/news/SourcesTable";
+import Link from "next/link";
+import type { Route } from "next";
+import { TrendingUp, TrendingDown } from "lucide-react";
+import { Badge } from "@/components/domain";
 
 function FeedTab() {
   const { items, totalItems, totalEvents, processedCount, unprocessedCount, positiveEvents, negativeEvents } =
@@ -34,11 +34,11 @@ function FeedTab() {
       </section>
 
       <div className="card card-pad section-gap" aria-live="polite">
-        <h2 style={{ margin: "0 0 16px" }}>Itens Recentes</h2>
+        <h2 className="mb-16">Itens Recentes</h2>
         {items.length === 0 ? (
           <div className="subtitle">Nenhum item coletado ainda.</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
@@ -54,7 +54,7 @@ function FeedTab() {
                   <tr key={item.id}>
                     <td>
                       {item.url && /^https?:\/\//.test(item.url) ? (
-                        <a href={item.url} target="_blank" rel="noopener noreferrer" style={{ color: "var(--accent)" }}>
+                        <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-accent">
                           {item.title ?? "—"}
                         </a>
                       ) : (
@@ -109,11 +109,11 @@ function EventsTab() {
       </section>
 
       <div className="card card-pad section-gap" aria-live="polite">
-        <h2 style={{ margin: "0 0 16px" }}>Todos os Eventos</h2>
+        <h2 className="mb-16">Todos os Eventos</h2>
         {events.length === 0 ? (
           <div className="subtitle">Nenhum evento detectado ainda.</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
@@ -128,7 +128,7 @@ function EventsTab() {
                 {events.map((event) => (
                   <tr key={event.id}>
                     <td>
-                      <Link href={`/news/events/${event.id}` as Route} style={{ color: "var(--accent)", textDecoration: "none" }}>
+                      <Link href={`/news/events/${event.id}` as Route} className="text-accent">
                         <Badge tone="neutral">{event.event_type ?? "—"}</Badge>
                       </Link>
                     </td>
@@ -139,13 +139,13 @@ function EventsTab() {
                         {event.direction_hint ?? "—"}
                       </Badge>
                     </td>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>
+                    <td className="mono">
                       {event.materiality_score !== null && Number.isFinite(event.materiality_score) ? event.materiality_score.toFixed(2) : "—"}
                     </td>
                     <td>
                       <Badge tone="neutral">{event.time_horizon ?? "—"}</Badge>
                     </td>
-                    <td style={{ maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <td className="max-w-320 truncate">
                       {event.description ?? "—"}
                     </td>
                   </tr>
@@ -161,141 +161,7 @@ function EventsTab() {
 
 function SourcesTab() {
   const { sources, stats } = useNewsData();
-  const { createMutation, updateMutation, deleteMutation } = useSourceMutations();
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingSource, setEditingSource] = useState<NewsSource | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-
-  const handleCreate = () => {
-    setEditingSource(null);
-    setModalOpen(true);
-  };
-
-  const handleEdit = (source: NewsSource) => {
-    setEditingSource(source);
-    setModalOpen(true);
-  };
-
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Excluir a fonte "${name}"?`)) return;
-    setDeletingId(id);
-    try {
-      await deleteMutation.mutateAsync(id);
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const handleSubmit = (data: { name: string; source_type?: string; url_pattern?: string; trust_level?: number }) => {
-    if (editingSource) {
-      updateMutation.mutate({ id: editingSource.id, ...data }, { onSuccess: () => setModalOpen(false) });
-    } else {
-      createMutation.mutate(data, { onSuccess: () => setModalOpen(false) });
-    }
-  };
-
-  const activeMutation = editingSource ? updateMutation : createMutation;
-
-  const trustBadge = (level: number | null) => {
-    if (level === null) return <Badge tone="neutral">—</Badge>;
-    if (level <= 2) return <Badge tone="good">Alta ({level})</Badge>;
-    if (level <= 3) return <Badge tone="neutral">Media ({level})</Badge>;
-    return <Badge tone="warn">Baixa ({level})</Badge>;
-  };
-
-  return (
-    <>
-      {stats && (
-        <section className="grid grid-4 section-gap" aria-label="Metricas de fontes" aria-live="polite">
-          <Metric label="Fontes ativas" value={String(stats.active_sources)} note="RSS configuradas" />
-          <Metric label="Itens coletados" value={String(stats.total_items)} note={`${stats.unprocessed_items} pendentes`} />
-          <Metric label="Eventos" value={String(stats.total_events)} note={`${stats.positive_events} pos / ${stats.negative_events} neg`} />
-          <Metric label="Impactos" value={String(stats.total_impacts)} note="em teses ativas" />
-        </section>
-      )}
-
-      <div className="card card-pad section-gap" aria-live="polite">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h2 style={{ margin: 0 }}>Fontes Cadastradas</h2>
-          <button className="button" onClick={handleCreate} type="button">
-            <Plus size={14} /> Nova Fonte
-          </button>
-        </div>
-
-        {sources.length === 0 ? (
-          <div className="subtitle">Nenhuma fonte cadastrada. Clique em &quot;Nova Fonte&quot; para adicionar.</div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Tipo</th>
-                  <th>Confianca</th>
-                  <th>Status</th>
-                  <th>Criado em</th>
-                  <th style={{ width: 80 }}></th>
-                </tr>
-              </thead>
-              <tbody>
-                {sources.map((source) => (
-                  <tr key={source.id}>
-                    <td style={{ fontWeight: 500 }}>{source.name}</td>
-                    <td><Badge tone="neutral">{source.source_type ?? "—"}</Badge></td>
-                    <td>{trustBadge(source.trust_level)}</td>
-                    <td>
-                      <Badge tone={source.is_active === true ? "good" : source.is_active === false ? "bad" : "neutral"}>
-                        {source.is_active === true ? <><Check size={12} /> Ativo</> : source.is_active === false ? <><X size={12} /> Inativo</> : "Desconhecido"}
-                      </Badge>
-                    </td>
-                    <td>
-                      {source.created_at
-                        ? new Date(source.created_at).toLocaleDateString("pt-BR")
-                        : "—"}
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-                        <button
-                          className="button"
-                          onClick={() => handleEdit(source)}
-                          disabled={deleteMutation.isPending}
-                          type="button"
-                          title="Editar"
-                          style={{ padding: "4px 8px" }}
-                        >
-                          <Pencil size={12} />
-                        </button>
-                        <button
-                          className="button"
-                          onClick={() => handleDelete(source.id, source.name)}
-                          disabled={deletingId === source.id}
-                          type="button"
-                          title="Excluir"
-                          style={{ padding: "4px 8px", color: "var(--red)" }}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      <SourceFormModal
-        open={modalOpen}
-        onOpenChange={setModalOpen}
-        source={editingSource}
-        onSubmit={handleSubmit}
-        isPending={activeMutation.isPending}
-        error={activeMutation.error instanceof Error ? activeMutation.error : null}
-      />
-    </>
-  );
+  return <SourcesTable sources={sources} stats={stats} />;
 }
 
 function NewsContent() {

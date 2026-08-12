@@ -50,7 +50,7 @@ function EventDetailContent({ eventId }: { eventId: string }) {
     <div className="section-gap">
       <header className="page-head">
         <div className="eyebrow">
-          <Link href={"/news" as Route} style={{ color: "var(--accent)", textDecoration: "none" }}>
+          <Link href={"/news" as Route} className="text-accent">
             <ArrowLeft size={14} /> Noticias
           </Link>
           {" / Evento"}
@@ -79,7 +79,7 @@ function EventDetailContent({ eventId }: { eventId: string }) {
         </article>
         <article className="card metric">
           <div className="metric-label">Materialidade</div>
-          <div className="metric-value" style={{ fontFamily: "var(--font-mono)" }}>
+          <div className="metric-value mono">
             {event.materiality_score !== null ? event.materiality_score.toFixed(2) : "—"}
           </div>
         </article>
@@ -90,14 +90,14 @@ function EventDetailContent({ eventId }: { eventId: string }) {
       </section>
 
       <div className="card card-pad section-gap">
-        <h2 style={{ margin: "0 0 12px" }}>Descricao</h2>
-        <p style={{ color: "var(--text)", lineHeight: 1.6 }}>{event.description ?? "Sem descricao disponivel."}</p>
+        <h2 className="mb-12">Descricao</h2>
+        <p className="lh-relaxed">{event.description ?? "Sem descricao disponivel."}</p>
       </div>
 
       {event.affected_metrics && (
         <div className="card card-pad section-gap">
-          <h2 style={{ margin: "0 0 12px" }}>Metricas Afetadas</h2>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <h2 className="mb-12">Metricas Afetadas</h2>
+          <div className="flex flex-wrap gap-8">
             {Array.isArray(event.affected_metrics?.metrics)
               ? (event.affected_metrics.metrics as unknown[]).map((m, i) => (
                   <Badge key={i} tone="neutral">{typeof m === "string" ? m : String(m)}</Badge>
@@ -106,11 +106,11 @@ function EventDetailContent({ eventId }: { eventId: string }) {
             }
           </div>
           {Array.isArray(event.affected_metrics?.key_claims) && event.affected_metrics.key_claims.length > 0 && (
-            <div style={{ marginTop: 16 }}>
-              <h3 style={{ margin: "0 0 8px", fontSize: 14 }}>Claims chave</h3>
+            <div className="mt-16">
+              <h3 className="mb-8" style={{ fontSize: 14 }}>Claims chave</h3>
               <ul style={{ margin: 0, paddingLeft: 20 }}>
                 {(event.affected_metrics.key_claims as unknown[]).map((claim, i) => (
-                  <li key={i} style={{ color: "var(--muted)", fontSize: 13, marginBottom: 4 }}>{typeof claim === "string" ? claim : String(claim)}</li>
+                  <li key={i} className="muted mb-4" style={{ fontSize: 13 }}>{typeof claim === "string" ? claim : String(claim)}</li>
                 ))}
               </ul>
             </div>
@@ -119,11 +119,11 @@ function EventDetailContent({ eventId }: { eventId: string }) {
       )}
 
       <div className="card card-pad section-gap" aria-live="polite">
-        <h2 style={{ margin: "0 0 16px" }}>Impactos em Teses ({event.impacts.length})</h2>
+        <h2 className="mb-16">Impactos em Teses ({event.impacts.length})</h2>
         {event.impacts.length === 0 ? (
           <p className="subtitle">Nenhum impacto registrado para este evento.</p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
@@ -137,7 +137,7 @@ function EventDetailContent({ eventId }: { eventId: string }) {
               <tbody>
                 {event.impacts.map((impact) => (
                   <tr key={impact.id}>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 12 }}>
+                    <td className="mono text-sm">
                       {impact.thesis_id ? impact.thesis_id.slice(0, 8) + "..." : "—"}
                     </td>
                     <td>
@@ -145,13 +145,13 @@ function EventDetailContent({ eventId }: { eventId: string }) {
                         {impact.thesis_effect ?? "—"}
                       </Badge>
                     </td>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>
+                    <td className="mono">
                       {impact.impact_score !== null ? impact.impact_score.toFixed(2) : "—"}
                     </td>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>
+                    <td className="mono">
                       {impact.confidence !== null ? `${(impact.confidence * 100).toFixed(0)}%` : "—"}
                     </td>
-                    <td style={{ maxWidth: 320, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: "var(--muted)", fontSize: 13 }}>
+                    <td className="max-w-320 truncate muted" style={{ fontSize: 13 }}>
                       {impact.reasoning ?? "—"}
                     </td>
                   </tr>

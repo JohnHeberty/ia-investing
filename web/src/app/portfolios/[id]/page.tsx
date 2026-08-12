@@ -240,13 +240,13 @@ export function PortfolioContent({ id }: { id: string }) {
                         const colors = ["var(--accent)", "var(--blue)", "var(--amber)", "var(--red)", "#9b59b6", "#1abc9c"];
                         const colorIndex = idx % colors.length;
                         return (
-                          <div key={pos.id} className="flex items-center gap-12" style={{ marginBottom: 12 }}>
-                            <div style={{ width: 12, height: 12, borderRadius: 2, background: colors[colorIndex] }} />
-                            <span style={{ flex: 1, fontWeight: 500 }}>{pos.ticker_symbol}</span>
-                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
+                          <div key={pos.id} className="flex items-center gap-12 distribution-row">
+                            <div className="distribution-swatch" style={{ background: colors[colorIndex] }} />
+                            <span className="flex-1 fw-500">{pos.ticker_symbol}</span>
+                            <span className="info-value">
                               {fmt.format(value)}
                             </span>
-                            <span style={{ fontFamily: "var(--font-mono)", fontSize: 13, color: "var(--muted)", width: 50, textAlign: "right" }}>
+                            <span className="info-value-muted w-50 text-right">
                               {weight.toFixed(1)}%
                             </span>
                           </div>
@@ -295,7 +295,7 @@ export function PortfolioContent({ id }: { id: string }) {
         ]}
       />
 
-      <footer className="mt-12" style={{ padding: "12px 0", borderTop: "1px solid var(--line-soft)", fontSize: 11, color: "var(--muted)" }}>
+      <footer className="mt-12 page-footer">
         <p>
           <strong>Moeda:</strong> {currency} ·
           <strong> Tipo:</strong> {isPaper ? "Paper Trading" : "Live"} ·

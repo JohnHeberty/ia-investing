@@ -87,7 +87,7 @@ function AgentsContent() {
       </div>
 
       {dataState === "stale" && (
-        <div style={{ marginBottom: 14 }}>
+        <div className="mb-12">
           <StaleWarning source="agents/runs" />
         </div>
       )}
@@ -123,7 +123,7 @@ function AgentsContent() {
             <h2>Versions e evals</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Versões ativas passaram pelos thresholds de schema e citation coverage.
             Cada run é versionada e rastreável.
           </p>
@@ -133,7 +133,7 @@ function AgentsContent() {
             <h2>Tool calls</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Allowlist, argumentos sanitizados, custo e duração permanecem vinculados ao run.
           </p>
         </article>
@@ -142,7 +142,7 @@ function AgentsContent() {
             <h2>Approvals</h2>
             <Badge tone="warn">Atenção</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Dois commands sensíveis aguardam decisão humana independente.
             Aprovações seguem princípio dos quatro olhos.
           </p>
@@ -171,7 +171,7 @@ function AgentsContent() {
               <tbody>
                 {runs.slice(0, 10).map((run) => (
                   <tr key={run.id}>
-                    <td className="rank">{run.id.slice(0, 8)}…</td>
+                    <td className="rank"><span title={run.id}>{run.id.slice(0, 8)}…</span></td>
                     <td>
                       <Badge
                         tone={
@@ -193,17 +193,17 @@ function AgentsContent() {
                               : run.status}
                       </Badge>
                     </td>
-                    <td>{run.capability_id.slice(0, 8)}…</td>
-                    <td className="numeric" style={{ fontFamily: "var(--font-mono)" }}>
+                    <td><span title={run.capability_id}>{run.capability_id.slice(0, 8)}…</span></td>
+                    <td className="numeric mono">
                       {run.duration_ms != null ? `${(run.duration_ms / 1000).toFixed(1)}s` : "—"}
                     </td>
-                    <td className="numeric" style={{ fontFamily: "var(--font-mono)" }}>
+                    <td className="numeric mono">
                       US$ {parseFloat(run.cost_usd).toFixed(4)}
                     </td>
-                    <td className="numeric" style={{ fontFamily: "var(--font-mono)" }}>
+                    <td className="numeric mono">
                       {(run.prompt_tokens + run.completion_tokens).toLocaleString("pt-BR")}
                     </td>
-                    <td style={{ color: "var(--muted)", fontSize: 11 }}>
+                    <td className="text-xs text-muted">
                       {new Date(run.created_at).toLocaleString("pt-BR", {
                         day: "2-digit",
                         month: "short",

@@ -138,8 +138,8 @@ function BacktestsContent() {
               <tbody>
                 {runs.map((run) => (
                   <tr key={run.id}>
-                    <td style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>
-                      {run.id.slice(0, 12)}
+                    <td className="text-xs mono">
+                      <span title={run.id}>{run.id.slice(0, 12)}</span>
                     </td>
                     <td>{run.strategy}</td>
                     <td>
@@ -152,7 +152,7 @@ function BacktestsContent() {
                         {run.pitGate}
                       </Badge>
                     </td>
-                    <td className="numeric" style={{ fontFamily: "var(--font-mono)" }}>
+                    <td className="numeric mono">
                       {run.sharpeRatio ?? "—"}
                     </td>
                     <td>
@@ -182,7 +182,7 @@ function BacktestsContent() {
             <h2>Estratégia vs benchmark</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Benchmark permanece fora do universo investível e usa série própria.
           </p>
         </article>
@@ -191,7 +191,7 @@ function BacktestsContent() {
             <h2>Baselines e ablações</h2>
             <Badge tone="good">Saudável</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Equal weight, quantitativo sem agents e ablações isolam contribuição incremental.
           </p>
         </article>
@@ -200,7 +200,7 @@ function BacktestsContent() {
             <h2>Custos e eventos</h2>
             <Badge tone="warn">Atenção</Badge>
           </div>
-          <p style={{ color: "var(--muted)", fontSize: 12, lineHeight: 1.65 }}>
+          <p className="card-desc">
             Resultados evidenciam efeito de slippage, impostos e corporate actions.
           </p>
         </article>

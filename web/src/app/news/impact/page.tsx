@@ -37,7 +37,7 @@ function ImpactContent() {
     <div className="section-gap">
       <header className="page-head">
         <div className="eyebrow">
-          <Link href={"/news" as Route} style={{ color: "var(--accent)", textDecoration: "none" }}>
+          <Link href={"/news" as Route} className="text-accent">
             <ArrowLeft size={14} /> Noticias
           </Link>
           {" / Impacto"}
@@ -57,33 +57,26 @@ function ImpactContent() {
       </section>
 
       <div className="card card-pad section-gap">
-        <h2 style={{ margin: "0 0 16px" }}>Timeline de Eventos Recentes</h2>
+        <h2 className="mb-16">Timeline de Eventos Recentes</h2>
         {sortedEvents.length === 0 ? (
           <div className="subtitle">Nenhum evento detectado ainda.</div>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div className="flex flex-col gap-8">
             {sortedEvents.slice(0, 20).map((event) => {
               const eventImpacts = impacts.filter((i) => i.event_id === event.id);
               return (
                 <div
                   key={event.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "flex-start",
-                    gap: 12,
-                    padding: "10px 12px",
-                    borderRadius: 8,
-                    background: "var(--surface-2)",
-                  }}
+                  className="timeline-event"
                 >
-                  <div style={{ flexShrink: 0, marginTop: 2 }}>
+                  <div className="flex-shrink-0" style={{ marginTop: 2 }}>
                     {directionIcon(event.direction_hint)}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <div className="flex items-center gap-8 mb-4">
                       <Link
                         href={`/news/events/${event.id}` as Route}
-                        style={{ color: "var(--accent)", textDecoration: "none", fontWeight: 500 }}
+                        className="text-accent fw-500"
                       >
                         {event.event_type ?? "evento"}
                       </Link>
@@ -93,15 +86,15 @@ function ImpactContent() {
                       {event.materiality_score !== null && Math.abs(event.materiality_score) >= 0.7 && (
                         <Badge tone="bad">ALERTA</Badge>
                       )}
-                      <span style={{ fontFamily: "var(--font-mono)", fontSize: 12, color: "var(--muted)" }}>
+                      <span className="mono text-sm muted">
                         {event.materiality_score !== null ? event.materiality_score.toFixed(2) : "—"}
                       </span>
                     </div>
-                    <div style={{ fontSize: 13, color: "var(--muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <div className="truncate muted" style={{ fontSize: 13 }}>
                       {event.description ?? "—"}
                     </div>
                     {eventImpacts.length > 0 && (
-                      <div style={{ marginTop: 6, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      <div className="mt-6 flex flex-wrap gap-4">
                         {eventImpacts.map((imp) => (
                           <Badge key={imp.event_id + imp.portfolio_id} tone="neutral">
                             {imp.portfolio_name}
@@ -118,13 +111,13 @@ function ImpactContent() {
       </div>
 
       <div className="card card-pad section-gap" aria-live="polite">
-        <h2 style={{ margin: "0 0 16px" }}>Impacto por Ativo nos Portfolios</h2>
+        <h2 className="mb-16">Impacto por Ativo nos Portfolios</h2>
         {impactsLoading ? (
           <LoadingSkeleton lines={4} />
         ) : impacts.length === 0 ? (
           <div className="subtitle">Nenhum cruzamento evento-portfolio nos ultimos 7 dias.</div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div className="overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
@@ -142,7 +135,7 @@ function ImpactContent() {
                     <td>
                       <Link
                         href={`/news/events/${impact.event_id}` as Route}
-                        style={{ color: "var(--accent)", textDecoration: "none" }}
+                        className="text-accent"
                       >
                         <Badge tone="neutral">{impact.event_type ?? "—"}</Badge>
                       </Link>
@@ -154,7 +147,7 @@ function ImpactContent() {
                         {impact.direction_hint ?? "—"}
                       </Badge>
                     </td>
-                    <td style={{ fontFamily: "var(--font-mono)" }}>
+                    <td className="mono">
                       {impact.materiality_score !== null ? impact.materiality_score.toFixed(2) : "—"}
                     </td>
                     <td>{impact.portfolio_name}</td>

@@ -69,7 +69,7 @@ export default function CandidateQueuePage() {
 
       <section className="card card-pad section-gap" aria-live="polite">
         <div className={styles.toolbar}>
-          <div className="card-title" style={{ marginBottom: 0 }}><h2>Fila de investigação</h2><span>{items.length} registros</span></div>
+          <div className="card-title mb-0"><h2>Fila de investigação</h2><span>{items.length} registros</span></div>
           <div className={styles.actions}>
             <select aria-label="Filtrar candidatos por estado" value={status} onChange={(event) => setStatus(event.target.value as CandidateStatus | "")}>
               {filterOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
