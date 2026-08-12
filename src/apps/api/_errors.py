@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from ia_investing.application.errors import (
     BusinessRejectionError,
     IaInvestingError,
+    RetryableInfrastructureError,
     ValidationError,
 )
 
@@ -17,6 +18,7 @@ def map_error(exc: Exception) -> HTTPException:
       403 — PermissionError (forbidden)
       409 — ValueError / InvalidTransition / Conflict / Idempotency
       422 — BusinessRejectionError / ValidationError
+      503 — RetryableInfrastructureError (transient, client should retry)
       500 — everything else
     """
     if isinstance(exc, LookupError):
@@ -25,6 +27,8 @@ def map_error(exc: Exception) -> HTTPException:
         return HTTPException(status_code=403, detail=str(exc))
     if isinstance(exc, BusinessRejectionError | ValidationError):
         return HTTPException(status_code=422, detail=str(exc))
+    if isinstance(exc, RetryableInfrastructureError):
+        return HTTPException(status_code=503, detail=str(exc) or "Service temporarily unavailable")
     if isinstance(exc, ValueError):
         return HTTPException(status_code=409, detail=str(exc))
     if isinstance(exc, IaInvestingError):

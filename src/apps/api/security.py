@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import hmac
+import logging
 import secrets
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
@@ -17,6 +18,8 @@ from jwt import PyJWKClient
 from ia_investing.application.audit import emit_security_event
 from ia_investing.application.security import ActorContext, enforce
 from ia_investing.settings import Settings, get_settings
+
+logger = logging.getLogger(__name__)
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -112,11 +115,17 @@ async def get_auth_context(
     dev_permissions: str = Header(default="", alias="X-Dev-Permissions"),
     dev_organization: UUID | None = Header(default=None, alias="X-Dev-Organization"),
     dev_teams: str = Header(default="", alias="X-Dev-Teams"),
+    dev_token: str | None = Header(default=None, alias="X-Dev-Token"),
     request: Request = None,  # type: ignore[assignment]
 ) -> AuthContext:
     if request is not None:
         session_context: AuthContext | None = getattr(request.state, "auth_context", None)
         if session_context is not None:
+            # NOTE: Session claims (permissions, roles) are cached for the lifetime
+            # of the session token (up to 8h). Changes to a user's roles/permissions
+            # in the identity provider will NOT take effect until the user re-authenticates.
+            # A proper fix would require short-lived tokens + refresh or a server-side
+            # session store with TTL-based invalidation.
             return session_context
     settings = get_settings()
     if credentials is not None:
@@ -127,6 +136,12 @@ async def get_auth_context(
             if settings.security.oidc_enabled:
                 claims = await _decode_oidc_token(credentials.credentials, verifier)
             elif settings.application.environment != "production" and settings.security.dev_jwt_skip_verify:
+                # SECURITY WARNING: JWT signature verification is disabled. This is only
+                # safe in local development. Never enable in staging/production.
+                logger.warning(
+                    "SECURITY: dev_jwt_skip_verify is active — JWT signature verification "
+                    "is bypassed. This must NEVER be enabled in production."
+                )
                 claims = jwt.decode(
                     credentials.credentials,
                     options={"verify_signature": False},
@@ -164,6 +179,20 @@ async def get_auth_context(
         )
 
     if settings.application.environment != "production" and dev_subject:
+        # SECURITY: Require a shared secret to use dev header auth.
+        # Without this, any client on the network can impersonate any user
+        # by sending X-Dev-Subject headers. Set SECURITY__DEV_SECRET_TOKEN
+        # in your .env file.
+        expected_token = settings.security.dev_secret_token
+        if not expected_token or dev_token != expected_token:
+            emit_security_event(
+                "auth_failure",
+                detail="X-Dev-* headers used without valid X-Dev-Token",
+            )
+            raise HTTPException(
+                status_code=403,
+                detail="Dev header authentication requires a valid X-Dev-Token",
+            )
         try:
             team_ids = frozenset(UUID(value) for value in dev_teams.replace(",", " ").split())
         except ValueError as exc:

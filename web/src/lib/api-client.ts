@@ -42,7 +42,11 @@ export async function bffFetch<T>(path: string, init?: RequestInit): Promise<T> 
     throw new Error(`HTTP ${res.status}: ${body.slice(0, 200)}`);
   }
   if (res.status === 204) return undefined as T;
-  return (await res.json()) as T;
+  try {
+    return (await res.json()) as T;
+  } catch {
+    throw new Error(`HTTP ${res.status}: Response body is not valid JSON`);
+  }
 }
 
 function k(prefix: string, ...rest: unknown[]): unknown[] {

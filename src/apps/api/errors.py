@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import logging
+
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from ia_investing.contracts.v1 import ProblemDetails
+
+logger = logging.getLogger(__name__)
 
 _TITLES = {
     400: "Bad Request",
@@ -47,3 +51,8 @@ def install_problem_handlers(app: FastAPI) -> None:
             details.append(f"{loc}: {msg}")
         detail = "; ".join(details) if details else "Request validation failed."
         return _response(request, 422, detail)
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
+        return _response(request, 500, "Internal server error")

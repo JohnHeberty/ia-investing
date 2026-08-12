@@ -62,6 +62,7 @@ def _auth_header(token: str = "test-token") -> dict[str, str]:
 @pytest.mark.asyncio
 async def test_development_identity_is_explicit(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
+    monkeypatch.setenv("SECURITY__DEV_SECRET_TOKEN", "test-dev-secret")
     get_settings.cache_clear()
     try:
         context = await get_auth_context(
@@ -70,6 +71,7 @@ async def test_development_identity_is_explicit(monkeypatch: pytest.MonkeyPatch)
             dev_permissions="agent_runs:create operations:read",
             dev_organization=None,
             dev_teams="",
+            dev_token="test-dev-secret",
         )
     finally:
         get_settings.cache_clear()
@@ -474,6 +476,7 @@ def test_parse_roles_empty() -> None:
 @pytest.mark.asyncio
 async def test_development_headers_with_org_and_teams(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
+    monkeypatch.setenv("SECURITY__DEV_SECRET_TOKEN", "test-dev-secret")
     get_settings.cache_clear()
     try:
         team_id = uuid4()
@@ -484,6 +487,7 @@ async def test_development_headers_with_org_and_teams(monkeypatch: pytest.Monkey
             dev_permissions="agent_runs:create",
             dev_organization=org_id,
             dev_teams=str(team_id),
+            dev_token="test-dev-secret",
         )
         assert context.subject == "dev@test.com"
         assert context.organization_id == org_id
@@ -524,6 +528,45 @@ async def test_no_credentials_no_dev_header_returns_401() -> None:
             dev_subject=None,
         )
     assert exc_info.value.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_dev_headers_without_token_are_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    """X-Dev-* headers without a valid X-Dev-Token must be rejected."""
+    monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
+    monkeypatch.setenv("SECURITY__DEV_SECRET_TOKEN", "real-secret")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await get_auth_context(
+                credentials=None,
+                dev_subject="attacker@example.com",
+                dev_permissions="admin",
+                dev_token=None,
+            )
+        assert exc_info.value.status_code == 403
+        assert "X-Dev-Token" in exc_info.value.detail
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_dev_headers_wrong_token_are_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    """X-Dev-* headers with wrong token must be rejected."""
+    monkeypatch.setenv("APPLICATION__ENVIRONMENT", "development")
+    monkeypatch.setenv("SECURITY__DEV_SECRET_TOKEN", "real-secret")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(HTTPException) as exc_info:
+            await get_auth_context(
+                credentials=None,
+                dev_subject="attacker@example.com",
+                dev_permissions="admin",
+                dev_token="wrong-token",
+            )
+        assert exc_info.value.status_code == 403
+    finally:
+        get_settings.cache_clear()
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== "production";
+
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1", "localhost", "100.*.*.*"],
   reactStrictMode: true,
@@ -22,11 +24,13 @@ const nextConfig: NextConfig = {
           key: "Content-Security-Policy",
           value: [
             "default-src 'self'",
-            "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+            // unsafe-inline kept for Next.js CSS-in-JS and echarts; unsafe-eval removed (not needed)
+            "script-src 'self' 'unsafe-inline'",
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
-            "connect-src 'self' http://localhost:8000 http://localhost:3000",
+            // In production only allow same-origin connections; in dev allow backend + dev server
+            `connect-src 'self'${isDev ? " http://localhost:8000 http://localhost:3000" : ""}`,
             "frame-ancestors 'none'",
           ].join("; "),
         },

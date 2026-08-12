@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime
 from uuid import UUID
 
@@ -18,6 +19,8 @@ from ia_investing.agents.portfolio_advisor import (
     compute_scores,
     generate_llm_analysis,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/portfolio", tags=["portfolio-recommendations"])
 
@@ -43,18 +46,22 @@ async def get_portfolio_recommendations(
 
     from sqlalchemy import text
 
-    result = await session.execute(
-        text("""
-            SELECT p.id, p.name, p.base_currency,
-                   pos.ticker_symbol, pos.quantity, pos.avg_cost_per_share, pos.current_price
-            FROM portfolios p
-            LEFT JOIN positions pos ON pos.portfolio_id = p.id
-            WHERE p.id = :portfolio_id AND p.organization_id = :org_id
-        """),
-        {"portfolio_id": str(portfolio_id), "org_id": str(auth.organization_id)},
-    )
+    try:
+        result = await session.execute(
+            text("""
+                SELECT p.id, p.name, p.base_currency,
+                       pos.ticker_symbol, pos.quantity, pos.avg_cost_per_share, pos.current_price
+                FROM portfolios p
+                LEFT JOIN positions pos ON pos.portfolio_id = p.id
+                WHERE p.id = :portfolio_id AND p.organization_id = :org_id
+            """),
+            {"portfolio_id": str(portfolio_id), "org_id": str(auth.organization_id)},
+        )
 
-    rows = result.fetchall()
+        rows = result.fetchall()
+    except Exception:
+        logger.exception("Failed to fetch portfolio %s", portfolio_id)
+        raise HTTPException(status_code=500, detail="Failed to load portfolio data")
 
     if not rows:
         raise HTTPException(status_code=404, detail="Portfolio not found")
@@ -62,7 +69,11 @@ async def get_portfolio_recommendations(
     from ia_investing.market_data import get_current_prices
 
     tickers = [row[3] for row in rows if row[3]]
-    real_prices = await asyncio.to_thread(get_current_prices, tickers) if tickers else {}
+    try:
+        real_prices = await asyncio.to_thread(get_current_prices, tickers) if tickers else {}
+    except Exception:
+        logger.warning("Failed to fetch current prices for %s", tickers)
+        real_prices = {}
 
     positions = []
     for row in rows:
@@ -86,6 +97,7 @@ async def get_portfolio_recommendations(
             scores = await compute_scores(ticker)
             all_scores[ticker] = scores
         except Exception:
+            logger.warning("Failed to compute scores for %s", ticker)
             all_scores[ticker] = dict.fromkeys(SCORING_WEIGHTS, 0.5)
 
     rec = build_portfolio_recommendation(
@@ -97,12 +109,16 @@ async def get_portfolio_recommendations(
     avg_momentum = sum(scores.get("momentum", 0.5) for scores in all_scores.values()) / max(len(all_scores), 1)
     expected_return = 0.03 + (avg_momentum * 0.15)
 
-    llm_result = await generate_llm_analysis(
-        positions=positions,
-        all_scores=all_scores,
-        risk_analysis=rec.risk_assessment,
-        expected_return=expected_return,
-    )
+    try:
+        llm_result = await generate_llm_analysis(
+            positions=positions,
+            all_scores=all_scores,
+            risk_analysis=rec.risk_assessment,
+            expected_return=expected_return,
+        )
+    except Exception:
+        logger.warning("LLM analysis failed for portfolio %s", portfolio_id)
+        llm_result = None
 
     for r in rec.recommendations:
         if llm_result and "position_analyses" in llm_result:
@@ -178,37 +194,41 @@ async def get_portfolio_theses(
 
     from sqlalchemy import text
 
-    result = await session.execute(
-        text("""
-            SELECT DISTINCT ON (rt.id)
-                rt.id as thesis_id,
-                rt.status as thesis_status,
-                rtv.id as version_id,
-                rtv.version_number,
-                rtv.status as version_status,
-                rtv.summary,
-                rtv.recommendation,
-                rtv.recommendation_confidence,
-                rtv.assumptions,
-                rtv.catalysts,
-                rtv.risks,
-                rtv.invalidation_criteria,
-                rtv.data_as_of,
-                rtv.expires_at,
-                rtv.created_by,
-                rtv.approved_by,
-                rtv.approved_at
-            FROM portfolio_version_theses pvt
-            JOIN institutional_portfolio_versions ipv ON ipv.id = pvt.portfolio_version_id
-            JOIN research_thesis_versions rtv ON rtv.id = pvt.thesis_version_id
-            JOIN research_theses rt ON rt.id = rtv.thesis_id
-            WHERE ipv.portfolio_id = :portfolio_id
-            ORDER BY rt.id, rtv.version_number DESC
-        """),
-        {"portfolio_id": str(portfolio_id)},
-    )
+    try:
+        result = await session.execute(
+            text("""
+                SELECT DISTINCT ON (rt.id)
+                    rt.id as thesis_id,
+                    rt.status as thesis_status,
+                    rtv.id as version_id,
+                    rtv.version_number,
+                    rtv.status as version_status,
+                    rtv.summary,
+                    rtv.recommendation,
+                    rtv.recommendation_confidence,
+                    rtv.assumptions,
+                    rtv.catalysts,
+                    rtv.risks,
+                    rtv.invalidation_criteria,
+                    rtv.data_as_of,
+                    rtv.expires_at,
+                    rtv.created_by,
+                    rtv.approved_by,
+                    rtv.approved_at
+                FROM portfolio_version_theses pvt
+                JOIN institutional_portfolio_versions ipv ON ipv.id = pvt.portfolio_version_id
+                JOIN research_thesis_versions rtv ON rtv.id = pvt.thesis_version_id
+                JOIN research_theses rt ON rt.id = rtv.thesis_id
+                WHERE ipv.portfolio_id = :portfolio_id
+                ORDER BY rt.id, rtv.version_number DESC
+            """),
+            {"portfolio_id": str(portfolio_id)},
+        )
 
-    rows = result.fetchall()
+        rows = result.fetchall()
+    except Exception:
+        logger.exception("Failed to fetch theses for portfolio %s", portfolio_id)
+        raise HTTPException(status_code=500, detail="Failed to load portfolio theses")
 
     theses = [
         PortfolioThesisItem(

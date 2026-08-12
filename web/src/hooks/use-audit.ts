@@ -45,7 +45,7 @@ export function useAudit() {
     actor: String(entry.actor_id ?? "system"),
     target: `${String(entry.resource_type ?? "resource")}:${String(entry.resource_id ?? "")}`,
     version: String(entry.hash ?? ""),
-    correlationId: String((entry.metadata as Record<string, unknown> | undefined)?.correlation_id ?? ""),
+    correlationId: String((entry.meta_data as Record<string, unknown> | undefined)?.correlation_id ?? ""),
     timestamp: String(entry.timestamp ?? entry.created_at ?? ""),
     integrity: tamperedIds.has(String(entry.id ?? "")) ? "mismatch" : "ok",
   }));

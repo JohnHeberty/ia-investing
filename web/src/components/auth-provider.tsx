@@ -46,7 +46,8 @@ async function fetchUser(): Promise<UserInfo | null> {
       throw new Error(`Auth check failed: ${response.status}`);
     }
     return response.json() as Promise<UserInfo>;
-  } catch {
+  } catch (err) {
+    console.error("[auth] fetchUser failed:", err);
     return null;
   }
 }

@@ -29,7 +29,11 @@ async function api<T>(
     );
   }
   if (response.status === 204) return null as unknown as T;
-  return response.json() as Promise<T>;
+  try {
+    return (await response.json()) as T;
+  } catch {
+    throw new Error(`API error: ${response.status}: Response body is not valid JSON`);
+  }
 }
 
 export type CandidateStatus =
@@ -123,7 +127,7 @@ export interface TimelineEvent {
 
 export interface CandidateDetail {
   candidate: Candidate;
-  readiness_score: string;
+  readiness_score: number;
   blocking_gap_codes: string[];
   gaps: CandidateGap[];
   sources: CandidateSource[];
@@ -170,6 +174,7 @@ export function createCandidate(input: {
 }): Promise<Candidate> {
   return api<Candidate>("/investment-candidates", {
     method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
     body: JSON.stringify(input),
   });
 }
@@ -198,7 +203,12 @@ export async function getCandidate(id: string): Promise<{ data: CandidateDetail;
       (body as { detail?: string }).detail ?? `API error: ${response.status}`,
     );
   }
-  const data = (await response.json()) as CandidateDetail;
+  let data: CandidateDetail;
+  try {
+    data = (await response.json()) as CandidateDetail;
+  } catch {
+    throw new Error(`API error: ${response.status}: Response body is not valid JSON`);
+  }
   const etag = response.headers.get("ETag") ?? "";
   return { data, etag };
 }
@@ -208,18 +218,17 @@ export function requestCandidateReanalysis(
   etag: string,
   force: boolean,
 ): Promise<void> {
-  return api<void>(`/investment-candidates/${candidateId}/reanalyze`, {
+  return api<void>(`/investment-candidates/${candidateId}/reanalysis`, {
     method: "POST",
     headers: { "If-Match": etag },
     body: JSON.stringify({ force }),
   });
 }
 
-export function listCandidates(status?: string): Promise<{ items: Candidate[] }> {
+export async function listCandidates(status?: string): Promise<{ items: Candidate[] }> {
   const query = status ? `?status=${encodeURIComponent(status)}` : "";
-  return api<{ items: Candidate[] }>(
-    `/investment-candidates${query}`,
-  );
+  const data = await api<Candidate[]>(`/investment-candidates${query}`);
+  return { items: data };
 }
 
 export function listExplorationRuns(): Promise<ExplorationRun[]> {
@@ -258,6 +267,7 @@ export function createExplorationSchedule(input: {
 export function promoteExplorationSuggestion(id: string): Promise<Candidate> {
   return api<Candidate>(`/exploration-runs/suggestions/${id}/promotion`, {
     method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
   });
 }
 

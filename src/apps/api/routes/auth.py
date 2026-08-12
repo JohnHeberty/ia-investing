@@ -35,9 +35,16 @@ def _get_allowed_redirect_hosts() -> frozenset[str]:
     return frozenset(settings.security.allowed_redirect_hosts)
 
 
-# In-memory OIDC state store with TTL eviction. In production, use Redis.
+# SECURITY: In-memory OIDC state store — NOT shared across workers.
+# With multiple uvicorn/gunicorn workers, state is lost between processes,
+# causing "Invalid or expired OIDC state" errors for ~50% of callbacks.
+# Mitigation: run with a single worker (e.g. uvicorn --workers 1) or replace
+# with a shared store (Redis, database). See Issue #4.
 _oidc_states: dict[str, dict[str, object]] = {}
 _OIDC_STATE_TTL_SECONDS = 600  # 10 minutes
+logger.warning(
+    "OIDC state store is in-memory — single-worker mode required for OIDC to work"
+)
 
 
 def _evict_expired_states() -> None:
@@ -166,7 +173,7 @@ async def _verify_jwt(id_token: str) -> dict[str, object]:
             id_token,
             signing_key.key,
             algorithms=["RS256"],
-            audience=settings.oidc_client_id,
+            audience=settings.oidc_audience,
             issuer=settings.oidc_issuer,
             options={"verify_exp": True},
         )
@@ -217,12 +224,12 @@ async def authorize(
     )
 
 
-@router.get("/callback", response_model=CallbackResponse)
+@router.get("/callback")
 async def callback(
     code: str | None = None,
     state: str | None = None,
     request: Request = None,  # type: ignore[assignment]
-) -> CallbackResponse:
+) -> Response:
     if not code or not state:
         raise HTTPException(status_code=400, detail="Missing authorization code or state")
     _evict_expired_states()
@@ -280,24 +287,29 @@ async def callback(
             permissions=permissions,
             name=name,
         )
-        if request is not None:
-            resp_obj = Response()
-            _set_session_cookie(resp_obj, session_token)
-            csrf = None
-            sid = decode_session_token(session_token)
-            if sid:
-                csrf = generate_csrf_token(str(sid.get("sid", "")))
-            if csrf:
-                resp_obj.set_cookie(
-                    key=CSRF_COOKIE_NAME,
-                    value=csrf,
-                    max_age=28_800,
-                    path="/",
-                    httponly=False,
-                    secure=_is_production(),
-                    samesite="strict",
-                )
-            return CallbackResponse(status="authenticated")
+        # SECURITY FIX: Return a real Response with both cookies AND JSON body.
+        # Previously, cookies were set on a discarded Response() and a bare
+        # CallbackResponse was returned — the client never received the cookies.
+        response = Response(
+            content='{"status":"authenticated"}',
+            media_type="application/json",
+        )
+        _set_session_cookie(response, session_token)
+        csrf = None
+        sid = decode_session_token(session_token)
+        if sid:
+            csrf = generate_csrf_token(str(sid.get("sid", "")))
+        if csrf:
+            response.set_cookie(
+                key=CSRF_COOKIE_NAME,
+                value=csrf,
+                max_age=28_800,
+                path="/",
+                httponly=False,
+                secure=_is_production(),
+                samesite="strict",
+            )
+        return response
     raise HTTPException(status_code=401, detail="OIDC callback failed")
 
 

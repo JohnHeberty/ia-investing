@@ -68,7 +68,33 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Email is required" }, { status: 400 });
   }
 
-  // Dev mode: accept any email, no password validation
+  // SECURITY: In dev mode, only allow pre-approved emails to receive admin.
+  // Without this, any email gets full admin privileges — a risk if the dev
+  // server is exposed on a shared network. Set DEV_ALLOWED_EMAILS env var
+  // (comma-separated) or fall back to a restrictive default.
+  const allowedEmailsEnv = process.env.DEV_ALLOWED_EMAILS;
+  const allowedEmails = allowedEmailsEnv
+    ? allowedEmailsEnv.split(",").map((e) => e.trim().toLowerCase())
+    : [];
+
+  if (allowedEmails.length > 0 && !allowedEmails.includes(email.toLowerCase())) {
+    console.warn(
+      `[auth] Dev login denied for "${email}" — not in DEV_ALLOWED_EMAILS whitelist`,
+    );
+    return NextResponse.json(
+      { error: "Email not in dev whitelist. Set DEV_ALLOWED_EMAILS to allow access." },
+      { status: 403 },
+    );
+  }
+
+  if (allowedEmails.length === 0) {
+    console.warn(
+      "[auth] DEV_ALLOWED_EMAILS is not set — granting admin to any email. " +
+        "This is insecure on shared networks.",
+    );
+  }
+
+  // Dev mode: accept whitelisted email, no password validation
   // In production, validate against identity provider
   const subject = email;
   const name = email.split("@")[0];

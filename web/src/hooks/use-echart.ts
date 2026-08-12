@@ -49,6 +49,8 @@ export function useEchart(buildOption: () => EChartOption | null, deps: unknown[
         window.removeEventListener("resize", handleResize);
         chart.dispose();
       };
+    }).catch((err: unknown) => {
+      console.error("[useEchart] Failed to load echarts:", err);
     });
 
     return () => {

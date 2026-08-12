@@ -89,6 +89,10 @@ class SecuritySettings(BaseModel):
         default=False,
         description="Allow JWT signature bypass in non-production environments. Never enable in production.",
     )
+    dev_secret_token: str = Field(
+        default="",
+        description="Shared secret required to use X-Dev-* auth headers. Must match the client-sent X-Dev-Token.",
+    )
     oidc_issuer: str | None = None
     oidc_audience: str | None = None
     oidc_client_id: str | None = None

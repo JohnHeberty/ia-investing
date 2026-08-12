@@ -24,13 +24,12 @@ export interface AgentRunSummary {
   evidence_coverage: string | null;
 }
 
-export function useAgentRuns(params?: { status?: string; agent_name?: string }) {
+export function useAgentRuns(params?: { status?: string }) {
   const query = useQuery({
     queryKey: queryKeys.agentRuns(params),
     queryFn: async () => {
       const qs = new URLSearchParams();
       if (params?.status) qs.set("status", params.status);
-      if (params?.agent_name) qs.set("agent_name", params.agent_name);
       const queryStr = qs.toString();
       return await bffFetch<Array<Record<string, unknown>>>(`/api/v1/agent-runs${queryStr ? `?${queryStr}` : ""}`);
     },

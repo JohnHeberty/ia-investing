@@ -131,7 +131,7 @@ export function useCreatePortfolio() {
       });
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["paperPortfolios"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.modelPortfolios() });
     },
   });
 }
@@ -173,7 +173,7 @@ export function useAddPosition() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolio", variables.portfolioId] });
-      queryClient.invalidateQueries({ queryKey: ["paperPortfolios"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.modelPortfolios() });
     },
   });
 }
@@ -294,7 +294,7 @@ export function useDeletePosition() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolio", variables.portfolioId] });
-      queryClient.invalidateQueries({ queryKey: ["paperPortfolios"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.modelPortfolios() });
     },
   });
 }
@@ -336,7 +336,7 @@ export function useUpdatePosition() {
     },
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["paperPortfolio", variables.portfolioId] });
-      queryClient.invalidateQueries({ queryKey: ["paperPortfolios"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.modelPortfolios() });
     },
   });
 }
@@ -353,7 +353,7 @@ export function useDeletePortfolio() {
       );
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["paperPortfolios"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.modelPortfolios() });
     },
   });
 }

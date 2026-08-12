@@ -21,13 +21,13 @@ export function useBacktests() {
   const query = useQuery({
     queryKey: queryKeys.backtests(),
     queryFn: async () => {
-      return await bffFetch<{ items?: Array<Record<string, unknown>> }>("/api/v1/backtests?limit=100&offset=0");
+      return await bffFetch<Array<Record<string, unknown>>>("/api/v1/backtests?limit=100&offset=0");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
-  const items = Array.isArray(query.data?.items) ? query.data.items : [];
+  const items = Array.isArray(query.data) ? query.data : [];
   const runs: BacktestRun[] = items.map((item) => {
     const results = item.results && typeof item.results === "object" ? item.results as Record<string, unknown> : {};
     const metrics = results.metrics && typeof results.metrics === "object" ? results.metrics as Record<string, unknown> : results;

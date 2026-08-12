@@ -1,6 +1,8 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
+// Security: only POST allowed — GET logout is a CSRF vector ( attackers can
+// trigger logout via <img> tags or link prefetch ).
 export async function POST(request: NextRequest) {
   const jar = await cookies();
   jar.delete("ia_session");
@@ -11,8 +13,4 @@ export async function POST(request: NextRequest) {
 
   const origin = request.nextUrl.origin;
   return NextResponse.redirect(new URL("/login", origin));
-}
-
-export async function GET(request: NextRequest) {
-  return POST(request);
 }

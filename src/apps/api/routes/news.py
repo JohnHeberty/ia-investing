@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -27,6 +28,8 @@ from ia_investing.news.service import (
     list_news_sources,
     update_news_source,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/news", tags=["news"])
 
@@ -128,9 +131,13 @@ async def get_news_items(
     _auth: AuthContext = Depends(require_permission("news:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> NewsListResponseV1:
-    items, total = await list_news_items(
-        session, issuer_id=issuer_id, is_processed=is_processed, limit=limit, offset=offset
-    )
+    try:
+        items, total = await list_news_items(
+            session, issuer_id=issuer_id, is_processed=is_processed, limit=limit, offset=offset
+        )
+    except Exception:
+        logger.exception("Failed to list news items")
+        raise HTTPException(status_code=500, detail="Failed to load news items")
     return NewsListResponseV1(
         items=[NewsItemV1.model_validate(item) for item in items],
         total=total,
@@ -177,7 +184,11 @@ async def fetch_news(
     _auth: AuthContext = Depends(require_permission("news:write")),
     session: AsyncSession = Depends(get_async_session),
 ) -> FetchResponseV1:
-    persisted = await fetch_and_persist_news_items(issuer_id, session, max_results=max_results)
+    try:
+        persisted = await fetch_and_persist_news_items(issuer_id, session, max_results=max_results)
+    except Exception:
+        logger.exception("Failed to fetch news for issuer %s", issuer_id)
+        raise HTTPException(status_code=502, detail="Failed to fetch news from external source")
     return FetchResponseV1(persisted=persisted, count=len(persisted))
 
 
@@ -187,7 +198,11 @@ async def analyze_news(
     _auth: AuthContext = Depends(require_permission("news:write")),
     session: AsyncSession = Depends(get_async_session),
 ) -> AnalyzeResponseV1:
-    result = await analyze_news_item(item_id, session)
+    try:
+        result = await analyze_news_item(item_id, session)
+    except Exception:
+        logger.exception("Failed to analyze news item %s", item_id)
+        raise HTTPException(status_code=502, detail="LLM analysis service temporarily unavailable")
     if result is None:
         raise HTTPException(status_code=503, detail="LLM analysis unavailable")
     if result.get("status") == "not_found":

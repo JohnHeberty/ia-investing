@@ -56,12 +56,16 @@ _api_limiter = SlidingWindowCounter(100, 60.0)
 
 
 def _get_client_ip(request: Request) -> str:
+    """Extract client IP, only trusting X-Forwarded-For when behind a known proxy."""
     client = request.client
     direct_ip = client.host if client else None
     forwarded = request.headers.get("X-Forwarded-For")
     if forwarded and direct_ip:
         try:
             direct = ipaddress.ip_address(direct_ip)
+            # Only trust X-Forwarded-For when the direct connection comes from a
+            # private/loopback address (i.e. behind a reverse proxy). Without this
+            # check, any client can spoof their IP to bypass rate limits.
             if direct.is_private or direct.is_loopback:
                 ip = forwarded.split(",")[0].strip()
                 ipaddress.ip_address(ip)

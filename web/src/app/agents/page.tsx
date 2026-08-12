@@ -24,7 +24,6 @@ function AgentsContent() {
     count,
   } = useAgentRuns({
     status: urlState.status ?? undefined,
-    agent_name: urlState.capability ?? undefined,
   });
 
   if (isLoading) {

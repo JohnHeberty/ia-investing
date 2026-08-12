@@ -9,16 +9,19 @@ Note: Macro indicators are global (not org-filtered) because macro data
 from __future__ import annotations
 
 import asyncio
+import logging
 from datetime import datetime
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
+
+logger = logging.getLogger(__name__)
 
 _MAX_SNAPSHOTS = 100
 
@@ -112,21 +115,25 @@ async def get_risk_overview(
     session: AsyncSession = Depends(get_async_session),
 ) -> RiskOverviewResponse:
 
-    snapshots_result = await session.execute(
-        text("""
-            SELECT DISTINCT ON (v.portfolio_id)
-                s.id, v.portfolio_id::text, s.as_of,
-                s.volatility, s.drawdown,
-                s.concentration, s.liquidity, s.exposures
-            FROM institutional_risk_snapshots s
-            JOIN institutional_portfolio_versions v ON v.id = s.portfolio_version_id
-            JOIN model_portfolios mp ON mp.id = v.portfolio_id
-            WHERE mp.organization_id = :org_id
-            ORDER BY v.portfolio_id, s.as_of DESC
-        """),
-        {"org_id": str(auth.organization_id)},
-    )
-    snapshot_rows = snapshots_result.fetchall()
+    try:
+        snapshots_result = await session.execute(
+            text("""
+                SELECT DISTINCT ON (v.portfolio_id)
+                    s.id, v.portfolio_id::text, s.as_of,
+                    s.volatility, s.drawdown,
+                    s.concentration, s.liquidity, s.exposures
+                FROM institutional_risk_snapshots s
+                JOIN institutional_portfolio_versions v ON v.id = s.portfolio_version_id
+                JOIN model_portfolios mp ON mp.id = v.portfolio_id
+                WHERE mp.organization_id = :org_id
+                ORDER BY v.portfolio_id, s.as_of DESC
+            """),
+            {"org_id": str(auth.organization_id)},
+        )
+        snapshot_rows = snapshots_result.fetchall()
+    except Exception:
+        logger.exception("Failed to fetch risk snapshots for org %s", auth.organization_id)
+        raise HTTPException(status_code=500, detail="Failed to load risk data")
 
     snapshots = []
     snapshot_ids = []
@@ -202,10 +209,14 @@ async def get_risk_overview(
             for row in result.fetchall()
         ]
 
-    breach_rows, stress_rows = await asyncio.gather(
-        _fetch_breaches(),
-        _fetch_stress(),
-    )
+    try:
+        breach_rows, stress_rows = await asyncio.gather(
+            _fetch_breaches(),
+            _fetch_stress(),
+        )
+    except Exception:
+        logger.exception("Failed to fetch breaches/stress for org %s", auth.organization_id)
+        breach_rows, stress_rows = [], []
 
     breach_by_snapshot: dict[UUID, int] = {}
     for b in breach_rows:
@@ -267,30 +278,34 @@ async def get_risk_policies(
     session: AsyncSession = Depends(get_async_session),
 ) -> RiskPoliciesResponse:
 
-    result = await session.execute(
-        text("""
-            SELECT rp.id, rp.mandate_id::text, rp.version,
-                   rp.methodology_version, rp.limits, rp.status
-            FROM institutional_risk_policies rp
-            JOIN strategy_mandates sm ON sm.id = rp.mandate_id
-            WHERE sm.organization_id = :org_id
-            ORDER BY rp.version DESC
-            LIMIT 10
-        """),
-        {"org_id": str(auth.organization_id)},
-    )
-
-    policies = [
-        RiskPolicyItem(
-            id=row[0],
-            mandate_id=row[1],
-            version=row[2],
-            methodology_version=row[3],
-            limits=row[4] or {},
-            status=row[5],
+    try:
+        result = await session.execute(
+            text("""
+                SELECT rp.id, rp.mandate_id::text, rp.version,
+                       rp.methodology_version, rp.limits, rp.status
+                FROM institutional_risk_policies rp
+                JOIN strategy_mandates sm ON sm.id = rp.mandate_id
+                WHERE sm.organization_id = :org_id
+                ORDER BY rp.version DESC
+                LIMIT 10
+            """),
+            {"org_id": str(auth.organization_id)},
         )
-        for row in result.fetchall()
-    ]
+
+        policies = [
+            RiskPolicyItem(
+                id=row[0],
+                mandate_id=row[1],
+                version=row[2],
+                methodology_version=row[3],
+                limits=row[4] or {},
+                status=row[5],
+            )
+            for row in result.fetchall()
+        ]
+    except Exception:
+        logger.exception("Failed to fetch risk policies for org %s", auth.organization_id)
+        policies = []
 
     return RiskPoliciesResponse(policies=policies, count=len(policies))
 
@@ -306,27 +321,31 @@ async def get_macro_indicators(
     session: AsyncSession = Depends(get_async_session),
 ) -> MacroIndicatorsResponse:
 
-    result = await session.execute(
-        text("""
-            SELECT DISTINCT ON (indicator_name)
-                id, indicator_name, source, value, unit, period_date, published_at
-            FROM macro_indicators
-            ORDER BY indicator_name, period_date DESC
-        """),
-    )
-
-    indicators = [
-        MacroIndicatorItem(
-            id=row[0],
-            indicator_name=row[1],
-            source=row[2],
-            value=float(row[3]) if row[3] is not None else None,
-            unit=row[4],
-            period_date=row[5],
-            published_at=row[6],
+    try:
+        result = await session.execute(
+            text("""
+                SELECT DISTINCT ON (indicator_name)
+                    id, indicator_name, source, value, unit, period_date, published_at
+                FROM macro_indicators
+                ORDER BY indicator_name, period_date DESC
+            """),
         )
-        for row in result.fetchall()
-    ]
+
+        indicators = [
+            MacroIndicatorItem(
+                id=row[0],
+                indicator_name=row[1],
+                source=row[2],
+                value=float(row[3]) if row[3] is not None else None,
+                unit=row[4],
+                period_date=row[5],
+                published_at=row[6],
+            )
+            for row in result.fetchall()
+        ]
+    except Exception:
+        logger.exception("Failed to fetch macro indicators")
+        indicators = []
 
     def _find(patterns: list[str]) -> MacroIndicatorItem | None:
         for ind in indicators:

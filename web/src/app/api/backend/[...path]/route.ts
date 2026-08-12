@@ -12,13 +12,13 @@ async function proxy(request: NextRequest, context: RouteContext) {
   target.search = request.nextUrl.search;
   const jar = await cookies();
 
-  // Session cookie (primary auth method — backend validates it)
-  const sessionCookie = jar.get("ia_session")?.value;
+  // Check for any session cookie — backend validates which ones it needs
+  const hasSessionCookie = jar.get("ia_session")?.value != null;
 
   // Auth routes are public — allow without any auth
   const isAuthRoute = path[2] === "auth";
 
-  if (!sessionCookie && !isAuthRoute) {
+  if (!hasSessionCookie && !isAuthRoute) {
     return NextResponse.json({ error: "Authentication required (no ia_session cookie in proxy)" }, { status: 401 });
   }
 
@@ -26,9 +26,12 @@ async function proxy(request: NextRequest, context: RouteContext) {
     const headers = new Headers(request.headers);
     for (const name of ["host", "content-length", "connection"]) headers.delete(name);
 
-    // Forward session cookie to backend (session middleware validates it)
-    if (sessionCookie) {
-      headers.set("cookie", `ia_session=${sessionCookie}`);
+    // Forward all cookies to backend — the backend validates each one it needs
+    // (ia_session for auth, ia_csrf_token for CSRF checks, etc.)
+    const allCookies = jar.getAll();
+    if (allCookies.length > 0) {
+      const cookieHeader = allCookies.map((c) => `${c.name}=${c.value}`).join("; ");
+      headers.set("cookie", cookieHeader);
     }
 
     headers.set("accept", "application/json");
@@ -41,7 +44,13 @@ async function proxy(request: NextRequest, context: RouteContext) {
     } as RequestInit);
   };
 
-  let response = await execute();
+  let response: Response;
+  try {
+    response = await execute();
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "Backend unreachable";
+    return NextResponse.json({ error: "Backend fetch failed", detail }, { status: 502 });
+  }
 
   const outgoingHeaders = new Headers(response.headers);
   outgoingHeaders.delete("transfer-encoding");

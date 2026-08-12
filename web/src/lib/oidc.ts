@@ -114,7 +114,11 @@ export async function exchangeCode(code: string, codeVerifier: string): Promise<
     const text = await response.text().catch(() => "Unknown error");
     throw new Error(`Token exchange failed: ${response.status} ${text}`);
   }
-  return response.json() as Promise<TokenSet>;
+  try {
+    return (await response.json()) as TokenSet;
+  } catch {
+    throw new Error(`Token exchange failed: response body is not valid JSON`);
+  }
 }
 
 const sessionCookieOpts = {
@@ -171,7 +175,13 @@ export async function refreshSession(): Promise<string | null> {
     await clearSession();
     return null;
   }
-  const tokens = (await response.json()) as TokenSet;
+  let tokens: TokenSet;
+  try {
+    tokens = (await response.json()) as TokenSet;
+  } catch {
+    await clearSession();
+    return null;
+  }
   await storeTokenSet(tokens);
   return tokens.access_token;
 }
