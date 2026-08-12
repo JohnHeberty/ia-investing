@@ -10,15 +10,11 @@ from ia_investing.application.paper_execution._evaluation import EvaluationServi
 from ia_investing.domain.identity import InstitutionalAccessContext
 
 
-def _context(
-    org_id: UUID | None = None, perms: frozenset[str] | None = None
-) -> InstitutionalAccessContext:
+def _context(org_id: UUID | None = None, perms: frozenset[str] | None = None) -> InstitutionalAccessContext:
     org = org_id or uuid4()
     default_perms = frozenset({"postmortem:write", "portfolio:propose", "committee:vote"})
     resolved_perms = default_perms if perms is None else perms
-    return InstitutionalAccessContext(
-        "manager", org, frozenset({uuid4()}), resolved_perms, "paper"
-    )
+    return InstitutionalAccessContext("manager", org, frozenset({uuid4()}), resolved_perms, "paper")
 
 
 def _mock_session() -> AsyncMock:
@@ -183,9 +179,7 @@ class TestDecideChallenger:
         ctx = _context(perms=frozenset())
         service = EvaluationService(session)
         with pytest.raises(PermissionError, match="committee:vote"):
-            await service.decide_challenger(
-                uuid4(), decision="retained", context=ctx, correlation_id=uuid4()
-            )
+            await service.decide_challenger(uuid4(), decision="retained", context=ctx, correlation_id=uuid4())
 
     @pytest.mark.asyncio
     async def test_raises_when_evaluation_not_found(self) -> None:
@@ -193,9 +187,7 @@ class TestDecideChallenger:
         session.get.return_value = None
         service = EvaluationService(session)
         with pytest.raises(LookupError, match="not found"):
-            await service.decide_challenger(
-                uuid4(), decision="retained", context=_context(), correlation_id=uuid4()
-            )
+            await service.decide_challenger(uuid4(), decision="retained", context=_context(), correlation_id=uuid4())
 
     @pytest.mark.asyncio
     async def test_raises_on_invalid_decision(self) -> None:
@@ -219,9 +211,7 @@ class TestDecideChallenger:
         ctx = _context(portfolio.organization_id)
         service = EvaluationService(session)
         with pytest.raises(ValueError, match="invalid challenger decision"):
-            await service.decide_challenger(
-                evaluation.id, decision="maybe", context=ctx, correlation_id=uuid4()
-            )
+            await service.decide_challenger(evaluation.id, decision="maybe", context=ctx, correlation_id=uuid4())
 
     @pytest.mark.asyncio
     async def test_raises_when_already_decided(self) -> None:
@@ -245,9 +235,7 @@ class TestDecideChallenger:
         ctx = _context(portfolio.organization_id)
         service = EvaluationService(session)
         with pytest.raises(ValueError, match="already been decided"):
-            await service.decide_challenger(
-                evaluation.id, decision="promoted", context=ctx, correlation_id=uuid4()
-            )
+            await service.decide_challenger(evaluation.id, decision="promoted", context=ctx, correlation_id=uuid4())
 
     @pytest.mark.asyncio
     async def test_raises_on_four_eyes_violation(self) -> None:
@@ -271,9 +259,7 @@ class TestDecideChallenger:
         ctx = _context(portfolio.organization_id)
         service = EvaluationService(session)
         with pytest.raises(PermissionError, match="own"):
-            await service.decide_challenger(
-                evaluation.id, decision="retained", context=ctx, correlation_id=uuid4()
-            )
+            await service.decide_challenger(evaluation.id, decision="retained", context=ctx, correlation_id=uuid4())
 
 
 class TestCreateChallengerEvaluation:

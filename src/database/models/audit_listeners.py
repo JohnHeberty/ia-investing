@@ -58,10 +58,12 @@ def _log_auto(mapper: Any, connection: Any, target: Any, action: str) -> None:
     raw = (
         str(prev_hash or "")
         + now.isoformat()
+        + "human"
         + str(actor_id or "")
         + action
         + resource_type
         + str(resource_id or "")
+        + ""
         + json.dumps(changes or {}, sort_keys=True)
         + json.dumps(metadata or {}, sort_keys=True)
     )
@@ -70,6 +72,7 @@ def _log_auto(mapper: Any, connection: Any, target: Any, action: str) -> None:
     connection.execute(
         sa.insert(AuditLogEntry).values(
             tenant_id=tenant_id,
+            actor_type="human",
             actor_id=actor_id,
             action=action,
             resource_type=resource_type,

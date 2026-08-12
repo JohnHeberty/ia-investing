@@ -108,7 +108,7 @@ class ReconciliationService:
         row.resolved_at = datetime.now(UTC)
         if resolution.get("method") == "compensating_entry" and resolution.get("compensating_reference"):
             await self._create_compensating_entry(row, resolution)
-        audit_entity(
+        await audit_entity(
             self.session,
             "reconciliation_break.resolve",
             "reconciliation_break",
@@ -132,9 +132,7 @@ class ReconciliationService:
         intent = await self.session.get(TradeIntent, order.trade_intent_id)
         return intent.instrument_id if intent is not None else None
 
-    async def _create_compensating_entry(
-        self, row: ReconciliationBreak, resolution: dict[str, object]
-    ) -> None:
+    async def _create_compensating_entry(self, row: ReconciliationBreak, resolution: dict[str, object]) -> None:
         portfolio = await self.session.get(ModelPortfolio, row.portfolio_id)
         if portfolio is None:
             return
@@ -272,7 +270,7 @@ class ReconciliationService:
                 payload={"break_id": str(row.id), "rule": rule, "blocking": blocking},
             )
         )
-        audit_entity(
+        await audit_entity(
             self.session,
             "reconciliation_break.detect",
             "reconciliation_break",

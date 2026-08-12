@@ -30,11 +30,7 @@ def _get_candidate_repository_uses(source: str) -> list[tuple[int, str]]:
     tree = ast.parse(source)
     results: list[tuple[int, str]] = []
     for node in ast.walk(tree):
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "CandidateRepository"
-        ):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "CandidateRepository":
             results.append((node.lineno, ast.unparse(node)))
     return results
 
@@ -76,21 +72,11 @@ class TestCandidateTenantScoping:
         )
         source = repo_path.read_text()
 
-        assert "organization_id" in source, (
-            "CandidateRepository must enforce organization_id in queries"
-        )
-        assert "get_candidate" in source, (
-            "CandidateRepository must have get_candidate method"
-        )
-        assert "get_source" in source, (
-            "CandidateRepository must have get_source method"
-        )
-        assert "get_analysis_run" in source, (
-            "CandidateRepository must have get_analysis_run method"
-        )
-        assert "get_exploration_run" in source, (
-            "CandidateRepository must have get_exploration_run method"
-        )
+        assert "organization_id" in source, "CandidateRepository must enforce organization_id in queries"
+        assert "get_candidate" in source, "CandidateRepository must have get_candidate method"
+        assert "get_source" in source, "CandidateRepository must have get_source method"
+        assert "get_analysis_run" in source, "CandidateRepository must have get_analysis_run method"
+        assert "get_exploration_run" in source, "CandidateRepository must have get_exploration_run method"
 
     @staticmethod
     def test_no_direct_session_get_on_tenant_entities():

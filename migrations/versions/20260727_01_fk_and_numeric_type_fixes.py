@@ -58,23 +58,45 @@ def upgrade() -> None:
     # --- R5-14: Float→Numeric on scorecards ---
     op.execute("ALTER TABLE scorecards ALTER COLUMN quality_score TYPE NUMERIC(6,4) USING quality_score::numeric(6,4)")
     op.execute("ALTER TABLE scorecards ALTER COLUMN growth_score TYPE NUMERIC(6,4) USING growth_score::numeric(6,4)")
-    op.execute("ALTER TABLE scorecards ALTER COLUMN leverage_score TYPE NUMERIC(6,4) USING leverage_score::numeric(6,4)")
-    op.execute("ALTER TABLE scorecards ALTER COLUMN valuation_score TYPE NUMERIC(6,4) USING valuation_score::numeric(6,4)")
+    op.execute(
+        "ALTER TABLE scorecards ALTER COLUMN leverage_score TYPE NUMERIC(6,4) USING leverage_score::numeric(6,4)"
+    )
+    op.execute(
+        "ALTER TABLE scorecards ALTER COLUMN valuation_score TYPE NUMERIC(6,4) USING valuation_score::numeric(6,4)"
+    )
     op.execute("ALTER TABLE scorecards ALTER COLUMN overall_score TYPE NUMERIC(6,4) USING overall_score::numeric(6,4)")
 
     # --- R5-14: Float→Numeric on backtest_results ---
     op.execute("ALTER TABLE backtest_results ALTER COLUMN cagr_pct TYPE NUMERIC(8,4) USING cagr_pct::numeric(8,4)")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN sharpe_ratio TYPE NUMERIC(8,4) USING sharpe_ratio::numeric(8,4)")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN sortino_ratio TYPE NUMERIC(8,4) USING sortino_ratio::numeric(8,4)")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN calmar_ratio TYPE NUMERIC(8,4) USING calmar_ratio::numeric(8,4)")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN max_drawdown_pct TYPE NUMERIC(8,4) USING max_drawdown_pct::numeric(8,4)")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN win_rate_pct TYPE NUMERIC(8,4) USING win_rate_pct::numeric(8,4)")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN benchmark_cagr_pct TYPE NUMERIC(8,4) USING benchmark_cagr_pct::numeric(8,4)")
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN sharpe_ratio TYPE NUMERIC(8,4) USING sharpe_ratio::numeric(8,4)"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN sortino_ratio TYPE NUMERIC(8,4) USING sortino_ratio::numeric(8,4)"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN calmar_ratio TYPE NUMERIC(8,4) USING calmar_ratio::numeric(8,4)"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN max_drawdown_pct TYPE NUMERIC(8,4) USING max_drawdown_pct::numeric(8,4)"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN win_rate_pct TYPE NUMERIC(8,4) USING win_rate_pct::numeric(8,4)"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN benchmark_cagr_pct TYPE NUMERIC(8,4) USING benchmark_cagr_pct::numeric(8,4)"
+    )
 
     # --- R5-13: Float→Numeric on risk_snapshots ---
-    op.execute("ALTER TABLE risk_snapshots ALTER COLUMN sharpe_ratio TYPE NUMERIC(10,6) USING sharpe_ratio::numeric(10,6)")
-    op.execute("ALTER TABLE risk_snapshots ALTER COLUMN max_drawdown_pct TYPE NUMERIC(10,6) USING max_drawdown_pct::numeric(10,6)")
-    op.execute("ALTER TABLE risk_snapshots ALTER COLUMN volatility_annualized TYPE NUMERIC(10,6) USING volatility_annualized::numeric(10,6)")
+    op.execute(
+        "ALTER TABLE risk_snapshots ALTER COLUMN sharpe_ratio TYPE NUMERIC(10,6) USING sharpe_ratio::numeric(10,6)"
+    )
+    op.execute(
+        "ALTER TABLE risk_snapshots ALTER COLUMN max_drawdown_pct TYPE NUMERIC(10,6) USING max_drawdown_pct::numeric(10,6)"
+    )
+    op.execute(
+        "ALTER TABLE risk_snapshots ALTER COLUMN volatility_annualized TYPE NUMERIC(10,6) USING volatility_annualized::numeric(10,6)"
+    )
 
     # --- R6-H1: Expand outbox state constraint ---
     # Drop all possible constraint name variants
@@ -132,25 +154,55 @@ def downgrade() -> None:
     )
 
     # --- Revert risk_snapshots Float→Numeric ---
-    op.execute("ALTER TABLE risk_snapshots ALTER COLUMN sharpe_ratio TYPE DOUBLE PRECISION USING sharpe_ratio::double precision")
-    op.execute("ALTER TABLE risk_snapshots ALTER COLUMN max_drawdown_pct TYPE DOUBLE PRECISION USING max_drawdown_pct::double precision")
-    op.execute("ALTER TABLE risk_snapshots ALTER COLUMN volatility_annualized TYPE DOUBLE PRECISION USING volatility_annualized::double precision")
+    op.execute(
+        "ALTER TABLE risk_snapshots ALTER COLUMN sharpe_ratio TYPE DOUBLE PRECISION USING sharpe_ratio::double precision"
+    )
+    op.execute(
+        "ALTER TABLE risk_snapshots ALTER COLUMN max_drawdown_pct TYPE DOUBLE PRECISION USING max_drawdown_pct::double precision"
+    )
+    op.execute(
+        "ALTER TABLE risk_snapshots ALTER COLUMN volatility_annualized TYPE DOUBLE PRECISION USING volatility_annualized::double precision"
+    )
 
     # --- Revert backtest_results Float→Numeric ---
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN benchmark_cagr_pct TYPE DOUBLE PRECISION USING benchmark_cagr_pct::double precision")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN win_rate_pct TYPE DOUBLE PRECISION USING win_rate_pct::double precision")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN max_drawdown_pct TYPE DOUBLE PRECISION USING max_drawdown_pct::double precision")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN calmar_ratio TYPE DOUBLE PRECISION USING calmar_ratio::double precision")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN sortino_ratio TYPE DOUBLE PRECISION USING sortino_ratio::double precision")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN sharpe_ratio TYPE DOUBLE PRECISION USING sharpe_ratio::double precision")
-    op.execute("ALTER TABLE backtest_results ALTER COLUMN cagr_pct TYPE DOUBLE PRECISION USING cagr_pct::double precision")
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN benchmark_cagr_pct TYPE DOUBLE PRECISION USING benchmark_cagr_pct::double precision"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN win_rate_pct TYPE DOUBLE PRECISION USING win_rate_pct::double precision"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN max_drawdown_pct TYPE DOUBLE PRECISION USING max_drawdown_pct::double precision"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN calmar_ratio TYPE DOUBLE PRECISION USING calmar_ratio::double precision"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN sortino_ratio TYPE DOUBLE PRECISION USING sortino_ratio::double precision"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN sharpe_ratio TYPE DOUBLE PRECISION USING sharpe_ratio::double precision"
+    )
+    op.execute(
+        "ALTER TABLE backtest_results ALTER COLUMN cagr_pct TYPE DOUBLE PRECISION USING cagr_pct::double precision"
+    )
 
     # --- Revert scorecards Float→Numeric ---
-    op.execute("ALTER TABLE scorecards ALTER COLUMN overall_score TYPE DOUBLE PRECISION USING overall_score::double precision")
-    op.execute("ALTER TABLE scorecards ALTER COLUMN valuation_score TYPE DOUBLE PRECISION USING valuation_score::double precision")
-    op.execute("ALTER TABLE scorecards ALTER COLUMN leverage_score TYPE DOUBLE PRECISION USING leverage_score::double precision")
-    op.execute("ALTER TABLE scorecards ALTER COLUMN growth_score TYPE DOUBLE PRECISION USING growth_score::double precision")
-    op.execute("ALTER TABLE scorecards ALTER COLUMN quality_score TYPE DOUBLE PRECISION USING quality_score::double precision")
+    op.execute(
+        "ALTER TABLE scorecards ALTER COLUMN overall_score TYPE DOUBLE PRECISION USING overall_score::double precision"
+    )
+    op.execute(
+        "ALTER TABLE scorecards ALTER COLUMN valuation_score TYPE DOUBLE PRECISION USING valuation_score::double precision"
+    )
+    op.execute(
+        "ALTER TABLE scorecards ALTER COLUMN leverage_score TYPE DOUBLE PRECISION USING leverage_score::double precision"
+    )
+    op.execute(
+        "ALTER TABLE scorecards ALTER COLUMN growth_score TYPE DOUBLE PRECISION USING growth_score::double precision"
+    )
+    op.execute(
+        "ALTER TABLE scorecards ALTER COLUMN quality_score TYPE DOUBLE PRECISION USING quality_score::double precision"
+    )
 
     # --- Drop FKs ---
     op.drop_constraint("fk_thesis_versions_agent_run", "thesis_versions", type_="foreignkey")

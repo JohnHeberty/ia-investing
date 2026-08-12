@@ -41,10 +41,12 @@ class AuditLogEntry(Base):
         nullable=False,
         index=True,
     )
+    actor_type: Mapped[str] = mapped_column(sa.String(50), nullable=False, server_default="human")
     actor_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
     action: Mapped[str] = mapped_column(sa.String(100), nullable=False)
     resource_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     resource_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True)
+    correlation_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True, index=True)
     changes: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     meta_data: Mapped[dict[str, Any]] = mapped_column("metadata", JSONB, nullable=False, default=dict)
     request_id: Mapped[UUID | None] = mapped_column(PG_UUID(as_uuid=True), nullable=True, index=True)
@@ -62,9 +64,14 @@ class AuditLogEntry(Base):
         sa.Index("ix_audit_log_tenant_timestamp", "tenant_id", "timestamp"),
         sa.Index("ix_audit_log_actor", "actor_id"),
         sa.Index("ix_audit_log_resource", "resource_type", "resource_id"),
+        sa.Index("ix_audit_log_correlation", "correlation_id"),
         sa.CheckConstraint(
             "action ~ '^[a-z][a-z0-9_.:-]{0,99}$'",
             name="ck_audit_log_action",
+        ),
+        sa.CheckConstraint(
+            "actor_type IN ('human', 'system')",
+            name="ck_audit_log_actor_type",
         ),
     )
 
@@ -72,10 +79,12 @@ class AuditLogEntry(Base):
         raw = (
             str(self.hash_prev or "")
             + self.timestamp.isoformat()
+            + self.actor_type
             + str(self.actor_id or "")
             + self.action
             + self.resource_type
             + str(self.resource_id or "")
+            + str(self.correlation_id or "")
             + json.dumps(self.changes or {}, sort_keys=True)
             + json.dumps(self.meta_data or {}, sort_keys=True)
         )

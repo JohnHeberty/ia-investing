@@ -12,6 +12,65 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.audit import AuditLogEntry
 
 
+async def create_domain_audit_entry(
+    session: AsyncSession,
+    *,
+    tenant_id: UUID,
+    actor_type: str,
+    actor_id: str,
+    action: str,
+    entity_type: str,
+    entity_id: UUID,
+    correlation_id: UUID,
+    details: dict[str, Any] | None = None,
+) -> AuditLogEntry:
+    """Create a hash-chained audit entry for domain events.
+
+    This is a convenience wrapper for callers that previously used AuditLog directly.
+    It computes the hash chain automatically.
+    """
+    result = await session.execute(
+        sa.select(AuditLogEntry.hash)
+        .where(AuditLogEntry.tenant_id == tenant_id)
+        .order_by(AuditLogEntry.timestamp.desc(), AuditLogEntry.id.desc())
+        .limit(1)
+    )
+    prev_hash = result.scalar_one_or_none()
+
+    now = datetime.now(UTC)
+    raw = (
+        str(prev_hash or "")
+        + now.isoformat()
+        + actor_type
+        + actor_id
+        + action
+        + entity_type
+        + str(entity_id)
+        + str(correlation_id)
+        + json.dumps(details or {}, sort_keys=True)
+        + json.dumps({}, sort_keys=True)
+    )
+    entry_hash = sha256(raw.encode("utf-8")).hexdigest()
+
+    entry = AuditLogEntry(
+        tenant_id=tenant_id,
+        actor_type=actor_type,
+        actor_id=None,
+        action=action,
+        resource_type=entity_type,
+        resource_id=entity_id,
+        correlation_id=correlation_id,
+        changes=details,
+        meta_data={"actor_id_str": actor_id},
+        hash_prev=prev_hash,
+        hash=entry_hash,
+        timestamp=now,
+        created_at=now,
+    )
+    session.add(entry)
+    return entry
+
+
 class AuditService:
     def __init__(self, session: AsyncSession, tenant_id: UUID) -> None:
         self._session = session
@@ -25,6 +84,9 @@ class AuditService:
         resource_id: UUID | None = None,
         changes: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
+        *,
+        actor_type: str = "human",
+        correlation_id: UUID | None = None,
     ) -> AuditLogEntry:
         await self._session.execute(
             sa.text("SELECT pg_advisory_xact_lock(hashtext(:tid))"), {"tid": str(self._tenant_id)}
@@ -37,10 +99,12 @@ class AuditService:
         raw = (
             str(prev_hash or "")
             + now.isoformat()
+            + actor_type
             + str(actor_id or "")
             + action
             + resource_type
             + str(resource_id or "")
+            + str(correlation_id or "")
             + json.dumps(changes or {}, sort_keys=True)
             + json.dumps(meta, sort_keys=True)
         )
@@ -48,10 +112,12 @@ class AuditService:
 
         entry = AuditLogEntry(
             tenant_id=self._tenant_id,
+            actor_type=actor_type,
             actor_id=actor_id,
             action=action,
             resource_type=resource_type,
             resource_id=resource_id,
+            correlation_id=correlation_id,
             changes=changes,
             meta_data=meta,
             hash_prev=prev_hash,
@@ -164,10 +230,12 @@ class AuditService:
         raw = (
             str(prev.hash if prev else "")
             + entry.timestamp.isoformat()
+            + entry.actor_type
             + str(entry.actor_id or "")
             + entry.action
             + entry.resource_type
             + str(entry.resource_id or "")
+            + str(entry.correlation_id or "")
             + json.dumps(entry.changes or {}, sort_keys=True)
             + json.dumps(entry.meta_data or {}, sort_keys=True)
         )

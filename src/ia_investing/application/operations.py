@@ -13,8 +13,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio.client import Client
 
-from database.models.audit_models import AuditLog
 from database.models.operations import Operation, OperationDispatchOutbox
+from ia_investing.application.audit_service import create_domain_audit_entry
 from ia_investing.contracts.v1 import OperationAcceptedV1, OperationState, OperationStatusV1
 from ia_investing.orchestration.queues import TASK_QUEUES, Capability
 
@@ -105,7 +105,9 @@ class OperationService:
         self.session.add(operation)
         self.session.add(outbox)
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=organization_id or UUID(int=0),
                 actor_type="human",
                 actor_id=command.actor_subject,
                 action="agent_run.submit",
@@ -172,7 +174,9 @@ class OperationService:
         )
         self.session.add(operation)
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=organization_id or UUID(int=0),
                 actor_type="human",
                 actor_id=actor_subject,
                 action=f"{command.operation_type}.submit",

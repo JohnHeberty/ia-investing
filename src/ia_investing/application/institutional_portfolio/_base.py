@@ -7,9 +7,9 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.audit_models import AuditLog
 from database.models.instrument_master import Listing
 from database.models.market_data import FxRate, MarketBar
+from ia_investing.application.audit_service import create_domain_audit_entry
 from ia_investing.domain.identity import InstitutionalAccessContext
 
 
@@ -81,7 +81,7 @@ async def fx_multiplier(
     return Decimal(1) / inverse.rate, inverse.id
 
 
-def audit(
+async def audit(
     session: AsyncSession,
     context: InstitutionalAccessContext,
     action: str,
@@ -90,11 +90,13 @@ def audit(
     details: dict[str, object],
 ) -> None:
     session.add(
-        AuditLog(
+        await create_domain_audit_entry(
+            self.session,
+            tenant_id=context.organization_id,
             actor_type="human",
             actor_id=context.subject,
-            action=action,
-            entity_type=entity_type,
+            action="action",
+            entity_type="entity_type",
             entity_id=entity_id,
             correlation_id=uuid4(),
             details={"organization_id": str(context.organization_id), **details},

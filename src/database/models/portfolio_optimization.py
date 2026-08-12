@@ -27,9 +27,7 @@ class OptimizationRun(Base):
     slacks: Mapped[dict[str, object]] = mapped_column(JSONB)
     diagnostics: Mapped[dict[str, object]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     __table_args__ = (
         sa.UniqueConstraint("portfolio_id", "as_of", "input_sha256", name="uq_optimization_runs_portfolio_asof_input"),
@@ -51,9 +49,7 @@ class PortfolioApprovalEvidence(Base):
     )
     evidence_sha256: Mapped[str] = mapped_column(sa.String(64))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     __table_args__ = (sa.CheckConstraint("evidence_sha256 ~ '^[0-9a-f]{64}$'", name="sha256_format"),)
 
@@ -92,9 +88,7 @@ class InstitutionalBacktestRun(Base):
     result_sha256: Mapped[str | None] = mapped_column(sa.String(64))
     results: Mapped[dict[str, object] | None] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     __table_args__ = (
         sa.UniqueConstraint(

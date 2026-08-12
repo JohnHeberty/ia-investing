@@ -67,6 +67,7 @@ class IntentService:
             )
         ).scalar_one_or_none()
         if existing is not None:
+
             def _cmp(a: object, b: object) -> bool:
                 if isinstance(a, Decimal) and isinstance(b, Decimal):
                     return a.normalize() == b.normalize()
@@ -103,7 +104,7 @@ class IntentService:
         )
         self.session.add(intent)
         await self.session.flush()
-        record(self.session, intent, "TradeIntentCreated", "paper_trade_intent.create", context.subject, correlation_id)
+        await record(self.session, intent, "TradeIntentCreated", "paper_trade_intent.create", context.subject, correlation_id)
         return intent, True
 
     async def decide_intent(
@@ -131,7 +132,7 @@ class IntentService:
         intent.approved_by = context.subject if approved else None
         intent.updated_at = datetime.now(UTC)
         event = "TradeIntentApproved" if approved else "TradeIntentRejected"
-        record(self.session, intent, event, "paper_trade_intent.decide", context.subject, correlation_id)
+        await record(self.session, intent, event, "paper_trade_intent.decide", context.subject, correlation_id)
         return intent
 
     async def cancel_intent(
@@ -156,7 +157,7 @@ class IntentService:
             order.completed_at = datetime.now(UTC)
         intent.status = "cancelled"
         intent.updated_at = datetime.now(UTC)
-        record(
+        await record(
             self.session,
             intent,
             "PaperTradeIntentCancelled",
@@ -164,7 +165,7 @@ class IntentService:
             context.subject,
             correlation_id,
         )
-        audit_entity(
+        await audit_entity(
             self.session,
             "paper_trade_intent.cancel.reason",
             "paper_trade_intent",
@@ -175,7 +176,7 @@ class IntentService:
             {"reason": reason},
         )
         if order is not None:
-            record_order(
+            await record_order(
                 self.session,
                 order,
                 "PaperOrderCancelled",

@@ -17,9 +17,7 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.execute(
-        "ALTER TABLE event_impacts DROP CONSTRAINT IF EXISTS event_impacts_thesis_id_fkey"
-    )
+    op.execute("ALTER TABLE event_impacts DROP CONSTRAINT IF EXISTS event_impacts_thesis_id_fkey")
     op.execute(
         "ALTER TABLE event_impacts ADD CONSTRAINT event_impacts_thesis_id_fkey "
         "FOREIGN KEY (thesis_id) REFERENCES research_theses(id) ON DELETE SET NULL"
@@ -27,9 +25,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.execute(
-        "ALTER TABLE event_impacts DROP CONSTRAINT IF EXISTS event_impacts_thesis_id_fkey"
-    )
+    op.execute("ALTER TABLE event_impacts DROP CONSTRAINT IF EXISTS event_impacts_thesis_id_fkey")
     op.execute(
         "ALTER TABLE event_impacts ADD CONSTRAINT event_impacts_thesis_id_fkey "
         "FOREIGN KEY (thesis_id) REFERENCES investment_theses(id) ON DELETE SET NULL"

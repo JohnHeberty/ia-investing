@@ -1,4 +1,4 @@
-.PHONY: lint typecheck test test-integration test-all build docker-up docker-down docker-test format check init
+.PHONY: lint typecheck test test-integration test-performance test-all build docker-up docker-down docker-test format check init
 
 lint:
 	ruff check .
@@ -12,16 +12,19 @@ typecheck:
 	mypy src
 
 test:
-	pytest tests/unit/ -q --tb=short
+	uv run pytest tests/unit/ -q --tb=short
 
 test-integration:
-	pytest tests/integration/ -q --tb=short -m integration
+	uv run pytest tests/integration/ -q --tb=short -m integration
+
+test-performance:
+	uv run pytest tests/performance/ -v --tb=short
 
 test-all:
-	pytest tests/ -q --tb=short
+	uv run pytest tests/ -q --tb=short
 
 test-cov:
-	pytest tests/ --cov=src --cov-report=term-missing --cov-report=html -q --tb=short
+	uv run pytest tests/ --cov=src --cov-report=term-missing --cov-report=html -q --tb=short
 
 build:
 	uv sync --all-extras

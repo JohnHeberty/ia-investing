@@ -47,26 +47,29 @@ def _exploration_input(**overrides: object) -> ExplorationWorkflowInput:
 
 
 def _runtime(**overrides: AsyncMock) -> CallbackCandidateActivityRuntime:
-    defaults: dict[str, AsyncMock] = {name: AsyncMock() for name in [
-        "resolve_identity",
-        "discover_sources",
-        "persist_sources",
-        "validate_supplied_source",
-        "evaluate_readiness",
-        "validate_sources",
-        "collect_documents",
-        "ingest_financials",
-        "validate_financials",
-        "analyze_fundamentals",
-        "analyze_risk",
-        "build_committee_pack",
-        "complete_run",
-        "screen_universe",
-        "explore_shortlist",
-        "persist_suggestions",
-        "expire_suggestions",
-        "restrict_list",
-    ]}
+    defaults: dict[str, AsyncMock] = {
+        name: AsyncMock()
+        for name in [
+            "resolve_identity",
+            "discover_sources",
+            "persist_sources",
+            "validate_supplied_source",
+            "evaluate_readiness",
+            "validate_sources",
+            "collect_documents",
+            "ingest_financials",
+            "validate_financials",
+            "analyze_fundamentals",
+            "analyze_risk",
+            "build_committee_pack",
+            "complete_run",
+            "screen_universe",
+            "explore_shortlist",
+            "persist_suggestions",
+            "expire_suggestions",
+            "restrict_list",
+        ]
+    }
     defaults.update(overrides)
     return CallbackCandidateActivityRuntime(**defaults)
 

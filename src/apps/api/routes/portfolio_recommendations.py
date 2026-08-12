@@ -70,12 +70,14 @@ async def get_portfolio_recommendations(
             ticker = row[3]
             real = real_prices.get(ticker)
             price = real["price"] if real else (float(row[6]) if row[6] else float(row[5]) if row[5] else 0)
-            positions.append({
-                "ticker_symbol": ticker,
-                "quantity": float(row[4]) if row[4] else 0,
-                "avg_cost_per_share": float(row[5]) if row[5] else 0,
-                "current_price": price,
-            })
+            positions.append(
+                {
+                    "ticker_symbol": ticker,
+                    "quantity": float(row[4]) if row[4] else 0,
+                    "avg_cost_per_share": float(row[5]) if row[5] else 0,
+                    "current_price": price,
+                }
+            )
 
     all_scores = {}
     for pos in positions:
@@ -92,10 +94,7 @@ async def get_portfolio_recommendations(
         all_scores=all_scores,
     )
 
-    avg_momentum = sum(
-        scores.get("momentum", 0.5)
-        for scores in all_scores.values()
-    ) / max(len(all_scores), 1)
+    avg_momentum = sum(scores.get("momentum", 0.5) for scores in all_scores.values()) / max(len(all_scores), 1)
     expected_return = 0.03 + (avg_momentum * 0.15)
 
     llm_result = await generate_llm_analysis(
@@ -125,10 +124,9 @@ async def get_portfolio_recommendations(
                 "rationale": r.rationale,
                 "risk_reward": r.risk_reward,
                 "llm_analysis": r.llm_analysis,
-                "scores": {
-                    dim: round(all_scores.get(r.ticker, {}).get(dim, 0.5), 3)
-                    for dim in SCORING_WEIGHTS
-                } if all_scores.get(r.ticker) else None,
+                "scores": {dim: round(all_scores.get(r.ticker, {}).get(dim, 0.5), 3) for dim in SCORING_WEIGHTS}
+                if all_scores.get(r.ticker)
+                else None,
             }
             for r in rec.recommendations
         ],

@@ -6,7 +6,6 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.audit_models import AuditLog
 from database.models.readiness import (
     ReadinessControl,
     ReadinessDecision,
@@ -15,6 +14,7 @@ from database.models.readiness import (
     ReadinessFinding,
     ReadinessVote,
 )
+from ia_investing.application.audit_service import create_domain_audit_entry
 from ia_investing.domain.identity import InstitutionalAccessContext
 from ia_investing.domain.readiness import (
     EvidenceStatus,
@@ -41,7 +41,7 @@ class ReadinessService:
         evidence = ReadinessEvidence(organization_id=context.organization_id, status="pending", **payload)
         self.session.add(evidence)
         await self.session.flush()
-        self._audit("readiness_evidence.register", "readiness_evidence", evidence.id, context, correlation_id)
+        await self._audit("readiness_evidence.register", "readiness_evidence", evidence.id, context, correlation_id)
         return evidence
 
     async def verify_evidence(
@@ -61,7 +61,7 @@ class ReadinessService:
         evidence.status = "verified" if accepted else "rejected"
         evidence.verified_by = context.subject
         evidence.verified_at = datetime.now(UTC)
-        self._audit("readiness_evidence.verify", "readiness_evidence", evidence.id, context, correlation_id)
+        await self._audit("readiness_evidence.verify", "readiness_evidence", evidence.id, context, correlation_id)
         return evidence
 
     async def freeze_pack(
@@ -104,7 +104,7 @@ class ReadinessService:
         )
         self.session.add(pack)
         await self.session.flush()
-        self._audit("readiness_pack.freeze", "readiness_decision_pack", pack.id, context, correlation_id)
+        await self._audit("readiness_pack.freeze", "readiness_decision_pack", pack.id, context, correlation_id)
         return pack
 
     async def vote(
@@ -135,7 +135,7 @@ class ReadinessService:
         )
         self.session.add(row)
         await self.session.flush()
-        self._audit("readiness_vote.sign", "readiness_vote", row.id, context, correlation_id)
+        await self._audit("readiness_vote.sign", "readiness_vote", row.id, context, correlation_id)
         return row
 
     async def decide(
@@ -207,7 +207,7 @@ class ReadinessService:
         )
         self.session.add(decision)
         await self.session.flush()
-        self._audit("readiness_decision.record", "readiness_decision", decision.id, context, correlation_id)
+        await self._audit("readiness_decision.record", "readiness_decision", decision.id, context, correlation_id)
         return decision
 
     @staticmethod
@@ -220,7 +220,7 @@ class ReadinessService:
         except ValueError as exc:
             raise ValueError(f"decision pack manifest {key} contains an invalid UUID") from exc
 
-    def _audit(
+    async def _audit(
         self,
         action: str,
         entity_type: str,
@@ -229,11 +229,13 @@ class ReadinessService:
         correlation_id: UUID,
     ) -> None:
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=context.organization_id,
                 actor_type="human",
                 actor_id=context.subject,
-                action=action,
-                entity_type=entity_type,
+                action="action",
+                entity_type="entity_type",
                 entity_id=entity_id,
                 correlation_id=correlation_id,
                 details={"organization_id": str(context.organization_id)},
@@ -277,7 +279,7 @@ class ReadinessService:
         finding = ReadinessFinding(organization_id=context.organization_id, status="open", **payload)
         self.session.add(finding)
         await self.session.flush()
-        self._audit("readiness_finding.create", "readiness_finding", finding.id, context, correlation_id)
+        await self._audit("readiness_finding.create", "readiness_finding", finding.id, context, correlation_id)
         return finding
 
     async def update_finding(
@@ -305,7 +307,7 @@ class ReadinessService:
             finding.remediation = remediation
         if exception_expires_at is not None:
             finding.exception_expires_at = exception_expires_at
-        self._audit("readiness_finding.update", "readiness_finding", finding.id, context, correlation_id)
+        await self._audit("readiness_finding.update", "readiness_finding", finding.id, context, correlation_id)
         return finding
 
     async def list_decision_packs(

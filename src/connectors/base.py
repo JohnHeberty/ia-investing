@@ -93,9 +93,7 @@ class HttpClient:
         client = await self._get_client()
         for attempt in range(1, self._max_retries + 1):
             try:
-                response = await client.get(
-                    full_url, params=params, headers=headers, follow_redirects=follow_redirects
-                )
+                response = await client.get(full_url, params=params, headers=headers, follow_redirects=follow_redirects)
                 response.raise_for_status()
                 return response.content
             except (TimeoutError, httpx.HTTPError) as exc:

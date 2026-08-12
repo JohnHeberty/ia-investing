@@ -29,6 +29,7 @@ router = APIRouter(prefix="/api/v1/risk", tags=["risk-overview"])
 # Schemas
 # ---------------------------------------------------------------------------
 
+
 class RiskBreachItem(BaseModel):
     id: UUID
     limit_name: str
@@ -104,6 +105,7 @@ class MacroIndicatorsResponse(BaseModel):
 # Risk overview
 # ---------------------------------------------------------------------------
 
+
 @router.get("/overview", response_model=RiskOverviewResponse)
 async def get_risk_overview(
     auth: AuthContext = Depends(get_auth_context),
@@ -131,17 +133,19 @@ async def get_risk_overview(
     for row in snapshot_rows:
         sid = row[0]
         snapshot_ids.append(sid)
-        snapshots.append(RiskSnapshotItem(
-            id=sid,
-            portfolio_id=row[1],
-            as_of=row[2],
-            volatility=float(row[3]) if row[3] is not None else None,
-            drawdown=float(row[4]) if row[4] is not None else None,
-            concentration=row[5],
-            liquidity=row[6],
-            exposures=row[7],
-            breach_count=0,
-        ))
+        snapshots.append(
+            RiskSnapshotItem(
+                id=sid,
+                portfolio_id=row[1],
+                as_of=row[2],
+                volatility=float(row[3]) if row[3] is not None else None,
+                drawdown=float(row[4]) if row[4] is not None else None,
+                concentration=row[5],
+                liquidity=row[6],
+                exposures=row[7],
+                breach_count=0,
+            )
+        )
 
     snapshot_ids = snapshot_ids[:_MAX_SNAPSHOTS]
 
@@ -162,8 +166,10 @@ async def get_risk_overview(
         )
         return [
             {
-                "id": row[0], "snapshot_id": row[1],
-                "limit_name": row[2], "limit_type": row[3],
+                "id": row[0],
+                "snapshot_id": row[1],
+                "limit_name": row[2],
+                "limit_type": row[3],
                 "observed_value": float(row[4]) if row[4] is not None else 0,
                 "limit_value": float(row[5]) if row[5] is not None else 0,
                 "status": row[6],
@@ -188,7 +194,8 @@ async def get_risk_overview(
         )
         return [
             {
-                "id": row[0], "name": row[1],
+                "id": row[0],
+                "name": row[1],
                 "pnl_impact": float(row[2]) if row[2] is not None else None,
                 "nav_impact_ratio": float(row[3]) if row[3] is not None else None,
             }
@@ -196,7 +203,8 @@ async def get_risk_overview(
         ]
 
     breach_rows, stress_rows = await asyncio.gather(
-        _fetch_breaches(), _fetch_stress(),
+        _fetch_breaches(),
+        _fetch_stress(),
     )
 
     breach_by_snapshot: dict[UUID, int] = {}
@@ -209,20 +217,24 @@ async def get_risk_overview(
         snap.breach_count = breach_by_snapshot.get(snap.id, 0)
         for b in breach_rows:
             if b["snapshot_id"] == snap.id:
-                breaches.append(RiskBreachItem(
-                    id=b["id"], limit_name=b["limit_name"],
-                    limit_type=b["limit_type"],
-                    observed_value=b["observed_value"],
-                    limit_value=b["limit_value"],
-                    status=b["status"],
-                ))
+                breaches.append(
+                    RiskBreachItem(
+                        id=b["id"],
+                        limit_name=b["limit_name"],
+                        limit_type=b["limit_type"],
+                        observed_value=b["observed_value"],
+                        limit_value=b["limit_value"],
+                        status=b["status"],
+                    )
+                )
 
     hard_breaches = [b for b in breaches if b.limit_type == "hard" and b.status == "open"]
     soft_breaches = [b for b in breaches if b.limit_type == "soft" and b.status == "open"]
 
     stress_scenarios = [
         StressScenarioItem(
-            id=s["id"], name=s["name"],
+            id=s["id"],
+            name=s["name"],
             pnl_impact=s["pnl_impact"],
             nav_impact_ratio=s["nav_impact_ratio"],
         )
@@ -248,6 +260,7 @@ async def get_risk_overview(
 # Risk policies (configurable limits)
 # ---------------------------------------------------------------------------
 
+
 @router.get("/policies", response_model=RiskPoliciesResponse)
 async def get_risk_policies(
     auth: AuthContext = Depends(get_auth_context),
@@ -269,8 +282,12 @@ async def get_risk_policies(
 
     policies = [
         RiskPolicyItem(
-            id=row[0], mandate_id=row[1], version=row[2],
-            methodology_version=row[3], limits=row[4] or {}, status=row[5],
+            id=row[0],
+            mandate_id=row[1],
+            version=row[2],
+            methodology_version=row[3],
+            limits=row[4] or {},
+            status=row[5],
         )
         for row in result.fetchall()
     ]
@@ -281,6 +298,7 @@ async def get_risk_policies(
 # ---------------------------------------------------------------------------
 # Macro indicators
 # ---------------------------------------------------------------------------
+
 
 @router.get("/macro", response_model=MacroIndicatorsResponse)
 async def get_macro_indicators(
@@ -299,9 +317,13 @@ async def get_macro_indicators(
 
     indicators = [
         MacroIndicatorItem(
-            id=row[0], indicator_name=row[1], source=row[2],
+            id=row[0],
+            indicator_name=row[1],
+            source=row[2],
             value=float(row[3]) if row[3] is not None else None,
-            unit=row[4], period_date=row[5], published_at=row[6],
+            unit=row[4],
+            period_date=row[5],
+            published_at=row[6],
         )
         for row in result.fetchall()
     ]

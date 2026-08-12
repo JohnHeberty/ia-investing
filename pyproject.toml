@@ -137,6 +137,7 @@ pythonpath = ["src"]
 addopts = "--tb=short -q"
 markers = [
     "integration: marks tests requiring running infrastructure (deselect with '-m not integration')",
+    "performance: marks performance benchmark tests (deselect with '-m not performance')",
 ]
 
 [tool.coverage.run]

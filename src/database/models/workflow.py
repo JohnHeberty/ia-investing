@@ -24,9 +24,7 @@ class PromptVersion(Base):
 
     is_active: Mapped[bool | None] = mapped_column(sa.Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"PromptVersion(agent_name={self.agent_name!r}, version_number={self.version_number})"
@@ -64,9 +62,7 @@ class StructuredOutputSchema(Base):
 
     is_active: Mapped[bool | None] = mapped_column(sa.Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"StructuredOutputSchema(name={self.name!r}, version_number={self.version_number})"

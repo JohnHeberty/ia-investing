@@ -9,8 +9,8 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.audit_models import AuditLog
 from database.models.data_foundation import DataSource, SourceLicense, SourceSLA
+from ia_investing.application.audit_service import create_domain_audit_entry
 
 
 class SourceHealthV1(BaseModel):
@@ -96,7 +96,9 @@ class SourceRegistryService:
             )
             self.session.add(sla)
             self.session.add(
-                AuditLog(
+                await create_domain_audit_entry(
+                    self.session,
+                    tenant_id=UUID(int=0),
                     actor_type="system",
                     actor_id="source-registry",
                     action="source.registered",
@@ -125,7 +127,9 @@ class SourceRegistryService:
                 existing_sla.expected_frequency_minutes = expected_frequency_minutes
                 existing_sla.freshness_grace_minutes = freshness_grace_minutes
             self.session.add(
-                AuditLog(
+                await create_domain_audit_entry(
+                    self.session,
+                    tenant_id=UUID(int=0),
                     actor_type="system",
                     actor_id="source-registry",
                     action="source.updated",
@@ -163,7 +167,9 @@ class SourceRegistryService:
             sla.last_error_code = last_error_code
         if correlation_id is not None:
             self.session.add(
-                AuditLog(
+                await create_domain_audit_entry(
+                    self.session,
+                    tenant_id=UUID(int=0),
                     actor_type="system",
                     actor_id="source-registry",
                     action="source.health_updated",

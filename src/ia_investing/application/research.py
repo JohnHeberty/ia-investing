@@ -9,7 +9,6 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.audit_models import AuditLog
 from database.models.research import (
     ClaimEvidenceLink,
     DomainOutboxEvent,
@@ -18,6 +17,7 @@ from database.models.research import (
     ResearchEvidence,
     ResearchQuestion,
 )
+from ia_investing.application.audit_service import create_domain_audit_entry
 
 CASE_TRANSITIONS = {
     "draft": {"triage": "research_cases:submit"},
@@ -135,7 +135,9 @@ class ResearchCaseService:
             )
         )
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=self._organization_id or UUID(int=0),
                 actor_type="human",
                 actor_id=actor_subject,
                 action="research_case.create",
@@ -200,7 +202,9 @@ class ResearchCaseService:
         )
         self.session.add(event)
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=self._organization_id or UUID(int=0),
                 actor_type="human",
                 actor_id=actor_subject,
                 action="research_case.transition",
@@ -241,8 +245,9 @@ class ResearchCaseService:
 
 
 class ClaimService:
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, organization_id: UUID | None = None) -> None:
         self.session = session
+        self._organization_id = organization_id
 
     async def verify(
         self,
@@ -290,7 +295,9 @@ class ClaimService:
             )
         )
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=self._organization_id or UUID(int=0),
                 actor_type="human",
                 actor_id=actor_subject,
                 action="research_claim.verify",

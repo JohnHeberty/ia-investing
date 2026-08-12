@@ -240,7 +240,7 @@ class OrderService:
                 )
         intent.status = "completed" if result.status == "filled" else "submitted" if simulated_fills else "expired"
         intent.updated_at = datetime.now(UTC)
-        record(self.session, intent, "PaperOrderSimulated", "paper_order.simulate", context.subject, correlation_id)
+        await record(self.session, intent, "PaperOrderSimulated", "paper_order.simulate", context.subject, correlation_id)
         order_event_type = {
             "accepted": "PaperOrderAccepted",
             "partially_filled": "PaperOrderPartiallyFilled",
@@ -249,7 +249,7 @@ class OrderService:
             "rejected": "PaperOrderRejected",
             "expired": "PaperOrderExpired",
         }.get(order.status, "PaperOrderAccepted")
-        record_order(
+        await record_order(
             self.session,
             order,
             order_event_type,

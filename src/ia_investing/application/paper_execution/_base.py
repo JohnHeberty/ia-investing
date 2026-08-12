@@ -6,10 +6,10 @@ from uuid import UUID, uuid4
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.audit_models import AuditLog
 from database.models.paper_execution import PaperKillSwitch, PaperOrder, ReconciliationBreak, TradeIntent
 from database.models.portfolio_domain import ModelPortfolio
 from database.models.research import DomainOutboxEvent
+from ia_investing.application.audit_service import create_domain_audit_entry
 from ia_investing.domain.paper_execution import ExecutionConfiguration
 
 
@@ -48,7 +48,7 @@ def configuration(model: object) -> ExecutionConfiguration:
     )
 
 
-def record(
+async def record(
     session: AsyncSession,
     intent: TradeIntent,
     event_type: str,
@@ -68,7 +68,7 @@ def record(
             idempotency_key=f"paper-intent:{intent.id}:{event_type}:{event_id}",
         )
     )
-    audit_entity(
+    await audit_entity(
         session,
         action,
         "paper_trade_intent",
@@ -80,7 +80,7 @@ def record(
     )
 
 
-def record_order(
+async def record_order(
     session: AsyncSession,
     order: PaperOrder,
     event_type: str,
@@ -106,7 +106,7 @@ def record_order(
             idempotency_key=f"paper-order:{order.id}:{event_type}:{event_id}",
         )
     )
-    audit_entity(
+    await audit_entity(
         session,
         action,
         "paper_order",
@@ -118,7 +118,7 @@ def record_order(
     )
 
 
-def audit_entity(
+async def audit_entity(
     session: AsyncSession,
     action: str,
     entity_type: str,
@@ -128,14 +128,14 @@ def audit_entity(
     correlation_id: UUID,
     details: dict[str, object],
 ) -> None:
-    session.add(
-        AuditLog(
-            actor_type="human",
-            actor_id=actor,
-            action=action,
-            entity_type=entity_type,
-            entity_id=entity_id,
-            correlation_id=correlation_id,
-            details={**details, "organization_id": str(organization_id)},
-        )
+    await create_domain_audit_entry(
+        session,
+        tenant_id=organization_id or UUID(int=0),
+        actor_type="human",
+        actor_id=actor,
+        action=action,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        correlation_id=correlation_id,
+        details={**details, "organization_id": str(organization_id)},
     )

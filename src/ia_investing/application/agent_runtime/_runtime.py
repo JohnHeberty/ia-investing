@@ -16,8 +16,8 @@ from database.models.agent_runtime import (
     AgentRuntimeToolCall,
     AgentVersion,
 )
-from database.models.audit_models import AuditLog
 from ia_investing.application.agent_runtime._crypto import canonical_hash, sanitize_tool_payload
+from ia_investing.application.audit_service import create_domain_audit_entry
 
 
 class AgentRuntimeService:
@@ -97,7 +97,7 @@ class AgentRuntimeService:
         )
         self.session.add(run)
         await self.session.flush()
-        self._audit(
+        await self._audit(
             actor_type="human",
             actor_id=actor_id,
             action="agent_runtime.run.create",
@@ -252,7 +252,7 @@ class AgentRuntimeService:
             run.error_detail = "A required tool call was rejected"
             run.finished_at = now
             tool_call.status = "blocked"
-        self._audit(
+        await self._audit(
             actor_type="human",
             actor_id=actor_id,
             action="agent_runtime.approval.decide",
@@ -318,7 +318,7 @@ class AgentRuntimeService:
         )
         self.session.add(promotion)
         await self.session.flush()
-        self._audit(
+        await self._audit(
             actor_type="human",
             actor_id=actor_id,
             action="agent_runtime.version.promote",
@@ -330,7 +330,7 @@ class AgentRuntimeService:
         await self.session.flush()
         return promotion
 
-    def _audit(
+    async def _audit(
         self,
         *,
         actor_type: str,
@@ -342,13 +342,15 @@ class AgentRuntimeService:
         details: dict[str, object],
     ) -> None:
         self.session.add(
-            AuditLog(
-                actor_type=actor_type,
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=organization_id or UUID(int=0),
+                actor_type="actor_type",
                 actor_id=actor_id,
-                action=action,
-                entity_type=entity_type,
+                action="action",
+                entity_type="entity_type",
                 entity_id=entity_id,
                 correlation_id=correlation_id,
-                details=details,
+                details={},
             )
         )

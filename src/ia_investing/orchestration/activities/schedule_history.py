@@ -27,11 +27,7 @@ async def record_schedule_run(params: dict[str, Any]) -> str:
         error_message = params.get("error_message")
 
         started = datetime.fromisoformat(started_at_str.replace("Z", "+00:00"))
-        finished = (
-            datetime.fromisoformat(finished_at_str.replace("Z", "+00:00"))
-            if finished_at_str
-            else None
-        )
+        finished = datetime.fromisoformat(finished_at_str.replace("Z", "+00:00")) if finished_at_str else None
         result_json = json.dumps(result_summary) if result_summary else None
 
         async with session_scope() as session:

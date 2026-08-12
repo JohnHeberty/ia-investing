@@ -7,9 +7,9 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.audit_models import AuditLog
 from database.models.research import DomainOutboxEvent
 from database.models.review import ResearchAssessment, ReviewDecision, ReviewRequest
+from ia_investing.application.audit_service import create_domain_audit_entry
 
 
 def canonical_hash(payload: dict[str, object]) -> str:
@@ -134,21 +134,21 @@ class ResearchReviewService:
                 idempotency_key=f"assessment:{assessment.id}:review:{request.id}",
             )
         )
-        self.session.add(
-            AuditLog(
-                actor_type="human",
-                actor_id=reviewer_id,
-                action="research_assessment.review",
-                entity_type="research_assessment",
-                entity_id=assessment.id,
-                correlation_id=correlation_id,
-                details={
-                    "decision": decision,
-                    "reason": reason,
-                    "before_hash": record.before_hash,
-                    "after_hash": record.after_hash,
-                },
-            )
+        await create_domain_audit_entry(
+            self.session,
+            tenant_id=UUID(int=0),
+            actor_type="human",
+            actor_id=reviewer_id,
+            action="research_assessment.review",
+            entity_type="research_assessment",
+            entity_id=assessment.id,
+            correlation_id=correlation_id,
+            details={
+                "decision": decision,
+                "reason": reason,
+                "before_hash": record.before_hash,
+                "after_hash": record.after_hash,
+            },
         )
         await self.session.flush()
         return record

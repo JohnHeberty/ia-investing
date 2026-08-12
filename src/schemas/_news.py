@@ -13,8 +13,15 @@ class NewsAnalysis(BaseModel):
     materiality_score: float = Field(ge=-1.0, le=1.0)
     thesis_effect: Literal["strengthen", "weaken", "no_change"]
     event_type: Literal[
-        "earnings", "guidance", "ma", "regulation", "dividend",
-        "governance", "market", "sector", "other",
+        "earnings",
+        "guidance",
+        "ma",
+        "regulation",
+        "dividend",
+        "governance",
+        "market",
+        "sector",
+        "other",
     ]
     affected_metrics: list[str]
     time_horizon: Literal["immediate", "short_term", "medium_term", "long_term"]

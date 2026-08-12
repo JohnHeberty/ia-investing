@@ -23,6 +23,7 @@ _CACHE_MAX_SIZE = 256
 def _get_cache_lock() -> __import__("asyncio").Lock:
     return __import__("asyncio").Lock()
 
+
 _LISTING_PATTERN = re.compile(r'<a\s+href="([^"]+\.(?:zip|csv|txt))"', re.IGNORECASE)
 _PERIOD_RE = re.compile(r"(\d{4}\d{2}|\d{4})(?:\D|$)")
 

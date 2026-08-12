@@ -77,7 +77,7 @@ class EvaluationService:
         )
         self.session.add(row)
         await self.session.flush()
-        audit_entity(
+        await audit_entity(
             self.session,
             "paper_post_mortem.create",
             "paper_post_mortem",
@@ -145,7 +145,7 @@ class EvaluationService:
         )
         self.session.add(row)
         await self.session.flush()
-        audit_entity(
+        await audit_entity(
             self.session,
             "challenger_evaluation.create",
             "challenger_evaluation",
@@ -211,7 +211,7 @@ class EvaluationService:
                 )
                 self.session.add(new_version)
                 await self.session.flush()
-                audit_entity(
+                await audit_entity(
                     self.session,
                     "portfolio_version.create",
                     "institutional_portfolio_version",
@@ -224,7 +224,7 @@ class EvaluationService:
                         "portfolio_id": str(row.challenger_portfolio_id),
                     },
                 )
-        audit_entity(
+        await audit_entity(
             self.session,
             "challenger_evaluation.decide",
             "challenger_evaluation",

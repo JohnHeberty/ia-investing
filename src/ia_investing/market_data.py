@@ -82,6 +82,7 @@ def get_cache_stats() -> dict[str, dict[str, Any]]:
         "prices": _prices_cache.stats(),
     }
 
+
 # Brazilian tickers need .SA suffix for yfinance
 _SA_SUFFIXES = (".SA", ".S", ".N")
 
@@ -305,8 +306,12 @@ def get_analyst_data(ticker: str) -> dict[str, Any] | None:
             if ud is not None and not ud.empty:
                 recent = ud.head(10)
                 result["recent_upgrades_downgrades"] = [
-                    {"firm": str(row.get("Firm", "")), "action": str(row.get("Action", "")),
-                     "from_grade": str(row.get("FromGrade", "")), "to_grade": str(row.get("ToGrade", ""))}
+                    {
+                        "firm": str(row.get("Firm", "")),
+                        "action": str(row.get("Action", "")),
+                        "from_grade": str(row.get("FromGrade", "")),
+                        "to_grade": str(row.get("ToGrade", "")),
+                    }
                     for _, row in recent.iterrows()
                 ]
             else:
@@ -320,7 +325,9 @@ def get_analyst_data(ticker: str) -> dict[str, Any] | None:
                 result["earnings_estimate"] = {
                     "next_quarter": {
                         "avg": float(ed.loc["0q", "avg"]) if "0q" in ed.index and "avg" in ed.columns else None,
-                        "growth": float(ed.loc["0q", "growth"]) if "0q" in ed.index and "growth" in ed.columns else None,
+                        "growth": float(ed.loc["0q", "growth"])
+                        if "0q" in ed.index and "growth" in ed.columns
+                        else None,
                     }
                 }
             else:
@@ -333,9 +340,15 @@ def get_analyst_data(ticker: str) -> dict[str, Any] | None:
             if eh is not None and not eh.empty:
                 last = eh.iloc[-1]
                 result["last_earnings_surprise"] = {
-                    "eps_estimate": float(last.get("epsEstimate")) if last.get("epsEstimate") == last.get("epsEstimate") else None,
-                    "eps_actual": float(last.get("epsActual")) if last.get("epsActual") == last.get("epsActual") else None,
-                    "surprise_percent": float(last.get("surprisePercent")) if last.get("surprisePercent") == last.get("surprisePercent") else None,
+                    "eps_estimate": float(last.get("epsEstimate"))
+                    if last.get("epsEstimate") == last.get("epsEstimate")
+                    else None,
+                    "eps_actual": float(last.get("epsActual"))
+                    if last.get("epsActual") == last.get("epsActual")
+                    else None,
+                    "surprise_percent": float(last.get("surprisePercent"))
+                    if last.get("surprisePercent") == last.get("surprisePercent")
+                    else None,
                 }
             else:
                 result["last_earnings_surprise"] = None

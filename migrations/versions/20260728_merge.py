@@ -5,7 +5,6 @@ Revises: 20260727_02, 20260728_03
 Create Date: 2026-07-28
 """
 
-
 revision: str = "20260728_merge"
 down_revision: tuple = ("20260727_02", "20260728_03")
 branch_labels: str | None = None

@@ -51,9 +51,7 @@ async def test_reconcile_portfolio_raises_on_naive_datetime() -> None:
     service = ReconciliationService(session)
     with pytest.raises(ValueError, match="timezone"):
         as_of = datetime(2026, 1, 1)
-        await service.reconcile_portfolio(
-            uuid4(), as_of=as_of, context=_context(), correlation_id=uuid4()
-        )
+        await service.reconcile_portfolio(uuid4(), as_of=as_of, context=_context(), correlation_id=uuid4())
 
 
 @pytest.mark.asyncio
@@ -62,9 +60,7 @@ async def test_reconcile_portfolio_raises_when_portfolio_not_found() -> None:
     session.get.return_value = None
     service = ReconciliationService(session)
     with pytest.raises(LookupError, match="not found"):
-        await service.reconcile_portfolio(
-            uuid4(), as_of=datetime.now(UTC), context=_context(), correlation_id=uuid4()
-        )
+        await service.reconcile_portfolio(uuid4(), as_of=datetime.now(UTC), context=_context(), correlation_id=uuid4())
 
 
 @pytest.mark.asyncio
@@ -75,9 +71,7 @@ async def test_reconcile_portfolio_raises_when_org_mismatch() -> None:
     session.get.return_value = portfolio
     service = ReconciliationService(session)
     with pytest.raises(LookupError, match="not found"):
-        await service.reconcile_portfolio(
-            portfolio.id, as_of=datetime.now(UTC), context=ctx, correlation_id=uuid4()
-        )
+        await service.reconcile_portfolio(portfolio.id, as_of=datetime.now(UTC), context=ctx, correlation_id=uuid4())
 
 
 @pytest.mark.asyncio
@@ -86,9 +80,7 @@ async def test_resolve_break_raises_without_permission() -> None:
     ctx = InstitutionalAccessContext("manager", uuid4(), frozenset({uuid4()}), frozenset(), "paper")
     service = ReconciliationService(session)
     with pytest.raises(PermissionError, match="reconciliation:write"):
-        await service.resolve_break(
-            uuid4(), resolution={}, context=ctx, correlation_id=uuid4()
-        )
+        await service.resolve_break(uuid4(), resolution={}, context=ctx, correlation_id=uuid4())
 
 
 @pytest.mark.asyncio
@@ -97,9 +89,7 @@ async def test_resolve_break_raises_when_not_found() -> None:
     session.get.return_value = None
     service = ReconciliationService(session)
     with pytest.raises(LookupError, match="not found"):
-        await service.resolve_break(
-            uuid4(), resolution={}, context=_context(), correlation_id=uuid4()
-        )
+        await service.resolve_break(uuid4(), resolution={}, context=_context(), correlation_id=uuid4())
 
 
 @pytest.mark.asyncio
@@ -111,9 +101,7 @@ async def test_resolve_break_returns_early_when_already_resolved() -> None:
     session.get.return_value = existing
     ctx = _context(existing.organization_id)
     service = ReconciliationService(session)
-    result = await service.resolve_break(
-        existing.id, resolution={}, context=ctx, correlation_id=uuid4()
-    )
+    result = await service.resolve_break(existing.id, resolution={}, context=ctx, correlation_id=uuid4())
     assert result.status == "resolved"
 
 
@@ -127,9 +115,7 @@ async def test_resolve_break_raises_when_evidence_missing() -> None:
     ctx = _context(existing.organization_id)
     service = ReconciliationService(session)
     with pytest.raises(ValueError, match="requires method and evidence"):
-        await service.resolve_break(
-            existing.id, resolution={"method": "review"}, context=ctx, correlation_id=uuid4()
-        )
+        await service.resolve_break(existing.id, resolution={"method": "review"}, context=ctx, correlation_id=uuid4())
 
 
 @pytest.mark.asyncio

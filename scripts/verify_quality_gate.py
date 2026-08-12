@@ -9,7 +9,7 @@ import sqlalchemy as sa
 
 from data_quality._models import ValidationResult
 from database.core import session_scope
-from database.models.audit_models import AuditLog
+from database.models.audit import AuditLogEntry
 from database.models.data_foundation import SourceObjectVersion
 from database.models.data_governance import QualityIncident, QualityRule, QuarantineRecord
 from ia_investing.application.data_quality import QualityGovernanceService
@@ -73,7 +73,7 @@ async def main() -> None:
             sa.select(QuarantineRecord).where(QuarantineRecord.quality_incident_id == first.incident_id)
         )
         audit_count = await session.scalar(
-            sa.select(sa.func.count(AuditLog.id)).where(AuditLog.correlation_id == correlation_id)
+            sa.select(sa.func.count(AuditLogEntry.id)).where(AuditLogEntry.correlation_id == correlation_id)
         )
 
     assert not first.promotion_allowed

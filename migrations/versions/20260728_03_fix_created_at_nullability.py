@@ -35,11 +35,7 @@ def _upgrade_table(table: str) -> None:
         return
     # Backfill NULLs then enforce NOT NULL
     conn.execute(sa.text(f"UPDATE {table} SET created_at = NOW() WHERE created_at IS NULL"))  # noqa: S608
-    conn.execute(
-        sa.text(
-            f"ALTER TABLE {table} ALTER COLUMN created_at SET NOT NULL"
-        )
-    )
+    conn.execute(sa.text(f"ALTER TABLE {table} ALTER COLUMN created_at SET NOT NULL"))
 
 
 def upgrade() -> None:

@@ -56,55 +56,57 @@ def setup_logging(settings: Settings) -> None:
         cache_logger_on_first_use=True,
     )
 
-    logging.config.dictConfig({
-        "version": 1,
-        "disable_existing_loggers": False,
-        "formatters": {
-            "raw": {"format": "%(message)s"},
-        },
-        "handlers": {
-            "stdout": {
-                "class": "logging.StreamHandler",
-                "stream": "ext://sys.stdout",
+    logging.config.dictConfig(
+        {
+            "version": 1,
+            "disable_existing_loggers": False,
+            "formatters": {
+                "raw": {"format": "%(message)s"},
+            },
+            "handlers": {
+                "stdout": {
+                    "class": "logging.StreamHandler",
+                    "stream": "ext://sys.stdout",
+                    "level": log_level,
+                    "formatter": "raw",
+                },
+                "file": {
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": str(log_dir / "app.log"),
+                    "maxBytes": settings.log.max_bytes,
+                    "backupCount": settings.log.backup_count,
+                    "encoding": "utf-8",
+                    "level": log_level,
+                    "formatter": "raw",
+                },
+                "error_file": {
+                    "class": "logging.handlers.RotatingFileHandler",
+                    "filename": str(log_dir / "errors.log"),
+                    "maxBytes": settings.log.max_bytes,
+                    "backupCount": settings.log.backup_count,
+                    "encoding": "utf-8",
+                    "level": logging.ERROR,
+                    "formatter": "raw",
+                },
+            },
+            "root": {
                 "level": log_level,
-                "formatter": "raw",
+                "handlers": ["stdout", "file", "error_file"],
             },
-            "file": {
-                "class": "logging.handlers.RotatingFileHandler",
-                "filename": str(log_dir / "app.log"),
-                "maxBytes": settings.log.max_bytes,
-                "backupCount": settings.log.backup_count,
-                "encoding": "utf-8",
-                "level": log_level,
-                "formatter": "raw",
+            "loggers": {
+                "uvicorn.access": {"level": "WARNING"},
+                "uvicorn.error": {"level": "WARNING"},
+                "httpx": {"level": "WARNING"},
+                "httpcore": {"level": "WARNING", "propagate": False},
+                "sqlalchemy": {"level": "WARNING", "propagate": False},
+                "grpc": {"level": "ERROR", "propagate": False},
+                "opentelemetry": {"level": "ERROR", "propagate": False},
+                "asyncio": {"level": "WARNING", "propagate": False},
+                "anyio": {"level": "WARNING", "propagate": False},
+                "anyio._backends._asyncio": {"level": "WARNING", "propagate": False},
             },
-            "error_file": {
-                "class": "logging.handlers.RotatingFileHandler",
-                "filename": str(log_dir / "errors.log"),
-                "maxBytes": settings.log.max_bytes,
-                "backupCount": settings.log.backup_count,
-                "encoding": "utf-8",
-                "level": logging.ERROR,
-                "formatter": "raw",
-            },
-        },
-        "root": {
-            "level": log_level,
-            "handlers": ["stdout", "file", "error_file"],
-        },
-        "loggers": {
-            "uvicorn.access": {"level": "WARNING"},
-            "uvicorn.error": {"level": "WARNING"},
-            "httpx": {"level": "WARNING"},
-            "httpcore": {"level": "WARNING", "propagate": False},
-            "sqlalchemy": {"level": "WARNING", "propagate": False},
-            "grpc": {"level": "ERROR", "propagate": False},
-            "opentelemetry": {"level": "ERROR", "propagate": False},
-            "asyncio": {"level": "WARNING", "propagate": False},
-            "anyio": {"level": "WARNING", "propagate": False},
-            "anyio._backends._asyncio": {"level": "WARNING", "propagate": False},
-        },
-    })
+        }
+    )
 
 
 def get_log_context() -> dict[str, Any]:

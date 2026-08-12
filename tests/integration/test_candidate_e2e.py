@@ -54,9 +54,13 @@ _TEST_ORG_ID = UUID("00000000-0000-0000-0000-000000000001")
 _TEST_ISSUER_ID = UUID("00000000-0000-0000-0000-000000000002")
 _TEST_INSTRUMENT_ID = UUID("00000000-0000-0000-0000-000000000003")
 _TEST_LISTING_ID = UUID("00000000-0000-0000-0000-000000000004")
+
+
 def _make_test_candidate_id() -> UUID:
     """Generate a unique candidate_id for each test run to avoid aggregate_version conflicts."""
     return uuid4()
+
+
 _TEST_ANALYSIS_RUN_ID = UUID("00000000-0000-0000-0000-000000000006")
 _TEST_CAPABILITY_ID = UUID("00000000-0000-0000-0000-000000000007")
 _TEST_ARTIFACT_ID_PROMPT = UUID("00000000-0000-0000-0000-000000000010")
@@ -79,19 +83,21 @@ async def test_org(session: AsyncSession) -> Organization:
     """Create or return existing test organization."""
     from sqlalchemy.dialects.postgresql import insert
 
-    stmt = insert(Organization).values(
-        id=_TEST_ORG_ID,
-        slug="test-org",
-        display_name="Test Org",
-        status="active",
-    ).on_conflict_do_nothing()
+    stmt = (
+        insert(Organization)
+        .values(
+            id=_TEST_ORG_ID,
+            slug="test-org",
+            display_name="Test Org",
+            status="active",
+        )
+        .on_conflict_do_nothing()
+    )
     await session.execute(stmt)
     await session.commit()
 
     # Fetch existing or create new
-    result = await session.execute(
-        sa.select(Organization).where(Organization.id == _TEST_ORG_ID)
-    )
+    result = await session.execute(sa.select(Organization).where(Organization.id == _TEST_ORG_ID))
     org = result.scalar_one_or_none()
     if org is None:
         org = Organization(
@@ -199,9 +205,7 @@ async def test_candidate(
     await session.execute(
         sa.delete(CandidateSourceRecord).where(CandidateSourceRecord.candidate_id == test_candidate_id)
     )
-    await session.execute(
-        sa.delete(CandidateGapRecord).where(CandidateGapRecord.candidate_id == test_candidate_id)
-    )
+    await session.execute(sa.delete(CandidateGapRecord).where(CandidateGapRecord.candidate_id == test_candidate_id))
     await session.execute(
         sa.delete(CandidateAnalysisRunRecord).where(CandidateAnalysisRunRecord.candidate_id == test_candidate_id)
     )
@@ -275,9 +279,7 @@ async def test_candidate(
     await session.flush()
     await session.commit()
 
-    run_stmt = sa.select(CandidateAnalysisRunRecord).where(
-        CandidateAnalysisRunRecord.id == _TEST_ANALYSIS_RUN_ID
-    )
+    run_stmt = sa.select(CandidateAnalysisRunRecord).where(CandidateAnalysisRunRecord.id == _TEST_ANALYSIS_RUN_ID)
     run_result = await session.execute(run_stmt)
     run = run_result.scalar_one_or_none()
     if run is None:
@@ -343,12 +345,16 @@ async def test_agent_registry(session: AsyncSession) -> UUID:
     for logical_id, display_name, description in _AGENT_CAPABILITIES:
         capability_uuid = uuid5(_TEST_CAPABILITY_ID, logical_id)
 
-        stmt = insert(AgentCapability).values(
-            id=capability_uuid,
-            logical_id=logical_id,
-            display_name=display_name,
-            description=description,
-        ).on_conflict_do_nothing()
+        stmt = (
+            insert(AgentCapability)
+            .values(
+                id=capability_uuid,
+                logical_id=logical_id,
+                display_name=display_name,
+                description=description,
+            )
+            .on_conflict_do_nothing()
+        )
         await session.execute(stmt)
 
         result = await session.execute(sa.select(AgentCapability).where(AgentCapability.id == capability_uuid))
@@ -386,44 +392,62 @@ async def test_agent_registry(session: AsyncSession) -> UUID:
 
         for artifact_key, artifact_id in artifact_uuids.items():
             kind = artifact_kinds[artifact_key]
-            print(f"DEBUG FIXTURE: Inserting artifact {artifact_key} for {logical_id}: kind={kind}, content={artifact_contents[kind]}")
-            stmt = insert(AgentArtifact).values(
-                id=artifact_id,
-                logical_id=f"{logical_id}_{kind}",
-                kind=kind,
-                version=1,
-                sha256=hashlib.sha256(f"{kind} text".encode()).hexdigest(),
-                content=artifact_contents[kind],
-                created_by="system",
-            ).on_conflict_do_nothing()
+            print(
+                f"DEBUG FIXTURE: Inserting artifact {artifact_key} for {logical_id}: kind={kind}, content={artifact_contents[kind]}"
+            )
+            stmt = (
+                insert(AgentArtifact)
+                .values(
+                    id=artifact_id,
+                    logical_id=f"{logical_id}_{kind}",
+                    kind=kind,
+                    version=1,
+                    sha256=hashlib.sha256(f"{kind} text".encode()).hexdigest(),
+                    content=artifact_contents[kind],
+                    created_by="system",
+                )
+                .on_conflict_do_nothing()
+            )
             await session.execute(stmt)
 
-        prompt_artifact = (await session.execute(sa.select(AgentArtifact).where(AgentArtifact.id == artifact_uuids["prompt"]))).scalar_one_or_none()
-        schema_artifact = (await session.execute(sa.select(AgentArtifact).where(AgentArtifact.id == artifact_uuids["schema"]))).scalar_one_or_none()
-        model_artifact = (await session.execute(sa.select(AgentArtifact).where(AgentArtifact.id == artifact_uuids["model_profile"]))).scalar_one_or_none()
-        toolset_artifact = (await session.execute(sa.select(AgentArtifact).where(AgentArtifact.id == artifact_uuids["toolset"]))).scalar_one_or_none()
+        prompt_artifact = (
+            await session.execute(sa.select(AgentArtifact).where(AgentArtifact.id == artifact_uuids["prompt"]))
+        ).scalar_one_or_none()
+        schema_artifact = (
+            await session.execute(sa.select(AgentArtifact).where(AgentArtifact.id == artifact_uuids["schema"]))
+        ).scalar_one_or_none()
+        model_artifact = (
+            await session.execute(sa.select(AgentArtifact).where(AgentArtifact.id == artifact_uuids["model_profile"]))
+        ).scalar_one_or_none()
+        toolset_artifact = (
+            await session.execute(sa.select(AgentArtifact).where(AgentArtifact.id == artifact_uuids["toolset"]))
+        ).scalar_one_or_none()
 
         version_uuid = uuid5(capability_uuid, "version_1")
-        stmt = insert(AgentVersion).values(
-            id=version_uuid,
-            capability_id=capability.id,
-            version=1,
-            prompt_artifact_id=prompt_artifact.id,
-            schema_artifact_id=schema_artifact.id,
-            model_artifact_id=model_artifact.id,
-            toolset_artifact_id=toolset_artifact.id,
-            budgets={
-                "max_prompt_tokens": 10000,
-                "max_completion_tokens": 5000,
-                "max_cost_usd": 1.0,
-                "max_turns": 10,
-                "max_tool_calls": 20,
-                "max_duration_ms": 60000,
-            },
-            policies={},
-            status="active",
-            created_by="system",
-        ).on_conflict_do_nothing()
+        stmt = (
+            insert(AgentVersion)
+            .values(
+                id=version_uuid,
+                capability_id=capability.id,
+                version=1,
+                prompt_artifact_id=prompt_artifact.id,
+                schema_artifact_id=schema_artifact.id,
+                model_artifact_id=model_artifact.id,
+                toolset_artifact_id=toolset_artifact.id,
+                budgets={
+                    "max_prompt_tokens": 10000,
+                    "max_completion_tokens": 5000,
+                    "max_cost_usd": 1.0,
+                    "max_turns": 10,
+                    "max_tool_calls": 20,
+                    "max_duration_ms": 60000,
+                },
+                policies={},
+                status="active",
+                created_by="system",
+            )
+            .on_conflict_do_nothing()
+        )
         await session.execute(stmt)
 
         capability.active_version_id = version_uuid
@@ -781,22 +805,30 @@ async def test_candidate_e2e_full_pipeline(
         from database.models.investment_candidates import CandidateSourceRecord
 
         all_sources = (
-            await verify_session.execute(
-                sa.select(CandidateSourceRecord).where(
-                    CandidateSourceRecord.candidate_id == candidate.id,
+            (
+                await verify_session.execute(
+                    sa.select(CandidateSourceRecord).where(
+                        CandidateSourceRecord.candidate_id == candidate.id,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         print(f"DEBUG: All sources for candidate {candidate.id}: {[(s.id, s.kind, s.status) for s in all_sources]}")
 
         source_records = (
-            await verify_session.execute(
-                sa.select(CandidateSourceRecord).where(
-                    CandidateSourceRecord.candidate_id == candidate.id,
-                    CandidateSourceRecord.status == "discovered",
+            (
+                await verify_session.execute(
+                    sa.select(CandidateSourceRecord).where(
+                        CandidateSourceRecord.candidate_id == candidate.id,
+                        CandidateSourceRecord.status == "discovered",
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         print(f"DEBUG: Discovered sources: {[(s.id, s.kind, s.status) for s in source_records]}")
 
     assert len(source_records) > 0, "Expected at least one discovered source to validate"
@@ -809,7 +841,9 @@ async def test_candidate_e2e_full_pipeline(
         )
 
         validation_result = await runtime.validate_supplied_candidate_source(validation_input)
-        print(f"DEBUG: Source {source_record.id} ({source_record.kind}) -> status={validation_result.status}, reason={validation_result.reason}")
+        print(
+            f"DEBUG: Source {source_record.id} ({source_record.kind}) -> status={validation_result.status}, reason={validation_result.reason}"
+        )
         assert validation_result.status == "verified", (
             f"Expected verified for source {source_record.id}, got {validation_result.status}: {validation_result.reason}"
         )
@@ -826,25 +860,25 @@ async def test_candidate_e2e_full_pipeline(
         from database.models.investment_candidates import CandidateSourceRecord
 
         sources_after_validation = (
-            await verify_session.execute(
-                sa.select(CandidateSourceRecord).where(
-                    CandidateSourceRecord.candidate_id == candidate.id,
+            (
+                await verify_session.execute(
+                    sa.select(CandidateSourceRecord).where(
+                        CandidateSourceRecord.candidate_id == candidate.id,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         print(f"DEBUG: Sources after validation loop: {[(s.id, s.kind, s.status) for s in sources_after_validation]}")
 
     source_validation_checkpoint = await runtime.validate_candidate_sources(command)
-    assert not source_validation_checkpoint.blocked, (
-        f"Source validation blocked: {source_validation_checkpoint.reason}"
-    )
+    assert not source_validation_checkpoint.blocked, f"Source validation blocked: {source_validation_checkpoint.reason}"
 
     # --- Stage 6: Fundamental Analysis ---
     # This stage executes governed agents with the MockProvider
     fundamental_checkpoint = await runtime.run_candidate_fundamental_analysis(command)
-    assert not fundamental_checkpoint.blocked, (
-        f"Fundamental analysis blocked: {fundamental_checkpoint.reason}"
-    )
+    assert not fundamental_checkpoint.blocked, f"Fundamental analysis blocked: {fundamental_checkpoint.reason}"
 
     # --- Stage 7: Risk Analysis ---
     risk_checkpoint = await runtime.run_candidate_risk_analysis(command)

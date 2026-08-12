@@ -85,6 +85,6 @@ class MandateService:
         )
         self.session.add(mandate)
         await self.session.flush()
-        audit(self.session, context, "mandate.create", "strategy_mandate", mandate.id, {"version": next_version})
+        await audit(self.session, context, "mandate.create", "strategy_mandate", mandate.id, {"version": next_version})
         await self.session.flush()
         return mandate

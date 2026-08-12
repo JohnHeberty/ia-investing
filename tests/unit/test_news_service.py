@@ -104,26 +104,32 @@ class TestNewsAnalysisSchema:
 class TestNewsExtractionActivities:
     def test_fetch_news_items_exists(self) -> None:
         from ia_investing.orchestration.activities.news_extraction import fetch_news_items
+
         assert callable(fetch_news_items)
 
     def test_analyze_single_news_item_exists(self) -> None:
         from ia_investing.orchestration.activities.news_extraction import analyze_single_news_item
+
         assert callable(analyze_single_news_item)
 
     def test_batch_analyze_news_exists(self) -> None:
         from ia_investing.orchestration.activities.news_extraction import batch_analyze_news
+
         assert callable(batch_analyze_news)
 
     def test_detect_event_duplicates_exists(self) -> None:
         from ia_investing.orchestration.activities.news_extraction import detect_event_duplicates
+
         assert callable(detect_event_duplicates)
 
     def test_check_alert_threshold_exists(self) -> None:
         from ia_investing.orchestration.activities.news_extraction import check_alert_threshold
+
         assert callable(check_alert_threshold)
 
     def test_news_extraction_activities_tuple_count(self) -> None:
         from ia_investing.orchestration.activities.news_extraction import NEWS_EXTRACTION_ACTIVITIES
+
         assert len(NEWS_EXTRACTION_ACTIVITIES) == 5
 
     @pytest.mark.asyncio
@@ -196,6 +202,7 @@ class TestNewsExtractionActivities:
 class TestExtractNewsWorkflow:
     def test_workflow_imports(self) -> None:
         from workflows._extract_news import ExtractNewsInput, ExtractNewsWorkflow
+
         assert ExtractNewsWorkflow is not None
         assert ExtractNewsInput is not None
 

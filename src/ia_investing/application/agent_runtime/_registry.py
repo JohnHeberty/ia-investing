@@ -12,9 +12,9 @@ from database.models.agent_runtime import (
     AgentCapability,
     AgentVersion,
 )
-from database.models.audit_models import AuditLog
 from ia_investing.ai.artifacts import ArtifactLoader, CapabilityManifest, FileArtifact
 from ia_investing.application.agent_runtime._crypto import canonical_hash
+from ia_investing.application.audit_service import create_domain_audit_entry
 
 
 class AgentRegistryService:
@@ -92,7 +92,7 @@ class AgentRegistryService:
                 await self.session.flush()
                 if initial:
                     capability.active_version_id = version.id
-                self._audit(
+                await self._audit(
                     actor_id=actor_id,
                     action="agent_registry.version.bootstrap" if initial else "agent_registry.version.candidate",
                     entity_id=version.id,
@@ -178,16 +178,18 @@ class AgentRegistryService:
         await self.session.flush()
         return artifact
 
-    def _audit(self, *, actor_id: str, action: str, entity_id: UUID, details: dict[str, object]) -> None:
+    async def _audit(self, *, actor_id: str, action: str, entity_id: UUID, details: dict[str, object]) -> None:
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=UUID(int=0),
                 actor_type="system",
                 actor_id=actor_id,
-                action=action,
+                action="action",
                 entity_type="agent_version",
                 entity_id=entity_id,
                 correlation_id=entity_id,
-                details=details,
+                details={},
             )
         )
 

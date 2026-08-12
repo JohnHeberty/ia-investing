@@ -301,10 +301,7 @@ async def test_scenario_b_ri_missing_resolved(db_runtime: DatabaseRuntime) -> No
         source_id = source.id
 
     # 5. Validate the URL — mock HTTP response with identity signals
-    expected_content = (
-        f"<html><title>Scenario Issuer S.A. RI</title><p>CNPJ: {issuer_cnpj}</p><p>{candidate.ticker} na B3</p></html>"
-        .encode()
-    )
+    expected_content = f"<html><title>Scenario Issuer S.A. RI</title><p>CNPJ: {issuer_cnpj}</p><p>{candidate.ticker} na B3</p></html>".encode()
     runtime._http = cast(
         SafeHttpClient,
         _mock_http_client(status_code=200, content=expected_content, final_url="https://ri.scenarioissuer.com.br"),

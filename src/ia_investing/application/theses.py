@@ -10,7 +10,6 @@ from uuid import UUID
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.audit_models import AuditLog
 from database.models.research import DomainOutboxEvent, ResearchClaim
 from database.models.review import ReviewDecision
 from database.models.thesis_domain import (
@@ -19,6 +18,7 @@ from database.models.thesis_domain import (
     ThesisVersionClaim,
     ThesisVersionEvidence,
 )
+from ia_investing.application.audit_service import create_domain_audit_entry
 from ia_investing.application.research import ResearchConcurrencyError
 
 
@@ -236,7 +236,9 @@ class ThesisService:
             )
         )
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=UUID(int=0),
                 actor_type="human",
                 actor_id=actor_subject,
                 action="research_thesis.activate",

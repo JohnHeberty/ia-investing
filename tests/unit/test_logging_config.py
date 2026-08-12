@@ -27,10 +27,7 @@ class TestSetupLogging:
         setup_logging(settings)
 
         root = logging.getLogger()
-        assert any(
-            isinstance(h, logging.StreamHandler) and h.stream is not None
-            for h in root.handlers
-        )
+        assert any(isinstance(h, logging.StreamHandler) and h.stream is not None for h in root.handlers)
 
     def test_sets_correct_log_level(self, tmp_path: Path) -> None:
         settings = _make_settings(log_dir=str(tmp_path), log_level="WARNING")
@@ -42,12 +39,14 @@ class TestSetupLogging:
         log_dir = Path("/tmp/test-logging-config-create-dir")
         if log_dir.exists():
             import shutil
+
             shutil.rmtree(log_dir)
         settings = _make_settings(log_dir=str(log_dir))
         setup_logging(settings)
 
         assert log_dir.exists()
         import shutil
+
         shutil.rmtree(log_dir, ignore_errors=True)
 
     def test_removes_existing_handlers(self, tmp_path: Path) -> None:

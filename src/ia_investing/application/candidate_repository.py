@@ -40,9 +40,7 @@ class CandidateRepository:
         )
         return (await self.session.execute(stmt)).scalar_one_or_none()
 
-    async def get_analysis_run(
-        self, candidate_id: UUID, analysis_run_id: UUID
-    ) -> CandidateAnalysisRunRecord | None:
+    async def get_analysis_run(self, candidate_id: UUID, analysis_run_id: UUID) -> CandidateAnalysisRunRecord | None:
         """Fetch analysis run only if it belongs to a candidate in this organization."""
         stmt = (
             select(CandidateAnalysisRunRecord)

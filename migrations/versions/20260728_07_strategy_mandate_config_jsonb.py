@@ -83,11 +83,17 @@ def downgrade() -> None:
     # Recreate the 18 columns
     op.add_column("strategy_mandates", sa.Column("objective", sa.Text, nullable=False, server_default=""))
     op.add_column("strategy_mandates", sa.Column("strategy_type", sa.String(50), nullable=False, server_default=""))
-    op.add_column("strategy_mandates", sa.Column("investment_horizon_days", sa.Integer, nullable=False, server_default="0"))
+    op.add_column(
+        "strategy_mandates", sa.Column("investment_horizon_days", sa.Integer, nullable=False, server_default="0")
+    )
     op.add_column("strategy_mandates", sa.Column("target_volatility", sa.Numeric(8, 6), nullable=True))
     op.add_column("strategy_mandates", sa.Column("max_drawdown", sa.Numeric(8, 6), nullable=False, server_default="0"))
-    op.add_column("strategy_mandates", sa.Column("min_cash_weight", sa.Numeric(8, 6), nullable=False, server_default="0"))
-    op.add_column("strategy_mandates", sa.Column("max_cash_weight", sa.Numeric(8, 6), nullable=False, server_default="0"))
+    op.add_column(
+        "strategy_mandates", sa.Column("min_cash_weight", sa.Numeric(8, 6), nullable=False, server_default="0")
+    )
+    op.add_column(
+        "strategy_mandates", sa.Column("max_cash_weight", sa.Numeric(8, 6), nullable=False, server_default="0")
+    )
     op.add_column("strategy_mandates", sa.Column("max_turnover", sa.Numeric(8, 6), nullable=False, server_default="0"))
     op.add_column("strategy_mandates", sa.Column("universe_definition", JSONB, nullable=False, server_default="{}"))
     op.add_column("strategy_mandates", sa.Column("rebalance_policy", JSONB, nullable=False, server_default="{}"))

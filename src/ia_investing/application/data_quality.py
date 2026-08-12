@@ -10,8 +10,8 @@ from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from data_quality._models import ValidationResult
-from database.models.audit_models import AuditLog
 from database.models.data_governance import QualityIncident, QualityRule, QuarantineRecord
+from ia_investing.application.audit_service import create_domain_audit_entry
 
 _meter = metrics.get_meter("ia_investing.data_quality")
 _incidents_opened = _meter.create_counter(
@@ -121,7 +121,9 @@ class QualityGovernanceService:
         _incidents_opened.add(1, {"rule": rule.code, "severity": rule.severity})
         _quarantine_blocked.add(1, {"rule": rule.code})
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=UUID(int=0),
                 actor_type="system",
                 actor_id="quality-gate",
                 action="quality_incident.open",
@@ -179,7 +181,9 @@ class QualityGovernanceService:
                 quarantine.released_at = now
             _incidents_resolved.add(1, {"rule": str(incident.quality_rule_id), "resolution": target})
         self.session.add(
-            AuditLog(
+            await create_domain_audit_entry(
+                self.session,
+                tenant_id=UUID(int=0),
                 actor_type="human",
                 actor_id=actor_subject,
                 action="quality_incident.transition",

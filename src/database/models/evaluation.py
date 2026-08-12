@@ -33,9 +33,7 @@ class Scorecard(Base):
     veto_conditions_triggered: Mapped[dict[str, object]] = mapped_column(JSONB)
 
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"Scorecard(scorecard_type={self.scorecard_type!r}, overall_score={self.overall_score})"
@@ -64,9 +62,7 @@ class BacktestResult(Base):
 
     details: Mapped[dict[str, object]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     def __repr__(self) -> str:
         return f"BacktestResult(strategy_name={self.strategy_name!r}, cagr_pct={self.cagr_pct})"

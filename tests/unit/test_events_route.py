@@ -70,9 +70,6 @@ class TestEventsRoute:
             assert call_args[1]["path"] == "/"
 
     def test_post_rejects_batch_over_max_length(self, client: TestClient) -> None:
-        events = [
-            {"event": "e", "path": "/", "timestamp": 1000}
-            for _ in range(101)
-        ]
+        events = [{"event": "e", "path": "/", "timestamp": 1000} for _ in range(101)]
         resp = client.post("/api/v1/events", json={"events": events})
         assert resp.status_code == 422

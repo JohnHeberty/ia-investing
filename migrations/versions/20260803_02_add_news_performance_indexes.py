@@ -16,8 +16,7 @@ depends_on = None
 def upgrade() -> None:
     # GIN index on raw_data JSONB for fast content_hash lookups in _load_existing_hashes
     op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_news_items_raw_data_hash "
-        "ON news_items USING gin (raw_data jsonb_path_ops)"
+        "CREATE INDEX IF NOT EXISTS ix_news_items_raw_data_hash ON news_items USING gin (raw_data jsonb_path_ops)"
     )
 
     # B-tree index on DetectedEvent.news_item_id for idempotency guard in analyze_news_item

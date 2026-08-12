@@ -33,7 +33,7 @@ class AlertService:
             alert.status = "acknowledged"
             alert.acknowledged_by = context.subject
             alert.acknowledged_at = datetime.now(UTC)
-            audit_entity(
+            await audit_entity(
                 self.session,
                 "operational_alert.acknowledge",
                 "operational_alert",
@@ -66,7 +66,7 @@ class AlertService:
             alert.acknowledged_at = datetime.now(UTC)
         alert.status = "resolved"
         alert.payload = {**alert.payload, "resolution": resolution, "resolved_by": context.subject}
-        audit_entity(
+        await audit_entity(
             self.session,
             "operational_alert.resolve",
             "operational_alert",
@@ -134,7 +134,7 @@ class AlertService:
         )
         self.session.add(switch)
         await self.session.flush()
-        audit_entity(
+        await audit_entity(
             self.session,
             "paper_kill_switch.activate",
             "paper_kill_switch",
@@ -164,7 +164,7 @@ class AlertService:
         switch.active = False
         switch.released_by = context.subject
         switch.released_at = datetime.now(UTC)
-        audit_entity(
+        await audit_entity(
             self.session,
             "paper_kill_switch.release",
             "paper_kill_switch",

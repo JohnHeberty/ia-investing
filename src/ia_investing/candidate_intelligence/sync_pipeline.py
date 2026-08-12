@@ -55,12 +55,16 @@ async def _update_candidate_status(
 
     async with db.session() as session:
         candidate = (
-            await session.execute(
-                sa.select(InvestmentCandidateRecord).where(
-                    InvestmentCandidateRecord.id == candidate_id,
+            (
+                await session.execute(
+                    sa.select(InvestmentCandidateRecord).where(
+                        InvestmentCandidateRecord.id == candidate_id,
+                    )
                 )
             )
-        ).scalars().one_or_none()
+            .scalars()
+            .one_or_none()
+        )
         if candidate is not None:
             candidate.status = new_status
             candidate.lock_version += 1
@@ -91,12 +95,16 @@ async def _record_event(
 
     async with db.session() as session:
         candidate = (
-            await session.execute(
-                sa.select(InvestmentCandidateRecord).where(
-                    InvestmentCandidateRecord.id == candidate_id,
+            (
+                await session.execute(
+                    sa.select(InvestmentCandidateRecord).where(
+                        InvestmentCandidateRecord.id == candidate_id,
+                    )
                 )
             )
-        ).scalars().one_or_none()
+            .scalars()
+            .one_or_none()
+        )
         current_version = (candidate.lock_version if candidate else 0) + 1
 
         session.add(
@@ -149,12 +157,16 @@ async def run_candidate_pipeline(
 
     async with db.session() as session:
         candidate = (
-            await session.execute(
-                sa.select(InvestmentCandidateRecord).where(
-                    InvestmentCandidateRecord.id == candidate_id,
+            (
+                await session.execute(
+                    sa.select(InvestmentCandidateRecord).where(
+                        InvestmentCandidateRecord.id == candidate_id,
+                    )
                 )
             )
-        ).scalars().one_or_none()
+            .scalars()
+            .one_or_none()
+        )
         if candidate is None:
             return PipelineResult(
                 candidate_id=candidate_id,
@@ -166,12 +178,19 @@ async def run_candidate_pipeline(
         org_id = candidate.organization_id
 
         run = (
-            await session.execute(
-                sa.select(CandidateAnalysisRunRecord).where(
-                    CandidateAnalysisRunRecord.candidate_id == candidate_id,
-                ).order_by(CandidateAnalysisRunRecord.run_number.desc()).limit(1)
+            (
+                await session.execute(
+                    sa.select(CandidateAnalysisRunRecord)
+                    .where(
+                        CandidateAnalysisRunRecord.candidate_id == candidate_id,
+                    )
+                    .order_by(CandidateAnalysisRunRecord.run_number.desc())
+                    .limit(1)
+                )
             )
-        ).scalars().one_or_none()
+            .scalars()
+            .one_or_none()
+        )
         if run is None:
             run = CandidateAnalysisRunRecord(
                 candidate_id=candidate_id,
@@ -273,26 +292,31 @@ async def run_candidate_pipeline(
         if hasattr(checkpoint, "stage"):
             await _record_event(db, candidate_id, org_id, name, checkpoint)
 
-            stages_result.append(StageResult(
-                stage=name,
-                status="blocked" if checkpoint.blocked else "passed",
-                reason=checkpoint.reason,
-                blocker_codes=list(checkpoint.blocker_codes),
-                duration_ms=round(duration, 1),
-                payload=checkpoint.payload,
-            ))
+            stages_result.append(
+                StageResult(
+                    stage=name,
+                    status="blocked" if checkpoint.blocked else "passed",
+                    reason=checkpoint.reason,
+                    blocker_codes=list(checkpoint.blocker_codes),
+                    duration_ms=round(duration, 1),
+                    payload=checkpoint.payload,
+                )
+            )
         else:
-            stages_result.append(StageResult(
-                stage=name,
-                status="passed",
-                reason=f"{name} completed",
-                blocker_codes=[],
-                duration_ms=round(duration, 1),
-            ))
+            stages_result.append(
+                StageResult(
+                    stage=name,
+                    status="passed",
+                    reason=f"{name} completed",
+                    blocker_codes=[],
+                    duration_ms=round(duration, 1),
+                )
+            )
 
         logger.info(
             "Pipeline %s stage=%s status=%s reason=%s (%.0fms)",
-            candidate_id, name,
+            candidate_id,
+            name,
             "blocked" if hasattr(checkpoint, "blocked") and checkpoint.blocked else "passed",
             getattr(checkpoint, "reason", "ok"),
             duration,
@@ -319,23 +343,28 @@ async def run_candidate_pipeline(
         except Exception as exc:
             logger.exception("Pipeline stage %s failed", name)
             duration = (time.monotonic() - t0) * 1000
-            stages_result.append(StageResult(
-                stage=name, status="blocked",
-                reason=f"Exception: {exc}",
-                blocker_codes=[f"{name}_exception"],
-                duration_ms=round(duration, 1),
-            ))
+            stages_result.append(
+                StageResult(
+                    stage=name,
+                    status="blocked",
+                    reason=f"Exception: {exc}",
+                    blocker_codes=[f"{name}_exception"],
+                    duration_ms=round(duration, 1),
+                )
+            )
             return None
 
         duration = (time.monotonic() - t0) * 1000
         output = raw.output if hasattr(raw, "output") else {}
-        stages_result.append(StageResult(
-            stage=name,
-            status="passed",
-            reason=f"Discovery complete: {len(output.get('sources', []))} sources found",
-            blocker_codes=[],
-            duration_ms=round(duration, 1),
-        ))
+        stages_result.append(
+            StageResult(
+                stage=name,
+                status="passed",
+                reason=f"Discovery complete: {len(output.get('sources', []))} sources found",
+                blocker_codes=[],
+                duration_ms=round(duration, 1),
+            )
+        )
         return {"blocked": False, "raw": raw, "reason": "ok"}
 
     source_checkpoint: dict[str, Any] | None = None
@@ -358,47 +387,73 @@ async def run_candidate_pipeline(
     # --- Stage 2: Source Discovery ---
     if not _blocked():
         source_checkpoint = await _run_stage_source_discovery(
-            "source_discovery", runtime.discover_candidate_sources, "source_discovery",
+            "source_discovery",
+            runtime.discover_candidate_sources,
+            "source_discovery",
         )
         if source_checkpoint is None:
             last_checkpoint = _make_blocked("source_discovery", "returned None")
         elif source_checkpoint.get("blocked", False):
             last_checkpoint = CandidateCheckpoint(
-                candidate_id=candidate_id, stage="source_discovery",
-                blocked=True, decision="blocked", reason=source_checkpoint.get("reason", "blocked"),
+                candidate_id=candidate_id,
+                stage="source_discovery",
+                blocked=True,
+                decision="blocked",
+                reason=source_checkpoint.get("reason", "blocked"),
             )
 
     # --- Stage 2b: Persist + validate individual sources ---
-    if not _blocked() and source_checkpoint and not source_checkpoint.get("blocked", True) and source_checkpoint.get("raw") is not None:
+    if (
+        not _blocked()
+        and source_checkpoint
+        and not source_checkpoint.get("blocked", True)
+        and source_checkpoint.get("raw") is not None
+    ):
         await _run_stage(
-            "source_persist", runtime.persist_candidate_sources_and_gaps, None,
-            transform=source_checkpoint["raw"], allow_persist_duplicate=True,
+            "source_persist",
+            runtime.persist_candidate_sources_and_gaps,
+            None,
+            transform=source_checkpoint["raw"],
+            allow_persist_duplicate=True,
         )
         from database.models.investment_candidates import CandidateSourceRecord
+
         async with db.session() as session:
             unverified = (
-                await session.execute(
-                    sa.select(CandidateSourceRecord).where(
-                        CandidateSourceRecord.candidate_id == candidate_id,
-                        CandidateSourceRecord.status == "discovered",
+                (
+                    await session.execute(
+                        sa.select(CandidateSourceRecord).where(
+                            CandidateSourceRecord.candidate_id == candidate_id,
+                            CandidateSourceRecord.status == "discovered",
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
         if unverified:
             from ia_investing.orchestration.activities.candidate_intelligence import CandidateSourceValidationInput
+
             vc = 0
             for src in unverified:
                 try:
                     await runtime.validate_supplied_candidate_source(
-                        CandidateSourceValidationInput(candidate_id=candidate_id, source_id=src.id, organization_id=org_id),
+                        CandidateSourceValidationInput(
+                            candidate_id=candidate_id, source_id=src.id, organization_id=org_id
+                        ),
                     )
                     vc += 1
                 except Exception as exc:
                     logger.warning("Source validation failed for %s: %s", src.id, exc)
-            stages_result.append(StageResult(
-                stage="source_individual_validation", status="passed",
-                reason=f"Validated {vc}/{len(unverified)} sources", blocker_codes=[], duration_ms=0,
-            ))
+            stages_result.append(
+                StageResult(
+                    stage="source_individual_validation",
+                    status="passed",
+                    reason=f"Validated {vc}/{len(unverified)} sources",
+                    blocker_codes=[],
+                    duration_ms=0,
+                )
+            )
 
     # --- Stage 3: Source Validation ---
     if not _blocked():
@@ -408,15 +463,20 @@ async def run_candidate_pipeline(
     # --- Stage 3b: Auto-resolve gaps ---
     if not _blocked():
         from database.models.investment_candidates import CandidateGapRecord, CandidateSourceRecord
+
         async with db.session() as session:
             open_gaps = (
-                await session.execute(
-                    sa.select(CandidateGapRecord).where(
-                        CandidateGapRecord.candidate_id == candidate_id,
-                        CandidateGapRecord.status == "open",
+                (
+                    await session.execute(
+                        sa.select(CandidateGapRecord).where(
+                            CandidateGapRecord.candidate_id == candidate_id,
+                            CandidateGapRecord.status == "open",
+                        )
                     )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             resolved_count = 0
             for gap in open_gaps:
                 should_resolve = False
@@ -452,10 +512,15 @@ async def run_candidate_pipeline(
             if resolved_count > 0:
                 await session.commit()
         if resolved_count > 0:
-            stages_result.append(StageResult(
-                stage="gap_auto_resolution", status="passed",
-                reason=f"Resolved {resolved_count} gap(s)", blocker_codes=[], duration_ms=0,
-            ))
+            stages_result.append(
+                StageResult(
+                    stage="gap_auto_resolution",
+                    status="passed",
+                    reason=f"Resolved {resolved_count} gap(s)",
+                    blocker_codes=[],
+                    duration_ms=0,
+                )
+            )
 
     # --- Stage 4: Readiness ---
     if not _blocked():
@@ -479,15 +544,21 @@ async def run_candidate_pipeline(
             ck = await _run_stage("document_collection", runtime.collect_candidate_documents, "document_collection")
             _update_last(ck)
         else:
-            stages_result.append(StageResult(
-                stage="document_collection", status="passed",
-                reason="Skipped: no verified sources with download URLs", blocker_codes=[], duration_ms=0,
-            ))
+            stages_result.append(
+                StageResult(
+                    stage="document_collection",
+                    status="passed",
+                    reason="Skipped: no verified sources with download URLs",
+                    blocker_codes=[],
+                    duration_ms=0,
+                )
+            )
 
     # --- Stage 6: Financial Ingestion ---
     if not _blocked():
-        ck = await _run_stage("financial_ingestion", runtime.ingest_candidate_financial_data, "data_quality",
-                              allow_persist_duplicate=True)
+        ck = await _run_stage(
+            "financial_ingestion", runtime.ingest_candidate_financial_data, "data_quality", allow_persist_duplicate=True
+        )
         if ck.blocked and ck.stage == "financial_ingestion":
             is_session_rollback = "transaction has been rolled back" in ck.reason
             is_no_data = "No DFP data found" in ck.reason or "financial_facts_missing" in ck.blocker_codes
@@ -495,23 +566,29 @@ async def run_candidate_pipeline(
                 async with db.session() as session:
                     fact_count = (
                         await session.execute(
-                            sa.text("SELECT count(*) FROM financial_facts ff "
-                                 "JOIN reporting_periods rp ON rp.id = ff.reporting_period_id "
-                                 "JOIN issuers iss ON iss.id = ff.issuer_id "
-                                 "JOIN investment_candidates ic ON ic.issuer_id = iss.id "
-                                 "WHERE ic.id = :cid"),
+                            sa.text(
+                                "SELECT count(*) FROM financial_facts ff "
+                                "JOIN reporting_periods rp ON rp.id = ff.reporting_period_id "
+                                "JOIN issuers iss ON iss.id = ff.issuer_id "
+                                "JOIN investment_candidates ic ON ic.issuer_id = iss.id "
+                                "WHERE ic.id = :cid"
+                            ),
                             {"cid": str(candidate_id)},
                         )
                     ).scalar()
                 if fact_count and fact_count > 0:
                     stages_result[-1] = StageResult(
-                        stage="financial_ingestion", status="passed",
+                        stage="financial_ingestion",
+                        status="passed",
                         reason=f"Skipped: {fact_count} financial facts already ingested",
-                        blocker_codes=[], duration_ms=0,
+                        blocker_codes=[],
+                        duration_ms=0,
                     )
                     ck = CandidateCheckpoint(
-                        candidate_id=candidate_id, stage="financial_ingestion",
-                        blocked=False, decision="continue",
+                        candidate_id=candidate_id,
+                        stage="financial_ingestion",
+                        blocked=False,
+                        decision="continue",
                         reason=f"{fact_count} facts already ingested",
                     )
             if ck.blocked:
@@ -525,18 +602,27 @@ async def run_candidate_pipeline(
     # --- Stage 8: Fundamental Analysis ---
     if not _blocked():
         try:
-            ck = await _run_stage("fundamental_analysis", runtime.run_candidate_fundamental_analysis, "fundamental_analysis")
+            ck = await _run_stage(
+                "fundamental_analysis", runtime.run_candidate_fundamental_analysis, "fundamental_analysis"
+            )
             _update_last(ck)
         except Exception as exc:
             logger.warning("fundamental_analysis raised: %s", exc)
-            stages_result.append(StageResult(
-                stage="fundamental_analysis", status="blocked",
-                reason=f"Exception: {exc}", blocker_codes=["fundamental_analysis_exception"],
-                duration_ms=0,
-            ))
+            stages_result.append(
+                StageResult(
+                    stage="fundamental_analysis",
+                    status="blocked",
+                    reason=f"Exception: {exc}",
+                    blocker_codes=["fundamental_analysis_exception"],
+                    duration_ms=0,
+                )
+            )
             last_checkpoint = CandidateCheckpoint(
-                candidate_id=candidate_id, stage="fundamental_analysis",
-                blocked=True, decision="blocked", reason=f"Exception: {exc}",
+                candidate_id=candidate_id,
+                stage="fundamental_analysis",
+                blocked=True,
+                decision="blocked",
+                reason=f"Exception: {exc}",
                 blocker_codes=("fundamental_analysis_exception",),
             )
 
@@ -547,14 +633,21 @@ async def run_candidate_pipeline(
             _update_last(ck)
         except Exception as exc:
             logger.warning("risk_analysis raised: %s", exc)
-            stages_result.append(StageResult(
-                stage="risk_analysis", status="blocked",
-                reason=f"Exception: {exc}", blocker_codes=["risk_analysis_exception"],
-                duration_ms=0,
-            ))
+            stages_result.append(
+                StageResult(
+                    stage="risk_analysis",
+                    status="blocked",
+                    reason=f"Exception: {exc}",
+                    blocker_codes=["risk_analysis_exception"],
+                    duration_ms=0,
+                )
+            )
             last_checkpoint = CandidateCheckpoint(
-                candidate_id=candidate_id, stage="risk_analysis",
-                blocked=True, decision="blocked", reason=f"Exception: {exc}",
+                candidate_id=candidate_id,
+                stage="risk_analysis",
+                blocked=True,
+                decision="blocked",
+                reason=f"Exception: {exc}",
                 blocker_codes=("risk_analysis_exception",),
             )
 
@@ -565,14 +658,21 @@ async def run_candidate_pipeline(
             _update_last(ck)
         except Exception as exc:
             logger.warning("committee_review raised: %s", exc)
-            stages_result.append(StageResult(
-                stage="committee_review", status="blocked",
-                reason=f"Exception: {exc}", blocker_codes=["committee_exception"],
-                duration_ms=0,
-            ))
+            stages_result.append(
+                StageResult(
+                    stage="committee_review",
+                    status="blocked",
+                    reason=f"Exception: {exc}",
+                    blocker_codes=["committee_exception"],
+                    duration_ms=0,
+                )
+            )
             last_checkpoint = CandidateCheckpoint(
-                candidate_id=candidate_id, stage="committee_review",
-                blocked=True, decision="blocked", reason=f"Exception: {exc}",
+                candidate_id=candidate_id,
+                stage="committee_review",
+                blocked=True,
+                decision="blocked",
+                reason=f"Exception: {exc}",
                 blocker_codes=("committee_exception",),
             )
 
@@ -589,7 +689,8 @@ async def run_candidate_pipeline(
 
     try:
         workflow_result = await runtime.complete_candidate_analysis_run(
-            command, final_ckpt,
+            command,
+            final_ckpt,
         )
         final_status = workflow_result.status
     except Exception as exc:
@@ -609,5 +710,6 @@ async def run_candidate_pipeline(
 
 def _get_database_url() -> str:
     from ia_investing.settings import get_settings
+
     settings = get_settings()
     return str(settings.database.url)

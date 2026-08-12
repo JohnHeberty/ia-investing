@@ -273,8 +273,12 @@ def _score_analyst(fund: dict[str, Any], analyst: dict[str, Any] | None) -> floa
 
     upgrades = analyst.get("recent_upgrades_downgrades", [])
     if upgrades:
-        ups = sum(1 for u in upgrades if "up" in u.get("action", "").lower() or "upgrade" in u.get("action", "").lower())
-        downs = sum(1 for u in upgrades if "down" in u.get("action", "").lower() or "downgrade" in u.get("action", "").lower())
+        ups = sum(
+            1 for u in upgrades if "up" in u.get("action", "").lower() or "upgrade" in u.get("action", "").lower()
+        )
+        downs = sum(
+            1 for u in upgrades if "down" in u.get("action", "").lower() or "downgrade" in u.get("action", "").lower()
+        )
         if ups > downs:
             score += 0.05
         elif downs > ups:
@@ -564,7 +568,7 @@ def analyze_portfolio_risk(positions: list[dict[str, Any]], total_value: float) 
         weights[ticker] = value / total_value if total_value > 0 else 0
 
     max_weight = max(weights.values()) if weights else 0
-    hhi = sum(w ** 2 for w in weights.values())
+    hhi = sum(w**2 for w in weights.values())
 
     concentration_risk = "high" if max_weight > 0.25 or hhi > 0.25 else "medium" if max_weight > 0.15 else "low"
 
@@ -582,8 +586,7 @@ def build_portfolio_recommendation(
     all_scores: dict[str, dict[str, Any]] | None = None,
 ) -> PortfolioRecommendation:
     total_value = sum(
-        pos.get("quantity", 0) * (pos.get("current_price") or pos.get("avg_cost_per_share", 0))
-        for pos in positions
+        pos.get("quantity", 0) * (pos.get("current_price") or pos.get("avg_cost_per_share", 0)) for pos in positions
     )
 
     recommendations = []
@@ -610,10 +613,9 @@ def build_portfolio_recommendation(
 
     risk_analysis = analyze_portfolio_risk(positions, total_value)
 
-    avg_momentum = sum(
-        scores.get("momentum", 0.5)
-        for scores in (all_scores or {}).values()
-    ) / max(len(all_scores or {}), 1)
+    avg_momentum = sum(scores.get("momentum", 0.5) for scores in (all_scores or {}).values()) / max(
+        len(all_scores or {}), 1
+    )
     expected_return = 0.03 + (avg_momentum * 0.15)
 
     buy_recs = [r for r in recommendations if r.action in ("buy", "increase")]
@@ -685,7 +687,9 @@ def _build_llm_context(
 
         entry = {
             "ticker": ticker,
-            "peso_atual": f"{pos.get('quantity', 0) * pos.get('current_price', 0):.1%}" if pos.get('current_price') else "N/A",
+            "peso_atual": f"{pos.get('quantity', 0) * pos.get('current_price', 0):.1%}"
+            if pos.get("current_price")
+            else "N/A",
             "scores": {k: v for k, v in scores.items() if not k.startswith("_")},
             "fundamentals": {
                 "nome": fund.get("name"),
@@ -749,12 +753,14 @@ async def generate_llm_analysis(
     """
     try:
         from ia_investing.settings import get_settings
+
         settings = get_settings()
 
         if settings.ai.provider == "mock":
             return None
 
         from ia_investing.ai.gateway import ChatCompletionRequest, ChatMessage, create_gateway_provider
+
         gw = settings.ai.gateway
 
         if not gw.base_url or not gw.api_key.get_secret_value():

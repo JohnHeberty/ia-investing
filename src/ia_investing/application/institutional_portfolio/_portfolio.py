@@ -40,7 +40,7 @@ class PortfolioLifecycleService:
         )
         self.session.add(portfolio)
         await self.session.flush()
-        audit(
+        await audit(
             self.session,
             context,
             "portfolio.create",
@@ -75,7 +75,7 @@ class PortfolioLifecycleService:
         before = portfolio.state
         portfolio.state = target
         portfolio.lock_version += 1
-        audit(
+        await audit(
             self.session,
             context,
             "portfolio.transition",

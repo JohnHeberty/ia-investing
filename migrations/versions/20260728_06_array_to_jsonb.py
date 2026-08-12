@@ -30,14 +30,8 @@ def upgrade() -> None:
     )
     if not result.scalar():
         return
-    op.execute(
-        "ALTER TABLE document_chunks ALTER COLUMN section_path "
-        "TYPE json USING section_path::text::json"
-    )
+    op.execute("ALTER TABLE document_chunks ALTER COLUMN section_path TYPE json USING section_path::text::json")
 
 
 def downgrade() -> None:
-    op.execute(
-        "ALTER TABLE document_chunks ALTER COLUMN section_path "
-        "TYPE text[] USING section_path::text[]"
-    )
+    op.execute("ALTER TABLE document_chunks ALTER COLUMN section_path TYPE text[] USING section_path::text[]")

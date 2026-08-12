@@ -93,9 +93,13 @@ def _provider_for_runner() -> AgentProvider:
 # ---------------------------------------------------------------------------
 
 _RETRYABLE_CODES = {
-    "empty_findings", "missing_risk_factors", "missing_risk_acknowledgment",
-    "risk_rating_inconsistent", "volatility_rating_mismatch",
-    "approval_confidence_too_low", "insufficient_citation_coverage",
+    "empty_findings",
+    "missing_risk_factors",
+    "missing_risk_acknowledgment",
+    "risk_rating_inconsistent",
+    "volatility_rating_mismatch",
+    "approval_confidence_too_low",
+    "insufficient_citation_coverage",
 }
 
 _FEEDBACK_TEMPLATES = {
@@ -109,8 +113,7 @@ _FEEDBACK_TEMPLATES = {
         "descrevendo um risco concreto para esta empresa."
     ),
     "missing_risk_acknowledgment": (
-        "O campo 'risk_acknowledgment' está vazio ou nulo. "
-        "Escreva uma frase curta reconhecendo os principais riscos."
+        "O campo 'risk_acknowledgment' está vazio ou nulo. Escreva uma frase curta reconhecendo os principais riscos."
     ),
     "approval_confidence_too_low": (
         "Confidence de aprovação abaixo de 0.6. "
@@ -225,8 +228,14 @@ async def _execute_governed_agent(
         break
 
     return last_result or AgentResult(
-        agent_name=capability, output_data=None, model_used="", tokens_prompt=0,
-        tokens_completion=0, cost_usd=0.0, duration_ms=0.0, status="failed",
+        agent_name=capability,
+        output_data=None,
+        model_used="",
+        tokens_prompt=0,
+        tokens_completion=0,
+        cost_usd=0.0,
+        duration_ms=0.0,
+        status="failed",
         error_message="Max retries exhausted",
     )
 
@@ -814,13 +823,8 @@ class ProductionCandidateRuntime:
                 )
 
             # P0-09: Strong signal requirement for official status.
-            official = (
-                len(strong_signals) >= 2
-                or (
-                    len(strong_signals) == 1
-                    and has_ticker
-                    and strong_signals[0] in ("cnpj", "legal_name")
-                )
+            official = len(strong_signals) >= 2 or (
+                len(strong_signals) == 1 and has_ticker and strong_signals[0] in ("cnpj", "legal_name")
             )
 
             if official:
@@ -1049,9 +1053,7 @@ class ProductionCandidateRuntime:
             ds = (await session.execute(sa.select(DataSource).where(DataSource.code == ds_code))).scalar_one_or_none()
             if ds is None:
                 lic = (
-                    await session.execute(
-                        sa.select(SourceLicense).where(SourceLicense.code == "cvm_open_data")
-                    )
+                    await session.execute(sa.select(SourceLicense).where(SourceLicense.code == "cvm_open_data"))
                 ).scalar_one_or_none()
                 if lic is None:
                     lic = SourceLicense(
@@ -1084,12 +1086,14 @@ class ProductionCandidateRuntime:
                 statement_name = stmt.value.rsplit("_", 1)[0].upper()
 
                 for idx, entry in enumerate(entries):
-                    activity.heartbeat({
-                        "stage": "ingesting",
-                        "statement": stmt.value,
-                        "progress": f"{idx}/{len(entries)}",
-                        "total": total_entries,
-                    })
+                    activity.heartbeat(
+                        {
+                            "stage": "ingesting",
+                            "statement": stmt.value,
+                            "progress": f"{idx}/{len(entries)}",
+                            "total": total_entries,
+                        }
+                    )
                     try:
                         period_end = date.fromisoformat(entry.dt_referencia)
                     except (ValueError, TypeError):
@@ -1969,9 +1973,7 @@ class ProductionCandidateRuntime:
             suggestion_count=suggestions_persisted,
         )
 
-    async def _compute_quantitative_score(
-        self, session: AsyncSession, listing_id: UUID, issuer_id: UUID
-    ) -> float:
+    async def _compute_quantitative_score(self, session: AsyncSession, listing_id: UUID, issuer_id: UUID) -> float:
         """Compute a deterministic 0-1 score from available market + fundamental data."""
         from database.models.financial_facts import FinancialFact
 

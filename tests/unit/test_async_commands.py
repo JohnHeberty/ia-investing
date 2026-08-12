@@ -117,7 +117,7 @@ class TestSubmitPortfolioOperation:
 
         assert isinstance(result, OperationAcceptedV1)
         assert result.state == OperationState.PENDING
-        assert mock_session.add.call_count == 2  # Operation + AuditLog
+        assert mock_session.add.call_count == 3  # Operation + Outbox + AuditEntry
         assert mock_session.commit.call_count == 1
 
     @pytest.mark.asyncio

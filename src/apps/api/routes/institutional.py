@@ -16,8 +16,8 @@ from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from apps.api.dependencies import SessionDep, get_temporal_client
 from apps.api.security import Principal, require_permission
-from database.models.audit_models import AuditLog
 from database.models.operations import Operation, OperationDispatchOutbox
+from ia_investing.application.audit_service import create_domain_audit_entry
 from ia_investing.application.mission_control import MissionControlService
 from ia_investing.contracts.v1 import MissionControlResponse, PortfolioRankItem
 
@@ -190,7 +190,9 @@ async def start_agent_run(
     session.add(operation)
     session.add(outbox)
     session.add(
-        AuditLog(
+        await create_domain_audit_entry(
+            session,
+            tenant_id=organization_id or UUID(int=0),
             actor_type="human",
             actor_id=principal.subject,
             action="agent_run.submit",

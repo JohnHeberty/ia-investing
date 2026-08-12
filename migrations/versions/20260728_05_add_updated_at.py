@@ -140,12 +140,7 @@ def upgrade() -> None:
     for table in TABLES:
         # Check if table exists
         result = conn.execute(
-            sa.text(
-                "SELECT EXISTS ("
-                "  SELECT 1 FROM information_schema.tables "
-                "  WHERE table_name = :table"
-                ")"
-            ),
+            sa.text("SELECT EXISTS (  SELECT 1 FROM information_schema.tables   WHERE table_name = :table)"),
             {"table": table},
         )
         if not result.scalar():

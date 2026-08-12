@@ -37,9 +37,7 @@ class DataSource(Base):
     license_id: Mapped[UUID] = mapped_column(sa.ForeignKey("source_licenses.id", ondelete="RESTRICT"))
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     license: Mapped[SourceLicense] = relationship()
     sla: Mapped[SourceSLA | None] = relationship(back_populates="source", uselist=False)
@@ -76,9 +74,7 @@ class SourceObject(Base):
     logical_uri: Mapped[str] = mapped_column(sa.Text)
     object_type: Mapped[str] = mapped_column(sa.String(100))
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
-    updated_at: Mapped[datetime] = mapped_column(
-        sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow
-    )
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     versions: Mapped[list[SourceObjectVersion]] = relationship(back_populates="source_object")
 

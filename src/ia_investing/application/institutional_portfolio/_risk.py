@@ -240,7 +240,7 @@ class RiskService:
         breach.status = "waived"
         self.session.add(waiver)
         await self.session.flush()
-        audit(
+        await audit(
             self.session,
             context,
             "risk_breach.waive",

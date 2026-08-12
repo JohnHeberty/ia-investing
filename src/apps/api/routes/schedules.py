@@ -100,6 +100,7 @@ async def _log_schedule_audit(
     )
     session.add(entry)
 
+
 SCHEDULE_META: dict[str, dict[str, str]] = {
     "news-collection-": {"category": "news", "description": "Coleta de noticias RSS"},
     "news-dedup-cleanup": {"category": "news", "description": "Limpeza de eventos duplicados"},
@@ -240,10 +241,12 @@ def _parse_schedule_description(description: Any) -> dict[str, Any]:
     raw_intervals = _safe_get(spec_obj, "intervals") if spec_obj else None
     if raw_intervals:
         for interval in raw_intervals:
-            intervals.append({
-                "every": str(interval.every),
-                "offset": str(interval.offset) if interval.offset else None,
-            })
+            intervals.append(
+                {
+                    "every": str(interval.every),
+                    "offset": str(interval.offset) if interval.offset else None,
+                }
+            )
 
     result: dict[str, Any] = {
         "schedule_id": description.id,
@@ -347,7 +350,7 @@ async def list_schedules(
         all_schedules.append(summary)
     all_schedules.sort(key=lambda s: (s.category, s.schedule_id))
     total = len(all_schedules)
-    sliced = all_schedules[offset:offset + limit]
+    sliced = all_schedules[offset : offset + limit]
     logger.info("Listed %d schedules (offset=%d, limit=%d, total=%d)", len(sliced), offset, limit, total)
     return sliced
 
@@ -391,11 +394,17 @@ async def create_schedule(
             raise HTTPException(status_code=409, detail=f"Schedule '{body.schedule_id}' already exists") from exc
         _handle_temporal_error(exc, body.schedule_id)
 
-    await _log_schedule_audit(session, _auth, "create", body.schedule_id, {
-        "workflow_type": body.workflow_type,
-        "task_queue": body.task_queue,
-        "interval": str(every),
-    })
+    await _log_schedule_audit(
+        session,
+        _auth,
+        "create",
+        body.schedule_id,
+        {
+            "workflow_type": body.workflow_type,
+            "task_queue": body.task_queue,
+            "interval": str(every),
+        },
+    )
     await session.commit()
     logger.info("Created schedule %s (workflow=%s)", body.schedule_id, body.workflow_type)
     return ScheduleActionResponseV1(schedule_id=body.schedule_id, message=f"Schedule created: {body.workflow_type}")

@@ -194,6 +194,7 @@ class PaperPortfolioService:
             return False
 
         from database.models.execution import Execution
+
         exec_stmt = sa.select(sa.func.count(Execution.id)).where(Execution.portfolio_id == portfolio_id)
         exec_count = (await self._session.execute(exec_stmt)).scalar_one()
         if exec_count > 0:
