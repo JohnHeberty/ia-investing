@@ -11,7 +11,7 @@ import pytest
 
 from connectors.b3._cotahist import _parse_csv_int, _parse_csv_price, _parse_date_str
 
-FIXTURES_ROOT = Path(__file__).parents[1] / "fixtures"
+FIXTURES_ROOT = Path(__file__).parents[2] / "fixtures"
 MANIFEST_PATH = FIXTURES_ROOT / "manifest.json"
 
 

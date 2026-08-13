@@ -141,6 +141,8 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]
+python_files = ["test_*.py", "*_test.py", "*.py"]
+python_functions = ["test_*"]
 addopts = "--tb=short -q"
 markers = [
     "integration: marks tests requiring running infrastructure (deselect with '-m not integration')",
