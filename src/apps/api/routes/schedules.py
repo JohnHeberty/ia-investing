@@ -312,9 +312,10 @@ def _validate_schedule_id(schedule_id: str) -> str:
 
 def _handle_temporal_error(exc: Exception, schedule_id: str) -> None:
     if isinstance(exc, RPCError):
-        if exc.status == "not_found":
+        from temporalio.service import RPCStatusCode
+        if exc.status == RPCStatusCode.NOT_FOUND:
             raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}") from exc
-        if exc.status in ("deadline_exceeded", "unavailable"):
+        if exc.status in (RPCStatusCode.DEADLINE_EXCEEDED, RPCStatusCode.UNAVAILABLE):
             raise HTTPException(status_code=503, detail=f"Temporal unavailable: {exc.status}") from exc
         raise HTTPException(status_code=502, detail=f"Temporal RPC error: {exc.status}") from exc
     logger.exception("Unexpected error for schedule %s", schedule_id)
