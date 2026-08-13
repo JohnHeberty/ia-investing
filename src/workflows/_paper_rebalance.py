@@ -12,6 +12,7 @@ class PaperRebalanceInput:
     portfolio_version_id: str
     input_sha256: str
     approval_timeout_seconds: int
+    schedule_id: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +41,23 @@ class PaperRebalanceWorkflow:
             )
         except TimeoutError:
             self._state = "expired"
+
+        if command.schedule_id:
+            await workflow.execute_activity(
+                "record_schedule_run",
+                {
+                    "schedule_id": command.schedule_id,
+                    "workflow_id": workflow.info().workflow_id,
+                    "status": "completed" if self._state == "approved_for_paper" else "failed",
+                    "started_at": workflow.info().start_time.isoformat(),
+                    "result_summary": {
+                        "portfolio_id": command.portfolio_id,
+                        "state": self._state,
+                    },
+                },
+                start_to_close_timeout=timedelta(seconds=10),
+            )
+
         return PaperRebalanceResult(command.portfolio_id, command.portfolio_version_id, self._state)
 
     @workflow.signal

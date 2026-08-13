@@ -148,13 +148,17 @@ def paper_rebalance_schedule_definition(
 ) -> ScheduleDefinition:
     if not portfolio_id or not portfolio_version_id or len(input_sha256) != 64:
         raise ValueError("portfolio, version, and a SHA-256 input hash are required")
+    schedule_id = f"paper-rebalance-{portfolio_id}".lower()
     return ScheduleDefinition(
-        schedule_id=f"paper-rebalance-{portfolio_id}".lower(),
+        schedule_id=schedule_id,
         schedule=Schedule(
             action=ScheduleActionStartWorkflow(
                 PaperRebalanceWorkflow.run,
-                PaperRebalanceInput(portfolio_id, portfolio_version_id, input_sha256, approval_timeout_seconds),
-                id=f"paper-rebalance-{portfolio_id}",
+                PaperRebalanceInput(
+                    portfolio_id, portfolio_version_id, input_sha256,
+                    approval_timeout_seconds, schedule_id=schedule_id,
+                ),
+                id=schedule_id,
                 task_queue=task_queue,
             ),
             spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
