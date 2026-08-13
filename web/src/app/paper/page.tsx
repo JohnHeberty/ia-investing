@@ -3,23 +3,12 @@
 import { Suspense } from "react";
 
 import { AsOfIndicator, Badge, Metric, StatePanel } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { usePaper } from "@/hooks/use-paper";
 
 function PaperContent() {
-  const {
-    orders,
-    approvedIntents,
-    partialFills,
-    criticalBreaks,
-    isLoading,
-    isError,
-    dataState,
-  } = usePaper();
+  const { orders, approvedIntents, partialFills, criticalBreaks, isLoading, isError, dataState } =
+    usePaper();
 
   if (isLoading) {
     return (
@@ -77,9 +66,7 @@ function PaperContent() {
             Intents, orders, fills, custos e breaks. Nenhuma integração ou credencial de corretora.
           </p>
         </div>
-        <AsOfIndicator
-          freshness={hasLiveOrders ? "Paper live" : "Paper only"}
-        />
+        <AsOfIndicator freshness={hasLiveOrders ? "Paper live" : "Paper only"} />
       </div>
 
       {dataState === "stale" && (

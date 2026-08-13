@@ -5,11 +5,10 @@ from __future__ import annotations
 import sys
 import types
 import warnings
-from unittest.mock import MagicMock
 
 import pytest
 
-from ia_investing._legacy_bridge import LegacyBridge, LegacyModuleError, _TRACKED_ACCESS
+from ia_investing._legacy_bridge import _TRACKED_ACCESS, LegacyBridge, LegacyModuleError
 from ia_investing.candidate_intelligence.events import CandidateEvent
 
 
@@ -115,10 +114,12 @@ class TestCandidateEvent:
 class TestAuditLogModel:
     def test_import(self):
         from database.models.audit_models import AuditLog
+
         assert AuditLog.__tablename__ == "audit_logs"
 
     def test_repr(self):
         from database.models.audit_models import AuditLog
+
         obj = AuditLog()
         obj.actor_type = "user"
         obj.action = "create"
@@ -147,33 +148,41 @@ class TestAuditListeners:
 
     def test_serialize_value_dict(self):
         from database.models.audit_listeners import _serialize_value
+
         assert _serialize_value({"a": 1}) == {"a": 1}
 
     def test_serialize_value_list(self):
         from database.models.audit_listeners import _serialize_value
+
         assert _serialize_value([1, 2]) == [1, 2]
 
     def test_serialize_value_isoformat(self):
-        from database.models.audit_listeners import _serialize_value
         from datetime import datetime
+
+        from database.models.audit_listeners import _serialize_value
+
         dt = datetime(2024, 1, 1)
         assert _serialize_value(dt) == "2024-01-01T00:00:00"
 
     def test_serialize_value_hex(self):
-        from database.models.audit_listeners import _serialize_value
         from uuid import uuid4
+
+        from database.models.audit_listeners import _serialize_value
+
         uid = uuid4()
         result = _serialize_value(uid)
         assert isinstance(result, str)
 
     def test_serialize_value_primitive(self):
         from database.models.audit_listeners import _serialize_value
+
         assert _serialize_value(42) == 42
         assert _serialize_value("hello") == "hello"
 
     def test_get_auditable_columns(self):
-        from database.models.audit_listeners import _get_auditable_columns
         from database.models.audit import AuditLogEntry
+        from database.models.audit_listeners import _get_auditable_columns
+
         cols = _get_auditable_columns(AuditLogEntry)
         assert "hash_prev" not in cols
         assert "hash" not in cols
@@ -186,7 +195,9 @@ class TestAuditListeners:
 # ---------------------------------------------------------------------------
 class TestUtils:
     def test_utcnow(self):
-        from database.models._utils import utcnow
         from datetime import datetime
+
+        from database.models._utils import utcnow
+
         result = utcnow()
         assert isinstance(result, datetime)

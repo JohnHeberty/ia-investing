@@ -21,7 +21,13 @@ export function EvidenceTag({
     <span
       className="badge"
       data-tone={tone}
-      title={kind === "fact" ? "Dado verificado e citável" : kind === "inference" ? "Dedução do agent" : "Sugestão de ação"}
+      title={
+        kind === "fact"
+          ? "Dado verificado e citável"
+          : kind === "inference"
+            ? "Dedução do agent"
+            : "Sugestão de ação"
+      }
     >
       {label}: {children}
     </span>
@@ -49,7 +55,8 @@ export function ConfidenceBar({
         <span
           style={{
             width: `${clamped}%`,
-            background: tone === "good" ? "var(--accent)" : tone === "warn" ? "var(--amber)" : "var(--red)",
+            background:
+              tone === "good" ? "var(--accent)" : tone === "warn" ? "var(--amber)" : "var(--red)",
           }}
         />
       </div>
@@ -137,11 +144,7 @@ export function QualityIndicator({
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
       <span style={{ color: "var(--muted)" }}>{label}</span>
-      <span
-        className="badge"
-        data-tone={tone}
-        style={{ fontFamily: "var(--font-mono)" }}
-      >
+      <span className="badge" data-tone={tone} style={{ fontFamily: "var(--font-mono)" }}>
         {clamped}%
       </span>
     </div>

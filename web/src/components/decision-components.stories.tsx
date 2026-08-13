@@ -9,6 +9,7 @@ import {
 
 const meta: Meta = {
   title: "Domain/DecisionComponents",
+  component: PortfolioDiff,
   tags: ["autodocs"],
 };
 export default meta;
@@ -19,7 +20,13 @@ type DiffStory = StoryObj<typeof PortfolioDiff>;
 const sampleEntries: DiffEntry[] = [
   { ticker: "PETR4", name: "Petrobras ON", currentWeight: 12.5, targetWeight: 15.0, action: "buy" },
   { ticker: "VALE3", name: "Vale ON", currentWeight: 10.2, targetWeight: 8.0, action: "sell" },
-  { ticker: "ITUB4", name: "Itaú Unibanco ON", currentWeight: 9.8, targetWeight: 9.8, action: "hold" },
+  {
+    ticker: "ITUB4",
+    name: "Itaú Unibanco ON",
+    currentWeight: 9.8,
+    targetWeight: 9.8,
+    action: "hold",
+  },
   { ticker: "WEGE3", name: "WEG ON", currentWeight: 0, targetWeight: 5.0, action: "new" },
   { ticker: "ABEV3", name: "Ambev ON", currentWeight: 6.0, targetWeight: 0, action: "exit" },
 ];
@@ -41,6 +48,7 @@ const sampleScenarios: ScenarioEntry[] = [
 
 export const RiskWaterfall: WaterfallStory = {
   args: { scenarios: sampleScenarios },
+  render: (args) => <ScenarioWaterfall {...args} />,
 };
 
 /* ── ApprovalCard ── */
@@ -49,11 +57,13 @@ type ApprovalStory = StoryObj<typeof ApprovalCard>;
 export const Pending: ApprovalStory = {
   args: {
     title: "Rebalanceamento Q3 — Aurora Quality",
-    description: "Aumentar exposição em PETR4 de 12.5% para 15.0% conforme tese de valor intrínseco.",
+    description:
+      "Aumentar exposição em PETR4 de 12.5% para 15.0% conforme tese de valor intrínseco.",
     status: "pending",
     requestedBy: "Maria Silva (Portfolio Manager)",
     requestedAt: "19/07/2026 09:30",
   },
+  render: (args) => <ApprovalCard {...args} />,
 };
 
 export const Approved: ApprovalStory = {
@@ -67,6 +77,7 @@ export const Approved: ApprovalStory = {
     decidedAt: "19/07/2026 14:15",
     reason: "Tese fundamentada com citation coverage > 90%",
   },
+  render: (args) => <ApprovalCard {...args} />,
 };
 
 export const Rejected: ApprovalStory = {
@@ -80,6 +91,7 @@ export const Rejected: ApprovalStory = {
     decidedAt: "19/07/2026 10:00",
     reason: "Risco de concentração inaceitável para o mandato.",
   },
+  render: (args) => <ApprovalCard {...args} />,
 };
 
 export const Conditional: ApprovalStory = {
@@ -95,4 +107,5 @@ export const Conditional: ApprovalStory = {
       "Limite de turnover mensal respeitado",
     ],
   },
+  render: (args) => <ApprovalCard {...args} />,
 };

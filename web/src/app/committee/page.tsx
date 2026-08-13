@@ -4,11 +4,7 @@ import { Suspense } from "react";
 import { ShieldCheck } from "lucide-react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { ApprovalCard } from "@/components/decision-components";
 import { useCommittee } from "@/hooks/use-committee";
 
@@ -77,9 +73,7 @@ function CommitteeContent() {
             Decision packs congelados, quórum, dissenso, condições e assinaturas verificáveis.
           </p>
         </div>
-        <AsOfIndicator
-          freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
-        />
+        <AsOfIndicator freshness={dataState === "stale" ? "Desatualizado" : "Atual"} />
       </div>
 
       {dataState === "stale" && (
@@ -88,7 +82,11 @@ function CommitteeContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores do comitê" aria-live="polite">
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Indicadores do comitê"
+        aria-live="polite"
+      >
         <Metric
           label="Na agenda"
           value={String(pendingDecisions.length)}
@@ -106,11 +104,7 @@ function CommitteeContent() {
           note={totalConflicts > 0 ? "membro impedido" : "nenhum"}
           tone={totalConflicts > 0 ? "warning" : undefined}
         />
-        <Metric
-          label="Decisões hoje"
-          value={String(approvedToday.length)}
-          note="assinadas"
-        />
+        <Metric label="Decisões hoje" value={String(approvedToday.length)} note="assinadas" />
       </section>
 
       {/* Quorum status */}
@@ -122,10 +116,7 @@ function CommitteeContent() {
           </Badge>
         </div>
         <div className="flex flex-col gap-8">
-          <div
-            className="flex items-center gap-12 border-top text-sm"
-            style={{ padding: "8px 0" }}
-          >
+          <div className="flex items-center gap-12 border-top text-sm" style={{ padding: "8px 0" }}>
             <ShieldCheck
               size={14}
               style={{ color: quorumMet ? "var(--accent)" : "var(--amber)" }}
@@ -143,8 +134,9 @@ function CommitteeContent() {
             >
               <span className="text-amber">⚠</span>
               <span className="muted">
-                {totalConflicts} conflito{totalConflicts !== 1 ? "s" : ""} declarado{totalConflicts !== 1 ? "s" : ""} —
-                membro{totalConflicts !== 1 ? "s" : ""} impedido{totalConflicts !== 1 ? "s" : ""} de votar na pauta relacionada.
+                {totalConflicts} conflito{totalConflicts !== 1 ? "s" : ""} declarado
+                {totalConflicts !== 1 ? "s" : ""} — membro{totalConflicts !== 1 ? "s" : ""} impedido
+                {totalConflicts !== 1 ? "s" : ""} de votar na pauta relacionada.
               </span>
             </div>
           )}
@@ -166,7 +158,9 @@ function CommitteeContent() {
             <ApprovalCard
               key={d.id}
               title={d.title}
-              description={d.description || "Decision pack congelado com tese, valuation, risco e proposta."}
+              description={
+                d.description || "Decision pack congelado com tese, valuation, risco e proposta."
+              }
               status={d.status}
               requestedBy={d.requestedBy}
               requestedAt={d.requestedAt}
@@ -187,8 +181,7 @@ function CommitteeContent() {
             <Badge tone="good">Saudável</Badge>
           </div>
           <p className="muted text-sm lh-relaxed">
-            Tese, valuation, risco, proposta e evidence hashes foram congelados na versão
-            submetida.
+            Tese, valuation, risco, proposta e evidence hashes foram congelados na versão submetida.
           </p>
         </article>
         <article className="card card-pad">

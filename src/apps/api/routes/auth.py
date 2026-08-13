@@ -42,9 +42,7 @@ def _get_allowed_redirect_hosts() -> frozenset[str]:
 # with a shared store (Redis, database). See Issue #4.
 _oidc_states: dict[str, dict[str, object]] = {}
 _OIDC_STATE_TTL_SECONDS = 600  # 10 minutes
-logger.warning(
-    "OIDC state store is in-memory — single-worker mode required for OIDC to work"
-)
+logger.warning("OIDC state store is in-memory — single-worker mode required for OIDC to work")
 
 
 def _evict_expired_states() -> None:
@@ -52,11 +50,11 @@ def _evict_expired_states() -> None:
     import time
 
     now = time.monotonic()
-    expired = [
-        k
-        for k, v in _oidc_states.items()
-        if "created_at" in v and now - v["created_at"] > _OIDC_STATE_TTL_SECONDS  # type: ignore[arg-type]
-    ]
+    expired = []
+    for key, value in _oidc_states.items():
+        created_at = value.get("created_at")
+        if isinstance(created_at, (int, float)) and now - created_at > _OIDC_STATE_TTL_SECONDS:
+            expired.append(key)
     for k in expired:
         del _oidc_states[k]
 
@@ -243,7 +241,7 @@ async def callback(
         {
             "grant_type": "authorization_code",
             "code": code,
-            "code_verifier": stored["verifier"],
+            "code_verifier": str(stored["verifier"]),
             "client_id": settings.oidc_client_id,
             "redirect_uri": settings.oidc_redirect_uri,
         }

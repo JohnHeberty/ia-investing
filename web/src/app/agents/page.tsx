@@ -3,28 +3,16 @@
 import { Suspense } from "react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { useAgentRuns } from "@/hooks/use-agent-runs";
 import { useUrlState, filterPresets } from "@/hooks/use-url-state";
 
 function AgentsContent() {
-  const [urlState, setUrlState] = useUrlState(filterPresets.agents);
-  const {
-    runs,
-    completedRuns,
-    failedRuns,
-    totalCost,
-    isLoading,
-    isError,
-    dataState,
-    count,
-  } = useAgentRuns({
-    status: urlState.status ?? undefined,
-  });
+  const [urlState] = useUrlState(filterPresets.agents);
+  const { runs, completedRuns, failedRuns, totalCost, isLoading, isError, dataState, count } =
+    useAgentRuns({
+      status: urlState.status ?? undefined,
+    });
 
   if (isLoading) {
     return (
@@ -80,7 +68,13 @@ function AgentsContent() {
           </p>
         </div>
         <AsOfIndicator
-          value={new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          value={new Date().toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
           freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
         />
       </div>
@@ -91,12 +85,12 @@ function AgentsContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Métricas de agents" aria-live="polite">
-        <Metric
-          label="Runs hoje"
-          value={String(count)}
-          note={`${completedRuns} concluídos`}
-        />
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Métricas de agents"
+        aria-live="polite"
+      >
+        <Metric label="Runs hoje" value={String(count)} note={`${completedRuns} concluídos`} />
         <Metric
           label="Taxa de sucesso"
           value={`${successRate}%`}
@@ -123,8 +117,8 @@ function AgentsContent() {
             <Badge tone="good">Saudável</Badge>
           </div>
           <p className="card-desc">
-            Versões ativas passaram pelos thresholds de schema e citation coverage.
-            Cada run é versionada e rastreável.
+            Versões ativas passaram pelos thresholds de schema e citation coverage. Cada run é
+            versionada e rastreável.
           </p>
         </article>
         <article className="card card-pad">
@@ -142,8 +136,8 @@ function AgentsContent() {
             <Badge tone="warn">Atenção</Badge>
           </div>
           <p className="card-desc">
-            Dois commands sensíveis aguardam decisão humana independente.
-            Aprovações seguem princípio dos quatro olhos.
+            Dois commands sensíveis aguardam decisão humana independente. Aprovações seguem
+            princípio dos quatro olhos.
           </p>
         </article>
       </section>
@@ -170,7 +164,9 @@ function AgentsContent() {
               <tbody>
                 {runs.slice(0, 10).map((run) => (
                   <tr key={run.id}>
-                    <td className="rank"><span title={run.id}>{run.id.slice(0, 8)}…</span></td>
+                    <td className="rank">
+                      <span title={run.id}>{run.id.slice(0, 8)}…</span>
+                    </td>
                     <td>
                       <Badge
                         tone={
@@ -192,13 +188,13 @@ function AgentsContent() {
                               : run.status}
                       </Badge>
                     </td>
-                    <td><span title={run.capability_id}>{run.capability_id.slice(0, 8)}…</span></td>
+                    <td>
+                      <span title={run.capability_id}>{run.capability_id.slice(0, 8)}…</span>
+                    </td>
                     <td className="numeric mono">
                       {run.duration_ms != null ? `${(run.duration_ms / 1000).toFixed(1)}s` : "—"}
                     </td>
-                    <td className="numeric mono">
-                      US$ {parseFloat(run.cost_usd).toFixed(4)}
-                    </td>
+                    <td className="numeric mono">US$ {parseFloat(run.cost_usd).toFixed(4)}</td>
                     <td className="numeric mono">
                       {(run.prompt_tokens + run.completion_tokens).toLocaleString("pt-BR")}
                     </td>

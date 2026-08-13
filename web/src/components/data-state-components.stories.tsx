@@ -8,6 +8,7 @@ import {
 
 const meta: Meta = {
   title: "Domain/DataStates",
+  component: DataStatePanel,
   tags: ["autodocs"],
 };
 export default meta;
@@ -49,9 +50,11 @@ type SkeletonStory = StoryObj<typeof LoadingSkeleton>;
 
 export const DefaultSkeleton: SkeletonStory = {
   args: { lines: 3 },
+  render: (args) => <LoadingSkeleton {...args} />,
 };
 export const ManyLines: SkeletonStory = {
   args: { lines: 8 },
+  render: (args) => <LoadingSkeleton {...args} />,
 };
 
 /* ── StaleWarning ── */
@@ -62,6 +65,7 @@ export const StaleWarningBanner: StaleStory = {
     lastUpdated: "2026-07-17T10:00:00Z",
     source: "CVM Filing",
   },
+  render: (args) => <StaleWarning {...args} />,
 };
 
 /* ── PartialDataIndicator ── */
@@ -72,4 +76,5 @@ export const PartialCoverage: PartialStory = {
     coverage: 65,
     missingFields: ["ROE", "D/E", "EV/EBITDA"],
   },
+  render: (args) => <PartialDataIndicator {...args} />,
 };

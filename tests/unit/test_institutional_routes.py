@@ -18,11 +18,9 @@ from apps.api.routes.institutional import (
     OperationStatusResponse,
     _mark_dispatched,
     get_operation_status,
-    mission_control,
     organization_uuid,
     start_agent_run,
 )
-
 
 # ---------------------------------------------------------------------------
 # AgentRunRequest model validation
@@ -275,7 +273,10 @@ class TestStartAgentRun:
         mock_request.scope = {"type": "http"}
 
         with patch("apps.api.routes.institutional.create_domain_audit_entry", new_callable=AsyncMock):
-            with patch("apps.api.routes.institutional.select", return_value=MagicMock(where=MagicMock(return_value=MagicMock()))):
+            with patch(
+                "apps.api.routes.institutional.select",
+                return_value=MagicMock(where=MagicMock(return_value=MagicMock())),
+            ):
                 with patch("apps.api.routes.institutional.Operation", return_value=_mock_op(now)):
                     with patch("apps.api.routes.institutional.OperationDispatchOutbox", return_value=MagicMock()):
                         resp = await start_agent_run(
@@ -331,7 +332,9 @@ class TestStartAgentRun:
         mock_request = MagicMock()
         mock_request.scope = {"type": "http"}
 
-        with patch("apps.api.routes.institutional.select", return_value=MagicMock(where=MagicMock(return_value=MagicMock()))):
+        with patch(
+            "apps.api.routes.institutional.select", return_value=MagicMock(where=MagicMock(return_value=MagicMock()))
+        ):
             resp = await start_agent_run(
                 payload=payload,
                 request=mock_request,
@@ -365,7 +368,9 @@ class TestStartAgentRun:
         mock_request = MagicMock()
         mock_request.scope = {"type": "http"}
 
-        with patch("apps.api.routes.institutional.select", return_value=MagicMock(where=MagicMock(return_value=MagicMock()))):
+        with patch(
+            "apps.api.routes.institutional.select", return_value=MagicMock(where=MagicMock(return_value=MagicMock()))
+        ):
             with pytest.raises(HTTPException) as exc_info:
                 await start_agent_run(
                     payload=payload,
@@ -396,7 +401,10 @@ class TestStartAgentRun:
         mock_request.scope = {"type": "http"}
 
         with patch("apps.api.routes.institutional.create_domain_audit_entry", new_callable=AsyncMock):
-            with patch("apps.api.routes.institutional.select", return_value=MagicMock(where=MagicMock(return_value=MagicMock()))):
+            with patch(
+                "apps.api.routes.institutional.select",
+                return_value=MagicMock(where=MagicMock(return_value=MagicMock())),
+            ):
                 with patch("apps.api.routes.institutional.Operation", return_value=_mock_op(now)):
                     with patch("apps.api.routes.institutional.OperationDispatchOutbox", return_value=MagicMock()):
                         payload = AgentRunRequest(
@@ -431,15 +439,16 @@ class TestStartAgentRun:
         session.commit = AsyncMock()
 
         mock_temporal = AsyncMock()
-        mock_temporal.start_workflow = AsyncMock(
-            side_effect=WorkflowAlreadyStartedError("wf-1", "RunAgentWorkflow")
-        )
+        mock_temporal.start_workflow = AsyncMock(side_effect=WorkflowAlreadyStartedError("wf-1", "RunAgentWorkflow"))
 
         mock_request = MagicMock()
         mock_request.scope = {"type": "http"}
 
         with patch("apps.api.routes.institutional.create_domain_audit_entry", new_callable=AsyncMock):
-            with patch("apps.api.routes.institutional.select", return_value=MagicMock(where=MagicMock(return_value=MagicMock()))):
+            with patch(
+                "apps.api.routes.institutional.select",
+                return_value=MagicMock(where=MagicMock(return_value=MagicMock())),
+            ):
                 with patch("apps.api.routes.institutional.Operation", return_value=_mock_op(now)):
                     with patch("apps.api.routes.institutional.OperationDispatchOutbox", return_value=MagicMock()):
                         payload = AgentRunRequest(
@@ -477,7 +486,10 @@ class TestStartAgentRun:
         mock_request.scope = {"type": "http"}
 
         with patch("apps.api.routes.institutional.create_domain_audit_entry", new_callable=AsyncMock):
-            with patch("apps.api.routes.institutional.select", return_value=MagicMock(where=MagicMock(return_value=MagicMock()))):
+            with patch(
+                "apps.api.routes.institutional.select",
+                return_value=MagicMock(where=MagicMock(return_value=MagicMock())),
+            ):
                 with patch("apps.api.routes.institutional.Operation", return_value=_mock_op(now)):
                     with patch("apps.api.routes.institutional.OperationDispatchOutbox", return_value=MagicMock()):
                         payload = AgentRunRequest(
@@ -548,7 +560,10 @@ class TestStartAgentRun:
         mock_request.scope = {"type": "http"}
 
         with patch("apps.api.routes.institutional.create_domain_audit_entry", new_callable=AsyncMock):
-            with patch("apps.api.routes.institutional.select", return_value=MagicMock(where=MagicMock(return_value=MagicMock()))):
+            with patch(
+                "apps.api.routes.institutional.select",
+                return_value=MagicMock(where=MagicMock(return_value=MagicMock())),
+            ):
                 with patch("apps.api.routes.institutional.Operation", return_value=_mock_op(now)):
                     with patch("apps.api.routes.institutional.OperationDispatchOutbox", return_value=MagicMock()):
                         payload = AgentRunRequest(

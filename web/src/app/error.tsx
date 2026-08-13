@@ -13,7 +13,7 @@ export default function ErrorBoundary({
     <div>
       <StatePanel
         title="Não foi possível carregar esta visão"
-        detail="A falha foi correlacionada sem registrar conteúdo confidencial."
+        detail={error.digest ? `Falha correlacionada: ${error.digest}` : error.message}
       />
       <button className="button" onClick={reset} style={{ marginTop: 12 }}>
         Tentar novamente

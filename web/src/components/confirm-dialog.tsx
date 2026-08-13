@@ -45,9 +45,7 @@ export function ConfirmDialog({
             width: "90%",
           }}
         >
-          <Dialog.Title style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>
-            {title}
-          </Dialog.Title>
+          <Dialog.Title style={{ fontSize: 15, fontWeight: 600, margin: 0 }}>{title}</Dialog.Title>
           <Dialog.Description
             style={{ fontSize: 13, color: "var(--muted)", marginTop: 8, lineHeight: 1.5 }}
           >
@@ -60,11 +58,7 @@ export function ConfirmDialog({
               </button>
             </Dialog.Close>
             <Dialog.Close asChild>
-              <button
-                className="button"
-                type="button"
-                onClick={onConfirm}
-              >
+              <button className="button" type="button" onClick={onConfirm}>
                 {confirmLabel}
               </button>
             </Dialog.Close>

@@ -37,7 +37,10 @@ test("complete acceptance journey: login → decide → verify", async ({ page }
   });
 
   await test.step("4. Open Portfolio 360 — click first row and verify detail page", async () => {
-    const firstRow = page.getByRole("table", { name: /carteiras elegíveis/i }).locator("tbody tr").first();
+    const firstRow = page
+      .getByRole("table", { name: /carteiras elegíveis/i })
+      .locator("tbody tr")
+      .first();
     await firstRow.click();
     await expect(page.getByRole("heading", { name: /portfolio 360/i })).toBeVisible();
     await expect(page.getByText(/carteira-modelo/i)).toBeVisible();

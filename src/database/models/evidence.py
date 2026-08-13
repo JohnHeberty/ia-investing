@@ -24,7 +24,7 @@ class DocumentChunk(Base):
     document_id: Mapped[UUID | None] = mapped_column(sa.ForeignKey("documents.id", ondelete="SET NULL"), index=True)
     page_start: Mapped[int]
     page_end: Mapped[int]
-    section_path: Mapped[list] = mapped_column(JSONB, default=list)
+    section_path: Mapped[list[str]] = mapped_column(JSONB, default=list)
     table_reference: Mapped[str | None] = mapped_column(sa.String(200))
     ordinal: Mapped[int]
     text: Mapped[str] = mapped_column(sa.Text)

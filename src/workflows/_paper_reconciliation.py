@@ -7,6 +7,7 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from ia_investing.orchestration.policies import DEFAULT_ACTIVITY_RETRY_POLICY
+    from workflows._schedule_run import complete_schedule_run, fail_schedule_run, start_schedule_run
 
 
 @dataclass(frozen=True, slots=True)
@@ -29,6 +30,23 @@ class PaperReconciliationResult:
 class PaperReconciliationWorkflow:
     @workflow.run
     async def run(self, command: PaperReconciliationInput) -> PaperReconciliationResult:
+        await start_schedule_run(command.schedule_id)
+        try:
+            result = await self._reconcile(command)
+        except Exception as exc:
+            await fail_schedule_run(command.schedule_id, exc)
+            raise
+        await complete_schedule_run(
+            command.schedule_id,
+            {
+                "portfolio_id": command.portfolio_id,
+                "break_count": result.break_count,
+                "blocking_count": result.blocking_count,
+            },
+        )
+        return result
+
+    async def _reconcile(self, command: PaperReconciliationInput) -> PaperReconciliationResult:
         as_of = workflow.now().isoformat()
         result = await workflow.execute_activity(
             "reconcile_paper_portfolio",
@@ -36,22 +54,5 @@ class PaperReconciliationWorkflow:
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
-
-        if command.schedule_id:
-            await workflow.execute_activity(
-                "record_schedule_run",
-                {
-                    "schedule_id": command.schedule_id,
-                    "workflow_id": workflow.info().workflow_id,
-                    "status": "completed",
-                    "started_at": workflow.info().start_time.isoformat(),
-                    "result_summary": {
-                        "portfolio_id": command.portfolio_id,
-                        "break_count": result.get("break_count", 0),
-                        "blocking_count": result.get("blocking_count", 0),
-                    },
-                },
-                start_to_close_timeout=timedelta(seconds=10),
-            )
 
         return PaperReconciliationResult(**result)

@@ -5,12 +5,11 @@ from __future__ import annotations
 import io
 import zipfile
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from connectors.b3._downloader import _fetch, RECORD_TIPREG
-from connectors.b3._models import CotahistTrade
+from connectors.b3._downloader import _fetch
 
 
 def _build_trade_line(

@@ -93,7 +93,8 @@ export function useRebalanceProposals(portfolioId?: string, status?: string) {
 
   return useQuery({
     queryKey: ["rebalance", "proposals", portfolioId, status],
-    queryFn: () => bffFetch<RebalanceProposal[]>(`/api/v1/rebalance/proposals${qs ? `?${qs}` : ""}`),
+    queryFn: () =>
+      bffFetch<RebalanceProposal[]>(`/api/v1/rebalance/proposals${qs ? `?${qs}` : ""}`),
     staleTime: 15_000,
     retry: 1,
   });
@@ -137,13 +138,7 @@ export function useApproveRebalance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      proposalId,
-      notes,
-    }: {
-      proposalId: string;
-      notes?: string;
-    }) =>
+    mutationFn: ({ proposalId, notes }: { proposalId: string; notes?: string }) =>
       bffFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -159,13 +154,7 @@ export function useExecuteTradeStep() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      proposalId,
-      tradeIds,
-    }: {
-      proposalId: string;
-      tradeIds: string[];
-    }) =>
+    mutationFn: ({ proposalId, tradeIds }: { proposalId: string; tradeIds: string[] }) =>
       bffFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/execute-step`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -195,13 +184,7 @@ export function useCancelRebalance() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      proposalId,
-      reason,
-    }: {
-      proposalId: string;
-      reason: string;
-    }) =>
+    mutationFn: ({ proposalId, reason }: { proposalId: string; reason: string }) =>
       bffFetch<RebalanceProposal>(`/api/v1/rebalance/proposals/${proposalId}/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

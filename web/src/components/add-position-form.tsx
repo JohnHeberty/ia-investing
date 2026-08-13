@@ -40,7 +40,11 @@ export function AddPositionForm({ portfolioId, onClose }: AddPositionFormProps) 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 500 }}>
+    <form
+      onSubmit={handleSubmit}
+      className="card card-pad"
+      style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 500 }}
+    >
       <div className="card-title">
         <h2>Adicionar Posição</h2>
       </div>
@@ -153,7 +157,9 @@ export function AddPositionForm({ portfolioId, onClose }: AddPositionFormProps) 
           type="submit"
           className="button"
           disabled={addPosition.isPending || !ticker.trim() || !quantity || !avgCost}
-          style={{ opacity: addPosition.isPending || !ticker.trim() || !quantity || !avgCost ? 0.5 : 1 }}
+          style={{
+            opacity: addPosition.isPending || !ticker.trim() || !quantity || !avgCost ? 0.5 : 1,
+          }}
         >
           {addPosition.isPending ? "Adicionando..." : "Adicionar Posição"}
         </button>

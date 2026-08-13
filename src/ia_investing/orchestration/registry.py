@@ -25,6 +25,7 @@ from ia_investing.orchestration.activities.schedule_history import SCHEDULE_HIST
 from workflows._dispatch_operations import DispatchOperationsWorkflow
 from workflows._extract_news import ExtractNewsWorkflow
 from workflows._ingest_cvm import IngestCVMWorkflow
+from workflows._news_dedup import NewsDedupWorkflow
 from workflows._paper_rebalance import PaperRebalanceWorkflow
 from workflows._paper_reconciliation import PaperReconciliationWorkflow
 from workflows._paper_valuation import PaperValuationWorkflow
@@ -72,7 +73,13 @@ CAPABILITIES: dict[str, CapabilityDefinition] = {
     ),
     "research-agents": CapabilityDefinition(
         task_queue="research-agents",
-        workflows=(RunAgentWorkflow, DispatchOperationsWorkflow, ExtractNewsWorkflow, *_CANDIDATE_WORKFLOWS),
+        workflows=(
+            RunAgentWorkflow,
+            DispatchOperationsWorkflow,
+            ExtractNewsWorkflow,
+            NewsDedupWorkflow,
+            *_CANDIDATE_WORKFLOWS,
+        ),
         activities=(
             AGENT_RUNTIME_ACTIVITIES
             + OPERATION_DISPATCH_ACTIVITIES

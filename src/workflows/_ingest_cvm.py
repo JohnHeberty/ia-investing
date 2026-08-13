@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import timedelta
+from typing import Any, Literal, cast
 
 from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from data_quality._accounting import ValidationResult
     from ia_investing.orchestration.policies import DEFAULT_ACTIVITY_RETRY_POLICY, EXTERNAL_IO_RETRY_POLICY
+    from workflows._schedule_run import complete_schedule_run, fail_schedule_run, start_schedule_run
 
 
 @dataclass(slots=True)
@@ -34,6 +36,25 @@ class IngestCVMOutput:
 class IngestCVMWorkflow:
     @workflow.run
     async def run(self, input: IngestCVMInput) -> IngestCVMOutput:
+        await start_schedule_run(input.schedule_id)
+        try:
+            output = await self._ingest(input)
+        except Exception as exc:
+            await fail_schedule_run(input.schedule_id, exc)
+            raise
+        await complete_schedule_run(
+            input.schedule_id,
+            {
+                "issuer_id": input.issuer_id,
+                "statement_type": input.statement_type,
+                "year": input.year,
+                "records_inserted": output.records_inserted,
+                "errors": len(output.errors),
+            },
+        )
+        return output
+
+    async def _ingest(self, input: IngestCVMInput) -> IngestCVMOutput:
         output = IngestCVMOutput(
             issuer_id=input.issuer_id,
             statement_type=input.statement_type,
@@ -54,12 +75,24 @@ class IngestCVMWorkflow:
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
 
-        validation_results: list[ValidationResult] = await workflow.execute_activity(
+        raw_validation_results: list[dict[str, Any]] = await workflow.execute_activity(
             "run_accounting_validations",
             args=[input.statement_type, parsed_records],
+            result_type=list,
             start_to_close_timeout=timedelta(seconds=120),
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
+        validation_results = [
+            ValidationResult(
+                check_name=str(item["check_name"]),
+                passed=bool(item["passed"]),
+                entity_type=str(item["entity_type"]),
+                entity_id=str(item["entity_id"]),
+                details=cast(dict[str, Any], item.get("details", {})),
+                severity=cast(Literal["error", "warning", "info"], item.get("severity", "warning")),
+            )
+            for item in raw_validation_results
+        ]
 
         output.validation_results = validation_results
 
@@ -90,24 +123,5 @@ class IngestCVMWorkflow:
             start_to_close_timeout=timedelta(seconds=10),
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
-
-        if input.schedule_id:
-            await workflow.execute_activity(
-                "record_schedule_run",
-                {
-                    "schedule_id": input.schedule_id,
-                    "workflow_id": workflow.info().workflow_id,
-                    "status": "completed",
-                    "started_at": workflow.info().start_time.isoformat(),
-                    "result_summary": {
-                        "issuer_id": input.issuer_id,
-                        "statement_type": input.statement_type,
-                        "year": input.year,
-                        "records_inserted": stored_count,
-                        "errors": len(errors),
-                    },
-                },
-                start_to_close_timeout=timedelta(seconds=10),
-            )
 
         return output

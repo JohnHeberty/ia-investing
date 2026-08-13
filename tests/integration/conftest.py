@@ -70,13 +70,16 @@ pytestmark = [
 # ---------------------------------------------------------------------------
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="function")
 async def engine():
     eng = create_async_engine(DB_URL, pool_size=2, max_overflow=2, echo=True, pool_pre_ping=True)
-    yield eng
+    try:
+        yield eng
+    finally:
+        await eng.dispose()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(loop_scope="function")
 async def session(engine) -> AsyncGenerator[AsyncSession, None]:
     async with async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)() as sess:
         yield sess
@@ -88,7 +91,7 @@ async def session(engine) -> AsyncGenerator[AsyncSession, None]:
 # ---------------------------------------------------------------------------
 
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def minio_client():
     if not _minio_reachable():
         pytest.skip("MinIO not reachable — start with: docker compose --profile test up -d")

@@ -8,9 +8,9 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY pyproject.toml uv.lock README.md ./
+COPY src/ ./src/
 RUN uv sync --frozen --no-dev --no-editable
 
-COPY src/ ./src/
 COPY prompts/ ./prompts/
 
 FROM python:3.12.7-slim-bookworm AS runtime

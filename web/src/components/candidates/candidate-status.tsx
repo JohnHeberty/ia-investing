@@ -18,6 +18,17 @@ const labels: Record<CandidateStatus, string> = {
 };
 
 export function CandidateStatusBadge({ status }: { status: CandidateStatus }) {
-  const tone = status === "approved" ? "good" : status === "rejected" || status === "cancelled" ? "bad" : status === "awaiting_user_input" ? "warn" : undefined;
-  return <span className="badge" data-tone={tone}>{labels[status]}</span>;
+  const tone =
+    status === "approved"
+      ? "good"
+      : status === "rejected" || status === "cancelled"
+        ? "bad"
+        : status === "awaiting_user_input"
+          ? "warn"
+          : undefined;
+  return (
+    <span className="badge" data-tone={tone}>
+      {labels[status]}
+    </span>
+  );
 }

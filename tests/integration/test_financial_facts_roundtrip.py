@@ -9,13 +9,17 @@ Tests the full round-trip through PostgreSQL:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import uuid4
 
 import pytest
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database.models.catalog import Issuer
+from database.models.data_foundation import DataSource, SourceObject, SourceObjectVersion
+from database.models.financial_facts import ReportingPeriod
 from ia_investing.application.financial_facts import (
     FinancialFactInput,
     FinancialFactRepository,
@@ -54,11 +58,48 @@ def _make_input(**overrides) -> FinancialFactInput:
     return FinancialFactInput(**defaults)
 
 
+@pytest.fixture
+async def fact_refs(session: AsyncSession) -> dict:
+    issuer = Issuer(name_pt=f"Integration Issuer {uuid4()}", is_active=True)
+    session.add(issuer)
+    await session.flush()
+    period = ReportingPeriod(
+        issuer_id=issuer.id,
+        period_start=date(2024, 1, 1),
+        period_end=date(2024, 12, 31),
+        fiscal_year=2024,
+        period_type="annual",
+        consolidation_scope="consolidated",
+    )
+    source_id = (await session.execute(sa.select(DataSource.id).where(DataSource.code == "CVM"))).scalar_one()
+    source = SourceObject(source_id=source_id, logical_uri=f"test://facts/{uuid4()}", object_type="json")
+    session.add_all([period, source])
+    await session.flush()
+    version = SourceObjectVersion(
+        source_object_id=source.id,
+        version_number=1,
+        content_sha256=uuid4().hex * 2,
+        storage_key=f"test/facts/{uuid4()}",
+        size_bytes=1,
+        media_type="application/json",
+        discovered_at=_dt(2024, 12, 31),
+    )
+    session.add(version)
+    await session.flush()
+    return {
+        "issuer_id": issuer.id,
+        "reporting_period_id": period.id,
+        "taxonomy_account_id": None,
+        "mapping_rule_id": None,
+        "source_object_version_id": version.id,
+    }
+
+
 @pytest.mark.asyncio
-async def test_revise_creates_fact(session: AsyncSession) -> None:
+async def test_revise_creates_fact(session: AsyncSession, fact_refs: dict) -> None:
     """First revise() creates revision 1 with no superseded fact."""
     repo = FinancialFactRepository(session)
-    item = _make_input()
+    item = _make_input(**fact_refs)
     result = await repo.revise(item)
     assert result.created is True
     assert result.fact.revision_number == 1
@@ -68,17 +109,17 @@ async def test_revise_creates_fact(session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_revise_supersedes_existing(session: AsyncSession) -> None:
+async def test_revise_supersedes_existing(session: AsyncSession, fact_refs: dict) -> None:
     """Second revise() closes window on revision 1 and creates revision 2."""
     repo = FinancialFactRepository(session)
-    item1 = _make_input(knowledge_at=_dt(2025, 1, 2))
+    item1 = _make_input(**fact_refs, knowledge_at=_dt(2025, 1, 2))
     await repo.revise(item1)
     await session.commit()
 
     item2 = _make_input(
         knowledge_at=_dt(2025, 6, 1),
         value=Decimal("6000.00"),
-        source_object_version_id=uuid4(),
+        **fact_refs,
     )
     result = await repo.revise(item2)
     assert result.created is True
@@ -90,10 +131,10 @@ async def test_revise_supersedes_existing(session: AsyncSession) -> None:
 
 
 @pytest.mark.asyncio
-async def test_list_as_of_filters_by_knowledge_at(session: AsyncSession) -> None:
+async def test_list_as_of_filters_by_knowledge_at(session: AsyncSession, fact_refs: dict) -> None:
     """list_as_of before knowledge_at returns no facts."""
     repo = FinancialFactRepository(session)
-    item = _make_input(knowledge_at=_dt(2025, 3, 1))
+    item = _make_input(**fact_refs, knowledge_at=_dt(2025, 3, 1))
     await repo.revise(item)
     await session.commit()
 
@@ -113,10 +154,10 @@ async def test_list_as_of_filters_by_knowledge_at(session: AsyncSession) -> None
 
 
 @pytest.mark.asyncio
-async def test_idempotent_revise_returns_created_false(session: AsyncSession) -> None:
+async def test_idempotent_revise_returns_created_false(session: AsyncSession, fact_refs: dict) -> None:
     """Revise with identical data returns created=False."""
     repo = FinancialFactRepository(session)
-    item = _make_input()
+    item = _make_input(**fact_refs)
     r1 = await repo.revise(item)
     await session.commit()
 

@@ -3,18 +3,13 @@
 import { Suspense } from "react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { useAudit } from "@/hooks/use-audit";
 
 function AuditContent() {
   const {
     auditEvents,
     totalEvents,
-    correlatedEvents,
     correlationRate,
     overrides,
     integrityFailures,
@@ -63,9 +58,7 @@ function AuditContent() {
     );
   }
 
-  const formattedCount = totalEvents > 0
-    ? totalEvents.toLocaleString("pt-BR")
-    : "—";
+  const formattedCount = totalEvents > 0 ? totalEvents.toLocaleString("pt-BR") : "—";
 
   return (
     <>
@@ -77,9 +70,7 @@ function AuditContent() {
             Atores, versões, hashes, razões e correlation IDs sem payload sensível em claro.
           </p>
         </div>
-        <AsOfIndicator
-          freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
-        />
+        <AsOfIndicator freshness={dataState === "stale" ? "Desatualizado" : "Atual"} />
       </div>
 
       {dataState === "stale" && (
@@ -88,12 +79,12 @@ function AuditContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Métricas de auditoria" aria-live="polite">
-        <Metric
-          label="Eventos hoje"
-          value={formattedCount}
-          note="append-only"
-        />
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Métricas de auditoria"
+        aria-live="polite"
+      >
+        <Metric label="Eventos hoje" value={formattedCount} note="append-only" />
         <Metric
           label="Correlacionados"
           value={`${correlationRate}%`}
@@ -119,7 +110,9 @@ function AuditContent() {
         <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Eventos recentes</h2>
-            <span>{auditEvents.length} evento{auditEvents.length !== 1 ? "s" : ""}</span>
+            <span>
+              {auditEvents.length} evento{auditEvents.length !== 1 ? "s" : ""}
+            </span>
           </div>
           <div className="table-wrap">
             <table className="table">
@@ -159,10 +152,7 @@ function AuditContent() {
                     </td>
                     <td className="text-sm">{event.actor}</td>
                     <td className="text-sm text-muted">{event.target}</td>
-                    <td
-                      className="text-xs muted"
-                      style={{ fontFamily: "var(--font-mono)" }}
-                    >
+                    <td className="text-xs muted" style={{ fontFamily: "var(--font-mono)" }}>
                       {event.correlationId.slice(0, 12)}…
                     </td>
                     <td className="text-sm text-muted">
@@ -186,7 +176,10 @@ function AuditContent() {
             </table>
           </div>
           {auditEvents.length > 15 && (
-            <div className="text-sm text-muted" style={{ padding: "8px 12px", borderTop: "1px solid var(--line-soft)" }}>
+            <div
+              className="text-sm text-muted"
+              style={{ padding: "8px 12px", borderTop: "1px solid var(--line-soft)" }}
+            >
               …e mais {auditEvents.length - 15} evento{auditEvents.length - 15 !== 1 ? "s" : ""}
             </div>
           )}

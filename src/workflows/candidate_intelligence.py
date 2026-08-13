@@ -33,6 +33,7 @@ with workflow.unsafe.imports_passed_through():
         validate_candidate_sources,
         validate_supplied_candidate_source,
     )
+    from workflows._schedule_run import complete_schedule_run, fail_schedule_run, start_schedule_run
 
 FAST_RETRY = RetryPolicy(
     initial_interval=timedelta(seconds=2),
@@ -232,21 +233,32 @@ class AutonomousEquityExplorationWorkflow:
 class ScheduledEquityExplorationWorkflow:
     @workflow.run
     async def run(self, command: dict[str, object]) -> ExplorationWorkflowResult:
-        created = await workflow.execute_activity(
-            "create_scheduled_exploration_run",
-            command,
-            start_to_close_timeout=timedelta(minutes=2),
-            retry_policy=FAST_RETRY,
+        schedule_id = str(command.get("schedule_id", ""))
+        await start_schedule_run(schedule_id)
+        try:
+            created = await workflow.execute_activity(
+                "create_scheduled_exploration_run",
+                command,
+                start_to_close_timeout=timedelta(minutes=2),
+                retry_policy=FAST_RETRY,
+            )
+            child_input = ExplorationWorkflowInput(
+                exploration_run_id=UUID(str(created["exploration_run_id"])),
+                organization_id=UUID(str(created["organization_id"])),
+                data_as_of=datetime.fromisoformat(str(created["data_as_of"])),
+                correlation_id=UUID(str(created["correlation_id"])),
+            )
+            result = await workflow.execute_child_workflow(
+                AutonomousEquityExplorationWorkflow.run,
+                child_input,
+                id=f"equity-exploration-{child_input.exploration_run_id}",
+                task_queue="research-agents",
+            )
+        except Exception as exc:
+            await fail_schedule_run(schedule_id, exc)
+            raise
+        await complete_schedule_run(
+            schedule_id,
+            {"exploration_run_id": str(child_input.exploration_run_id), "state": result.status},
         )
-        child_input = ExplorationWorkflowInput(
-            exploration_run_id=UUID(str(created["exploration_run_id"])),
-            organization_id=UUID(str(created["organization_id"])),
-            data_as_of=datetime.fromisoformat(str(created["data_as_of"])),
-            correlation_id=UUID(str(created["correlation_id"])),
-        )
-        return await workflow.execute_child_workflow(
-            AutonomousEquityExplorationWorkflow.run,
-            child_input,
-            id=f"equity-exploration-{child_input.exploration_run_id}",
-            task_queue="research-agents",
-        )
+        return result

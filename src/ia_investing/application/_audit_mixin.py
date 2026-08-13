@@ -13,7 +13,7 @@ class AuditMixin:
     async def _audit(
         self,
         session: AsyncSession,
-        tenant_id: UUID,
+        tenant_id: UUID | None,
         actor_id: UUID | None,
         action: str,
         resource_type: str,
@@ -21,6 +21,8 @@ class AuditMixin:
         changes: dict[str, Any] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> None:
+        if tenant_id is None:
+            raise ValueError("organization context is required for audit logging")
         ctx = get_log_context()
         merged_meta: dict[str, Any] = {**(metadata or {})}
         for key in ("request_id", "trace_id", "ip", "user_agent", "http_method", "http_path", "duration_ms"):

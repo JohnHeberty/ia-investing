@@ -124,6 +124,7 @@ def _force_session_loop_cleanup():
         pass
     # Force-close any lingering background threads/tasks
     import threading
+
     for t in threading.enumerate():
         if t is not threading.current_thread() and t.daemon:
             pass  # daemon threads die with main thread

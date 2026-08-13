@@ -9,6 +9,8 @@ from workflows import (  # noqa: F401  # intentional legacy re-export for ia_inv
     IngestCVMInput,
     IngestCVMOutput,
     IngestCVMWorkflow,
+    NewsDedupInput,
+    NewsDedupWorkflow,
     PaperRebalanceInput,
     PaperRebalanceResult,
     PaperRebalanceWorkflow,

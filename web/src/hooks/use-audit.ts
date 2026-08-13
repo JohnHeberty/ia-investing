@@ -21,7 +21,9 @@ export function useAudit() {
   const logsQuery = useQuery({
     queryKey: queryKeys.auditLogs(),
     queryFn: async () => {
-      return await bffFetch<{ items?: Array<Record<string, unknown>> }>("/api/v1/audit/logs?limit=250&offset=0");
+      return await bffFetch<{ items?: Array<Record<string, unknown>> }>(
+        "/api/v1/audit/logs?limit=250&offset=0",
+      );
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
@@ -29,7 +31,10 @@ export function useAudit() {
   const integrityQuery = useQuery({
     queryKey: ["audit-chain-verification"],
     queryFn: async () => {
-      return await bffFetch<{ tampered_entries?: Array<Record<string, unknown>>; verified?: boolean }>("/api/v1/audit/verify");
+      return await bffFetch<{
+        tampered_entries?: Array<Record<string, unknown>>;
+        verified?: boolean;
+      }>("/api/v1/audit/verify");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
@@ -45,7 +50,9 @@ export function useAudit() {
     actor: String(entry.actor_id ?? "system"),
     target: `${String(entry.resource_type ?? "resource")}:${String(entry.resource_id ?? "")}`,
     version: String(entry.hash ?? ""),
-    correlationId: String((entry.meta_data as Record<string, unknown> | undefined)?.correlation_id ?? ""),
+    correlationId: String(
+      (entry.meta_data as Record<string, unknown> | undefined)?.correlation_id ?? "",
+    ),
     timestamp: String(entry.timestamp ?? entry.created_at ?? ""),
     integrity: tamperedIds.has(String(entry.id ?? "")) ? "mismatch" : "ok",
   }));

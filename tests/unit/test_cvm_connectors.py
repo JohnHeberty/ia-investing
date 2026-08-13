@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import csv
 import io
 import zipfile
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from connectors.cvm._cad import _normalize_cnpj, get_companies, get_company_by_cnpj
+from connectors.cvm._cad import _normalize_cnpj
 from connectors.cvm._directory import (
     _CACHE,
     _LISTING_PATTERN,
@@ -23,14 +22,15 @@ from connectors.cvm._directory import (
 from connectors.cvm._financials import (
     FinancialEntry,
     StatementType,
-    _normalize_cnpj as fin_normalize_cnpj,
     _parse,
     _parse_valor,
     parse_value_status,
 )
+from connectors.cvm._financials import (
+    _normalize_cnpj as fin_normalize_cnpj,
+)
 from connectors.cvm._parser import fetch_csv, fetch_csv_from_zip
 from connectors.cvm.fca import FCAGeneral, _int_opt, _opt
-
 
 # ---------------------------------------------------------------------------
 # _parser.py
@@ -191,8 +191,26 @@ class TestNormalizeCnpj:
 class TestParseFinancials:
     def test_filters_by_cnpj(self) -> None:
         rows = [
-            {"CNPJ_CIA": "33.000.167/0001-01", "DENOM_CIA": "Empresa A", "CD_CVM": "123", "DT_REFER": "2025-01-01", "VERSAO": "1", "VL_CONTA": "1000", "CD_CONTA": "1.01", "DS_CONTA": "Ativo"},
-            {"CNPJ_CIA": "99.999.999/0001-99", "DENOM_CIA": "Empresa B", "CD_CVM": "456", "DT_REFER": "2025-01-01", "VERSAO": "1", "VL_CONTA": "2000", "CD_CONTA": "1.01", "DS_CONTA": "Ativo"},
+            {
+                "CNPJ_CIA": "33.000.167/0001-01",
+                "DENOM_CIA": "Empresa A",
+                "CD_CVM": "123",
+                "DT_REFER": "2025-01-01",
+                "VERSAO": "1",
+                "VL_CONTA": "1000",
+                "CD_CONTA": "1.01",
+                "DS_CONTA": "Ativo",
+            },
+            {
+                "CNPJ_CIA": "99.999.999/0001-99",
+                "DENOM_CIA": "Empresa B",
+                "CD_CVM": "456",
+                "DT_REFER": "2025-01-01",
+                "VERSAO": "1",
+                "VL_CONTA": "2000",
+                "CD_CONTA": "1.01",
+                "DS_CONTA": "Ativo",
+            },
         ]
         result = _parse(rows, "33.000.167/0001-01")
         assert len(result) == 1
@@ -200,14 +218,37 @@ class TestParseFinancials:
 
     def test_no_filter_returns_all(self) -> None:
         rows = [
-            {"CNPJ_CIA": "33.000.167/0001-01", "DENOM_CIA": "A", "CD_CVM": "1", "DT_REFER": "2025-01-01", "VERSAO": "1", "VL_CONTA": "100"},
-            {"CNPJ_CIA": "99.999.999/0001-99", "DENOM_CIA": "B", "CD_CVM": "2", "DT_REFER": "2025-01-01", "VERSAO": "1", "VL_CONTA": "200"},
+            {
+                "CNPJ_CIA": "33.000.167/0001-01",
+                "DENOM_CIA": "A",
+                "CD_CVM": "1",
+                "DT_REFER": "2025-01-01",
+                "VERSAO": "1",
+                "VL_CONTA": "100",
+            },
+            {
+                "CNPJ_CIA": "99.999.999/0001-99",
+                "DENOM_CIA": "B",
+                "CD_CVM": "2",
+                "DT_REFER": "2025-01-01",
+                "VERSAO": "1",
+                "VL_CONTA": "200",
+            },
         ]
         result = _parse(rows, None)
         assert len(result) == 2
 
     def test_invalid_versao_raises(self) -> None:
-        rows = [{"CNPJ_CIA": "33.000.167/0001-01", "DENOM_CIA": "A", "CD_CVM": "1", "DT_REFER": "2025-01-01", "VERSAO": "abc", "VL_CONTA": "100"}]
+        rows = [
+            {
+                "CNPJ_CIA": "33.000.167/0001-01",
+                "DENOM_CIA": "A",
+                "CD_CVM": "1",
+                "DT_REFER": "2025-01-01",
+                "VERSAO": "abc",
+                "VL_CONTA": "100",
+            }
+        ]
         with pytest.raises(ValueError, match="invalid VERSAO"):
             _parse(rows, None)
 

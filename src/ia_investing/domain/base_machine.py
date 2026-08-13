@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from threading import RLock
 from typing import Any
 from uuid import UUID, uuid4
 
@@ -75,6 +76,7 @@ class BaseStateMachine:
     ) -> None:
         self._model = model
         self._transitions_meta = list(transitions)
+        self._lock = RLock()
 
         persisted_state = model.state
 

@@ -27,7 +27,7 @@ def _dt(y: int, m: int, d: int, h: int = 0, mi: int = 0) -> datetime:
 @pytest.mark.asyncio
 async def test_raw_zone_register_creates_version(session: AsyncSession, minio_client) -> None:
     """register() creates SourceObject and SourceObjectVersion in DB."""
-    stmt = sa.select(DataSource).where(DataSource.code == "data-steward-cvm")
+    stmt = sa.select(DataSource).where(DataSource.code == "CVM")
     ds = (await session.execute(stmt)).scalar_one_or_none()
     if ds is None:
         pytest.skip("CVM data source not seeded — run migrations first")
@@ -36,7 +36,7 @@ async def test_raw_zone_register_creates_version(session: AsyncSession, minio_cl
     svc = RawZoneService(session, store)
 
     item = RawObjectInput(
-        source_code="data-steward-cvm",
+        source_code="CVM",
         logical_uri="cvm://dfp/PETROBRAS/2024",
         object_type="financial_statement",
         content=b"<xml>test content</xml>",
@@ -52,7 +52,7 @@ async def test_raw_zone_register_creates_version(session: AsyncSession, minio_cl
     db_version = (
         await session.execute(sa.select(SourceObjectVersion).where(SourceObjectVersion.id == result.version_id))
     ).scalar_one()
-    assert db_version.storage_key.startswith("raw/data-steward-cvm/")
+    assert db_version.storage_key.startswith("raw/CVM/")
     assert db_version.size_bytes == len(item.content)
     await session.commit()
 
@@ -60,7 +60,7 @@ async def test_raw_zone_register_creates_version(session: AsyncSession, minio_cl
 @pytest.mark.asyncio
 async def test_raw_zone_dedup_by_hash(session: AsyncSession, minio_client) -> None:
     """register() with same content returns created=False."""
-    stmt = sa.select(DataSource).where(DataSource.code == "data-steward-cvm")
+    stmt = sa.select(DataSource).where(DataSource.code == "CVM")
     ds = (await session.execute(stmt)).scalar_one_or_none()
     if ds is None:
         pytest.skip("CVM data source not seeded")
@@ -69,7 +69,7 @@ async def test_raw_zone_dedup_by_hash(session: AsyncSession, minio_client) -> No
     svc = RawZoneService(session, store)
 
     item = RawObjectInput(
-        source_code="data-steward-cvm",
+        source_code="CVM",
         logical_uri="cvm://dfp/VALE/2024",
         object_type="financial_statement",
         content=b"<xml>duplicate content test</xml>",

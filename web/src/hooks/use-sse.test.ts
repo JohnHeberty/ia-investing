@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useSSE, type SSEState } from "@/hooks/use-sse";
+import { useSSE } from "@/hooks/use-sse";
 
 class MockEventSource {
   static instances: MockEventSource[] = [];
@@ -235,9 +235,7 @@ describe("useSSE hook", () => {
   it("passes last_event_id in URL when provided", () => {
     vi.stubGlobal("EventSource", MockEventSource);
 
-    renderHook(() =>
-      useSSE("/api/events", vi.fn(), { lastEventId: "evt-42" }),
-    );
+    renderHook(() => useSSE("/api/events", vi.fn(), { lastEventId: "evt-42" }));
 
     expect(MockEventSource.instances[0].url).toContain("last_event_id=evt-42");
   });

@@ -5,7 +5,8 @@ import { defineConfig } from "vitest/config";
 import { storybookTest } from "@storybook/addon-vitest/vitest-plugin";
 import { playwright } from "@vitest/browser-playwright";
 
-const dirname = typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
+const dirname =
+  typeof __dirname !== "undefined" ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
@@ -19,6 +20,7 @@ export default defineConfig({
       {
         extends: true,
         test: {
+          name: "unit",
           environment: "jsdom",
           setupFiles: ["./src/test/setup.ts"],
           globals: true,
@@ -34,6 +36,7 @@ export default defineConfig({
         ],
         test: {
           name: "storybook",
+          testTimeout: 60_000,
           browser: {
             enabled: true,
             headless: true,

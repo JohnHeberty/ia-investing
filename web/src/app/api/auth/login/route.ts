@@ -43,10 +43,7 @@ async function createSessionToken(claims: {
  */
 export async function POST(request: NextRequest) {
   if (!SESSION_SECRET) {
-    return NextResponse.json(
-      { error: "Session secret not configured" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Session secret not configured" }, { status: 500 });
   }
 
   if (process.env.NODE_ENV !== "development") {
@@ -78,9 +75,7 @@ export async function POST(request: NextRequest) {
     : [];
 
   if (allowedEmails.length > 0 && !allowedEmails.includes(email.toLowerCase())) {
-    console.warn(
-      `[auth] Dev login denied for "${email}" — not in DEV_ALLOWED_EMAILS whitelist`,
-    );
+    console.warn(`[auth] Dev login denied for "${email}" — not in DEV_ALLOWED_EMAILS whitelist`);
     return NextResponse.json(
       { error: "Email not in dev whitelist. Set DEV_ALLOWED_EMAILS to allow access." },
       { status: 403 },
@@ -103,7 +98,8 @@ export async function POST(request: NextRequest) {
     sub: subject,
     name,
     email,
-    organization_id: process.env.NEXT_PUBLIC_ORGANIZATION_ID ?? "00000000-0000-0000-0000-000000000001",
+    organization_id:
+      process.env.NEXT_PUBLIC_ORGANIZATION_ID ?? "00000000-0000-0000-0000-000000000001",
     roles: ["admin"],
     permissions: [
       "admin",

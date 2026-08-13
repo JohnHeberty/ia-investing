@@ -41,7 +41,11 @@ export function ProposalActions({
             onClick={() => approve.mutate({ proposalId: proposal.id })}
             disabled={approve.isPending}
             className="button"
-            style={{ background: "var(--blue)", color: "#fff", opacity: approve.isPending ? 0.5 : 1 }}
+            style={{
+              background: "var(--blue)",
+              color: "#fff",
+              opacity: approve.isPending ? 0.5 : 1,
+            }}
           >
             {approve.isPending ? "Aprovando..." : "Aprovar proposta"}
           </button>
@@ -61,27 +65,53 @@ export function ProposalActions({
             onClick={() => complete.mutate({ proposalId: proposal.id })}
             disabled={complete.isPending}
             className="button secondary"
-            style={{ borderColor: "var(--accent)", color: "var(--accent)", opacity: complete.isPending ? 0.5 : 1 }}
+            style={{
+              borderColor: "var(--accent)",
+              color: "var(--accent)",
+              opacity: complete.isPending ? 0.5 : 1,
+            }}
           >
             {complete.isPending ? "Finalizando..." : "Completar rebalanceamento"}
           </button>
         )}
         {canCancel && (
           <button
-            onClick={() => cancel.mutate({ proposalId: proposal.id, reason: "Cancelado pelo operador" })}
+            onClick={() =>
+              cancel.mutate({ proposalId: proposal.id, reason: "Cancelado pelo operador" })
+            }
             disabled={cancel.isPending}
             className="button secondary"
-            style={{ borderColor: "var(--red)", color: "var(--red)", opacity: cancel.isPending ? 0.5 : 1 }}
+            style={{
+              borderColor: "var(--red)",
+              color: "var(--red)",
+              opacity: cancel.isPending ? 0.5 : 1,
+            }}
           >
             {cancel.isPending ? "Cancelando..." : "Cancelar proposta"}
           </button>
         )}
       </div>
 
-      {approve.isError && <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao aprovar: {approve.error.message}</p>}
-      {execute.isError && <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao executar: {execute.error.message}</p>}
-      {complete.isError && <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao finalizar: {complete.error.message}</p>}
-      {cancel.isError && <p style={{ fontSize: 14, color: "var(--red)" }}>Erro ao cancelar: {cancel.error.message}</p>}
+      {approve.isError && (
+        <p style={{ fontSize: 14, color: "var(--red)" }}>
+          Erro ao aprovar: {approve.error.message}
+        </p>
+      )}
+      {execute.isError && (
+        <p style={{ fontSize: 14, color: "var(--red)" }}>
+          Erro ao executar: {execute.error.message}
+        </p>
+      )}
+      {complete.isError && (
+        <p style={{ fontSize: 14, color: "var(--red)" }}>
+          Erro ao finalizar: {complete.error.message}
+        </p>
+      )}
+      {cancel.isError && (
+        <p style={{ fontSize: 14, color: "var(--red)" }}>
+          Erro ao cancelar: {cancel.error.message}
+        </p>
+      )}
     </>
   );
 }

@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-import asyncio
 from datetime import date
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from parsers._html import extract_text_from_tag, parse_html
-from parsers._types import ParsedDocument
 from connectors.b3._parser import (
-    _format_date,
     _LINE_WIDTH,
+    _format_date,
     _parse_csv_int,
     _parse_csv_price,
     _parse_date_str,
@@ -21,6 +18,8 @@ from connectors.b3._parser import (
     _parse_price,
 )
 from connectors.base import HttpClient
+from parsers._html import extract_text_from_tag, parse_html
+from parsers._types import ParsedDocument
 
 
 # ---------------------------------------------------------------------------
@@ -267,7 +266,7 @@ class TestHttpClient:
     async def test_get_text_success(self):
         client = HttpClient()
         mock_response = MagicMock()
-        mock_response.content = "hello".encode("utf-8")
+        mock_response.content = b"hello"
         mock_response.raise_for_status = MagicMock()
 
         mock_http_client = AsyncMock()

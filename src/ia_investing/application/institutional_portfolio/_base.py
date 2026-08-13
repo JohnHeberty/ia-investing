@@ -91,12 +91,12 @@ async def audit(
 ) -> None:
     session.add(
         await create_domain_audit_entry(
-            self.session,
+            session,
             tenant_id=context.organization_id,
             actor_type="human",
             actor_id=context.subject,
-            action="action",
-            entity_type="entity_type",
+            action=action,
+            entity_type=entity_type,
             entity_id=entity_id,
             correlation_id=uuid4(),
             details={"organization_id": str(context.organization_id), **details},

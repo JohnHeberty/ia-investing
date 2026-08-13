@@ -34,7 +34,11 @@ export function LimitsTab({ riskMetrics, positionsLength }: LimitsTabProps) {
   const activePolicy = policies.find((p) => p.status === "active") ?? policies[0];
   const limits = activePolicy?.limits ?? {};
 
-  const maxPosLimit = resolveLimit(limits, "max_single_position", DEFAULT_LIMITS.max_single_position);
+  const maxPosLimit = resolveLimit(
+    limits,
+    "max_single_position",
+    DEFAULT_LIMITS.max_single_position,
+  );
   const hhiLimit = resolveLimit(limits, "max_hhi", DEFAULT_LIMITS.max_hhi);
   const maxPositions = resolveLimit(limits, "max_positions", DEFAULT_LIMITS.max_positions);
 
@@ -66,9 +70,7 @@ export function LimitsTab({ riskMetrics, positionsLength }: LimitsTabProps) {
     <div className="card card-pad">
       <div className="card-title">
         <h2>Limites de Risco</h2>
-        {activePolicy && (
-          <Badge tone="neutral">Policy v{activePolicy.version}</Badge>
-        )}
+        {activePolicy && <Badge tone="neutral">Policy v{activePolicy.version}</Badge>}
       </div>
       {activePolicy && (
         <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
@@ -95,16 +97,19 @@ export function LimitsTab({ riskMetrics, positionsLength }: LimitsTabProps) {
             return (
               <tr key={row.name}>
                 <td style={{ fontWeight: 500 }}>{row.name}</td>
-                <td style={{ fontFamily: "var(--font-mono)", color: violated ? "var(--red)" : undefined }}>
+                <td
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    color: violated ? "var(--red)" : undefined,
+                  }}
+                >
                   {row.format(row.current)}
                 </td>
                 <td style={{ fontFamily: "var(--font-mono)", color: "var(--muted)" }}>
                   {row.limitFormat(row.limit)}
                 </td>
                 <td>
-                  <Badge tone={violated ? "bad" : "good"}>
-                    {violated ? "Violação" : "OK"}
-                  </Badge>
+                  <Badge tone={violated ? "bad" : "good"}>{violated ? "Violação" : "OK"}</Badge>
                 </td>
               </tr>
             );

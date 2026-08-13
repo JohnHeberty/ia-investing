@@ -4,11 +4,7 @@ import { Suspense, useState } from "react";
 import { FolderOpen, Plus } from "lucide-react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { CaseCard } from "@/components/opportunities/CaseCard";
 import { CreateCaseForm } from "@/components/opportunities/CreateCaseForm";
 import { useResearchCases } from "@/hooks/use-research-cases";
@@ -38,13 +34,15 @@ function FunnelRow({
           style={{
             width: `${pct}%`,
             background:
-              tone === "good" ? "var(--accent)" : tone === "warn" ? "var(--amber)" : "var(--muted-2)",
+              tone === "good"
+                ? "var(--accent)"
+                : tone === "warn"
+                  ? "var(--amber)"
+                  : "var(--muted-2)",
           }}
         />
       </div>
-      <span className="funnel-count">
-        {value}
-      </span>
+      <span className="funnel-count">{value}</span>
     </div>
   );
 }
@@ -107,8 +105,7 @@ function OpportunitiesContent() {
     );
   }
 
-  const conversionRate =
-    count > 0 ? Math.round((readyForCommittee / count) * 100) : 0;
+  const conversionRate = count > 0 ? Math.round((readyForCommittee / count) * 100) : 0;
 
   return (
     <>
@@ -121,9 +118,7 @@ function OpportunitiesContent() {
           </p>
         </div>
         <div className="flex items-center gap-12">
-          <AsOfIndicator
-            freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
-          />
+          <AsOfIndicator freshness={dataState === "stale" ? "Desatualizado" : "Atual"} />
           {canCreateCase ? (
             <button
               className="button"
@@ -152,12 +147,12 @@ function OpportunitiesContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores de oportunidades" aria-live="polite">
-        <Metric
-          label="Novas"
-          value={String(openCases)}
-          note="abertas ou triadas"
-        />
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Indicadores de oportunidades"
+        aria-live="polite"
+      >
+        <Metric label="Novas" value={String(openCases)} note="abertas ou triadas" />
         <Metric
           label="Em pesquisa"
           value={String(researchCases)}
@@ -169,11 +164,7 @@ function OpportunitiesContent() {
           value={String(readyForCommittee)}
           note="aguardando decisão"
         />
-        <Metric
-          label="Convertidas"
-          value={`${conversionRate}%`}
-          note="janela de 30 dias"
-        />
+        <Metric label="Convertidas" value={`${conversionRate}%`} note="janela de 30 dias" />
       </section>
 
       {count === 0 ? (
@@ -208,19 +199,28 @@ function OpportunitiesContent() {
           <section className="card card-pad section-gap">
             <div className="card-title">
               <h2>Funil de pesquisa</h2>
-              <span>{count} caso{count !== 1 ? "s" : ""} total</span>
+              <span>
+                {count} caso{count !== 1 ? "s" : ""} total
+              </span>
             </div>
             <div className="flex flex-col gap-8">
               <FunnelRow label="Abertos / Triados" value={openCases} total={count} tone="neutral" />
               <FunnelRow label="Em pesquisa" value={researchCases} total={count} tone="warn" />
-              <FunnelRow label="Prontos para comitê" value={readyForCommittee} total={count} tone="good" />
+              <FunnelRow
+                label="Prontos para comitê"
+                value={readyForCommittee}
+                total={count}
+                tone="good"
+              />
             </div>
           </section>
 
           <section className="card card-pad section-gap" aria-live="polite">
             <div className="card-title">
               <h2>Casos de pesquisa</h2>
-              <span>{count} registro{count !== 1 ? "s" : ""}</span>
+              <span>
+                {count} registro{count !== 1 ? "s" : ""}
+              </span>
             </div>
             <div className="table-wrap">
               <table className="table">

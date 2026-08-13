@@ -32,16 +32,8 @@ export function PortfolioMetrics({
         note={`${totalPnlPercent >= 0 ? "+" : ""}${totalPnlPercent.toFixed(2)}%`}
         tone={totalPnl >= 0 ? "positive" : "warning"}
       />
-      <Metric
-        label="Moeda"
-        value={currency}
-        note="Moeda base"
-      />
-      <Metric
-        label="Tipo"
-        value={isPaper ? "Paper" : "Live"}
-        note="Ambiente de operação"
-      />
+      <Metric label="Moeda" value={currency} note="Moeda base" />
+      <Metric label="Tipo" value={isPaper ? "Paper" : "Live"} note="Ambiente de operação" />
     </section>
   );
 }

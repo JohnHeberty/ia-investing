@@ -9,7 +9,7 @@ from temporalio import activity
 from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
-from workflows._discover import DiscoveryBrief, DiscoverStocksWorkflow, ScreenFilters
+from workflows._discover import DiscoverStocksWorkflow, DiscoveryBrief, ScreenFilters
 
 TASK_QUEUE = "test-discover"
 
@@ -27,9 +27,12 @@ class TestScreenFilters:
 
     def test_custom_values(self):
         f = ScreenFilters(
-            min_market_cap=1e9, max_market_cap=1e12,
-            sectors_include=["Finance"], sectors_exclude=["Mining"],
-            min_volume_avg=1e6, exclude_penny_stocks=False,
+            min_market_cap=1e9,
+            max_market_cap=1e12,
+            sectors_include=["Finance"],
+            sectors_exclude=["Mining"],
+            min_volume_avg=1e6,
+            exclude_penny_stocks=False,
         )
         assert f.min_market_cap == 1e9
         assert f.sectors_include == ["Finance"]
@@ -49,17 +52,26 @@ class TestScreenFilters:
 class TestDiscoveryBrief:
     def test_construction(self):
         b = DiscoveryBrief(
-            issuer_id="i1", ticker_symbol="PETR4", issuer_name="Petrobras",
-            sector="Oil", market_cap=1e12, screening_score=0.95,
+            issuer_id="i1",
+            ticker_symbol="PETR4",
+            issuer_name="Petrobras",
+            sector="Oil",
+            market_cap=1e12,
+            screening_score=0.95,
         )
         assert b.anomaly_flags == []
         assert b.metrics == {}
 
     def test_with_anomalies(self):
         b = DiscoveryBrief(
-            issuer_id="i1", ticker_symbol="PETR4", issuer_name="Petrobras",
-            sector="Oil", market_cap=1e12, screening_score=0.95,
-            anomaly_flags=["high_vol", "low_liquidity"], metrics={"pe": 15.0},
+            issuer_id="i1",
+            ticker_symbol="PETR4",
+            issuer_name="Petrobras",
+            sector="Oil",
+            market_cap=1e12,
+            screening_score=0.95,
+            anomaly_flags=["high_vol", "low_liquidity"],
+            metrics={"pe": 15.0},
         )
         assert len(b.anomaly_flags) == 2
 
@@ -105,18 +117,32 @@ def _make_discover_activities(
 class TestDiscoverStocksWorkflow:
     @pytest.mark.asyncio
     async def test_happy_path(self):
-        acts, publish = _make_discover_activities(
+        acts, _publish = _make_discover_activities(
             universe=[{"ticker": "PETR4"}, {"ticker": "VALE3"}],
             filtered=[{"ticker": "PETR4"}, {"ticker": "VALE3"}],
             scored=[{"ticker": "PETR4", "score": 0.9}, {"ticker": "VALE3", "score": 0.8}],
             anomalies=[{"ticker": "PETR4", "anomalies": []}, {"ticker": "VALE3", "anomalies": ["low_vol"]}],
             briefs=[
-                {"issuer_id": "i1", "ticker_symbol": "PETR4", "issuer_name": "Petrobras",
-                 "sector": "Oil", "market_cap": 1e12, "screening_score": 0.9,
-                 "anomaly_flags": [], "metrics": {}},
-                {"issuer_id": "i2", "ticker_symbol": "VALE3", "issuer_name": "Vale",
-                 "sector": "Mining", "market_cap": 5e11, "screening_score": 0.8,
-                 "anomaly_flags": ["low_vol"], "metrics": {}},
+                {
+                    "issuer_id": "i1",
+                    "ticker_symbol": "PETR4",
+                    "issuer_name": "Petrobras",
+                    "sector": "Oil",
+                    "market_cap": 1e12,
+                    "screening_score": 0.9,
+                    "anomaly_flags": [],
+                    "metrics": {},
+                },
+                {
+                    "issuer_id": "i2",
+                    "ticker_symbol": "VALE3",
+                    "issuer_name": "Vale",
+                    "sector": "Mining",
+                    "market_cap": 5e11,
+                    "screening_score": 0.8,
+                    "anomaly_flags": ["low_vol"],
+                    "metrics": {},
+                },
             ],
         )
 
@@ -135,7 +161,7 @@ class TestDiscoverStocksWorkflow:
 
     @pytest.mark.asyncio
     async def test_empty_universe(self):
-        acts, publish = _make_discover_activities()
+        acts, _publish = _make_discover_activities()
 
         async with await WorkflowEnvironment.start_local() as env:
             async with Worker(env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DiscoverStocksWorkflow]):
@@ -150,11 +176,18 @@ class TestDiscoverStocksWorkflow:
 
     @pytest.mark.asyncio
     async def test_discovery_brief_construction_from_dict(self):
-        acts, publish = _make_discover_activities(
+        acts, _publish = _make_discover_activities(
             briefs=[
-                {"issuer_id": "i1", "ticker_symbol": "PETR4", "issuer_name": "Petrobras",
-                 "sector": "Oil", "market_cap": 1e12, "screening_score": 0.95,
-                 "anomaly_flags": ["flag1"], "metrics": {"pe": 10}},
+                {
+                    "issuer_id": "i1",
+                    "ticker_symbol": "PETR4",
+                    "issuer_name": "Petrobras",
+                    "sector": "Oil",
+                    "market_cap": 1e12,
+                    "screening_score": 0.95,
+                    "anomaly_flags": ["flag1"],
+                    "metrics": {"pe": 10},
+                },
             ],
         )
 
@@ -178,9 +211,16 @@ class TestDiscoverStocksWorkflow:
             universe=[{"t": 1}, {"t": 2}, {"t": 3}],
             filtered=[{"t": 1}, {"t": 2}],
             briefs=[
-                {"issuer_id": "i1", "ticker_symbol": "A", "issuer_name": "A",
-                 "sector": "S", "market_cap": 1, "screening_score": 1,
-                 "anomaly_flags": [], "metrics": {}},
+                {
+                    "issuer_id": "i1",
+                    "ticker_symbol": "A",
+                    "issuer_name": "A",
+                    "sector": "S",
+                    "market_cap": 1,
+                    "screening_score": 1,
+                    "anomaly_flags": [],
+                    "metrics": {},
+                },
             ],
         )
 

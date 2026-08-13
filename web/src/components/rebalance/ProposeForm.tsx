@@ -20,7 +20,7 @@ export function ProposeForm({
     try {
       parsed = JSON.parse(targets) as Record<string, number>;
     } catch {
-      setParseError("JSON inválido. Use o formato: {\"TICKER\": 0.25, ...}");
+      setParseError('JSON inválido. Use o formato: {"TICKER": 0.25, ...}');
       return;
     }
     propose.mutate(
@@ -30,10 +30,18 @@ export function ProposeForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div className="card-title"><h3>Nova proposta de rebalanceamento</h3></div>
+    <form
+      onSubmit={handleSubmit}
+      className="card card-pad"
+      style={{ display: "flex", flexDirection: "column", gap: 16 }}
+    >
+      <div className="card-title">
+        <h3>Nova proposta de rebalanceamento</h3>
+      </div>
       <div>
-        <label style={{ display: "block", fontSize: 14, color: "var(--muted)" }}>Target allocations (JSON)</label>
+        <label style={{ display: "block", fontSize: 14, color: "var(--muted)" }}>
+          Target allocations (JSON)
+        </label>
         <textarea
           style={{
             marginTop: 4,
@@ -53,6 +61,7 @@ export function ProposeForm({
           onChange={(e) => setTargets(e.target.value)}
         />
       </div>
+      {parseError && <p style={{ fontSize: 14, color: "var(--red)" }}>{parseError}</p>}
       <div>
         <label style={{ display: "block", fontSize: 14, color: "var(--muted)" }}>Rationale</label>
         <textarea

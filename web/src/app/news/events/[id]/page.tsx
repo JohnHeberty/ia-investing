@@ -2,7 +2,7 @@
 
 import { use } from "react";
 import { Suspense } from "react";
-import { Newspaper, TrendingUp, TrendingDown, ArrowLeft } from "lucide-react";
+import { TrendingUp, TrendingDown, ArrowLeft } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import type { Route } from "next";
@@ -36,15 +36,28 @@ interface EventDetail {
 }
 
 function EventDetailContent({ eventId }: { eventId: string }) {
-  const { data: event, isLoading, isError, error } = useQuery({
+  const {
+    data: event,
+    isLoading,
+    isError,
+    error,
+  } = useQuery({
     queryKey: queryKeys.newsEvent(eventId),
     queryFn: () => bffFetch<EventDetail>(`/api/v1/news/events/${eventId}`),
     staleTime: 30_000,
   });
 
   if (isLoading) return <LoadingSkeleton lines={12} />;
-  if (isError) return <DataStatePanel state="error" title="Erro ao carregar evento" detail={error instanceof Error ? error.message : String(error)} />;
-  if (!event) return <DataStatePanel state="missing" title="Evento nao encontrado" detail="ID invalido." />;
+  if (isError)
+    return (
+      <DataStatePanel
+        state="error"
+        title="Erro ao carregar evento"
+        detail={error instanceof Error ? error.message : String(error)}
+      />
+    );
+  if (!event)
+    return <DataStatePanel state="missing" title="Evento nao encontrado" detail="ID invalido." />;
 
   return (
     <div className="section-gap">
@@ -62,17 +75,27 @@ function EventDetailContent({ eventId }: { eventId: string }) {
         </div>
       </header>
 
-      <section className="grid grid-4 section-gap" aria-label="Metricas do evento" aria-live="polite">
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Metricas do evento"
+        aria-live="polite"
+      >
         <article className="card metric">
           <div className="metric-label">Tipo</div>
-          <div className="metric-value"><Badge tone="neutral">{event.event_type ?? "—"}</Badge></div>
+          <div className="metric-value">
+            <Badge tone="neutral">{event.event_type ?? "—"}</Badge>
+          </div>
         </article>
         <article className="card metric">
           <div className="metric-label">Direcao</div>
           <div className="metric-value">
             <Badge tone={directionTone(event.direction_hint)}>
-              {event.direction_hint === "positive" && <TrendingUp size={14} style={{ marginRight: 4 }} />}
-              {event.direction_hint === "negative" && <TrendingDown size={14} style={{ marginRight: 4 }} />}
+              {event.direction_hint === "positive" && (
+                <TrendingUp size={14} style={{ marginRight: 4 }} />
+              )}
+              {event.direction_hint === "negative" && (
+                <TrendingDown size={14} style={{ marginRight: 4 }} />
+              )}
               {event.direction_hint ?? "—"}
             </Badge>
           </div>
@@ -85,7 +108,9 @@ function EventDetailContent({ eventId }: { eventId: string }) {
         </article>
         <article className="card metric">
           <div className="metric-label">Horizonte</div>
-          <div className="metric-value"><Badge tone="neutral">{event.time_horizon ?? "—"}</Badge></div>
+          <div className="metric-value">
+            <Badge tone="neutral">{event.time_horizon ?? "—"}</Badge>
+          </div>
         </article>
       </section>
 
@@ -98,23 +123,31 @@ function EventDetailContent({ eventId }: { eventId: string }) {
         <div className="card card-pad section-gap">
           <h2 className="mb-12">Metricas Afetadas</h2>
           <div className="flex flex-wrap gap-8">
-            {Array.isArray(event.affected_metrics?.metrics)
-              ? (event.affected_metrics.metrics as unknown[]).map((m, i) => (
-                  <Badge key={i} tone="neutral">{typeof m === "string" ? m : String(m)}</Badge>
-                ))
-              : <span className="subtitle">Nenhuma metrica identificada</span>
-            }
+            {Array.isArray(event.affected_metrics?.metrics) ? (
+              (event.affected_metrics.metrics as unknown[]).map((m, i) => (
+                <Badge key={i} tone="neutral">
+                  {typeof m === "string" ? m : String(m)}
+                </Badge>
+              ))
+            ) : (
+              <span className="subtitle">Nenhuma metrica identificada</span>
+            )}
           </div>
-          {Array.isArray(event.affected_metrics?.key_claims) && event.affected_metrics.key_claims.length > 0 && (
-            <div className="mt-16">
-              <h3 className="mb-8" style={{ fontSize: 14 }}>Claims chave</h3>
-              <ul style={{ margin: 0, paddingLeft: 20 }}>
-                {(event.affected_metrics.key_claims as unknown[]).map((claim, i) => (
-                  <li key={i} className="muted mb-4" style={{ fontSize: 13 }}>{typeof claim === "string" ? claim : String(claim)}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+          {Array.isArray(event.affected_metrics?.key_claims) &&
+            event.affected_metrics.key_claims.length > 0 && (
+              <div className="mt-16">
+                <h3 className="mb-8" style={{ fontSize: 14 }}>
+                  Claims chave
+                </h3>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {(event.affected_metrics.key_claims as unknown[]).map((claim, i) => (
+                    <li key={i} className="muted mb-4" style={{ fontSize: 13 }}>
+                      {typeof claim === "string" ? claim : String(claim)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
         </div>
       )}
 
@@ -149,7 +182,9 @@ function EventDetailContent({ eventId }: { eventId: string }) {
                       {impact.impact_score !== null ? impact.impact_score.toFixed(2) : "—"}
                     </td>
                     <td className="mono">
-                      {impact.confidence !== null ? `${(impact.confidence * 100).toFixed(0)}%` : "—"}
+                      {impact.confidence !== null
+                        ? `${(impact.confidence * 100).toFixed(0)}%`
+                        : "—"}
                     </td>
                     <td className="max-w-320 truncate muted" style={{ fontSize: 13 }}>
                       {impact.reasoning ?? "—"}

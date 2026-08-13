@@ -4,18 +4,13 @@ import { Suspense } from "react";
 import { TrendingUp, TrendingDown, Minus, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
-import {
-  NewsDataContext,
-  useNewsValue,
-  useNewsPortfolioImpacts,
-} from "@/hooks/use-news";
-import type { PortfolioImpact } from "@/hooks/use-news";
+import { NewsDataContext, useNewsValue, useNewsPortfolioImpacts } from "@/hooks/use-news";
 import { directionTone } from "@/lib/news-helpers";
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import { DataStatePanel, LoadingSkeleton } from "@/components/data-state-components";
+import { LoadingSkeleton } from "@/components/data-state-components";
 
 function ImpactContent() {
-  const { events, totalEvents, positiveEvents, negativeEvents, stats } = useNewsValue();
+  const { events, totalEvents, positiveEvents, negativeEvents } = useNewsValue();
   const { data: portfolioImpacts, isLoading: impactsLoading } = useNewsPortfolioImpacts();
 
   const impacts = portfolioImpacts ?? [];
@@ -49,11 +44,19 @@ function ImpactContent() {
         </div>
       </header>
 
-      <section className="grid grid-4 section-gap" aria-label="Metricas de impacto" aria-live="polite">
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Metricas de impacto"
+        aria-live="polite"
+      >
         <Metric label="Eventos" value={String(totalEvents)} note="detectados por LLM" />
         <Metric label="Positivos" value={String(positiveEvents)} note="direction_hint=positive" />
         <Metric label="Negativos" value={String(negativeEvents)} note="direction_hint=negative" />
-        <Metric label="Portfolios afetados" value={String(affectedPortfolios)} note={`${impacts.length} intersecoes`} />
+        <Metric
+          label="Portfolios afetados"
+          value={String(affectedPortfolios)}
+          note={`${impacts.length} intersecoes`}
+        />
       </section>
 
       <div className="card card-pad section-gap">
@@ -65,10 +68,7 @@ function ImpactContent() {
             {sortedEvents.slice(0, 20).map((event) => {
               const eventImpacts = impacts.filter((i) => i.event_id === event.id);
               return (
-                <div
-                  key={event.id}
-                  className="timeline-event"
-                >
+                <div key={event.id} className="timeline-event">
                   <div className="flex-shrink-0" style={{ marginTop: 2 }}>
                     {directionIcon(event.direction_hint)}
                   </div>
@@ -83,11 +83,14 @@ function ImpactContent() {
                       <Badge tone={directionTone(event.direction_hint)}>
                         {event.direction_hint ?? "—"}
                       </Badge>
-                      {event.materiality_score !== null && Math.abs(event.materiality_score) >= 0.7 && (
-                        <Badge tone="bad">ALERTA</Badge>
-                      )}
+                      {event.materiality_score !== null &&
+                        Math.abs(event.materiality_score) >= 0.7 && (
+                          <Badge tone="bad">ALERTA</Badge>
+                        )}
                       <span className="mono text-sm muted">
-                        {event.materiality_score !== null ? event.materiality_score.toFixed(2) : "—"}
+                        {event.materiality_score !== null
+                          ? event.materiality_score.toFixed(2)
+                          : "—"}
                       </span>
                     </div>
                     <div className="truncate muted" style={{ fontSize: 13 }}>
@@ -142,13 +145,19 @@ function ImpactContent() {
                     </td>
                     <td>
                       <Badge tone={directionTone(impact.direction_hint)}>
-                        {impact.direction_hint === "positive" && <TrendingUp size={12} style={{ marginRight: 4 }} />}
-                        {impact.direction_hint === "negative" && <TrendingDown size={12} style={{ marginRight: 4 }} />}
+                        {impact.direction_hint === "positive" && (
+                          <TrendingUp size={12} style={{ marginRight: 4 }} />
+                        )}
+                        {impact.direction_hint === "negative" && (
+                          <TrendingDown size={12} style={{ marginRight: 4 }} />
+                        )}
                         {impact.direction_hint ?? "—"}
                       </Badge>
                     </td>
                     <td className="mono">
-                      {impact.materiality_score !== null ? impact.materiality_score.toFixed(2) : "—"}
+                      {impact.materiality_score !== null
+                        ? impact.materiality_score.toFixed(2)
+                        : "—"}
                     </td>
                     <td>{impact.portfolio_name}</td>
                     <td>
@@ -156,7 +165,10 @@ function ImpactContent() {
                     </td>
                     <td>
                       {impact.event_created_at
-                        ? new Date(impact.event_created_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+                        ? new Date(impact.event_created_at).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "short",
+                          })
                         : "—"}
                     </td>
                   </tr>

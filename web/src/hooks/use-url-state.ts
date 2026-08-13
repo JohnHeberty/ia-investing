@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 /**
@@ -11,12 +11,9 @@ export function useUrlState<T extends Record<string, string | string[] | undefin
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const defaultsRef = useRef(defaults);
-  defaultsRef.current = defaults;
-
   const state = useMemo(() => {
     const result = {} as Record<string, string | string[] | undefined>;
-    for (const [key, defaultValue] of Object.entries(defaultsRef.current)) {
+    for (const [key, defaultValue] of Object.entries(defaults)) {
       const param = searchParams.get(key);
       if (param === null) {
         result[key] = defaultValue;
@@ -27,13 +24,13 @@ export function useUrlState<T extends Record<string, string | string[] | undefin
       }
     }
     return result as T;
-  }, [searchParams]);
+  }, [defaults, searchParams]);
 
   const setState = useCallback(
     (updates: Partial<T>) => {
       const params = new URLSearchParams(searchParams.toString());
       for (const [key, value] of Object.entries(updates)) {
-        const defaultVal = defaultsRef.current[key];
+        const defaultVal = defaults[key];
         const isDefault =
           value === undefined ||
           value === null ||
@@ -52,9 +49,9 @@ export function useUrlState<T extends Record<string, string | string[] | undefin
       }
       const qs = params.toString();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      router.push(qs ? `${pathname}?${qs}` : pathname as any, { scroll: false });
+      router.push(qs ? `${pathname}?${qs}` : (pathname as any), { scroll: false });
     },
-    [router, pathname, searchParams],
+    [defaults, router, pathname, searchParams],
   );
 
   return [state, setState] as const;

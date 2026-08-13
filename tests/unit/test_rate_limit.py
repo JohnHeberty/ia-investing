@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import asyncio
-import ipaddress
-import math
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from starlette.requests import Request
 from starlette.responses import Response
-from starlette.testclient import TestClient
 
 from apps.api.middleware.rate_limit import (
     RateLimitExceededError,
@@ -22,7 +19,6 @@ from apps.api.middleware.rate_limit import (
     _rate_limit_response,
     rate_limit,
 )
-
 
 # ---------------------------------------------------------------------------
 # SlidingWindowCounter
@@ -191,6 +187,7 @@ class TestRateLimitMiddleware:
     def _reset_global_limiters(self) -> None:
         """Reset shared global limiters so tests are independent."""
         import apps.api.middleware.rate_limit as rl
+
         rl._global_limiter = SlidingWindowCounter(1000, 60.0)
         rl._auth_limiter = SlidingWindowCounter(10, 60.0)
         rl._api_limiter = SlidingWindowCounter(100, 60.0)

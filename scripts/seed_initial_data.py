@@ -9,6 +9,7 @@ All inserts use ON CONFLICT DO NOTHING so the script is safe to re-run.
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -238,13 +239,16 @@ async def seed() -> None:
     async with session_scope() as session:
         n = await _upsert(session, "source_licenses", SOURCE_LICENSES, ["id"])
         print(f"  source_licenses: {n} inserted")
-        n = await _upsert(session, "data_sources", DATA_SOURCES, ["id"])
+        data_sources = [{**row, "is_active": True, "created_at": UTCNOW} for row in DATA_SOURCES]
+        n = await _upsert(session, "data_sources", data_sources, ["id"])
         print(f"  data_sources:    {n} inserted")
         n = await _upsert(session, "source_slas", SOURCE_SLAS, ["id"])
         print(f"  source_slas:     {n} inserted")
-        n = await _upsert(session, "quality_rules", QUALITY_RULES, ["id"])
+        quality_rules = [{**row, "tolerance": json.dumps(row["tolerance"])} for row in QUALITY_RULES]
+        n = await _upsert(session, "quality_rules", quality_rules, ["id"])
         print(f"  quality_rules:   {n} inserted")
-        n = await _upsert(session, "metric_definitions", METRIC_DEFINITIONS, ["id"])
+        metric_definitions = [{**row, "dependencies": json.dumps(row["dependencies"])} for row in METRIC_DEFINITIONS]
+        n = await _upsert(session, "metric_definitions", metric_definitions, ["id"])
         print(f"  metric_defs:     {n} inserted")
         await session.commit()
     print("Seed complete.")

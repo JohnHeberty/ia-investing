@@ -36,18 +36,20 @@ async def _seed_issuer(
     *,
     issuer_id=None,
     name: str = "Petróleo Brasileiro S.A.",
-    cnpj: str = "33000167000101",
+    cnpj: str | None = None,
 ):
-    from database.models.catalog import Industry
+    from database.models.catalog import Industry, Sector
 
     ind = (await session.execute(__import__("sqlalchemy").select(Industry).limit(1))).scalar_one_or_none()
     if ind is None:
-        ind = Industry(id=uuid4(), name_pt="Petróleo e Gás", sector="Energia", isic_code="06")
-        session.add(ind)
+        sector = Sector(id=uuid4(), name_pt="Energia")
+        ind = Industry(id=uuid4(), name_pt="Petróleo e Gás", sector=sector)
+        session.add_all([sector, ind])
         await session.flush()
 
     iid = issuer_id or uuid4()
-    issuer = Issuer(id=iid, name_pt=name, cnpj=cnpj, industry_id=ind.id, is_active=True)
+    unique_cnpj = cnpj or f"{uuid4().int % (10**14):014d}"
+    issuer = Issuer(id=iid, name_pt=name, cnpj=unique_cnpj, industry_id=ind.id, is_active=True)
     session.add(issuer)
     await session.flush()
     return issuer
@@ -55,7 +57,13 @@ async def _seed_issuer(
 
 async def _seed_instrument(session: AsyncSession, issuer_id, *, instrument_id=None):
     iid = instrument_id or uuid4()
-    inst = Instrument(id=iid, issuer_id=issuer_id, share_class="ON", is_active=True)
+    inst = Instrument(
+        id=iid,
+        issuer_id=issuer_id,
+        instrument_type="common_share",
+        share_class="ON",
+        is_active=True,
+    )
     session.add(inst)
     await session.flush()
     return inst

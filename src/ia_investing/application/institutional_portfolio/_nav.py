@@ -53,7 +53,9 @@ class NavService:
         snapshots = await self._load_snapshots(version.id)
         instrument_ids = tuple(s.instrument_id for s in snapshots)
         market = await self._load_market_data(instrument_ids, snapshots, as_of, portfolio.base_currency)
-        positions, invested_cost, ca_details = self._valuate_positions(snapshots, market, portfolio.base_currency)
+        positions, invested_cost, position_details, corporate_action_cash = self._valuate_positions(
+            snapshots, market, portfolio.base_currency
+        )
         cash_values, cash_details, fees, taxes = await self._prepare_cash_and_ledger(
             version.id, portfolio.id, market.fx_rates, portfolio.base_currency, as_of
         )
@@ -65,8 +67,8 @@ class NavService:
             positions,
             cash_values,
             cash_details,
-            ca_details,
-            corporate_action_cash=ca_details,
+            position_details,
+            corporate_action_cash=corporate_action_cash,
             fees=fees,
             taxes=taxes,
             invested_cost=invested_cost,
@@ -117,7 +119,7 @@ class NavService:
                     MarketBar.close_price,
                     MarketBar.knowledge_at.label("bar_knowledge_at"),
                 )
-                .distinct_on(Listing.instrument_id)
+                .distinct(Listing.instrument_id)
                 .join(MarketBar, MarketBar.listing_id == Listing.id)
                 .where(
                     Listing.instrument_id.in_(instrument_ids),
@@ -139,7 +141,7 @@ class NavService:
                 row.bar_knowledge_at,
             )
 
-        min_as_of_date = min(s.as_of.date() for s in snapshots)
+        min_as_of_date = min((s.as_of.date() for s in snapshots), default=as_of.date())
         corporate_action_rows = list(
             (
                 await self.session.scalars(
@@ -180,8 +182,8 @@ class NavService:
             if inst.currency_code != target_currency:
                 currency_pairs.add((inst.currency_code, target_currency))
         for action in corporate_actions:
-            inst = instruments.get(action.instrument_id)
-            action_currency = action.currency_code or (inst.currency_code if inst else None)
+            instrument = instruments.get(action.instrument_id)
+            action_currency = action.currency_code or (instrument.currency_code if instrument else None)
             if action_currency and action_currency != target_currency:
                 currency_pairs.add((action_currency, target_currency))
 
@@ -200,7 +202,7 @@ class NavService:
                         FxRate.rate_at <= as_of,
                         FxRate.knowledge_at <= as_of,
                     )
-                    .distinct_on(FxRate.base_currency)
+                    .distinct(FxRate.base_currency)
                     .order_by(FxRate.base_currency, FxRate.rate_at.desc(), FxRate.knowledge_at.desc())
                 )
             )
@@ -224,7 +226,7 @@ class NavService:
                             FxRate.rate_at <= as_of,
                             FxRate.knowledge_at <= as_of,
                         )
-                        .distinct_on(FxRate.quote_currency)
+                        .distinct(FxRate.quote_currency)
                         .order_by(FxRate.quote_currency, FxRate.rate_at.desc(), FxRate.knowledge_at.desc())
                     )
                 )
@@ -241,7 +243,7 @@ class NavService:
         snapshots: list[PositionSnapshot],
         market: MarketSnapshotData,
         base_currency: str,
-    ) -> tuple[list[PositionValue], Decimal, list[dict[str, object]]]:
+    ) -> tuple[list[PositionValue], Decimal, list[dict[str, object]], list[Decimal]]:
         def _get_fx(source: str, target: str) -> tuple[Decimal, UUID | None]:
             if source == target:
                 return Decimal(1), None
@@ -271,7 +273,7 @@ class NavService:
             actions = [
                 a
                 for a in market.actions_by_instrument.get(snapshot.instrument_id, [])
-                if a.ex_date > snapshot_as_of_date
+                if a.ex_date is not None and a.ex_date > snapshot_as_of_date
             ]
 
             applied_actions: list[str] = []
@@ -315,7 +317,7 @@ class NavService:
                 }
             )
 
-        return positions, invested_cost, corporate_action_cash
+        return positions, invested_cost, input_details, corporate_action_cash
 
     async def _prepare_cash_and_ledger(
         self,
@@ -378,7 +380,7 @@ class NavService:
         positions: list[PositionValue],
         cash_values: list[Decimal],
         cash_details: list[dict[str, object]],
-        ca_details: list[Decimal],
+        position_details: list[dict[str, object]],
         *,
         corporate_action_cash: list[Decimal],
         fees: tuple[Decimal, ...],
@@ -392,9 +394,11 @@ class NavService:
             version.mandate_id, version.as_of, as_of, portfolio.base_currency
         )
         input_details: dict[str, object] = {
-            "positions": [d for d in cash_details if d.get("type") == "position"],
-            "cash": [d for d in cash_details if d.get("type") != "position"],
-            "corporate_action_cash": [{"amount": str(a)} for a in corporate_action_cash],
+            "positions": [detail for detail in position_details if detail.get("type") == "position"],
+            "cash": cash_details,
+            "corporate_action_cash": [
+                detail for detail in position_details if detail.get("type") == "corporate_action_cash"
+            ],
             "benchmark": benchmark_details,
         }
         revision = (

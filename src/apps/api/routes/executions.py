@@ -339,7 +339,11 @@ async def fail_execution(
         resource_id=execution_id,
         changes={"action": "fail", "reason": body.reason},
     )
-    return ExecutionFailedResponse(id=str(execution.id), state=execution.state, reason=execution.reason)
+    return ExecutionFailedResponse(
+        id=str(execution.id),
+        state=execution.state,
+        reason=execution.reason or "unspecified failure",
+    )
 
 
 @router.post("/{execution_id}/settle", response_model=ExecutionSettledResponse)

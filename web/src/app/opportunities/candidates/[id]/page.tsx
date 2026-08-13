@@ -6,7 +6,14 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { CandidateStatusBadge } from "@/components/candidates/candidate-status";
 import { CandidateTabs } from "@/components/candidates/CandidateTabs";
-import { getCandidate, requestCandidateReanalysis, runCandidatePipeline, resolveCandidateGap, type CandidateDetail, type PipelineResult } from "@/lib/candidate-api";
+import {
+  getCandidate,
+  requestCandidateReanalysis,
+  runCandidatePipeline,
+  resolveCandidateGap,
+  type CandidateDetail,
+  type PipelineResult,
+} from "@/lib/candidate-api";
 import styles from "@/components/candidates/candidate-intelligence.module.css";
 
 type Tab = "overview" | "sources" | "gaps" | "analysis" | "timeline";
@@ -25,31 +32,43 @@ export default function CandidateDetailPage() {
   const [resolveNotes, setResolveNotes] = useState("");
   const [resolving, setResolving] = useState(false);
 
-  const load = useCallback(async (silent = false) => {
-    if (!silent) setLoading(true);
-    setError(null);
-    try {
-      const result = await getCandidate(params.id);
-      setDetail(result.data);
-      setEtag(result.etag);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Falha ao carregar candidato");
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  }, [params.id]);
+  const load = useCallback(
+    async (silent = false) => {
+      if (!silent) setLoading(true);
+      setError(null);
+      try {
+        const result = await getCandidate(params.id);
+        setDetail(result.data);
+        setEtag(result.etag);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "Falha ao carregar candidato");
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [params.id],
+  );
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => {
+    queueMicrotask(() => void load());
+  }, [load]);
 
-  const openGaps = useMemo(() => (detail?.gaps ?? []).filter((gap) => gap.status === "open") ?? [], [detail]);
+  const openGaps = useMemo(
+    () => (detail?.gaps ?? []).filter((gap) => gap.status === "open") ?? [],
+    [detail],
+  );
   const shouldPoll = Boolean(
-    (detail?.sources ?? []).some((source) => source.status === "discovered")
-      || (detail?.analysis_runs ?? []).some((run) => run.status === "queued" || run.status === "running"),
+    (detail?.sources ?? []).some((source) => source.status === "discovered") ||
+    (detail?.analysis_runs ?? []).some(
+      (run) => run.status === "queued" || run.status === "running",
+    ),
   );
 
   useEffect(() => {
     if (!shouldPoll) return undefined;
-    const timer = window.setInterval(() => { void load(true); }, 10_000);
+    const timer = window.setInterval(() => {
+      void load(true);
+    }, 10_000);
     return () => window.clearInterval(timer);
   }, [load, shouldPoll]);
 
@@ -99,8 +118,19 @@ export default function CandidateDetailPage() {
     }
   }
 
-  if (loading) return <div className="state-panel"><strong>Carregando investigação</strong>Consultando fontes, lacunas e execuções.</div>;
-  if (error && !detail) return <div className="state-panel" data-state="error"><strong>Não foi possível abrir o candidato</strong>{error}</div>;
+  if (loading)
+    return (
+      <div className="state-panel">
+        <strong>Carregando investigação</strong>Consultando fontes, lacunas e execuções.
+      </div>
+    );
+  if (error && !detail)
+    return (
+      <div className="state-panel" data-state="error">
+        <strong>Não foi possível abrir o candidato</strong>
+        {error}
+      </div>
+    );
   if (!detail) return null;
 
   const candidate = detail.candidate;
@@ -110,32 +140,82 @@ export default function CandidateDetailPage() {
     <>
       <header className="page-head">
         <div>
-          <Link className="breadcrumb" href="/opportunities/candidates"><ArrowLeft size={13} /> Voltar para candidatos</Link>
-          <div className="eyebrow mt-12">{candidate.origin === "manual" ? "Indicação manual" : "Exploração autônoma"}</div>
-          <h1>{candidate.ticker} · {candidate.legal_name ?? "Identidade em resolução"}</h1>
-          <p className="subtitle">{candidate.rationale ?? "Investigação completa para decidir elegibilidade de carteira."}</p>
+          <Link className="breadcrumb" href="/opportunities/candidates">
+            <ArrowLeft size={13} /> Voltar para candidatos
+          </Link>
+          <div className="eyebrow mt-12">
+            {candidate.origin === "manual" ? "Indicação manual" : "Exploração autônoma"}
+          </div>
+          <h1>
+            {candidate.ticker} · {candidate.legal_name ?? "Identidade em resolução"}
+          </h1>
+          <p className="subtitle">
+            {candidate.rationale ?? "Investigação completa para decidir elegibilidade de carteira."}
+          </p>
         </div>
         <div className={styles.actions}>
           <CandidateStatusBadge status={candidate.status} />
-          <button className="button" onClick={() => void runPipeline()} disabled={pipelineLoading || actionLoading}><RefreshCw size={14} className={pipelineLoading ? "animate-spin" : ""} /> {pipelineLoading ? "Executando pipeline..." : "Executar Pipeline"}</button>
-          <button className="button" onClick={() => void reanalyze()} disabled={actionLoading || pipelineLoading}><RefreshCw size={14} /> {actionLoading ? "Solicitando..." : "Analisar novamente"}</button>
+          <button
+            className="button"
+            onClick={() => void runPipeline()}
+            disabled={pipelineLoading || actionLoading}
+          >
+            <RefreshCw size={14} className={pipelineLoading ? "animate-spin" : ""} />{" "}
+            {pipelineLoading ? "Executando pipeline..." : "Executar Pipeline"}
+          </button>
+          <button
+            className="button"
+            onClick={() => void reanalyze()}
+            disabled={actionLoading || pipelineLoading}
+          >
+            <RefreshCw size={14} /> {actionLoading ? "Solicitando..." : "Analisar novamente"}
+          </button>
         </div>
       </header>
 
-      {error && <div className={styles.error} role="alert">{error}</div>}
+      {error && (
+        <div className={styles.error} role="alert">
+          {error}
+        </div>
+      )}
       {pipelineResult && (
-        <div className="card card-pad section-gap" style={{ borderLeft: `3px solid ${pipelineResult.final_status === "succeeded" ? "var(--accent)" : pipelineResult.final_status === "blocked" ? "var(--amber)" : "var(--red)"}` }}>
+        <div
+          className="card card-pad section-gap"
+          style={{
+            borderLeft: `3px solid ${pipelineResult.final_status === "succeeded" ? "var(--accent)" : pipelineResult.final_status === "blocked" ? "var(--amber)" : "var(--red)"}`,
+          }}
+        >
           <div className="card-title">
             <h2>Resultado do Pipeline</h2>
-            <span className="badge" data-tone={pipelineResult.final_status === "succeeded" ? "good" : pipelineResult.final_status === "blocked" ? "warn" : "bad"}>
-              {pipelineResult.final_status} ({(pipelineResult.total_duration_ms / 1000).toFixed(1)}s)
+            <span
+              className="badge"
+              data-tone={
+                pipelineResult.final_status === "succeeded"
+                  ? "good"
+                  : pipelineResult.final_status === "blocked"
+                    ? "warn"
+                    : "bad"
+              }
+            >
+              {pipelineResult.final_status} ({(pipelineResult.total_duration_ms / 1000).toFixed(1)}
+              s)
             </span>
           </div>
           <div className="flex flex-col gap-4 mt-8">
             {pipelineResult.stages.map((s) => (
               <div key={s.stage} className="pipeline-stage">
                 <span className="pipeline-stage-label">{s.stage}</span>
-                <span className="pipeline-stage-status" style={{ color: s.status === "blocked" ? "var(--red)" : s.status === "skipped" ? "var(--muted)" : "var(--accent)" }}>
+                <span
+                  className="pipeline-stage-status"
+                  style={{
+                    color:
+                      s.status === "blocked"
+                        ? "var(--red)"
+                        : s.status === "skipped"
+                          ? "var(--muted)"
+                          : "var(--accent)",
+                  }}
+                >
                   {s.status} ({s.duration_ms.toFixed(0)}ms)
                 </span>
               </div>
@@ -143,13 +223,45 @@ export default function CandidateDetailPage() {
           </div>
         </div>
       )}
-      {detail.blocking_gap_codes.length > 0 && <div className="state-panel mb-14" data-state="partial"><strong>Análise bloqueada aguardando complemento</strong>Resolva ou forneça as fontes obrigatórias indicadas abaixo. URLs fornecidas passam por validação antes de liberar o fluxo.</div>}
+      {detail.blocking_gap_codes.length > 0 && (
+        <div className="state-panel mb-14" data-state="partial">
+          <strong>Análise bloqueada aguardando complemento</strong>Resolva ou forneça as fontes
+          obrigatórias indicadas abaixo. URLs fornecidas passam por validação antes de liberar o
+          fluxo.
+        </div>
+      )}
 
       <section className="grid grid-4 section-gap" aria-live="polite">
-        <article className="card metric"><div className="metric-label">Prontidão</div><div className={`metric-value ${readinessPercent >= 90 ? "positive" : readinessPercent < 60 ? "warning" : ""}`}>{readinessPercent}%</div><div className="metric-note">não substitui aprovação</div></article>
-        <article className="card metric"><div className="metric-label">Lacunas abertas</div><div className={`metric-value ${openGaps.length ? "warning" : "positive"}`}>{openGaps.length}</div><div className="metric-note">{(detail.blocking_gap_codes ?? []).length} bloqueantes</div></article>
-        <article className="card metric"><div className="metric-label">Fontes verificadas</div><div className="metric-value">{(detail.sources ?? []).filter((source) => source.status === "verified").length}</div><div className="metric-note">de {(detail.sources ?? []).length} cadastradas</div></article>
-        <article className="card metric"><div className="metric-label">Execuções</div><div className="metric-value">{(detail.analysis_runs ?? []).length}</div><div className="metric-note">última: {(detail.analysis_runs ?? [])[0]?.status ?? "—"}</div></article>
+        <article className="card metric">
+          <div className="metric-label">Prontidão</div>
+          <div
+            className={`metric-value ${readinessPercent >= 90 ? "positive" : readinessPercent < 60 ? "warning" : ""}`}
+          >
+            {readinessPercent}%
+          </div>
+          <div className="metric-note">não substitui aprovação</div>
+        </article>
+        <article className="card metric">
+          <div className="metric-label">Lacunas abertas</div>
+          <div className={`metric-value ${openGaps.length ? "warning" : "positive"}`}>
+            {openGaps.length}
+          </div>
+          <div className="metric-note">{(detail.blocking_gap_codes ?? []).length} bloqueantes</div>
+        </article>
+        <article className="card metric">
+          <div className="metric-label">Fontes verificadas</div>
+          <div className="metric-value">
+            {(detail.sources ?? []).filter((source) => source.status === "verified").length}
+          </div>
+          <div className="metric-note">de {(detail.sources ?? []).length} cadastradas</div>
+        </article>
+        <article className="card metric">
+          <div className="metric-label">Execuções</div>
+          <div className="metric-value">{(detail.analysis_runs ?? []).length}</div>
+          <div className="metric-note">
+            última: {(detail.analysis_runs ?? [])[0]?.status ?? "—"}
+          </div>
+        </article>
       </section>
 
       <CandidateTabs
@@ -161,8 +273,14 @@ export default function CandidateDetailPage() {
         resolveNotes={resolveNotes}
         resolving={resolving}
         onResolveGap={resolveGap}
-        onEditGap={(gapId) => { setEditingGapId(gapId); setResolveNotes(""); }}
-        onCancelEdit={() => { setEditingGapId(null); setResolveNotes(""); }}
+        onEditGap={(gapId) => {
+          setEditingGapId(gapId);
+          setResolveNotes("");
+        }}
+        onCancelEdit={() => {
+          setEditingGapId(null);
+          setResolveNotes("");
+        }}
         onNotesChange={setResolveNotes}
         load={load}
       />

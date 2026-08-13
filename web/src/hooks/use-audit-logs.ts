@@ -32,7 +32,9 @@ export function useAuditLogs(resourceType: string, resourceId: string | null) {
         resource_id: resourceId,
         limit: "50",
       });
-      const data = await bffFetch<{ items?: AuditLogEntry[]; total?: number }>(`/api/v1/audit/logs?${params}`);
+      const data = await bffFetch<{ items?: AuditLogEntry[]; total?: number }>(
+        `/api/v1/audit/logs?${params}`,
+      );
       return { items: (data.items ?? []) as AuditLogEntry[], total: data.total ?? 0 };
     },
     enabled: !!resourceId,

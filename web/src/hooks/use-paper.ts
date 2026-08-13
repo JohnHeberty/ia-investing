@@ -30,9 +30,7 @@ export function usePaper() {
     refetchOnWindowFocus: false,
   });
 
-  const intents = Array.isArray(tradeIntentsQuery.data)
-    ? tradeIntentsQuery.data
-    : [];
+  const intents = Array.isArray(tradeIntentsQuery.data) ? tradeIntentsQuery.data : [];
 
   const orders: PaperOrder[] = intents.map((i) => {
     const side = String(i.side ?? i.direction ?? "BUY");
@@ -64,12 +62,7 @@ export function usePaper() {
   const isLoading = tradeIntentsQuery.isLoading;
   const isError = tradeIntentsQuery.isError;
 
-  const dataState: DataState = computeDataState(
-    isLoading,
-    isError,
-    null,
-    intents.length > 0,
-  );
+  const dataState: DataState = computeDataState(isLoading, isError, null, intents.length > 0);
 
   return {
     orders,

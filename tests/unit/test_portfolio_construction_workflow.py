@@ -20,7 +20,7 @@ sys.modules["_scorecard"] = _scorecard
 _spec.loader.exec_module(_scorecard)  # type: ignore[union-attr]
 ScorecardCalculator = _scorecard.ScorecardCalculator
 
-from workflows._portfolio_construction import (  # noqa: E402
+from workflows._portfolio_construction import (
     PipelineConfig,
     PortfolioConstructionInput,
     PortfolioConstructionWorkflow,

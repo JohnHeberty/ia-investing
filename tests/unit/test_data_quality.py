@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import pytest
 
-from data_quality._models import ValidationResult, _close, _get, _make
+from data_quality._accounting import REQUIRED_FIELDS, run_all_checks
 from data_quality._balance_sheet import validate_balance_sheet
 from data_quality._cash_flow import validate_cash_flow
-from data_quality._dre import validate_dre
 from data_quality._completeness import check_data_completeness
+from data_quality._dre import validate_dre
+from data_quality._models import _close, _get, _make
 from data_quality._temporal import check_temporal_consistency
-from data_quality._accounting import run_all_checks, REQUIRED_FIELDS
 
 
 # ---------------------------------------------------------------------------
@@ -83,21 +83,21 @@ class TestValidateBalanceSheet:
         data = _valid_bs()
         data["total_assets"] = 2000
         results = validate_balance_sheet(data)
-        balance = [r for r in results if r.check_name == "balance_sheet_balances"][0]
+        balance = next(r for r in results if r.check_name == "balance_sheet_balances")
         assert balance.passed is False
 
     def test_negative_field(self):
         data = _valid_bs()
         data["cash"] = -50
         results = validate_balance_sheet(data)
-        cash_check = [r for r in results if r.check_name == "cash_non_negative"][0]
+        cash_check = next(r for r in results if r.check_name == "cash_non_negative")
         assert cash_check.passed is False
 
     def test_negative_equity_severity_warning(self):
         data = _valid_bs()
         data["equity"] = -100
         results = validate_balance_sheet(data)
-        eq_check = [r for r in results if r.check_name == "equity_non_negative"][0]
+        eq_check = next(r for r in results if r.check_name == "equity_non_negative")
         assert eq_check.severity == "warning"
 
 
@@ -127,7 +127,7 @@ class TestValidateCashFlow:
         data = _valid_cf()
         data["free_cash_flow"] = 999
         results = validate_cash_flow(data)
-        fcf = [r for r in results if r.check_name == "free_cash_flow_consistency"][0]
+        fcf = next(r for r in results if r.check_name == "free_cash_flow_consistency")
         assert fcf.passed is False
 
     def test_net_income_zero(self):
@@ -141,7 +141,7 @@ class TestValidateCashFlow:
         data["net_income"] = 1
         data["operating_cash_flow"] = 100
         results = validate_cash_flow(data)
-        ocf = [r for r in results if r.check_name == "operating_cf_vs_net_income"][0]
+        ocf = next(r for r in results if r.check_name == "operating_cf_vs_net_income")
         assert ocf.passed is False
 
 
@@ -175,28 +175,28 @@ class TestValidateDRE:
         data = _valid_dre()
         data["receita_liquida"] = -100
         results = validate_dre(data)
-        check = [r for r in results if r.check_name == "receita_liquida_non_negative"][0]
+        check = next(r for r in results if r.check_name == "receita_liquida_non_negative")
         assert check.passed is False
 
     def test_custo_exceeds_receita(self):
         data = _valid_dre()
         data["custo_receita"] = 2000
         results = validate_dre(data)
-        check = [r for r in results if r.check_name == "custo_receita_lte_receita"][0]
+        check = next(r for r in results if r.check_name == "custo_receita_lte_receita")
         assert check.passed is False
 
     def test_ebitda_inconsistency(self):
         data = _valid_dre()
         data["ebitda"] = 9999
         results = validate_dre(data)
-        check = [r for r in results if r.check_name == "ebitda_consistency"][0]
+        check = next(r for r in results if r.check_name == "ebitda_consistency")
         assert check.passed is False
 
     def test_lucro_inconsistency(self):
         data = _valid_dre()
         data["lucro_liquido"] = 9999
         results = validate_dre(data)
-        check = [r for r in results if r.check_name == "lucro_liquido_consistency"][0]
+        check = next(r for r in results if r.check_name == "lucro_liquido_consistency")
         assert check.passed is False
 
 
@@ -239,7 +239,7 @@ class TestCheckTemporalConsistency:
             {"date": "2024-03-01", "value": 30},
         ]
         results = check_temporal_consistency(series, "date", "value")
-        sorted_check = [r for r in results if r.check_name == "temporal_sorted"][0]
+        sorted_check = next(r for r in results if r.check_name == "temporal_sorted")
         assert sorted_check.passed is True
 
     def test_unsorted_dates(self):
@@ -248,7 +248,7 @@ class TestCheckTemporalConsistency:
             {"date": "2024-01-01", "value": 10},
         ]
         results = check_temporal_consistency(series, "date", "value")
-        sorted_check = [r for r in results if r.check_name == "temporal_sorted"][0]
+        sorted_check = next(r for r in results if r.check_name == "temporal_sorted")
         assert sorted_check.passed is False
 
     def test_duplicates(self):
@@ -257,7 +257,7 @@ class TestCheckTemporalConsistency:
             {"date": "2024-01-01", "value": 20},
         ]
         results = check_temporal_consistency(series, "date", "value")
-        dup_check = [r for r in results if r.check_name == "temporal_no_duplicates"][0]
+        dup_check = next(r for r in results if r.check_name == "temporal_no_duplicates")
         assert dup_check.passed is False
 
     def test_large_gaps(self):
@@ -266,7 +266,7 @@ class TestCheckTemporalConsistency:
             {"date": "2024-12-31", "value": 20},
         ]
         results = check_temporal_consistency(series, "date", "value", max_gap_days=30)
-        gap_check = [r for r in results if r.check_name == "temporal_no_large_gaps"][0]
+        gap_check = next(r for r in results if r.check_name == "temporal_no_large_gaps")
         assert gap_check.passed is False
 
     def test_no_gaps(self):
@@ -275,7 +275,7 @@ class TestCheckTemporalConsistency:
             {"date": "2024-01-15", "value": 20},
         ]
         results = check_temporal_consistency(series, "date", "value", max_gap_days=30)
-        gap_check = [r for r in results if r.check_name == "temporal_no_large_gaps"][0]
+        gap_check = next(r for r in results if r.check_name == "temporal_no_large_gaps")
         assert gap_check.passed is True
 
     def test_single_record(self):

@@ -49,12 +49,13 @@ export function useResearchCases() {
       }))
     : [];
 
-  const latestAsOf = cases.length > 0
-    ? cases.reduce((latest, c) => {
-        const d = new Date(c.data_as_of).getTime();
-        return d > latest ? d : latest;
-      }, 0)
-    : null;
+  const latestAsOf =
+    cases.length > 0
+      ? cases.reduce((latest, c) => {
+          const d = new Date(c.data_as_of).getTime();
+          return d > latest ? d : latest;
+        }, 0)
+      : null;
 
   const openCases = cases.filter((c) => c.state === "open" || c.state === "triaged").length;
   const researchCases = cases.filter((c) => c.state === "in_research").length;

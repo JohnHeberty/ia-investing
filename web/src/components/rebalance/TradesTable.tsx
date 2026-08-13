@@ -40,17 +40,31 @@ export function TradesTable({
                 />
               )}
             </td>
-            <td style={{ textAlign: "center", fontSize: 12, color: "var(--muted-2)" }}>{trade.execution_order}</td>
+            <td style={{ textAlign: "center", fontSize: 12, color: "var(--muted-2)" }}>
+              {trade.execution_order}
+            </td>
             <td style={{ fontWeight: 500, color: "var(--text)" }}>{trade.ticker}</td>
-            <td><SideBadge side={trade.side} /></td>
+            <td>
+              <SideBadge side={trade.side} />
+            </td>
             <td>
               {pct(trade.current_weight)} → {pct(trade.target_weight)}
             </td>
-            <td style={{ fontFamily: "var(--font-mono)", color: trade.delta > 0 ? "var(--accent)" : "var(--red)" }}>
-              {trade.delta > 0 ? "+" : ""}{pct(trade.delta)}
+            <td
+              style={{
+                fontFamily: "var(--font-mono)",
+                color: trade.delta > 0 ? "var(--accent)" : "var(--red)",
+              }}
+            >
+              {trade.delta > 0 ? "+" : ""}
+              {pct(trade.delta)}
             </td>
-            <td style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{money.format(trade.estimated_value)}</td>
-            <td><StatusBadge status={trade.status} /></td>
+            <td style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>
+              {money.format(trade.estimated_value)}
+            </td>
+            <td>
+              <StatusBadge status={trade.status} />
+            </td>
           </tr>
         ))}
       </tbody>

@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef } from "react";
 
 export type SourceEntry = {
   id: string;
@@ -67,7 +67,14 @@ export function SourceDrawer({
           overflowY: "auto",
         }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 20,
+          }}
+        >
           <h2 style={{ fontSize: 16, fontWeight: 600 }}>{title}</h2>
           <button
             onClick={onClose}
@@ -81,7 +88,16 @@ export function SourceDrawer({
         {sources.length === 0 ? (
           <p style={{ color: "var(--muted)", fontSize: 13 }}>Nenhuma fonte registrada.</p>
         ) : (
-          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
+          <ul
+            style={{
+              listStyle: "none",
+              padding: 0,
+              margin: 0,
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+            }}
+          >
             {sources.map((source) => (
               <li
                 key={source.id}
@@ -92,7 +108,9 @@ export function SourceDrawer({
                   fontSize: 12,
                 }}
               >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+                >
                   <strong>{source.name}</strong>
                   <Badge source={source} />
                 </div>
@@ -106,7 +124,12 @@ export function SourceDrawer({
                     href={source.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{ color: "var(--blue)", fontSize: 11, marginTop: 4, display: "inline-block" }}
+                    style={{
+                      color: "var(--blue)",
+                      fontSize: 11,
+                      marginTop: 4,
+                      display: "inline-block",
+                    }}
                   >
                     Abrir fonte original
                   </a>

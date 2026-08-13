@@ -46,19 +46,69 @@ export function CandidateCreateForm({ onClose }: { onClose?: () => void }) {
 
   return (
     <form className={`card card-pad ${styles.layout}`} onSubmit={submit}>
-      <div className="card-title"><h2>Novo candidato de investimento</h2><span>investigação completa</span></div>
-      <div className={styles.formGrid}>
-        <div className={styles.field}><label htmlFor="ticker">Ticker *</label><input id="ticker" name="ticker" required maxLength={24} placeholder="WEGE3" autoCapitalize="characters" /></div>
-        <div className={styles.field}><label htmlFor="exchange">Bolsa *</label><input id="exchange" name="exchange" required defaultValue="B3" maxLength={20} /></div>
-        <div className={styles.field}><label htmlFor="legal_name">Razão social</label><input id="legal_name" name="legal_name" maxLength={300} /></div>
-        <div className={styles.field}><label htmlFor="cnpj">CNPJ</label><input id="cnpj" name="cnpj" maxLength={18} value={cnpj} onChange={(e: ChangeEvent<HTMLInputElement>) => setCnpj(formatCNPJ(e.target.value))} placeholder="00.000.000/0000-00" /></div>
-        <div className={styles.field}><label htmlFor="cvm_code">Código CVM</label><input id="cvm_code" name="cvm_code" maxLength={32} /></div>
-        <div className={`${styles.field} ${styles.full}`}><label htmlFor="rationale">Por que investigar</label><textarea id="rationale" name="rationale" maxLength={4000} placeholder="Hipótese inicial, evento observado ou motivo da indicação." /></div>
+      <div className="card-title">
+        <h2>Novo candidato de investimento</h2>
+        <span>investigação completa</span>
       </div>
-      {error && <div className={styles.error} role="alert">{error}</div>}
+      <div className={styles.formGrid}>
+        <div className={styles.field}>
+          <label htmlFor="ticker">Ticker *</label>
+          <input
+            id="ticker"
+            name="ticker"
+            required
+            maxLength={24}
+            placeholder="WEGE3"
+            autoCapitalize="characters"
+          />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="exchange">Bolsa *</label>
+          <input id="exchange" name="exchange" required defaultValue="B3" maxLength={20} />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="legal_name">Razão social</label>
+          <input id="legal_name" name="legal_name" maxLength={300} />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="cnpj">CNPJ</label>
+          <input
+            id="cnpj"
+            name="cnpj"
+            maxLength={18}
+            value={cnpj}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setCnpj(formatCNPJ(e.target.value))}
+            placeholder="00.000.000/0000-00"
+          />
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="cvm_code">Código CVM</label>
+          <input id="cvm_code" name="cvm_code" maxLength={32} />
+        </div>
+        <div className={`${styles.field} ${styles.full}`}>
+          <label htmlFor="rationale">Por que investigar</label>
+          <textarea
+            id="rationale"
+            name="rationale"
+            maxLength={4000}
+            placeholder="Hipótese inicial, evento observado ou motivo da indicação."
+          />
+        </div>
+      </div>
+      {error && (
+        <div className={styles.error} role="alert">
+          {error}
+        </div>
+      )}
       <div className={styles.actions}>
-        <button className="button" disabled={submitting}>{submitting ? "Cadastrando..." : "Cadastrar e iniciar investigação"}</button>
-        {onClose && <button className="button secondary" type="button" onClick={onClose}>Cancelar</button>}
+        <button className="button" disabled={submitting}>
+          {submitting ? "Cadastrando..." : "Cadastrar e iniciar investigação"}
+        </button>
+        {onClose && (
+          <button className="button secondary" type="button" onClick={onClose}>
+            Cancelar
+          </button>
+        )}
       </div>
     </form>
   );

@@ -60,7 +60,7 @@ async def test_register_source_creates_entities_and_audit() -> None:
 
     call_count = 0
 
-    async def fake_execute(stmt):
+    async def fake_execute(stmt, params=None):
         nonlocal call_count
         call_count += 1
 
@@ -123,7 +123,7 @@ async def test_update_health_records_success() -> None:
 
     call_count = 0
 
-    async def routing_execute(stmt):
+    async def routing_execute(stmt, params=None):
         nonlocal call_count
         call_count += 1
         if call_count == 1:

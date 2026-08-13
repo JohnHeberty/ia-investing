@@ -16,8 +16,8 @@ class CommitteeSession(Base):
     organization_id: Mapped[UUID | None] = mapped_column(
         sa.ForeignKey("organizations.id", ondelete="CASCADE"), index=True
     )
-    thesis_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    members: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    thesis_ids: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    members: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
     scheduled_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
     convened_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
     state: Mapped[str] = mapped_column(sa.String(20), nullable=False, default="scheduled")

@@ -7,6 +7,7 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from ia_investing.orchestration.policies import DEFAULT_ACTIVITY_RETRY_POLICY
+    from workflows._schedule_run import complete_schedule_run, fail_schedule_run, start_schedule_run
 
 
 @dataclass(frozen=True, slots=True)
@@ -36,6 +37,19 @@ class PaperValuationWorkflow:
 
     @workflow.run
     async def run(self, command: PaperValuationInput) -> PaperValuationResult:
+        await start_schedule_run(command.schedule_id)
+        try:
+            result = await self._value(command)
+        except Exception as exc:
+            await fail_schedule_run(command.schedule_id, exc)
+            raise
+        await complete_schedule_run(
+            command.schedule_id,
+            {"portfolio_id": command.portfolio_id, "nav": result.nav, "revision": result.revision},
+        )
+        return result
+
+    async def _value(self, command: PaperValuationInput) -> PaperValuationResult:
         as_of = workflow.now().isoformat()
         reconciliation = await workflow.execute_activity(
             "reconcile_paper_portfolio",
@@ -44,18 +58,6 @@ class PaperValuationWorkflow:
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
         if reconciliation["blocking_count"]:
-            if command.schedule_id:
-                await workflow.execute_activity(
-                    "record_schedule_run",
-                    {
-                        "schedule_id": command.schedule_id,
-                        "workflow_id": workflow.info().workflow_id,
-                        "status": "failed",
-                        "started_at": workflow.info().start_time.isoformat(),
-                        "error_message": "blocking reconciliation break prevents NAV publication",
-                    },
-                    start_to_close_timeout=timedelta(seconds=10),
-                )
             raise RuntimeError("blocking reconciliation break prevents NAV publication")
 
         publication = await workflow.execute_activity(
@@ -64,22 +66,5 @@ class PaperValuationWorkflow:
             start_to_close_timeout=timedelta(minutes=5),
             retry_policy=DEFAULT_ACTIVITY_RETRY_POLICY,
         )
-
-        if command.schedule_id:
-            await workflow.execute_activity(
-                "record_schedule_run",
-                {
-                    "schedule_id": command.schedule_id,
-                    "workflow_id": workflow.info().workflow_id,
-                    "status": "completed",
-                    "started_at": workflow.info().start_time.isoformat(),
-                    "result_summary": {
-                        "portfolio_id": command.portfolio_id,
-                        "nav": publication.get("nav", ""),
-                        "revision": publication.get("revision", 0),
-                    },
-                },
-                start_to_close_timeout=timedelta(seconds=10),
-            )
 
         return PaperValuationResult(**publication)

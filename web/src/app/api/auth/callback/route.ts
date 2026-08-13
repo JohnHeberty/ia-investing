@@ -1,13 +1,7 @@
 import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
-import {
-  clearSession,
-  exchangeCode,
-  safeReturnTo,
-  storeTokenSet,
-  verifyJwt,
-} from "@/lib/oidc";
+import { clearSession, exchangeCode, safeReturnTo, storeTokenSet, verifyJwt } from "@/lib/oidc";
 
 export async function GET(request: NextRequest) {
   const jar = await cookies();

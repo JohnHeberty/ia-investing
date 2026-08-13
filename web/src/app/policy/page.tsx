@@ -3,11 +3,7 @@
 import { Suspense } from "react";
 
 import { AsOfIndicator, Badge, Metric, StatePanel } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { usePolicy } from "@/hooks/use-policy";
 
 function PolicyContent() {
@@ -79,7 +75,13 @@ function PolicyContent() {
           </p>
         </div>
         <AsOfIndicator
-          freshness={dataState === "stale" ? "Desatualizado" : hasLiveEvents ? "Atual" : "Fixtures sintéticas"}
+          freshness={
+            dataState === "stale"
+              ? "Desatualizado"
+              : hasLiveEvents
+                ? "Atual"
+                : "Fixtures sintéticas"
+          }
         />
       </div>
 
@@ -99,7 +101,11 @@ function PolicyContent() {
         <Metric
           label="Objetos monitorados"
           value={hasLiveEvents ? String(monitoredObjects) : "—"}
-          note={hasLiveEvents ? `${monitoredObjects} objeto${monitoredObjects !== 1 ? "s" : ""}` : "dado ausente não vira zero"}
+          note={
+            hasLiveEvents
+              ? `${monitoredObjects} objeto${monitoredObjects !== 1 ? "s" : ""}`
+              : "dado ausente não vira zero"
+          }
         />
         <Metric
           label="Diffs novos"
@@ -179,8 +185,7 @@ function PolicyContent() {
         <article className="card card-pad">
           <h2>Matriz de exposição</h2>
           <p className="subtitle">
-            Evento → setor → driver → métrica → emissor → tese → carteira, com confiança por
-            aresta.
+            Evento → setor → driver → métrica → emissor → tese → carteira, com confiança por aresta.
           </p>
         </article>
         <article className="card card-pad">

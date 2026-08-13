@@ -13,9 +13,10 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 import pytest
+import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.data_foundation import SourceObject, SourceObjectVersion
+from database.models.data_foundation import DataSource, SourceObject, SourceObjectVersion
 from database.models.evidence import DocumentChunk
 
 _TZ = UTC
@@ -28,7 +29,7 @@ def _dt(y: int, m: int, d: int) -> datetime:
 @pytest.fixture
 async def seed_evidence(session: AsyncSession):
     """Seed a DocumentChunk with text search and embedding."""
-    ds_id = uuid4()
+    ds_id = (await session.execute(sa.select(DataSource.id).where(DataSource.code == "CVM"))).scalar_one()
     so = SourceObject(id=uuid4(), source_id=ds_id, logical_uri="test://doc/1", object_type="pdf")
     session.add(so)
     await session.flush()
@@ -40,6 +41,7 @@ async def seed_evidence(session: AsyncSession):
         storage_key="test/key",
         media_type="application/pdf",
         size_bytes=1024,
+        discovered_at=_dt(2025, 1, 15),
     )
     session.add(sov)
     await session.flush()

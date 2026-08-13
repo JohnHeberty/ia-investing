@@ -31,7 +31,9 @@ export function useAgentRuns(params?: { status?: string }) {
       const qs = new URLSearchParams();
       if (params?.status) qs.set("status", params.status);
       const queryStr = qs.toString();
-      return await bffFetch<Array<Record<string, unknown>>>(`/api/v1/agent-runs${queryStr ? `?${queryStr}` : ""}`);
+      return await bffFetch<Array<Record<string, unknown>>>(
+        `/api/v1/agent-runs${queryStr ? `?${queryStr}` : ""}`,
+      );
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,
@@ -56,12 +58,13 @@ export function useAgentRuns(params?: { status?: string }) {
       }))
     : [];
 
-  const latestAsOf = runs.length > 0
-    ? runs.reduce((latest, r) => {
-        const d = new Date(r.created_at).getTime();
-        return d > latest ? d : latest;
-      }, 0)
-    : null;
+  const latestAsOf =
+    runs.length > 0
+      ? runs.reduce((latest, r) => {
+          const d = new Date(r.created_at).getTime();
+          return d > latest ? d : latest;
+        }, 0)
+      : null;
 
   const completedRuns = runs.filter((r) => r.status === "succeeded").length;
   const failedRuns = runs.filter((r) => r.status === "failed").length;

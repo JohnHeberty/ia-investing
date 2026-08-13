@@ -15,7 +15,17 @@ const options: Array<[SourceKind, string]> = [
   ["newsroom", "Notícias oficiais"],
 ];
 
-export function SourceCompletionForm({ candidateId, etag, suggestedKind, onSaved }: { candidateId: string; etag: string; suggestedKind?: SourceKind | null; onSaved: () => void }) {
+export function SourceCompletionForm({
+  candidateId,
+  etag,
+  suggestedKind,
+  onSaved,
+}: {
+  candidateId: string;
+  etag: string;
+  suggestedKind?: SourceKind | null;
+  onSaved: () => void;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -42,13 +52,47 @@ export function SourceCompletionForm({ candidateId, etag, suggestedKind, onSaved
   return (
     <form className={styles.layout} onSubmit={submit}>
       <div className={styles.formGrid}>
-        <div className={styles.field}><label htmlFor="kind">Tipo de fonte *</label><select id="kind" name="kind" defaultValue={suggestedKind ?? "financial_reports"}>{options.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
-        <div className={styles.field}><label htmlFor="url">URL oficial *</label><input id="url" name="url" type="url" required placeholder="https://ri.empresa.com.br/resultados" /></div>
-        <div className={`${styles.field} ${styles.full}`}><label htmlFor="notes">Observação</label><textarea id="notes" name="notes" placeholder="Como você confirmou que esta página pertence à companhia?" /></div>
+        <div className={styles.field}>
+          <label htmlFor="kind">Tipo de fonte *</label>
+          <select id="kind" name="kind" defaultValue={suggestedKind ?? "financial_reports"}>
+            {options.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className={styles.field}>
+          <label htmlFor="url">URL oficial *</label>
+          <input
+            id="url"
+            name="url"
+            type="url"
+            required
+            placeholder="https://ri.empresa.com.br/resultados"
+          />
+        </div>
+        <div className={`${styles.field} ${styles.full}`}>
+          <label htmlFor="notes">Observação</label>
+          <textarea
+            id="notes"
+            name="notes"
+            placeholder="Como você confirmou que esta página pertence à companhia?"
+          />
+        </div>
       </div>
-      <p className="subtitle">A URL fornecida fica como descoberta pelo usuário e ainda passa pela validação automática de identidade, domínio e conteúdo.</p>
-      {error && <div className={styles.error} role="alert">{error}</div>}
-      <button className="button" disabled={submitting}>{submitting ? "Salvando..." : "Salvar fonte para validação"}</button>
+      <p className="subtitle">
+        A URL fornecida fica como descoberta pelo usuário e ainda passa pela validação automática de
+        identidade, domínio e conteúdo.
+      </p>
+      {error && (
+        <div className={styles.error} role="alert">
+          {error}
+        </div>
+      )}
+      <button className="button" disabled={submitting}>
+        {submitting ? "Salvando..." : "Salvar fonte para validação"}
+      </button>
     </form>
   );
 }

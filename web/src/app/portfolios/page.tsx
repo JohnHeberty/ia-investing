@@ -51,13 +51,11 @@ export default function PortfoliosPage() {
           <div className="eyebrow">Portfolio Intelligence</div>
           <h1>Carteiras</h1>
           <p className="subtitle">
-            Gerencie suas carteiras de investimento. Crie novas carteiras, acompanhe posições e receba recomendações dos agents.
+            Gerencie suas carteiras de investimento. Crie novas carteiras, acompanhe posições e
+            receba recomendações dos agents.
           </p>
         </div>
-        <button
-          className="button"
-          onClick={() => setShowCreateForm(true)}
-        >
+        <button className="button" onClick={() => setShowCreateForm(true)}>
           + Nova Carteira
         </button>
       </header>
@@ -72,10 +70,7 @@ export default function PortfoliosPage() {
         <div className="state-panel" data-state="empty">
           <strong>Nenhuma carteira encontrada</strong>
           <p>Crie sua primeira carteira para começar a gerenciar investimentos.</p>
-          <button
-            className="button mt-12"
-            onClick={() => setShowCreateForm(true)}
-          >
+          <button className="button mt-12" onClick={() => setShowCreateForm(true)}>
             Criar Carteira
           </button>
         </div>
@@ -105,7 +100,10 @@ export default function PortfoliosPage() {
                     <div className="detail-row">
                       <span className="detail-row-label">Capital Inicial</span>
                       <span className="detail-row-value">
-                        {new Intl.NumberFormat("pt-BR", { style: "currency", currency: portfolio.base_currency }).format(portfolio.initial_capital)}
+                        {new Intl.NumberFormat("pt-BR", {
+                          style: "currency",
+                          currency: portfolio.base_currency,
+                        }).format(portfolio.initial_capital)}
                       </span>
                     </div>
                   )}

@@ -3,11 +3,7 @@
 import { Suspense } from "react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 
 import { useQualityIncidents } from "@/hooks/use-quality-incidents";
 
@@ -65,7 +61,9 @@ function DataQualityContent() {
     );
   }
 
-  const quarantineCount = incidents.filter((i) => i.status === "open" && i.severity === "high").length;
+  const quarantineCount = incidents.filter(
+    (i) => i.status === "open" && i.severity === "high",
+  ).length;
   const totalIncidents = count;
   const openIncidents = incidents.filter((i) => i.status === "open").length;
 
@@ -80,7 +78,13 @@ function DataQualityContent() {
           </p>
         </div>
         <AsOfIndicator
-          value={new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          value={new Date().toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
           freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
         />
       </div>
@@ -91,7 +95,11 @@ function DataQualityContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Métricas de qualidade" aria-live="polite">
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Métricas de qualidade"
+        aria-live="polite"
+      >
         <Metric
           label="Fontes saudáveis"
           value={totalSources > 0 ? `${healthySources}/${totalSources}` : "\u2014"}
@@ -132,7 +140,8 @@ function DataQualityContent() {
           </p>
           {neverSucceededSources > 0 && (
             <p className="text-xs text-red" style={{ marginTop: 6 }}>
-              {neverSucceededSources} fonte{neverSucceededSources !== 1 ? "s" : ""} nunca retornou sucesso.
+              {neverSucceededSources} fonte{neverSucceededSources !== 1 ? "s" : ""} nunca retornou
+              sucesso.
             </p>
           )}
         </article>
@@ -142,8 +151,8 @@ function DataQualityContent() {
             <Badge tone="good">Saudável</Badge>
           </div>
           <p className="card-desc">
-            Missing e parse_error permanecem explícitos; zero só representa valor reportado.
-            Zero nunca substitui dado ausente.
+            Missing e parse_error permanecem explícitos; zero só representa valor reportado. Zero
+            nunca substitui dado ausente.
           </p>
         </article>
         <article className="card card-pad">
@@ -155,7 +164,8 @@ function DataQualityContent() {
           </div>
           <p className="card-desc">
             Transitions exigem autorização, razão, auditoria e waiver com expiração.
-            {openIncidents > 0 && ` ${openIncidents} incidente${openIncidents !== 1 ? "s" : ""} aberto${openIncidents !== 1 ? "s" : ""}.`}
+            {openIncidents > 0 &&
+              ` ${openIncidents} incidente${openIncidents !== 1 ? "s" : ""} aberto${openIncidents !== 1 ? "s" : ""}.`}
           </p>
         </article>
       </section>
@@ -182,9 +192,14 @@ function DataQualityContent() {
                 {sources.map((source, index) => {
                   const name = String(source.name ?? source.code ?? `Fonte ${index + 1}`);
                   const code = String(source.code ?? "");
-                  const status = String(source.status ?? "unknown") as "healthy" | "stale" | "never_succeeded" | "inactive";
-                  const lastSuccess = source.last_success_at ? String(source.last_success_at) : null;
-                  const lastFailure = source.last_failure_at ? String(source.last_failure_at) : null;
+                  const status = String(source.status ?? "unknown") as
+                    "healthy" | "stale" | "never_succeeded" | "inactive";
+                  const lastSuccess = source.last_success_at
+                    ? String(source.last_success_at)
+                    : null;
+                  const lastFailure = source.last_failure_at
+                    ? String(source.last_failure_at)
+                    : null;
                   const owner = String(source.owner_role ?? "");
 
                   return (
@@ -222,7 +237,10 @@ function DataQualityContent() {
                             })
                           : "—"}
                       </td>
-                      <td className="text-xs" style={{ color: lastFailure ? "var(--red)" : "var(--muted)" }}>
+                      <td
+                        className="text-xs"
+                        style={{ color: lastFailure ? "var(--red)" : "var(--muted)" }}
+                      >
                         {lastFailure
                           ? new Date(lastFailure).toLocaleString("pt-BR", {
                               day: "2-digit",
@@ -246,7 +264,9 @@ function DataQualityContent() {
         <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Incidentes de qualidade</h2>
-            <span>{incidents.length} incidente{incidents.length !== 1 ? "s" : ""}</span>
+            <span>
+              {incidents.length} incidente{incidents.length !== 1 ? "s" : ""}
+            </span>
           </div>
           <div className="table-wrap">
             <table className="table">
@@ -263,7 +283,9 @@ function DataQualityContent() {
               <tbody>
                 {incidents.map((incident) => (
                   <tr key={incident.id}>
-                    <td className="rank"><span title={incident.id}>{incident.id.slice(0, 12)}</span></td>
+                    <td className="rank">
+                      <span title={incident.id}>{incident.id.slice(0, 12)}</span>
+                    </td>
                     <td>
                       <Badge
                         tone={

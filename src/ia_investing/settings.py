@@ -72,7 +72,7 @@ class AIGatewaySettings(BaseModel):
 
 
 class AISettings(BaseModel):
-    provider: Literal["mock", "gateway", "litellm"] = "gateway"
+    provider: Literal["mock", "gateway", "litellm"] = "mock"
     gateway: AIGatewaySettings = Field(default_factory=AIGatewaySettings)
 
 
@@ -131,7 +131,7 @@ class SchedulerSettings(BaseModel):
 
     news_collection_interval_hours: int = Field(default=4, ge=1, le=168)
     news_dedup_interval_hours: int = Field(default=24, ge=1, le=168)
-    outbox_recovery_interval_minutes: int = Field(default=30, ge=5, le=1440)
+    outbox_recovery_interval_minutes: int = Field(default=1, ge=1, le=1440)
 
 
 class WorkerSettings(BaseModel):

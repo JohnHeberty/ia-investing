@@ -1,5 +1,6 @@
-"""Portfolio Advisor Agent — recommends adjustments to portfolios based on
-9-dimension scoring (fundamental, momentum, valuation, risk, analyst,
+"""Portfolio Advisor Agent.
+
+Recommends adjustments to portfolios based on 9-dimension scoring (fundamental, momentum, valuation, risk, analyst,
 leverage, growth, liquidity, earnings) with optional LLM-generated analysis.
 """
 
@@ -212,7 +213,7 @@ def _score_risk(prices: list[float], fund: dict[str, Any]) -> float:
 
     fifty_two_high = fund.get("fifty_two_week_high")
     fifty_two_low = fund.get("fifty_two_week_low")
-    current = fund.get("trailing_pe")
+    fund.get("trailing_pe")
     if fifty_two_high and fifty_two_low and fifty_two_high > fifty_two_low:
         high = float(fifty_two_high)
         low = float(fifty_two_low)
@@ -377,7 +378,7 @@ def _score_liquidity(fund: dict[str, Any]) -> float:
     score = 0.5
     avg_vol = fund.get("avg_volume")
     avg_vol_10d = fund.get("average_volume_10days")
-    beta = fund.get("beta")
+    fund.get("beta")
 
     if avg_vol is not None and avg_vol > 0:
         if avg_vol > 1_000_000:
@@ -596,10 +597,7 @@ def build_portfolio_recommendation(
         value = pos.get("quantity", 0) * price
         current_weight = value / total_value if total_value > 0 else 0
 
-        if all_scores and ticker in all_scores:
-            scores = all_scores[ticker]
-        else:
-            scores = dict.fromkeys(SCORING_WEIGHTS, 0.5)
+        scores = all_scores[ticker] if all_scores and ticker in all_scores else dict.fromkeys(SCORING_WEIGHTS, 0.5)
 
         composite = calculate_position_score(scores)
 
@@ -657,9 +655,11 @@ def build_portfolio_recommendation(
 # LLM-enhanced analysis
 # ---------------------------------------------------------------------------
 
-PORTFOLIO_ADVISOR_SYSTEM_PROMPT = """Você é um consultor de investimentos especializado em análise de carteiras de ações brasileiras e americanas.
+PORTFOLIO_ADVISOR_SYSTEM_PROMPT = """Você é um consultor de investimentos especializado em análise de
+carteiras de ações brasileiras e americanas.
 
-Seu papel é analisar scores quantitativos e dados fundamentais de cada ativo, e gerar uma análise em linguagem natural que ajude o investidor a tomar decisões informadas.
+Seu papel é analisar scores quantitativos e dados fundamentais de cada ativo, e gerar uma análise em
+linguagem natural que ajude o investidor a tomar decisões informadas.
 
 IMPORTANTE:
 - Responda SEMPRE em JSON válido conforme o schema solicitado
@@ -717,7 +717,7 @@ def _build_llm_context(
                 "num_analistas": analyst.get("number_of_analysts"),
                 "preco_alvo": analyst.get("target_mean_price"),
                 "upside": (
-                    f"{(analyst['target_mean_price'] - pos.get('current_price', 0)) / pos.get('current_price', 1) * 100:.1f}%"
+                    f"{(analyst['target_mean_price'] - pos.get('current_price', 0)) / pos.get('current_price', 1) * 100:.1f}%"  # noqa: E501
                     if analyst.get("target_mean_price") and pos.get("current_price")
                     else None
                 ),
@@ -814,7 +814,8 @@ Responda em JSON:
         json_start = content.find("{")
         json_end = content.rfind("}") + 1
         if json_start >= 0 and json_end > json_start:
-            return json.loads(content[json_start:json_end])
+            parsed = json.loads(content[json_start:json_end])
+            return parsed if isinstance(parsed, dict) else None
 
         return None
     except TimeoutError:

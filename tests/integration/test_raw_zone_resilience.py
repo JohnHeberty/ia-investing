@@ -19,7 +19,7 @@ from database.models.data_foundation import DataSource, SourceObject, SourceObje
 from ia_investing.data.raw_zone import RawObjectInput, RawRegistration, RawZoneService, S3ImmutableObjectStore
 
 _TZ = UTC
-_SOURCE_CODE = "data-steward-cvm"
+_SOURCE_CODE = "CVM"
 
 
 def _dt(y: int, m: int, d: int, h: int = 0, mi: int = 0) -> datetime:

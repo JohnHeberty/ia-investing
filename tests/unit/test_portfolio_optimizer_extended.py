@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
-
 import cvxpy as cp
 import numpy as np
 import polars as pl
@@ -17,7 +15,7 @@ try:
 except (ImportError, ModuleNotFoundError):
     pytest.skip("cvxpy unavailable", allow_module_level=True)
 
-from portfolio._optimizer import BPS_DIVISOR, MAX_SOLVER_ITERS, OptimizationResult, OptimizerConfig, PortfolioOptimizer, SOLVER_EPSILON, WEIGHT_THRESHOLD
+from portfolio._optimizer import OptimizationResult, OptimizerConfig, PortfolioOptimizer
 
 
 def _make_returns(seed: int = 42, n_days: int = 100, n_assets: int = 3) -> pl.DataFrame:
@@ -115,11 +113,13 @@ class TestPortfolioOptimizerExtended:
 
     @pytest.mark.asyncio
     async def test_sector_constraint(self):
-        returns = pl.DataFrame({
-            "A": [0.01, 0.02, 0.01, 0.02],
-            "B": [0.01, 0.02, 0.01, 0.02],
-            "C": [-0.01, -0.02, -0.01, -0.02],
-        })
+        returns = pl.DataFrame(
+            {
+                "A": [0.01, 0.02, 0.01, 0.02],
+                "B": [0.01, 0.02, 0.01, 0.02],
+                "C": [-0.01, -0.02, -0.01, -0.02],
+            }
+        )
         constraints = {"sector_map": {"Tech": ["A", "B"]}}
         optimizer = PortfolioOptimizer(max_weight=0.50, max_sector=0.40)
         result = await optimizer.optimize(returns, constraints=constraints)
@@ -199,6 +199,7 @@ class TestPortfolioOptimizerExtended:
             else:
                 prob._status = "optimal"
                 import numpy as np
+
                 prob._solution = cp.Variable(3)
                 prob._solution.value = np.array([0.5, 0.3, 0.2])
 
@@ -222,6 +223,7 @@ class TestPortfolioOptimizerExtended:
             else:
                 # Simulate slow fallback
                 import time
+
                 time.sleep(1)
 
         monkeypatch.setattr(cp.Problem, "solve", mock_solve)
@@ -260,15 +262,20 @@ class TestPortfolioOptimizerExtended:
 
     @pytest.mark.asyncio
     async def test_zero_risk_gives_zero_sharpe(self):
-        returns = pl.DataFrame({
-            "A": [0.01, 0.01, 0.01],
-            "B": [0.01, 0.01, 0.01],
-        })
+        returns = pl.DataFrame(
+            {
+                "A": [0.01, 0.01, 0.01],
+                "B": [0.01, 0.01, 0.01],
+            }
+        )
         optimizer = PortfolioOptimizer(max_weight=1.0, risk_aversion=0.0)
         result = await optimizer.optimize(returns)
-        if result.status in ("optimal", "optimal_inaccurate"):
-            if result.expected_risk is not None and result.expected_risk == 0.0:
-                assert result.sharpe_ratio == 0.0
+        if (
+            result.status in ("optimal", "optimal_inaccurate")
+            and result.expected_risk is not None
+            and result.expected_risk == 0.0
+        ):
+            assert result.sharpe_ratio == 0.0
 
     @pytest.mark.asyncio
     async def test_current_weights_partial_mapping(self):

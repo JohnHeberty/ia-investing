@@ -10,12 +10,12 @@ from structlog.processors import (
     CallsiteParameter,
     CallsiteParameterAdder,
     JSONRenderer,
+    StackInfoRenderer,
     TimeStamper,
 )
 from structlog.stdlib import (
     LoggerFactory,
     PositionalArgumentsFormatter,
-    StackInfoRenderer,
     add_log_level,
     add_logger_name,
     filter_by_level,

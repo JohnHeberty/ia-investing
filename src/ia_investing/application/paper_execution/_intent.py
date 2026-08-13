@@ -104,7 +104,14 @@ class IntentService:
         )
         self.session.add(intent)
         await self.session.flush()
-        await record(self.session, intent, "TradeIntentCreated", "paper_trade_intent.create", context.subject, correlation_id)
+        await record(
+            self.session,
+            intent,
+            "TradeIntentCreated",
+            "paper_trade_intent.create",
+            context.subject,
+            correlation_id,
+        )
         return intent, True
 
     async def decide_intent(

@@ -1,4 +1,4 @@
-"""Integration test: source registry — DataSources seeded by migration.
+"""Integration test: source registry — DataSources seeded during bootstrap.
 
 Verifies:
   - CVM and B3 sources exist in data_sources table
@@ -17,7 +17,7 @@ from database.models.data_foundation import DataSource, SourceLicense, SourceSLA
 
 async def test_cvm_source_exists(session: AsyncSession) -> None:
     """CVM data source must be seeded by migration."""
-    stmt = sa.select(DataSource).where(DataSource.code == "data-steward-cvm")
+    stmt = sa.select(DataSource).where(DataSource.code == "CVM")
     row = (await session.execute(stmt)).scalar_one_or_none()
     assert row is not None, "CVM data source not found"
     assert row.is_active is True
@@ -26,7 +26,7 @@ async def test_cvm_source_exists(session: AsyncSession) -> None:
 
 async def test_b3_source_exists(session: AsyncSession) -> None:
     """B3 data source must be seeded by migration."""
-    stmt = sa.select(DataSource).where(DataSource.code == "data-steward-b3")
+    stmt = sa.select(DataSource).where(DataSource.code == "B3")
     row = (await session.execute(stmt)).scalar_one_or_none()
     assert row is not None, "B3 data source not found"
     assert row.is_active is True

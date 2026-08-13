@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
 
@@ -47,19 +47,20 @@ async def batch_analyze_news(params: dict[str, Any]) -> dict[str, Any]:
         import sqlalchemy as sa
 
         from database.core import session_scope
-        from database.models.news import NewsItem
+        from database.models.news import NewsEntityLink, NewsItem
         from ia_investing.news.service import analyze_news_item
 
         issuer_id = params.get("issuer_id", "")
         limit = params.get("limit", 10)
 
         async with session_scope() as session:
-            result = await session.execute(
-                sa.select(NewsItem.id)
-                .where(NewsItem.is_processed.is_(False))
-                .order_by(NewsItem.created_at.desc())
-                .limit(limit)
-            )
+            statement = sa.select(NewsItem.id).where(NewsItem.is_processed.is_(False))
+            if issuer_id:
+                statement = statement.join(
+                    NewsEntityLink,
+                    NewsEntityLink.news_item_id == NewsItem.id,
+                ).where(NewsEntityLink.issuer_id == UUID(issuer_id))
+            result = await session.execute(statement.distinct().order_by(NewsItem.created_at.desc()).limit(limit))
             item_ids = list(result.scalars().all())
             total = len(item_ids)
 
@@ -88,6 +89,7 @@ async def detect_event_duplicates(event_id: str) -> dict[str, Any]:
     """Check if a detected event is a duplicate of an existing one."""
     with activity_span("detect_event_duplicates"):
         import sqlalchemy as sa
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
 
         from database.core import session_scope
         from database.models.news import DetectedEvent, EventDuplicate
@@ -100,12 +102,15 @@ async def detect_event_duplicates(event_id: str) -> dict[str, Any]:
             similar = (
                 (
                     await session.execute(
-                        sa.select(DetectedEvent).where(
+                        sa.select(DetectedEvent)
+                        .where(
                             DetectedEvent.id != event.id,
                             DetectedEvent.event_type == event.event_type,
                             DetectedEvent.issuer_id == event.issuer_id,
+                            DetectedEvent.created_at < event.created_at,
                             DetectedEvent.created_at >= event.created_at - timedelta(hours=24),
                         )
+                        .order_by(DetectedEvent.created_at, DetectedEvent.id)
                     )
                 )
                 .scalars()
@@ -113,14 +118,16 @@ async def detect_event_duplicates(event_id: str) -> dict[str, Any]:
             )
 
             if similar:
-                dup = EventDuplicate(
-                    original_id=similar.id,
-                    duplicate_id=event.id,
-                    similarity_method="type+issuer+time",
-                    similarity_score=0.8,
+                await session.execute(
+                    pg_insert(EventDuplicate)
+                    .values(
+                        original_id=similar.id,
+                        duplicate_id=event.id,
+                        similarity_method="type+issuer+time",
+                        similarity_score=0.8,
+                    )
+                    .on_conflict_do_nothing(index_elements=[EventDuplicate.duplicate_id])
                 )
-                session.add(dup)
-                await session.flush()
                 return {
                     "event_id": event_id,
                     "is_duplicate": True,
@@ -128,6 +135,78 @@ async def detect_event_duplicates(event_id: str) -> dict[str, Any]:
                 }
 
             return {"event_id": event_id, "is_duplicate": False}
+
+
+@activity.defn(name="deduplicate_recent_events")
+async def deduplicate_recent_events(params: dict[str, Any]) -> dict[str, int]:
+    """Idempotently mark recent events that repeat issuer/type within 24 hours."""
+    with activity_span("deduplicate_recent_events"):
+        import sqlalchemy as sa
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+        from sqlalchemy.orm import aliased
+
+        from database.core import session_scope
+        from database.models.news import DetectedEvent, EventDuplicate
+
+        lookback_hours = int(params.get("lookback_hours", 24))
+        batch_size = int(params.get("batch_size", 500))
+        if lookback_hours < 1 or lookback_hours > 24 * 30:
+            raise ValueError("lookback_hours must be between 1 and 720")
+        if batch_size < 1 or batch_size > 5000:
+            raise ValueError("batch_size must be between 1 and 5000")
+
+        current = aliased(DetectedEvent)
+        previous = aliased(DetectedEvent)
+        original_id = (
+            sa.select(previous.id)
+            .where(
+                previous.id != current.id,
+                previous.issuer_id == current.issuer_id,
+                previous.event_type == current.event_type,
+                previous.created_at < current.created_at,
+                previous.created_at >= current.created_at - timedelta(hours=24),
+            )
+            .order_by(previous.created_at, previous.id)
+            .limit(1)
+            .correlate(current)
+            .scalar_subquery()
+        )
+        already_marked = sa.exists(sa.select(EventDuplicate.id).where(EventDuplicate.duplicate_id == current.id))
+
+        async with session_scope() as session:
+            rows = (
+                await session.execute(
+                    sa.select(current.id, original_id.label("original_id"))
+                    .where(
+                        current.created_at >= datetime.now(UTC) - timedelta(hours=lookback_hours),
+                        current.issuer_id.is_not(None),
+                        current.event_type.is_not(None),
+                        ~already_marked,
+                    )
+                    .order_by(current.created_at, current.id)
+                    .limit(batch_size)
+                )
+            ).all()
+            pairs = [
+                {
+                    "original_id": row.original_id,
+                    "duplicate_id": row.id,
+                    "similarity_method": "type+issuer+time",
+                    "similarity_score": 0.8,
+                }
+                for row in rows
+                if row.original_id is not None
+            ]
+            inserted = 0
+            if pairs:
+                statement = (
+                    pg_insert(EventDuplicate)
+                    .values(pairs)
+                    .on_conflict_do_nothing(index_elements=[EventDuplicate.duplicate_id])
+                    .returning(EventDuplicate.id)
+                )
+                inserted = len((await session.execute(statement)).scalars().all())
+            return {"scanned": len(rows), "duplicates_created": inserted}
 
 
 MATERIALITY_ALERT_THRESHOLD = 0.7
@@ -174,5 +253,6 @@ NEWS_EXTRACTION_ACTIVITIES = (
     analyze_single_news_item,
     batch_analyze_news,
     detect_event_duplicates,
+    deduplicate_recent_events,
     check_alert_threshold,
 )

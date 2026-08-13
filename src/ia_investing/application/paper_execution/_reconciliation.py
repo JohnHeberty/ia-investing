@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -18,6 +19,7 @@ from ia_investing.domain.paper_execution import (
 from ia_investing.domain.paper_execution import (
     LedgerCashEntry,
     LedgerPositionEntry,
+    ReconciledPositionBreak,
     ReconciliationFill,
     ReconciliationLedgerEntry,
     ReconciliationOrder,
@@ -186,7 +188,7 @@ class ReconciliationService:
         )
         return ExecutionData(
             portfolio=portfolio,
-            orders=list(order_rows),
+            orders=[(row[0], row[1]) for row in order_rows],
             fills=fills,
             ledger=ledger,
         )
@@ -224,8 +226,8 @@ class ReconciliationService:
         correlation_id: UUID,
         rule: str,
         resource_key: str,
-        expected: dict[str, object] | None,
-        actual: dict[str, object] | None,
+        expected: Mapping[str, object] | None,
+        actual: Mapping[str, object] | None,
         severity: str,
         blocking: bool,
     ) -> ReconciliationBreak:
@@ -247,8 +249,8 @@ class ReconciliationService:
             as_of=as_of,
             rule=rule,
             resource_key=resource_key,
-            expected=expected,
-            actual=actual,
+            expected=dict(expected) if expected is not None else None,
+            actual=dict(actual) if actual is not None else None,
             severity=severity,
             owner_role="operations",
             status="open",
@@ -321,7 +323,7 @@ class ReconciliationService:
 
     async def _reconcile_positions(
         self, portfolio_id: UUID, version_id: UUID, as_of: datetime
-    ) -> tuple[DomainBreak, ...]:
+    ) -> tuple[ReconciledPositionBreak, ...]:
         position_rows = list(
             (
                 await self.session.scalars(
@@ -349,7 +351,9 @@ class ReconciliationService:
         )
         return reconcile_positions(ledger_positions, snapshot_positions)
 
-    async def _reconcile_cash(self, portfolio_id: UUID, version_id: UUID, as_of: datetime) -> tuple[DomainBreak, ...]:
+    async def _reconcile_cash(
+        self, portfolio_id: UUID, version_id: UUID, as_of: datetime
+    ) -> tuple[ReconciledPositionBreak, ...]:
         cash_entries = list(
             (
                 await self.session.scalars(

@@ -32,10 +32,12 @@ def _make_dispatch_activities(dispatch_result: dict[str, int] | None = None):
 class TestDispatchOperationsWorkflow:
     @pytest.mark.asyncio
     async def test_happy_path_no_schedule(self):
-        acts, record = _make_dispatch_activities(dispatch_result={"dispatched": 5, "failed": 0})
+        acts, _record = _make_dispatch_activities(dispatch_result={"dispatched": 5, "failed": 0})
 
         async with await WorkflowEnvironment.start_local() as env:
-            async with Worker(env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]):
+            async with Worker(
+                env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]
+            ):
                 result = await env.client.execute_workflow(
                     DispatchOperationsWorkflow.run,
                     None,
@@ -47,10 +49,12 @@ class TestDispatchOperationsWorkflow:
 
     @pytest.mark.asyncio
     async def test_happy_path_with_command(self):
-        acts, record = _make_dispatch_activities(dispatch_result={"dispatched": 10})
+        acts, _record = _make_dispatch_activities(dispatch_result={"dispatched": 10})
 
         async with await WorkflowEnvironment.start_local() as env:
-            async with Worker(env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]):
+            async with Worker(
+                env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]
+            ):
                 result = await env.client.execute_workflow(
                     DispatchOperationsWorkflow.run,
                     {"batch_size": 100},
@@ -65,7 +69,9 @@ class TestDispatchOperationsWorkflow:
         acts, record = _make_dispatch_activities(dispatch_result={"dispatched": 3})
 
         async with await WorkflowEnvironment.start_local() as env:
-            async with Worker(env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]):
+            async with Worker(
+                env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]
+            ):
                 await env.client.execute_workflow(
                     DispatchOperationsWorkflow.run,
                     {"batch_size": 50, "schedule_id": "sch-42"},
@@ -73,16 +79,18 @@ class TestDispatchOperationsWorkflow:
                     task_queue=TASK_QUEUE,
                 )
 
-        assert len(record) == 1
-        assert record[0]["schedule_id"] == "sch-42"
-        assert record[0]["status"] == "completed"
+        assert len(record) == 2
+        assert [entry["status"] for entry in record] == ["running", "completed"]
+        assert {entry["schedule_id"] for entry in record} == {"sch-42"}
 
     @pytest.mark.asyncio
     async def test_no_schedule_id_skips_record(self):
         acts, record = _make_dispatch_activities(dispatch_result={"dispatched": 0})
 
         async with await WorkflowEnvironment.start_local() as env:
-            async with Worker(env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]):
+            async with Worker(
+                env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]
+            ):
                 await env.client.execute_workflow(
                     DispatchOperationsWorkflow.run,
                     {"batch_size": 50},
@@ -97,7 +105,9 @@ class TestDispatchOperationsWorkflow:
         acts, record = _make_dispatch_activities(dispatch_result={})
 
         async with await WorkflowEnvironment.start_local() as env:
-            async with Worker(env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]):
+            async with Worker(
+                env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[DispatchOperationsWorkflow]
+            ):
                 await env.client.execute_workflow(
                     DispatchOperationsWorkflow.run,
                     {},

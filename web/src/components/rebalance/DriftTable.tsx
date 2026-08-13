@@ -23,7 +23,9 @@ export function DriftTable({ items }: { items: DriftItem[] }) {
             <td>{pct(item.current_weight)}</td>
             <td>{pct(item.target_weight)}</td>
             <td style={{ fontFamily: "var(--font-mono)" }}>{pct(item.drift)}</td>
-            <td><DriftBadge severity={item.severity} /></td>
+            <td>
+              <DriftBadge severity={item.severity} />
+            </td>
           </tr>
         ))}
       </tbody>

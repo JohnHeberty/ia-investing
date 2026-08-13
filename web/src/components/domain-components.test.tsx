@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import {
   ConfidenceBar,
@@ -9,7 +9,12 @@ import {
   QualityIndicator,
 } from "@/components/evidence-tags";
 import { ApprovalCard } from "@/components/decision-components";
-import { DataStatePanel, LoadingSkeleton, PartialDataIndicator, StaleWarning } from "@/components/data-state-components";
+import {
+  DataStatePanel,
+  LoadingSkeleton,
+  PartialDataIndicator,
+  StaleWarning,
+} from "@/components/data-state-components";
 
 describe("Evidence tags and badges", () => {
   it("EvidenceTag renders fact with correct tone", () => {

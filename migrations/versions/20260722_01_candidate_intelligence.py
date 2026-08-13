@@ -83,11 +83,11 @@ def upgrade() -> None:
             name="ck_exploration_suggestions_status_values",
         ),
         sa.CheckConstraint(
-            "quantitative_score BETWEEN 0 AND 1 AND data_coverage_score BETWEEN 0 AND 1 AND source_discovery_score BETWEEN 0 AND 1",  # noqa: E501
+            "quantitative_score BETWEEN 0 AND 1 AND data_coverage_score BETWEEN 0 AND 1 AND source_discovery_score BETWEEN 0 AND 1",
             name="ck_exploration_suggestions_score_ranges",
         ),
         sa.CheckConstraint(
-            "status <> 'dismissed' OR (dismissed_at IS NOT NULL AND dismissed_by IS NOT NULL AND dismissal_reason IS NOT NULL)",  # noqa: E501
+            "status <> 'dismissed' OR (dismissed_at IS NOT NULL AND dismissed_by IS NOT NULL AND dismissal_reason IS NOT NULL)",
             name="ck_exploration_suggestions_dismissal_fields",
         ),
     )
@@ -122,7 +122,7 @@ def upgrade() -> None:
         sa.Column("lock_version", sa.Integer(), nullable=False, server_default="1"),
         sa.CheckConstraint("origin IN ('manual','explorer')", name="ck_investment_candidates_origin_values"),
         sa.CheckConstraint(
-            "status IN ('suggested','identity_resolution','source_discovery','awaiting_user_input','source_validation','document_collection','data_quality','fundamental_analysis','risk_analysis','committee_review','approved','rejected','watchlist','cancelled')",  # noqa: E501
+            "status IN ('suggested','identity_resolution','source_discovery','awaiting_user_input','source_validation','document_collection','data_quality','fundamental_analysis','risk_analysis','committee_review','approved','rejected','watchlist','cancelled')",
             name="ck_investment_candidates_status_values",
         ),
         sa.CheckConstraint(

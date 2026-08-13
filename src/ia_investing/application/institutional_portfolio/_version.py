@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Any, cast
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -49,7 +50,8 @@ class PortfolioVersionService:
             raise ValueError("position quantity and cost basis must be nonnegative")
         if any(amount < 0 for _, amount in cash):
             raise ValueError("cash snapshots must be nonnegative")
-        restricted = set(mandate.config.get("exclusions", {}).get("restricted", []))  # type: ignore[call-overload]
+        config = cast(dict[str, Any], mandate.config)
+        restricted = set(config.get("exclusions", {}).get("restricted", []))
         selected = {str(instrument_id) for instrument_id, _, _ in positions}
         if selected & restricted:
             raise ValueError(f"portfolio contains restricted instruments: {sorted(selected & restricted)}")

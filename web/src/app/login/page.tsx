@@ -46,9 +46,7 @@ function LoginForm() {
   return (
     <>
       <h1>Entrar no IA Investing OS</h1>
-      <p className="subtitle">
-        Digite seu email para autenticar.
-      </p>
+      <p className="subtitle">Digite seu email para autenticar.</p>
 
       {loginError && (
         <div role="alert" className="alert-error">
@@ -70,11 +68,7 @@ function LoginForm() {
             autoFocus
           />
         </div>
-        <button
-          className="btn btn-primary login-btn"
-          type="submit"
-          disabled={submitting || !email}
-        >
+        <button className="btn btn-primary login-btn" type="submit" disabled={submitting || !email}>
           {submitting ? "Entrando…" : "Entrar"}
         </button>
       </form>

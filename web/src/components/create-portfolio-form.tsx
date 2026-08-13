@@ -43,7 +43,11 @@ export function CreatePortfolioForm({ onClose }: CreatePortfolioFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="card card-pad" style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 600 }}>
+    <form
+      onSubmit={handleSubmit}
+      className="card card-pad"
+      style={{ display: "flex", flexDirection: "column", gap: 16, maxWidth: 600 }}
+    >
       <div className="card-title">
         <h2>Nova Carteira</h2>
       </div>

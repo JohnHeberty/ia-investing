@@ -8,20 +8,40 @@ interface PositionsTabProps {
   currency: string;
   portfolioId: string;
   editingPosition: string | null;
-  editForm: { ticker_symbol: string; quantity: string; avg_cost_per_share: string; current_price: string };
+  editForm: {
+    ticker_symbol: string;
+    quantity: string;
+    avg_cost_per_share: string;
+    current_price: string;
+  };
   setEditingPosition: (id: string | null) => void;
-  setEditForm: (form: { ticker_symbol: string; quantity: string; avg_cost_per_share: string; current_price: string }) => void;
+  setEditForm: (form: {
+    ticker_symbol: string;
+    quantity: string;
+    avg_cost_per_share: string;
+    current_price: string;
+  }) => void;
   needsRecalc: boolean;
   setNeedsRecalc: (v: boolean) => void;
-  updatePosition: UseMutationResult<{ deleted: boolean }, Error, {
-    portfolioId: string;
-    positionId: string;
-    ticker_symbol?: string;
-    quantity?: number;
-    avg_cost_per_share?: number;
-    current_price?: number;
-  }, unknown>;
-  deletePosition: UseMutationResult<{ deleted: boolean }, Error, { portfolioId: string; positionId: string }, unknown>;
+  updatePosition: UseMutationResult<
+    { deleted: boolean },
+    Error,
+    {
+      portfolioId: string;
+      positionId: string;
+      ticker_symbol?: string;
+      quantity?: number;
+      avg_cost_per_share?: number;
+      current_price?: number;
+    },
+    unknown
+  >;
+  deletePosition: UseMutationResult<
+    { deleted: boolean },
+    Error,
+    { portfolioId: string; positionId: string },
+    unknown
+  >;
   showAddPosition: boolean;
   setShowAddPosition: (v: boolean) => void;
   editError: string | null;
@@ -59,10 +79,16 @@ export function PositionsTab({
 
       {needsRecalc && (
         <div className="banner warn mb-16">
-          <span>Posições alteradas. Clique em <strong>Recalcular</strong> para atualizar as recomendações.</span>
+          <span>
+            Posições alteradas. Clique em <strong>Recalcular</strong> para atualizar as
+            recomendações.
+          </span>
           <button
             className="button sm"
-            onClick={() => { refetchRecommendations(); setNeedsRecalc(false); }}
+            onClick={() => {
+              refetchRecommendations();
+              setNeedsRecalc(false);
+            }}
           >
             🔄 Recalcular
           </button>
@@ -113,7 +139,9 @@ export function PositionsTab({
                         style={{ width: 80 }}
                         aria-label="Ticker"
                         value={editForm.ticker_symbol}
-                        onChange={(e) => setEditForm({ ...editForm, ticker_symbol: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, ticker_symbol: e.target.value })
+                        }
                       />
                     </td>
                     <td>
@@ -134,7 +162,9 @@ export function PositionsTab({
                         style={{ width: 90 }}
                         aria-label="Preço Compra"
                         value={editForm.avg_cost_per_share}
-                        onChange={(e) => setEditForm({ ...editForm, avg_cost_per_share: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, avg_cost_per_share: e.target.value })
+                        }
                       />
                     </td>
                     <td>
@@ -145,7 +175,9 @@ export function PositionsTab({
                         style={{ width: 90 }}
                         aria-label="Preço Atual"
                         value={editForm.current_price}
-                        onChange={(e) => setEditForm({ ...editForm, current_price: e.target.value })}
+                        onChange={(e) =>
+                          setEditForm({ ...editForm, current_price: e.target.value })
+                        }
                       />
                     </td>
                     <td colSpan={3} />
@@ -177,13 +209,18 @@ export function PositionsTab({
                         </button>
                         <button
                           className="button secondary sm"
-                          onClick={() => { setEditingPosition(null); setEditError(null); }}
+                          onClick={() => {
+                            setEditingPosition(null);
+                            setEditError(null);
+                          }}
                         >
                           Cancelar
                         </button>
                       </div>
                       {editError && (
-                        <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>{editError}</div>
+                        <div style={{ fontSize: 11, color: "var(--red)", marginTop: 4 }}>
+                          {editError}
+                        </div>
                       )}
                     </td>
                   </tr>
@@ -194,21 +231,16 @@ export function PositionsTab({
                 <tr key={pos.id}>
                   <td style={{ fontWeight: 500 }}>{pos.ticker_symbol}</td>
                   <td>{new Intl.NumberFormat("pt-BR").format(pos.quantity)}</td>
-                  <td className="mono">
-                    {fmt.format(pos.avg_cost_per_share)}
-                  </td>
-                  <td className="mono">
-                    {fmt.format(currentPrice)}
-                  </td>
-                  <td className="mono">
-                    {fmt.format(cost)}
-                  </td>
-                  <td className="mono">
-                    {fmt.format(value)}
-                  </td>
+                  <td className="mono">{fmt.format(pos.avg_cost_per_share)}</td>
+                  <td className="mono">{fmt.format(currentPrice)}</td>
+                  <td className="mono">{fmt.format(cost)}</td>
+                  <td className="mono">{fmt.format(value)}</td>
                   <td className="mono" style={{ color: pnl >= 0 ? "var(--accent)" : "var(--red)" }}>
-                    {pnl >= 0 ? "+" : ""}{pnlPercent.toFixed(2)}%
-                    <span className="text-xs muted" style={{ marginLeft: 4 }}>({weight.toFixed(1)}%)</span>
+                    {pnl >= 0 ? "+" : ""}
+                    {pnlPercent.toFixed(2)}%
+                    <span className="text-xs muted" style={{ marginLeft: 4 }}>
+                      ({weight.toFixed(1)}%)
+                    </span>
                   </td>
                   <td>
                     <div className="flex gap-4">

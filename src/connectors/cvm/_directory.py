@@ -10,6 +10,7 @@ Então raspamos o HTML index do diretório pai uma vez por chamada e deixamos a 
 
 from __future__ import annotations
 
+import asyncio
 import re
 import time
 
@@ -18,10 +19,11 @@ from ..base import DEFAULT_TIMEOUT, HttpClient
 _CACHE: dict[str, tuple[float, list[str]]] = {}
 _CACHE_TTL = 3600.0  # 1 hour
 _CACHE_MAX_SIZE = 256
+_CACHE_LOCK = asyncio.Lock()
 
 
-def _get_cache_lock() -> __import__("asyncio").Lock:
-    return __import__("asyncio").Lock()
+def _get_cache_lock() -> asyncio.Lock:
+    return _CACHE_LOCK
 
 
 _LISTING_PATTERN = re.compile(r'<a\s+href="([^"]+\.(?:zip|csv|txt))"', re.IGNORECASE)

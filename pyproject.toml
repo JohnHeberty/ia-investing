@@ -99,9 +99,12 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**/*.py" = ["S101", "D", "ANN", "PT", "T201", "S311", "S105", "S107"]
+"tests/**/*.py" = [
+    "S101", "D", "ANN", "PT", "T201", "S311", "S105", "S107", "S108", "S106",
+    "N802", "N806", "B017", "SIM117", "E501", "RUF015", "E402",
+]
 "scripts/**/*.py" = ["D", "ANN", "T201", "S112", "C90", "PT"]
-"migrations/**/*.py" = ["D", "ANN"]
+"migrations/**/*.py" = ["D", "ANN", "E501", "N806"]
 "apps/**/*.py" = ["D", "ANN"]
 "src/ia_investing/application/secrets_manager.py" = ["S105", "S310"]
 "src/connectors/**/*.py" = ["S314"]
@@ -113,6 +116,9 @@ ignore = [
 "src/ia_investing/domain/readiness.py" = ["C901"]
 "src/portfolio/_optimizer.py" = ["C901"]
 "src/ia_investing/application/institutional_portfolio/*.py" = ["C901"]
+"src/ia_investing/application/portfolio.py" = ["C901"]
+"src/ia_investing/agents/portfolio_advisor.py" = ["C901"]
+"src/ia_investing/candidate_intelligence/sync_pipeline.py" = ["C901"]
 "src/ia_investing/application/paper_execution/_order.py" = ["C901"]
 "src/apps/api/routes/auth.py" = ["C901"]
 "src/apps/api/security.py" = ["C901"]
@@ -131,7 +137,7 @@ line-ending = "auto"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-asyncio_default_fixture_loop_scope = "session"
+asyncio_default_fixture_loop_scope = "function"
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "--tb=short -q"

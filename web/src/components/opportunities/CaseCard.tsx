@@ -25,15 +25,7 @@ export function CaseCard({ caseItem, onSelect }: CaseCardProps) {
         <Badge tone="neutral">{c.case_type || "—"}</Badge>
       </td>
       <td>
-        <Badge
-          tone={
-            c.priority === "high"
-              ? "bad"
-              : c.priority === "medium"
-                ? "warn"
-                : "neutral"
-          }
-        >
+        <Badge tone={c.priority === "high" ? "bad" : c.priority === "medium" ? "warn" : "neutral"}>
           {c.priority === "high"
             ? "Alta"
             : c.priority === "medium"
@@ -64,9 +56,7 @@ export function CaseCard({ caseItem, onSelect }: CaseCardProps) {
                   : c.state}
         </Badge>
       </td>
-      <td style={{ color: "var(--muted)", fontSize: 12 }}>
-        {c.created_by || "—"}
-      </td>
+      <td style={{ color: "var(--muted)", fontSize: 12 }}>{c.created_by || "—"}</td>
     </tr>
   );
 }

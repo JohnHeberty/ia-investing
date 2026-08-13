@@ -70,6 +70,7 @@ class TestSchemas:
 
     def test_create_trade_intent_invalid_side(self) -> None:
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError):
             CreateTradeIntentV1(
                 portfolio_version_id=uuid4(),
@@ -137,6 +138,7 @@ class TestSchemas:
 
     def test_challenger_decision_invalid(self) -> None:
         from pydantic import ValidationError
+
         with pytest.raises(ValidationError):
             ChallengerDecisionInputV1(decision="maybe")
 

@@ -10,6 +10,7 @@ from temporalio import workflow
 
 with workflow.unsafe.imports_passed_through():
     from ia_investing.orchestration.policies import EXTERNAL_IO_RETRY_POLICY
+    from workflows._schedule_run import complete_schedule_run, fail_schedule_run, start_schedule_run
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,6 +26,16 @@ class ExtractNewsInput:
 class ExtractNewsWorkflow:
     @workflow.run
     async def run(self, command: ExtractNewsInput) -> dict[str, Any]:
+        await start_schedule_run(command.schedule_id)
+        try:
+            result = await self._extract(command)
+        except Exception as exc:
+            await fail_schedule_run(command.schedule_id, exc)
+            raise
+        await complete_schedule_run(command.schedule_id, result)
+        return result
+
+    async def _extract(self, command: ExtractNewsInput) -> dict[str, Any]:
         fetched: list[dict[str, Any]] = await workflow.execute_activity(
             "fetch_news_items",
             {"issuer_id": command.issuer_id, "max_results": command.max_results},
@@ -51,18 +62,5 @@ class ExtractNewsWorkflow:
             "analyzed_count": analysis.get("analyzed", 0) if isinstance(analysis, dict) else 0,
             "results": analysis.get("results", []) if isinstance(analysis, dict) else [],
         }
-
-        if command.schedule_id:
-            await workflow.execute_activity(
-                "record_schedule_run",
-                {
-                    "schedule_id": command.schedule_id,
-                    "workflow_id": workflow.info().workflow_id,
-                    "status": "completed",
-                    "started_at": workflow.info().start_time.isoformat(),
-                    "result_summary": result,
-                },
-                start_to_close_timeout=timedelta(seconds=10),
-            )
 
         return result

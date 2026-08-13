@@ -3,11 +3,7 @@
 import { Suspense } from "react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { ScenarioWaterfall, type ScenarioEntry } from "@/components/decision-components";
 import { useSourceHealthSummary } from "@/hooks/use-source-health-summary";
 import { useRiskOverview } from "@/hooks/use-risk-overview";
@@ -23,11 +19,7 @@ function RiskContent() {
     dataState,
   } = useSourceHealthSummary();
 
-  const {
-    overview,
-    isLoading: riskLoading,
-    isError: riskError,
-  } = useRiskOverview();
+  const { overview, isLoading: riskLoading, isError: riskError } = useRiskOverview();
 
   const isLoading = sourceLoading || riskLoading;
   const isError = sourceError || riskError;
@@ -82,13 +74,14 @@ function RiskContent() {
     cumulative: 0,
   }));
 
-  const scenarios = stressScenarios.length > 0
-    ? stressScenarios.reduce<ScenarioEntry[]>((acc, s, i) => {
-        const cumulative = i === 0 ? s.impact : (acc[i - 1]?.cumulative ?? 0) + s.impact;
-        acc.push({ ...s, cumulative });
-        return acc;
-      }, [])
-    : [];
+  const scenarios =
+    stressScenarios.length > 0
+      ? stressScenarios.reduce<ScenarioEntry[]>((acc, s, i) => {
+          const cumulative = i === 0 ? s.impact : (acc[i - 1]?.cumulative ?? 0) + s.impact;
+          acc.push({ ...s, cumulative });
+          return acc;
+        }, [])
+      : [];
 
   const volatility = overview?.latest_volatility;
   const drawdown = overview?.latest_drawdown;
@@ -104,7 +97,13 @@ function RiskContent() {
           </p>
         </div>
         <AsOfIndicator
-          value={new Date().toLocaleString("pt-BR", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          value={new Date().toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
           freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
         />
       </div>
@@ -125,21 +124,28 @@ function RiskContent() {
               </Badge>
             </div>
             <p className="text-sm muted mt-8">
-              Dados de mercado (preços, fundamentais) são fornecidos via <strong>yfinance</strong> e estão disponíveis em tempo real.
-              As fontes institucionais abaixo aguardam ativação do Temporal Worker para ingestão automática.
+              Dados de mercado (preços, fundamentais) são fornecidos via <strong>yfinance</strong> e
+              estão disponíveis em tempo real. As fontes institucionais abaixo aguardam ativação do
+              Temporal Worker para ingestão automática.
             </p>
             <div className="mt-12 flex flex-wrap gap-4">
-              {sources.filter((s) => s.status !== "healthy").map((s) => (
-                <span key={String(s.code ?? s.name)} className="badge" data-tone="warn">
-                  {String(s.name ?? s.code ?? "")}
-                </span>
-              ))}
+              {sources
+                .filter((s) => s.status !== "healthy")
+                .map((s) => (
+                  <span key={String(s.code ?? s.name)} className="badge" data-tone="warn">
+                    {String(s.name ?? s.code ?? "")}
+                  </span>
+                ))}
             </div>
           </div>
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores de risco" aria-live="polite">
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Indicadores de risco"
+        aria-live="polite"
+      >
         <Metric
           label="Hard breaches"
           value={String(hardBreaches.length)}
@@ -181,10 +187,7 @@ function RiskContent() {
           {hardBreaches.length > 0 && (
             <div className="mt-8">
               {hardBreaches.map((b) => (
-                <div
-                  key={b.id}
-                  className="breach-row"
-                >
+                <div key={b.id} className="breach-row">
                   <span>{b.limit_name}</span>
                   <span className="mono text-red">
                     {b.observed_value} / {b.limit_value}
@@ -222,14 +225,16 @@ function RiskContent() {
             )}
           </div>
           <p className="muted text-sm lh-relaxed">
-            {volatility !== null && volatility !== undefined
-              ? <>Volatilidade: <strong>{(volatility * 100).toFixed(1)}%</strong> anualizada</>
-              : "Dados de volatilidade serão exibidos após execução de assessment de risco."}
+            {volatility !== null && volatility !== undefined ? (
+              <>
+                Volatilidade: <strong>{(volatility * 100).toFixed(1)}%</strong> anualizada
+              </>
+            ) : (
+              "Dados de volatilidade serão exibidos após execução de assessment de risco."
+            )}
           </p>
           {drawdown !== null && drawdown !== undefined && (
-            <p className="text-red text-sm mt-4">
-              Max drawdown: {(drawdown * 100).toFixed(1)}%
-            </p>
+            <p className="text-red text-sm mt-4">Max drawdown: {(drawdown * 100).toFixed(1)}%</p>
           )}
         </article>
       </section>
@@ -272,18 +277,10 @@ function RiskContent() {
                   <tr key={b.id}>
                     <td className="fw-600">{b.limit_name}</td>
                     <td>
-                      <Badge tone={b.limit_type === "hard" ? "bad" : "warn"}>
-                        {b.limit_type}
-                      </Badge>
+                      <Badge tone={b.limit_type === "hard" ? "bad" : "warn"}>{b.limit_type}</Badge>
                     </td>
-                    <td className="numeric mono">
-                      {b.limit_value}
-                    </td>
-                    <td
-                      className="numeric mono text-red"
-                    >
-                      {b.observed_value}
-                    </td>
+                    <td className="numeric mono">{b.limit_value}</td>
+                    <td className="numeric mono text-red">{b.observed_value}</td>
                     <td>
                       <Badge tone={b.status === "open" ? "bad" : "good"}>
                         {b.status === "open" ? "Aberto" : b.status}

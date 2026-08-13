@@ -143,7 +143,10 @@ class EventDuplicate(Base):
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
-    __table_args__ = (sa.CheckConstraint("original_id <> duplicate_id", name="no_self_duplicate"),)
+    __table_args__ = (
+        sa.CheckConstraint("original_id <> duplicate_id", name="no_self_duplicate"),
+        sa.UniqueConstraint("duplicate_id", name="uq_event_duplicates_duplicate_id"),
+    )
 
     def __repr__(self) -> str:
         return f"EventDuplicate(similarity_method={self.similarity_method!r})"

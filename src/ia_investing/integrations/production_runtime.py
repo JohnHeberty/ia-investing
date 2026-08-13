@@ -56,6 +56,16 @@ from ia_investing.settings import get_settings
 logger = logging.getLogger(__name__)
 
 
+def _heartbeat(details: object) -> None:
+    """Emit a Temporal heartbeat when called inside an activity.
+
+    Runtime callbacks are also intentionally callable from API/bootstrap code and
+    integration tests, where no Temporal activity context exists.
+    """
+    with contextlib.suppress(RuntimeError):
+        activity.heartbeat(details)
+
+
 def _extract_text_from_html(raw: bytes) -> str:
     """Best-effort HTML-to-text extraction without external dependencies."""
     import re
@@ -190,7 +200,7 @@ async def _execute_governed_agent(
             }
             if agent_run_id:
                 metadata["agent_run_id"] = agent_run_id
-            activity.heartbeat({"stage": "llm_call", "capability": capability, "attempt": attempt})
+            _heartbeat({"stage": "llm_call", "capability": capability, "attempt": attempt})
             executed = await AgentExecutionService(session, provider).execute(run_id, metadata=metadata)
             await session.commit()
 
@@ -468,7 +478,7 @@ class ProductionCandidateRuntime:
                     )
 
                     if issuer.cnpj:
-                        activity.heartbeat({"stage": "cvm_lookup", "cnpj": issuer.cnpj})
+                        _heartbeat({"stage": "cvm_lookup", "cnpj": issuer.cnpj})
                         cvm_profile = await self._cvm.lookup_by_cnpj(issuer.cnpj)
                         if cvm_profile is not None:
                             evidence: dict[str, object] = {
@@ -750,7 +760,7 @@ class ProductionCandidateRuntime:
                 )
 
             try:
-                activity.heartbeat({"stage": "validating_source", "url": source.url})
+                _heartbeat({"stage": "validating_source", "url": source.url})
                 response = await self._http.get(source.url)
             except Exception as exc:
                 logger.warning("validate_source %s: %s", source.url, exc)
@@ -926,7 +936,7 @@ class ProductionCandidateRuntime:
         stored_to_s3 = 0
         version = start_version
         for source in sources:
-            activity.heartbeat({"stage": "collecting", "collected": collected, "failed": failed, "total": len(sources)})
+            _heartbeat({"stage": "collecting", "collected": collected, "failed": failed, "total": len(sources)})
             if not source.url:
                 continue
             try:
@@ -1086,7 +1096,7 @@ class ProductionCandidateRuntime:
                 statement_name = stmt.value.rsplit("_", 1)[0].upper()
 
                 for idx, entry in enumerate(entries):
-                    activity.heartbeat(
+                    _heartbeat(
                         {
                             "stage": "ingesting",
                             "statement": stmt.value,

@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import math
-
 import pytest
 
-from metrics._helpers import _get, _md, _pct_change, _safe_div
-from metrics.engine import calculate_all, calculate_pillar, get_metric_names, get_pillar_names
 from metrics._dividend import DIVIDEND_METRICS
+from metrics._helpers import _get, _md, _pct_change, _safe_div
 from metrics._macro import MACRO_METRICS
 from metrics._quality_growth import QUALITY_GROWTH_METRICS
+from metrics.engine import calculate_all, calculate_pillar, get_metric_names, get_pillar_names
 
 
 # ---------------------------------------------------------------------------

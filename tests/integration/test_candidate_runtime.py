@@ -123,6 +123,7 @@ async def db_runtime(engine: AsyncEngine) -> DatabaseRuntime:
 
 @pytest_asyncio.fixture(autouse=True)
 async def _cleanup_global_runtime() -> AsyncGenerator[None]:
+    reset_candidate_activity_runtime_for_tests()
     yield
     reset_candidate_activity_runtime_for_tests()
 

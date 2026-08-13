@@ -44,7 +44,8 @@ const stateConfig: Record<
   partial: {
     icon: <AlertTriangle size={20} />,
     title: "Dados parciais",
-    detail: "Apenas parte do conjunto de dados está disponível. Resultados podem estar incompletos.",
+    detail:
+      "Apenas parte do conjunto de dados está disponível. Resultados podem estar incompletos.",
     variant: "warning",
   },
   quarantined: {
@@ -149,13 +150,7 @@ export function LoadingSkeleton({
 /**
  * Stale data warning banner.
  */
-export function StaleWarning({
-  lastUpdated,
-  source,
-}: {
-  lastUpdated?: string;
-  source?: string;
-}) {
+export function StaleWarning({ lastUpdated, source }: { lastUpdated?: string; source?: string }) {
   if (!lastUpdated && !source) return null;
   return (
     <div
@@ -210,9 +205,7 @@ export function PartialDataIndicator({
       <AlertTriangle size={14} />
       <span>
         Dados parciais — {Math.round(coverage)}% de cobertura
-        {missingFields && missingFields.length > 0 && (
-          <> · Ausentes: {missingFields.join(", ")}</>
-        )}
+        {missingFields && missingFields.length > 0 && <> · Ausentes: {missingFields.join(", ")}</>}
       </span>
     </div>
   );

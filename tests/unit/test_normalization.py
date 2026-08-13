@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import sys
-import types
 from unittest.mock import MagicMock
 
 import pytest
@@ -45,15 +43,17 @@ class TestComputeDerivedMetrics:
         assert result["ebitda"] == 250.0
 
     def test_ebitda_from_lucro_bruto_minus_opex(self):
-        result = compute_derived_metrics({
-            "receita_liquida": 1000,
-            "custo_receita": 600,
-            "despesas_vendas": 100,
-            "despesas_administrativas": 50,
-            "outras_despesas_operacionais": 30,
-            "outras_receitas_operacionais": 20,
-        })
-        expected_ebitda = 400 - (100 + 50 + 30 - 20) + 0
+        result = compute_derived_metrics(
+            {
+                "receita_liquida": 1000,
+                "custo_receita": 600,
+                "despesas_vendas": 100,
+                "despesas_administrativas": 50,
+                "outras_despesas_operacionais": 30,
+                "outras_receitas_operacionais": 20,
+            }
+        )
+        400 - (100 + 50 + 30 - 20) + 0
         assert "ebitda" in result
 
     def test_ebit_derived_from_ebitda(self):
@@ -61,23 +61,27 @@ class TestComputeDerivedMetrics:
         assert result["ebit"] == 250.0
 
     def test_margins_computed(self):
-        result = compute_derived_metrics({
-            "receita_liquida": 1000,
-            "lucro_bruto": 400,
-            "ebitda": 200,
-            "lucro_liquido": 100,
-        })
+        result = compute_derived_metrics(
+            {
+                "receita_liquida": 1000,
+                "lucro_bruto": 400,
+                "ebitda": 200,
+                "lucro_liquido": 100,
+            }
+        )
         assert result["margem_bruta"] == pytest.approx(0.4)
         assert result["margem_ebitda"] == pytest.approx(0.2)
         assert result["margem_liquida"] == pytest.approx(0.1)
 
     def test_roe_and_roa(self):
-        result = compute_derived_metrics({
-            "receita_liquida": 1000,
-            "lucro_liquido": 100,
-            "patrimonio_liquido": 500,
-            "total_ativos": 2000,
-        })
+        result = compute_derived_metrics(
+            {
+                "receita_liquida": 1000,
+                "lucro_liquido": 100,
+                "patrimonio_liquido": 500,
+                "total_ativos": 2000,
+            }
+        )
         assert result["roe"] == pytest.approx(0.2)
         assert result["roa"] == pytest.approx(0.05)
         assert result["giro_ativo"] == pytest.approx(0.5)
@@ -94,7 +98,7 @@ class TestComputeDerivedMetrics:
 # ---------------------------------------------------------------------------
 # _mappings.py tests
 # ---------------------------------------------------------------------------
-from normalization._mappings import CVM_ACCOUNT_MAP, _DESCRIPTION_PATTERNS
+from normalization._mappings import _DESCRIPTION_PATTERNS, CVM_ACCOUNT_MAP
 
 
 class TestMappings:
@@ -104,7 +108,7 @@ class TestMappings:
         assert "11.01" in CVM_ACCOUNT_MAP
 
     def test_description_patterns_structure(self):
-        for canonical, patterns in _DESCRIPTION_PATTERNS.items():
+        for _canonical, patterns in _DESCRIPTION_PATTERNS.items():
             assert isinstance(patterns, list)
             assert all(isinstance(p, str) for p in patterns)
 
@@ -118,8 +122,8 @@ from normalization._normalizers import (
     normalize_bpa,
     normalize_bpp,
     normalize_dfc,
-    normalize_dre,
     normalize_dmpl,
+    normalize_dre,
     normalize_dva,
 )
 
@@ -263,6 +267,7 @@ class TestPackageInit:
             normalize_dfc,
             normalize_dre,
         )
+
         assert callable(compute_derived_metrics)
         assert callable(normalize_bpa)
         assert callable(normalize_bpp)
@@ -272,11 +277,7 @@ class TestPackageInit:
 
     def test_financials_reexports(self):
         from normalization._financials import (
-            CVM_ACCOUNT_MAP,
             compute_derived_metrics,
-            normalize_bpa,
-            normalize_bpp,
-            normalize_dfc,
-            normalize_dre,
         )
+
         assert callable(compute_derived_metrics)

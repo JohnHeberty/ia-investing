@@ -12,9 +12,9 @@ from __future__ import annotations
 import logging
 import time
 from datetime import datetime
-from typing import Any
+from typing import Any, cast
 
-import yfinance as yf
+import yfinance as yf  # type: ignore[import-untyped]
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +30,7 @@ class _TTLCache:
     NOT thread-safe — do not use from multiple OS threads.
     """
 
-    def __init__(self, max_size: int = 512, default_ttl: float = 3600.0):
+    def __init__(self, max_size: int = 512, default_ttl: float = 3600.0) -> None:
         self._store: dict[str, tuple[float, Any]] = {}
         self._max_size = max_size
         self._default_ttl = default_ttl
@@ -137,7 +137,7 @@ def get_current_prices(tickers: list[str]) -> dict[str, dict[str, Any]]:
     """Fetch current prices for multiple tickers efficiently."""
     results: dict[str, dict[str, Any]] = {}
     yf_tickers = [_to_yf_ticker(t) for t in tickers]
-    yf_map = dict(zip(yf_tickers, tickers))
+    yf_map = dict(zip(yf_tickers, tickers, strict=False))
 
     try:
         data = yf.download(yf_tickers, period="1d", progress=False, threads=True)
@@ -146,10 +146,7 @@ def get_current_prices(tickers: list[str]) -> dict[str, dict[str, Any]]:
 
         for yf_t, orig_t in yf_map.items():
             try:
-                if len(yf_tickers) == 1:
-                    close = float(data["Close"].iloc[-1])
-                else:
-                    close = float(data[("Close", yf_t)].iloc[-1])
+                close = float(data["Close"].iloc[-1]) if len(yf_tickers) == 1 else float(data["Close", yf_t].iloc[-1])
                 results[orig_t] = {
                     "ticker": orig_t,
                     "yf_ticker": yf_t,
@@ -184,7 +181,7 @@ def get_historical_prices(
     cache_key = f"hist:{ticker}:{period}:{interval}"
     cached = _history_cache.get(cache_key)
     if cached is not None:
-        return cached
+        return cast(list[dict[str, Any]], cached)
 
     yf_ticker = _to_yf_ticker(ticker)
     try:
@@ -216,7 +213,7 @@ def get_fundamentals(ticker: str) -> dict[str, Any] | None:
     cache_key = f"fund:{ticker}"
     cached = _fundamentals_cache.get(cache_key)
     if cached is not None:
-        return cached
+        return cast(dict[str, Any], cached)
 
     yf_ticker = _to_yf_ticker(ticker)
     try:
@@ -285,7 +282,7 @@ def get_analyst_data(ticker: str) -> dict[str, Any] | None:
     cache_key = f"analyst:{ticker}"
     cached = _analyst_cache.get(cache_key)
     if cached is not None:
-        return cached
+        return cast(dict[str, Any], cached)
 
     yf_ticker = _to_yf_ticker(ticker)
     try:
@@ -396,10 +393,10 @@ def get_financial_statements(ticker: str) -> dict[str, Any] | None:
         balance = t.balance_sheet
         cashflow = t.cashflow
 
-        def _df_to_records(df):
+        def _df_to_records(df: Any) -> list[dict[str, Any]]:
             if df is None or df.empty:
                 return []
-            records = []
+            records: list[dict[str, Any]] = []
             for col in df.columns:
                 record = {"period": col.strftime("%Y-%m-%d") if hasattr(col, "strftime") else str(col)}
                 for idx in df.index:

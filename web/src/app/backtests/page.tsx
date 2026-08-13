@@ -3,23 +3,11 @@
 import { Suspense } from "react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { useBacktests } from "@/hooks/use-backtests";
 
 function BacktestsContent() {
-  const {
-    runs,
-    completedRuns,
-    pitGatePass,
-    isLoading,
-    isError,
-    dataState,
-    count,
-  } = useBacktests();
+  const { runs, completedRuns, pitGatePass, isLoading, isError, dataState, count } = useBacktests();
 
   if (isLoading) {
     return (
@@ -64,7 +52,7 @@ function BacktestsContent() {
   const hasRuns = runs.length > 0;
   const medianSharpe = (() => {
     if (!hasRuns) return null;
-    const values = runs.map(r => Number(r.sharpeRatio)).filter(n => Number.isFinite(n));
+    const values = runs.map((r) => Number(r.sharpeRatio)).filter((n) => Number.isFinite(n));
     if (values.length === 0) return null;
     values.sort((a, b) => a - b);
     return values[Math.floor(values.length / 2)];
@@ -80,9 +68,7 @@ function BacktestsContent() {
             Configuração imutável, delay de sinal e execução, custos, impostos e baselines.
           </p>
         </div>
-        <AsOfIndicator
-          freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
-        />
+        <AsOfIndicator freshness={dataState === "stale" ? "Desatualizado" : "Atual"} />
       </div>
 
       {dataState === "stale" && (
@@ -91,7 +77,11 @@ function BacktestsContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Métricas de backtest" aria-live="polite">
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Métricas de backtest"
+        aria-live="polite"
+      >
         <Metric
           label="Runs concluídos"
           value={hasRuns ? String(completedRuns) : "—"}
@@ -121,7 +111,9 @@ function BacktestsContent() {
         <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Runs de backtest</h2>
-            <span>{count} run{count !== 1 ? "s" : ""}</span>
+            <span>
+              {count} run{count !== 1 ? "s" : ""}
+            </span>
           </div>
           <div className="table-wrap">
             <table className="table">
@@ -152,9 +144,7 @@ function BacktestsContent() {
                         {run.pitGate}
                       </Badge>
                     </td>
-                    <td className="numeric mono">
-                      {run.sharpeRatio ?? "—"}
-                    </td>
+                    <td className="numeric mono">{run.sharpeRatio ?? "—"}</td>
                     <td>
                       <Badge tone={run.reproducibility.includes("/") ? "good" : "neutral"}>
                         {run.reproducibility}

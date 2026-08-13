@@ -118,25 +118,38 @@ class RiskService:
             bars_data = bars_by_instrument.get(position.instrument_id, [])
             latest_by_bar: dict[datetime, dict[str, object]] = {}
             for bar in bars_data:
-                latest_by_bar.setdefault(bar["bar_at"], bar)
-            bars = sorted(latest_by_bar.values(), key=lambda item: item["bar_at"])
+                raw_bar_at = bar["bar_at"]
+                if isinstance(raw_bar_at, date):
+                    normalized_at = (
+                        raw_bar_at
+                        if isinstance(raw_bar_at, datetime)
+                        else datetime.combine(raw_bar_at, datetime.min.time()).replace(tzinfo=UTC)
+                    )
+                    latest_by_bar.setdefault(normalized_at, bar)
+            bars = [latest_by_bar[key] for key in sorted(latest_by_bar)]
             if len(bars) < 2:
                 raise ValueError(f"risk history is missing for instrument {position.instrument_id}")
-            bar_at = bars[-1]["bar_at"]
+            raw_latest_at = bars[-1]["bar_at"]
+            if not isinstance(raw_latest_at, date):
+                raise ValueError(f"invalid market-bar timestamp for instrument {position.instrument_id}")
+            bar_at = raw_latest_at
             if isinstance(bar_at, date) and not isinstance(bar_at, datetime):
                 bar_at = datetime.combine(bar_at, datetime.min.time()).replace(tzinfo=UTC)
             price_age_hours = Decimal(str((as_of - bar_at).total_seconds())) / Decimal(3600)
             if price_age_hours > max_price_age_hours:
                 raise ValueError(f"risk price is stale for instrument {position.instrument_id}")
             instrument_key = str(position.instrument_id)
-            position_values[instrument_key] = position.quantity * bars[-1]["close_price"]
+            close_prices = [Decimal(str(bar["close_price"])) for bar in bars]
+            volumes = [Decimal(str(bar["volume"])) for bar in bars]
+            position_values[instrument_key] = position.quantity * close_prices[-1]
             average_daily_values[instrument_key] = sum(
-                (bar["close_price"] * Decimal(bar["volume"]) for bar in bars), start=Decimal(0)
+                (price * volume for price, volume in zip(close_prices, volumes, strict=True)),
+                start=Decimal(0),
             ) / Decimal(len(bars))
             return_series[instrument_key] = [
-                bars[index]["close_price"] / bars[index - 1]["close_price"] - Decimal(1)
+                close_prices[index] / close_prices[index - 1] - Decimal(1)
                 for index in range(1, len(bars))
-                if bars[index - 1]["close_price"] > 0
+                if close_prices[index - 1] > 0
             ]
         cash_value = (
             await self.session.scalar(

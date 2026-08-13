@@ -26,9 +26,18 @@ export function usePermissions(): Permissions {
   const perms = useMemo(() => user?.permissions ?? [], [user?.permissions]);
 
   const can = useCallback((permission: string) => hasPermission(perms, permission), [perms]);
-  const canAny = useCallback((...permsList: string[]) => permsList.some((p) => hasPermission(perms, p)), [perms]);
-  const canAll = useCallback((...permsList: string[]) => permsList.every((p) => hasPermission(perms, p)), [perms]);
-  const isAdmin = useMemo(() => perms.includes("*") || (user?.roles ?? []).includes("admin"), [perms, user?.roles]);
+  const canAny = useCallback(
+    (...permsList: string[]) => permsList.some((p) => hasPermission(perms, p)),
+    [perms],
+  );
+  const canAll = useCallback(
+    (...permsList: string[]) => permsList.every((p) => hasPermission(perms, p)),
+    [perms],
+  );
+  const isAdmin = useMemo(
+    () => perms.includes("*") || (user?.roles ?? []).includes("admin"),
+    [perms, user?.roles],
+  );
   const role = useMemo(() => user?.roles?.[0] ?? null, [user?.roles]);
 
   return { permissions: perms, can, canAny, canAll, isAdmin, role };

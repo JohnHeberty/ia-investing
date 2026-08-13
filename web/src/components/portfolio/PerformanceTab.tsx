@@ -29,20 +29,20 @@ export function PerformanceTab({
         <div className="stat-grid">
           <div>
             <div className="stat-label">Valor Investido</div>
-            <div className="stat-value">
-              {fmt.format(totalCost)}
-            </div>
+            <div className="stat-value">{fmt.format(totalCost)}</div>
           </div>
           <div>
             <div className="stat-label">Valor Atual</div>
-            <div className="stat-value">
-              {fmt.format(totalValue)}
-            </div>
+            <div className="stat-value">{fmt.format(totalValue)}</div>
           </div>
           <div>
             <div className="stat-label">Retorno</div>
-            <div className="stat-value" style={{ color: totalPnl >= 0 ? "var(--accent)" : "var(--red)" }}>
-              {totalPnlPercent >= 0 ? "+" : ""}{totalPnlPercent.toFixed(2)}%
+            <div
+              className="stat-value"
+              style={{ color: totalPnl >= 0 ? "var(--accent)" : "var(--red)" }}
+            >
+              {totalPnlPercent >= 0 ? "+" : ""}
+              {totalPnlPercent.toFixed(2)}%
             </div>
           </div>
         </div>

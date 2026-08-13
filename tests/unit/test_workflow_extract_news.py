@@ -26,8 +26,11 @@ class TestExtractNewsInput:
 
     def test_custom_values(self):
         inp = ExtractNewsInput(
-            issuer_id="VALE3", max_results=50, analyze_limit=20,
-            organization_id="org-1", schedule_id="sch-1",
+            issuer_id="VALE3",
+            max_results=50,
+            analyze_limit=20,
+            organization_id="org-1",
+            schedule_id="sch-1",
         )
         assert inp.max_results == 50
         assert inp.analyze_limit == 20
@@ -68,7 +71,7 @@ def _make_extract_activities(
 class TestExtractNewsWorkflow:
     @pytest.mark.asyncio
     async def test_happy_path_dict_fetched(self):
-        acts, record = _make_extract_activities(
+        acts, _record = _make_extract_activities(
             fetch_result={"items": [{"title": "News 1"}, {"title": "News 2"}]},
             analyze_result={"analyzed": 2, "results": [{"impact": "high"}]},
         )
@@ -89,7 +92,7 @@ class TestExtractNewsWorkflow:
 
     @pytest.mark.asyncio
     async def test_list_fetched_count(self):
-        acts, record = _make_extract_activities(
+        acts, _record = _make_extract_activities(
             fetch_result=[{"title": "A"}, {"title": "B"}, {"title": "C"}],
             analyze_result={"analyzed": 3, "results": []},
         )
@@ -107,7 +110,7 @@ class TestExtractNewsWorkflow:
 
     @pytest.mark.asyncio
     async def test_non_dict_non_list_fetched(self):
-        acts, record = _make_extract_activities(
+        acts, _record = _make_extract_activities(
             fetch_result="unexpected",
             analyze_result={"analyzed": 0, "results": []},
         )
@@ -125,7 +128,7 @@ class TestExtractNewsWorkflow:
 
     @pytest.mark.asyncio
     async def test_non_dict_analysis(self):
-        acts, record = _make_extract_activities(
+        acts, _record = _make_extract_activities(
             fetch_result={"items": []},
             analyze_result="not a dict",
         )
@@ -158,9 +161,10 @@ class TestExtractNewsWorkflow:
                     task_queue=TASK_QUEUE,
                 )
 
-        assert len(record) == 1
-        assert record[0]["schedule_id"] == "sch-123"
-        assert record[0]["status"] == "completed"
+        assert len(record) == 2
+        assert [entry["status"] for entry in record] == ["running", "completed"]
+        assert {entry["schedule_id"] for entry in record} == {"sch-123"}
+        assert record[1]["finished_at"]
 
     @pytest.mark.asyncio
     async def test_no_schedule_id_skips_record(self):
@@ -182,7 +186,7 @@ class TestExtractNewsWorkflow:
 
     @pytest.mark.asyncio
     async def test_empty_dict_fetched(self):
-        acts, record = _make_extract_activities(
+        acts, _record = _make_extract_activities(
             fetch_result={},
             analyze_result={"analyzed": 0, "results": []},
         )

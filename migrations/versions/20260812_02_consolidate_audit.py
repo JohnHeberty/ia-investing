@@ -43,6 +43,9 @@ def upgrade() -> None:
     )
 
     # 5. Expand action check constraint to allow dot notation (e.g. agent_run.submit)
+    # The project naming convention expands explicit check names to
+    # ``ck_<table>_<name>``. Older databases can contain either spelling.
+    op.execute("ALTER TABLE audit_log_entries DROP CONSTRAINT IF EXISTS ck_audit_log_entries_ck_audit_log_action")
     op.execute("ALTER TABLE audit_log_entries DROP CONSTRAINT IF EXISTS ck_audit_log_action")
     op.create_check_constraint(
         "ck_audit_log_action",
@@ -50,7 +53,31 @@ def upgrade() -> None:
         "action ~ '^[a-z][a-z0-9_.:-]{0,99}$'",
     )
 
-    # 6. Migrate data from audit_logs if it exists
+    # 6. Preserve legacy global audit rows under a deterministic system tenant.
+    # ``audit_log_entries.tenant_id`` is non-null and FK-constrained, while the
+    # retired ``audit_logs.organization_id`` allowed NULL.
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'audit_logs')
+               AND EXISTS (SELECT 1 FROM audit_logs WHERE organization_id IS NULL) THEN
+                INSERT INTO organizations (id, slug, display_name, status, created_at, updated_at)
+                VALUES (
+                    '00000000-0000-0000-0000-000000000000'::uuid,
+                    'legacy-global-audit',
+                    'Legacy Global Audit',
+                    'active',
+                    now(),
+                    now()
+                )
+                ON CONFLICT (id) DO NOTHING;
+            END IF;
+        END $$;
+        """
+    )
+
+    # 7. Migrate data from audit_logs if it exists
     op.execute(
         """
         DO $$
@@ -82,7 +109,7 @@ def upgrade() -> None:
         """
     )
 
-    # 7. Remove server default after migration
+    # 8. Remove server default after migration
     op.alter_column(
         "audit_log_entries",
         "actor_type",
@@ -91,12 +118,14 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.execute("ALTER TABLE audit_log_entries DROP CONSTRAINT IF EXISTS ck_audit_log_entries_ck_audit_log_actor_type")
     op.execute("ALTER TABLE audit_log_entries DROP CONSTRAINT IF EXISTS ck_audit_log_actor_type")
     op.drop_index("ix_audit_log_correlation", table_name="audit_log_entries")
     op.drop_column("audit_log_entries", "correlation_id")
     op.drop_column("audit_log_entries", "actor_type")
 
     # Restore original action check constraint
+    op.execute("ALTER TABLE audit_log_entries DROP CONSTRAINT IF EXISTS ck_audit_log_entries_ck_audit_log_action")
     op.execute("ALTER TABLE audit_log_entries DROP CONSTRAINT IF EXISTS ck_audit_log_action")
     op.execute(
         "ALTER TABLE audit_log_entries ADD CONSTRAINT ck_audit_log_action "

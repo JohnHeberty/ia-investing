@@ -27,7 +27,9 @@ function makeWrapper(permissions: string[], roles: string[] = []) {
     login: vi.fn(),
     logout: vi.fn(),
   });
-  return ({ children }: { children: ReactNode }) => <>{children}</>;
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return <>{children}</>;
+  };
 }
 
 describe("usePermissions", () => {

@@ -47,7 +47,7 @@ export default function ExplorationPage() {
   }, []);
 
   useEffect(() => {
-    void refresh();
+    queueMicrotask(() => void refresh());
   }, [refresh]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -68,7 +68,9 @@ export default function ExplorationPage() {
         minimum_liquidity: String(form.get("minimum_liquidity") || "5000000"),
         maximum_suggestions: Number(form.get("maximum_suggestions") || 20),
       });
-      setSuccess(`Exploração ${run.id} enfileirada. Nenhuma sugestão entra diretamente em carteira.`);
+      setSuccess(
+        `Exploração ${run.id} enfileirada. Nenhuma sugestão entra diretamente em carteira.`,
+      );
       await refresh(run.id);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao iniciar exploração");
@@ -98,7 +100,9 @@ export default function ExplorationPage() {
         interval_hours: Number(form.get("schedule_interval_hours") || 168),
         paused: false,
       });
-      setSuccess(`Agendamento ${schedule.schedule_id} criado a cada ${schedule.interval_hours} horas.`);
+      setSuccess(
+        `Agendamento ${schedule.schedule_id} criado a cada ${schedule.interval_hours} horas.`,
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao criar agendamento");
     } finally {
@@ -111,7 +115,9 @@ export default function ExplorationPage() {
     setError(null);
     try {
       const candidate = await promoteExplorationSuggestion(id);
-      setSuccess(`${candidate.ticker} foi promovida para candidato e entrou no fluxo completo de investigação.`);
+      setSuccess(
+        `${candidate.ticker} foi promovida para candidato e entrou no fluxo completo de investigação.`,
+      );
       await refresh(selected?.run.id);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao promover sugestão");
@@ -146,15 +152,24 @@ export default function ExplorationPage() {
     <>
       <header className="page-head">
         <div>
-          <Link className="breadcrumb" href="/opportunities/candidates"><ArrowLeft size={13} /> Voltar para candidatos</Link>
+          <Link className="breadcrumb" href="/opportunities/candidates">
+            <ArrowLeft size={13} /> Voltar para candidatos
+          </Link>
           <div className="eyebrow mt-12">Autonomous discovery</div>
           <h1>Exploração de novas ações</h1>
-          <p className="subtitle">O universo, liquidez, restricted list e cobertura são filtrados em código. O agent investiga apenas a shortlist e cria sugestões para o mesmo processo de aprovação.</p>
+          <p className="subtitle">
+            O universo, liquidez, restricted list e cobertura são filtrados em código. O agent
+            investiga apenas a shortlist e cria sugestões para o mesmo processo de aprovação.
+          </p>
         </div>
         <Radar size={34} />
       </header>
 
-      {error && <div className={styles.error} role="alert">{error}</div>}
+      {error && (
+        <div className={styles.error} role="alert">
+          {error}
+        </div>
+      )}
       {success && <div className={styles.success}>{success}</div>}
 
       <ExplorationForm onSubmit={submit} submitting={submitting} />
@@ -163,7 +178,14 @@ export default function ExplorationPage() {
       <section className="card card-pad section-gap">
         <div className="card-title">
           <h2>Execuções e sugestões</h2>
-          <button className="button secondary" type="button" onClick={() => void refresh()} disabled={loading}><RefreshCw size={14} /> Atualizar</button>
+          <button
+            className="button secondary"
+            type="button"
+            onClick={() => void refresh()}
+            disabled={loading}
+          >
+            <RefreshCw size={14} /> Atualizar
+          </button>
         </div>
         {loading && <p className="subtitle">Carregando execuções...</p>}
         {!loading && !runs.length && <p className="subtitle">Nenhuma exploração executada.</p>}
@@ -177,17 +199,29 @@ export default function ExplorationPage() {
               >
                 {runs.map((run) => (
                   <option key={run.id} value={run.id}>
-                    {new Date(run.created_at).toLocaleString("pt-BR")} · {run.status} · {run.strategy_codes.join(", ")}
+                    {new Date(run.created_at).toLocaleString("pt-BR")} · {run.status} ·{" "}
+                    {run.strategy_codes.join(", ")}
                   </option>
                 ))}
               </select>
             </label>
-            {selected && <span className="subtitle">Universo {selected.run.universe_size} · elegíveis {selected.run.eligible_size} · sugestões {selected.suggestions.length}</span>}
+            {selected && (
+              <span className="subtitle">
+                Universo {selected.run.universe_size} · elegíveis {selected.run.eligible_size} ·
+                sugestões {selected.suggestions.length}
+              </span>
+            )}
           </div>
         )}
 
-        {selected?.run.error_detail && <div className={styles.error}>{selected.run.error_detail}</div>}
-        {selected && !selected.suggestions.length && <p className="subtitle">A execução ainda não produziu sugestões ou nenhuma ação passou pelos filtros.</p>}
+        {selected?.run.error_detail && (
+          <div className={styles.error}>{selected.run.error_detail}</div>
+        )}
+        {selected && !selected.suggestions.length && (
+          <p className="subtitle">
+            A execução ainda não produziu sugestões ou nenhuma ação passou pelos filtros.
+          </p>
+        )}
         {selected && !!selected.suggestions.length && (
           <div className={`${styles.sourceList} mt-12`}>
             {selected.suggestions.map((item) => (
@@ -205,7 +239,12 @@ export default function ExplorationPage() {
 
       <DismissDialog
         open={dismissTarget !== null}
-        onOpenChange={(open) => { if (!open) { setDismissTarget(null); setDismissReason(""); } }}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDismissTarget(null);
+            setDismissReason("");
+          }
+        }}
         dismissReason={dismissReason}
         onDismissReasonChange={setDismissReason}
         onConfirm={() => void confirmDismiss()}

@@ -4,11 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from decimal import Decimal
-from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 
 from apps.api.routes.agent_runtime import (
     AgentRunV1,
@@ -16,7 +14,6 @@ from apps.api.routes.agent_runtime import (
     ApprovalV1,
     CreateAgentRunV1,
 )
-
 
 # ---------------------------------------------------------------------------
 # Pydantic model validation

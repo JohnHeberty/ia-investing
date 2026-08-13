@@ -24,12 +24,12 @@ This runbook covers deployment, configuration, failure handling, and incident re
 
 ### Redirect Behavior
 
-| Condition | Behavior |
-|-----------|----------|
-| No session cookie | Redirect to `/login` |
-| Session expired (401) | Redirect to `/login` |
-| Invalid session (400) | Redirect to `/login` |
-| Backend 403 | Show error panel, no redirect |
+| Condition             | Behavior                      |
+| --------------------- | ----------------------------- |
+| No session cookie     | Redirect to `/login`          |
+| Session expired (401) | Redirect to `/login`          |
+| Invalid session (400) | Redirect to `/login`          |
+| Backend 403           | Show error panel, no redirect |
 
 ---
 
@@ -70,10 +70,10 @@ The SSE client implements exponential backoff:
 
 ### Other Flags
 
-| Flag | Purpose |
-|------|---------|
-| `NEXT_PUBLIC_API_URL` | Backend API base URL |
-| `NEXT_PUBLIC_AUTH_URL` | NextAuth base URL |
+| Flag                     | Purpose                 |
+| ------------------------ | ----------------------- |
+| `NEXT_PUBLIC_API_URL`    | Backend API base URL    |
+| `NEXT_PUBLIC_AUTH_URL`   | NextAuth base URL       |
 | `NEXT_PUBLIC_SENTRY_DSN` | Error tracking endpoint |
 
 ---
@@ -155,13 +155,13 @@ vercel promote <deployment-url>
 
 ### Common Issues
 
-| Symptom | Likely Cause | Fix |
-|---------|-------------|-----|
-| White screen | JS bundle error or missing env var | Check build logs, verify env vars |
-| Redirect loop | Auth misconfiguration | Check `NEXTAUTH_URL` and cookie settings |
-| 502 on API routes | Backend down | Check backend health, restart if needed |
-| Stale data | SSE connection lost | Refresh page, check SSE endpoint |
-| Missing features | Feature flag disabled | Check `NEXT_PUBLIC_ENABLE_DEMO_DATA` |
+| Symptom           | Likely Cause                       | Fix                                      |
+| ----------------- | ---------------------------------- | ---------------------------------------- |
+| White screen      | JS bundle error or missing env var | Check build logs, verify env vars        |
+| Redirect loop     | Auth misconfiguration              | Check `NEXTAUTH_URL` and cookie settings |
+| 502 on API routes | Backend down                       | Check backend health, restart if needed  |
+| Stale data        | SSE connection lost                | Refresh page, check SSE endpoint         |
+| Missing features  | Feature flag disabled              | Check `NEXT_PUBLIC_ENABLE_DEMO_DATA`     |
 
 ### Post-Incident
 

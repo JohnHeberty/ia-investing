@@ -3,7 +3,8 @@
 .cache
 .mypy_cache
 .pytest_cache
-.ruff_cache.venv
+.ruff_cache
+.venv
 __pycache__
 *.pyc
 *.pyo
@@ -17,6 +18,7 @@ infra
 FIX*
 QUALITY*
 *.md
+!README.md
 *.pdf
 *.log
 *.csv

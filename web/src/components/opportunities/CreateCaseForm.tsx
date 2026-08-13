@@ -3,20 +3,15 @@
 import { useState, useCallback, useEffect } from "react";
 import { X, CheckCircle, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { bffFetch, queryKeys } from "@/lib/api-client";
 
-const newCaseSchema = z.object({
-  title: z.string().min(3, "Título deve ter pelo menos 3 caracteres"),
-  instrument: z.string().min(1, "Instrumento é obrigatório"),
-  case_type: z.enum(["fundamental", "macro", "event", "technical"], {
-    error: "Selecione um tipo de caso",
-  }),
-});
-
-type NewCaseFormValues = z.infer<typeof newCaseSchema>;
+type NewCaseFormValues = {
+  title: string;
+  instrument: string;
+  case_type: "fundamental" | "macro" | "event" | "technical";
+};
 
 export function CreateCaseForm({ onClose }: { onClose: () => void }) {
   const queryClient = useQueryClient();
@@ -51,14 +46,11 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
           : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
       try {
-        const existingCases = queryClient.getQueryData(
-          queryKeys.researchCases(),
-        ) as Array<Record<string, unknown>> | undefined;
+        const existingCases = queryClient.getQueryData(queryKeys.researchCases()) as
+          Array<Record<string, unknown>> | undefined;
 
         const duplicate = existingCases?.find(
-          (c) =>
-            String(c.instrument_id ?? "").toLowerCase() ===
-            values.instrument.toLowerCase(),
+          (c) => String(c.instrument_id ?? "").toLowerCase() === values.instrument.toLowerCase(),
         );
 
         if (duplicate) {
@@ -87,19 +79,14 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
         setSubmitSuccess(true);
         queryClient.invalidateQueries({ queryKey: queryKeys.researchCases() });
       } catch (err) {
-        setSubmitError(
-          err instanceof Error ? err.message : "Erro desconhecido",
-        );
+        setSubmitError(err instanceof Error ? err.message : "Erro desconhecido");
       }
     },
-    [queryClient, onClose],
+    [queryClient],
   );
 
   return (
-    <section
-      className="card card-pad section-gap"
-      aria-label="Abrir novo caso de pesquisa"
-    >
+    <section className="card card-pad section-gap" aria-label="Abrir novo caso de pesquisa">
       <div className="card-title">
         <h2>Novo caso de pesquisa</h2>
         <button
@@ -138,7 +125,10 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
                 htmlFor="case-title"
                 style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 4 }}
               >
-                Título <span aria-hidden="true" style={{ color: "var(--red)" }}>*</span>
+                Título{" "}
+                <span aria-hidden="true" style={{ color: "var(--red)" }}>
+                  *
+                </span>
               </label>
               <input
                 id="case-title"
@@ -159,7 +149,11 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
                 {...register("title")}
               />
               {errors.title && (
-                <p id="case-title-error" role="alert" style={{ color: "var(--red)", fontSize: 11, marginTop: 4 }}>
+                <p
+                  id="case-title-error"
+                  role="alert"
+                  style={{ color: "var(--red)", fontSize: 11, marginTop: 4 }}
+                >
                   {errors.title.message}
                 </p>
               )}
@@ -170,7 +164,10 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
                 htmlFor="case-instrument"
                 style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 4 }}
               >
-                Instrumento <span aria-hidden="true" style={{ color: "var(--red)" }}>*</span>
+                Instrumento{" "}
+                <span aria-hidden="true" style={{ color: "var(--red)" }}>
+                  *
+                </span>
               </label>
               <input
                 id="case-instrument"
@@ -191,7 +188,11 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
                 {...register("instrument")}
               />
               {errors.instrument && (
-                <p id="case-instrument-error" role="alert" style={{ color: "var(--red)", fontSize: 11, marginTop: 4 }}>
+                <p
+                  id="case-instrument-error"
+                  role="alert"
+                  style={{ color: "var(--red)", fontSize: 11, marginTop: 4 }}
+                >
                   {errors.instrument.message}
                 </p>
               )}
@@ -202,7 +203,10 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
                 htmlFor="case-type"
                 style={{ display: "block", fontSize: 12, color: "var(--muted)", marginBottom: 4 }}
               >
-                Tipo de caso <span aria-hidden="true" style={{ color: "var(--red)" }}>*</span>
+                Tipo de caso{" "}
+                <span aria-hidden="true" style={{ color: "var(--red)" }}>
+                  *
+                </span>
               </label>
               <select
                 id="case-type"
@@ -227,7 +231,11 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
                 <option value="technical">Técnico</option>
               </select>
               {errors.case_type && (
-                <p id="case-type-error" role="alert" style={{ color: "var(--red)", fontSize: 11, marginTop: 4 }}>
+                <p
+                  id="case-type-error"
+                  role="alert"
+                  style={{ color: "var(--red)", fontSize: 11, marginTop: 4 }}
+                >
                   {errors.case_type.message}
                 </p>
               )}
@@ -254,11 +262,7 @@ export function CreateCaseForm({ onClose }: { onClose: () => void }) {
             )}
 
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-              <button
-                type="button"
-                onClick={onClose}
-                className="button secondary"
-              >
+              <button type="button" onClick={onClose} className="button secondary">
                 Cancelar
               </button>
               <button

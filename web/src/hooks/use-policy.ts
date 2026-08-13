@@ -25,15 +25,15 @@ export function usePolicy() {
     queryKey: queryKeys.policyEvents(),
     queryFn: async () => {
       const asOf = new Date().toISOString();
-      return await bffFetch<Array<Record<string, unknown>>>(`/api/v1/policy/events?as_of=${encodeURIComponent(asOf)}`);
+      return await bffFetch<Array<Record<string, unknown>>>(
+        `/api/v1/policy/events?as_of=${encodeURIComponent(asOf)}`,
+      );
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
-  const events = Array.isArray(policyEventsQuery.data)
-    ? policyEventsQuery.data
-    : [];
+  const events = Array.isArray(policyEventsQuery.data) ? policyEventsQuery.data : [];
 
   const policyEvents: PolicyEvent[] = events.map((e) => ({
     id: String(e.id ?? ""),

@@ -659,6 +659,7 @@ async def create_exploration_schedule(
                 "minimum_liquidity": str(body.minimum_liquidity),
                 "maximum_suggestions": body.maximum_suggestions,
                 "requested_by": f"schedule:{body.name}",
+                "schedule_id": schedule_id,
             },
             id=f"{schedule_id}-workflow",
             task_queue="research-agents",

@@ -73,9 +73,7 @@ export function useRiskPolicies() {
   const query = useQuery({
     queryKey: ["riskPolicies"],
     queryFn: async () => {
-      return await bffFetch<{ policies: RiskPolicy[]; count: number }>(
-        "/api/v1/risk/policies",
-      );
+      return await bffFetch<{ policies: RiskPolicy[]; count: number }>("/api/v1/risk/policies");
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,

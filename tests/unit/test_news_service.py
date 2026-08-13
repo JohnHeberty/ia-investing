@@ -130,7 +130,7 @@ class TestNewsExtractionActivities:
     def test_news_extraction_activities_tuple_count(self) -> None:
         from ia_investing.orchestration.activities.news_extraction import NEWS_EXTRACTION_ACTIVITIES
 
-        assert len(NEWS_EXTRACTION_ACTIVITIES) == 5
+        assert len(NEWS_EXTRACTION_ACTIVITIES) == 6
 
     @pytest.mark.asyncio
     async def test_check_alert_threshold_alerts_on_high_materiality(self) -> None:

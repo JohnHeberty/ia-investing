@@ -34,9 +34,7 @@ export function useSourceHealthSummary() {
     refetchOnWindowFocus: false,
   });
 
-  const sources = Array.isArray(sourceHealthQuery.data)
-    ? sourceHealthQuery.data
-    : [];
+  const sources = Array.isArray(sourceHealthQuery.data) ? sourceHealthQuery.data : [];
 
   const staleCount = sources.filter(
     (s) => s.status === "stale" || s.status === "never_succeeded",

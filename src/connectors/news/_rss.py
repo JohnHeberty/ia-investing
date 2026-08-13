@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from email.utils import parsedate_to_datetime
 from urllib.parse import quote_plus
 
-import defusedxml.ElementTree as DefusedET
+import defusedxml.ElementTree as DefusedET  # type: ignore[import-untyped]
 
 from ..base import DEFAULT_TIMEOUT, HttpClient
 

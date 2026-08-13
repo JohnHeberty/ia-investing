@@ -18,7 +18,7 @@ export function AllocationChart({ positions, currency = "BRL" }: AllocationChart
 
     const total = positions.reduce((sum, p) => {
       const price = p.current_price ?? p.avg_cost_per_share;
-      return sum + (p.quantity * price);
+      return sum + p.quantity * price;
     }, 0);
 
     if (total <= 0) return null;
@@ -59,7 +59,11 @@ export function AllocationChart({ positions, currency = "BRL" }: AllocationChart
   }, [positions, currency]);
 
   if (positions.length === 0) {
-    return <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Sem posições para exibir.</div>;
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+        Sem posições para exibir.
+      </div>
+    );
   }
 
   return <div ref={chartRef} style={{ height: 300, width: "100%" }} />;

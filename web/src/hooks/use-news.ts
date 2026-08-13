@@ -102,7 +102,8 @@ function useNewsQueries() {
 
   const eventsQuery = useQuery({
     queryKey: queryKeys.newsEvents(),
-    queryFn: () => bffFetch<{ items: DetectedEvent[]; total: number }>("/api/v1/news/events?limit=100"),
+    queryFn: () =>
+      bffFetch<{ items: DetectedEvent[]; total: number }>("/api/v1/news/events?limit=100"),
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
@@ -183,7 +184,12 @@ export function useSourceMutations() {
   };
 
   const createMutation = useMutation({
-    mutationFn: (data: { name: string; source_type?: string; url_pattern?: string; trust_level?: number }) =>
+    mutationFn: (data: {
+      name: string;
+      source_type?: string;
+      url_pattern?: string;
+      trust_level?: number;
+    }) =>
       bffFetch<NewsSource>("/api/v1/news/sources", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -193,7 +199,17 @@ export function useSourceMutations() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, ...data }: { id: string; name?: string; source_type?: string; url_pattern?: string; trust_level?: number; is_active?: boolean }) =>
+    mutationFn: ({
+      id,
+      ...data
+    }: {
+      id: string;
+      name?: string;
+      source_type?: string;
+      url_pattern?: string;
+      trust_level?: number;
+      is_active?: boolean;
+    }) =>
       bffFetch<NewsSource>(`/api/v1/news/sources/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -203,8 +219,7 @@ export function useSourceMutations() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) =>
-      bffFetch<void>(`/api/v1/news/sources/${id}`, { method: "DELETE" }),
+    mutationFn: (id: string) => bffFetch<void>(`/api/v1/news/sources/${id}`, { method: "DELETE" }),
     onSuccess: invalidateSources,
   });
 

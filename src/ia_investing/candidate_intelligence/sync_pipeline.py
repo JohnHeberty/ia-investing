@@ -1,5 +1,6 @@
-"""Synchronous candidate analysis pipeline — runs all 10 stages
-without Temporal orchestration. Calls ProductionCandidateRuntime
+"""Synchronous candidate analysis pipeline.
+
+Runs all 10 stages without Temporal orchestration. Calls ProductionCandidateRuntime
 methods directly in sequence.
 
 Usage:
@@ -278,13 +279,14 @@ async def run_candidate_pipeline(
                     blocker_codes=(f"{name}_exception",),
                 )
 
-        if result is None:
+        if not isinstance(result, CandidateCheckpoint):
             result = CandidateCheckpoint(
                 candidate_id=candidate_id,
                 stage=name,
                 blocked=False,
                 decision="completed",
                 reason=f"{name} completed (no checkpoint returned)",
+                payload=result if isinstance(result, dict) else {},
             )
         checkpoint = result
         duration = (time.monotonic() - t0) * 1000

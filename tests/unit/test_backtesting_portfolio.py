@@ -142,84 +142,62 @@ class TestComputeMetrics:
 # ---------------------------------------------------------------------------
 class TestEqualWeightStrategy:
     def test_basic(self):
-        result = asyncio.get_event_loop().run_until_complete(
-            equal_weight_strategy(pl.DataFrame(), ["A", "B", "C"], {})
-        )
+        result = asyncio.run(equal_weight_strategy(pl.DataFrame(), ["A", "B", "C"], {}))
         assert result == {"A": pytest.approx(1 / 3), "B": pytest.approx(1 / 3), "C": pytest.approx(1 / 3)}
 
     def test_empty_cols(self):
-        result = asyncio.get_event_loop().run_until_complete(
-            equal_weight_strategy(pl.DataFrame(), [], {})
-        )
+        result = asyncio.run(equal_weight_strategy(pl.DataFrame(), [], {}))
         assert result == {}
 
 
 class TestMarketCapProxyStrategy:
     def test_basic(self):
         df = pl.DataFrame({"A": [100.0], "B": [200.0]})
-        result = asyncio.get_event_loop().run_until_complete(
-            market_cap_proxy_strategy(df, ["A", "B"], {})
-        )
+        result = asyncio.run(market_cap_proxy_strategy(df, ["A", "B"], {}))
         assert result["A"] == pytest.approx(1 / 3)
         assert result["B"] == pytest.approx(2 / 3)
 
     def test_empty_df(self):
-        result = asyncio.get_event_loop().run_until_complete(
-            market_cap_proxy_strategy(pl.DataFrame(), ["A"], {})
-        )
+        result = asyncio.run(market_cap_proxy_strategy(pl.DataFrame(), ["A"], {}))
         assert result == {}
 
     def test_all_zero_prices(self):
         df = pl.DataFrame({"A": [0.0], "B": [0.0]})
-        result = asyncio.get_event_loop().run_until_complete(
-            market_cap_proxy_strategy(df, ["A", "B"], {})
-        )
+        result = asyncio.run(market_cap_proxy_strategy(df, ["A", "B"], {}))
         assert result == {}
 
     def test_current_weights_fallback(self):
-        result = asyncio.get_event_loop().run_until_complete(
-            market_cap_proxy_strategy(pl.DataFrame(), [], {"A": 1.0})
-        )
+        result = asyncio.run(market_cap_proxy_strategy(pl.DataFrame(), [], {"A": 1.0}))
         assert result == {"A": 1.0}
 
 
 class TestMomentumStrategy:
     def test_short_data(self):
         df = pl.DataFrame({"A": [100.0]})
-        result = asyncio.get_event_loop().run_until_complete(
-            momentum_strategy(df, ["A"], {}, lookback=60)
-        )
+        result = asyncio.run(momentum_strategy(df, ["A"], {}, lookback=60))
         assert result == {}
 
     def test_sufficient_data(self):
         prices = list(range(100, 160))
         df = pl.DataFrame({"A": [float(p) for p in prices]})
-        result = asyncio.get_event_loop().run_until_complete(
-            momentum_strategy(df, ["A"], {}, lookback=60)
-        )
+        result = asyncio.run(momentum_strategy(df, ["A"], {}, lookback=60))
         assert "A" in result
 
 
 class TestSectorNeutralStrategy:
     def test_no_sector_map(self):
-        result = asyncio.get_event_loop().run_until_complete(
-            sector_neutral_strategy(pl.DataFrame(), ["A", "B"], {})
-        )
+        result = asyncio.run(sector_neutral_strategy(pl.DataFrame(), ["A", "B"], {}))
         assert result["A"] == pytest.approx(0.5)
 
     def test_with_sector_map(self):
         sector_map = {"A": "tech", "B": "tech", "C": "finance"}
-        result = asyncio.get_event_loop().run_until_complete(
-            sector_neutral_strategy(pl.DataFrame(), ["A", "B", "C"], {}, sector_map)
-        )
+        result = asyncio.run(sector_neutral_strategy(pl.DataFrame(), ["A", "B", "C"], {}, sector_map))
         assert result["A"] == pytest.approx(0.25)
         assert result["B"] == pytest.approx(0.25)
         assert result["C"] == pytest.approx(0.5)
 
     def test_empty_cols(self):
-        result = asyncio.get_event_loop().run_until_complete(
-            sector_neutral_strategy(pl.DataFrame(), [], {})
-        )
+        result = asyncio.run(sector_neutral_strategy(pl.DataFrame(), [], {}))
         assert result == {}
 
 

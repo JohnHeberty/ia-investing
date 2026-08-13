@@ -6,10 +6,13 @@ import Link from "next/link";
 
 import { AllocationChart } from "@/components/allocation-chart";
 import { AsOfIndicator, Badge, DomainTabs } from "@/components/domain";
+import { LoadingSkeleton } from "@/components/data-state-components";
 import {
-  LoadingSkeleton,
-} from "@/components/data-state-components";
-import { usePortfolioDetail, usePortfolioRecommendations, usePortfolioTheses, useDeletePortfolio } from "@/hooks/use-portfolios";
+  usePortfolioDetail,
+  usePortfolioRecommendations,
+  usePortfolioTheses,
+  useDeletePortfolio,
+} from "@/hooks/use-portfolios";
 import { useUpdatePosition, useDeletePosition } from "@/hooks/use-portfolios";
 import { useAuditLogs } from "@/hooks/use-audit-logs";
 
@@ -23,19 +26,25 @@ import { ThesesTab } from "@/components/portfolio/ThesesTab";
 import { AuditTab } from "@/components/portfolio/AuditTab";
 import { ConfirmDeleteModal } from "@/components/portfolio/ConfirmDeleteModal";
 
-function computeRiskMetrics(positions: Array<{
-  ticker_symbol: string;
-  quantity: number;
-  avg_cost_per_share: number;
-  current_price: number | null;
-}>, totalValue: number) {
+function computeRiskMetrics(
+  positions: Array<{
+    ticker_symbol: string;
+    quantity: number;
+    avg_cost_per_share: number;
+    current_price: number | null;
+  }>,
+  totalValue: number,
+) {
   const weights = positions.map((p) => {
     const price = p.current_price ?? p.avg_cost_per_share;
     return totalValue > 0 ? (p.quantity * price) / totalValue : 0;
   });
   const maxWeight = weights.length > 0 ? Math.max(...weights) : 0;
   const hhi = weights.reduce((sum, w) => sum + w * w, 0);
-  const top3Weight = [...weights].sort((a, b) => b - a).slice(0, 3).reduce((s, w) => s + w, 0);
+  const top3Weight = [...weights]
+    .sort((a, b) => b - a)
+    .slice(0, 3)
+    .reduce((s, w) => s + w, 0);
   return { maxWeight, hhi, top3Weight };
 }
 
@@ -47,7 +56,12 @@ export function PortfolioContent({ id }: { id: string }) {
   const [showAddPosition, setShowAddPosition] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [editingPosition, setEditingPosition] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<{ ticker_symbol: string; quantity: string; avg_cost_per_share: string; current_price: string }>({ ticker_symbol: "", quantity: "", avg_cost_per_share: "", current_price: "" });
+  const [editForm, setEditForm] = useState<{
+    ticker_symbol: string;
+    quantity: string;
+    avg_cost_per_share: string;
+    current_price: string;
+  }>({ ticker_symbol: "", quantity: "", avg_cost_per_share: "", current_price: "" });
   const [needsRecalc, setNeedsRecalc] = useState(false);
   const [editError, setEditError] = useState<string | null>(null);
   const deletePortfolio = useDeletePortfolio();
@@ -55,16 +69,23 @@ export function PortfolioContent({ id }: { id: string }) {
   const deletePosition = useDeletePosition();
   const router = useRouter();
 
-  const positions = portfolio?.positions || [];
+  const positions = useMemo(() => portfolio?.positions || [], [portfolio?.positions]);
   const totalValue = useMemo(
-    () => positions.reduce((sum, pos) => sum + (pos.quantity * (pos.current_price ?? pos.avg_cost_per_share)), 0),
+    () =>
+      positions.reduce(
+        (sum, pos) => sum + pos.quantity * (pos.current_price ?? pos.avg_cost_per_share),
+        0,
+      ),
     [positions],
   );
   const totalCost = useMemo(
-    () => positions.reduce((sum, pos) => sum + (pos.quantity * pos.avg_cost_per_share), 0),
+    () => positions.reduce((sum, pos) => sum + pos.quantity * pos.avg_cost_per_share, 0),
     [positions],
   );
-  const riskMetrics = useMemo(() => computeRiskMetrics(positions, totalValue), [positions, totalValue]);
+  const riskMetrics = useMemo(
+    () => computeRiskMetrics(positions, totalValue),
+    [positions, totalValue],
+  );
   const currency = portfolio?.base_currency || "BRL";
   const fmt = useMemo(
     () => new Intl.NumberFormat("pt-BR", { style: "currency", currency, maximumFractionDigits: 0 }),
@@ -101,7 +122,9 @@ export function PortfolioContent({ id }: { id: string }) {
         </div>
         <div className="state-panel" data-state="error">
           <strong>Erro ao carregar carteira</strong>
-          <p>Não foi possível acessar os dados desta carteira. Verifique o ID ou tente novamente.</p>
+          <p>
+            Não foi possível acessar os dados desta carteira. Verifique o ID ou tente novamente.
+          </p>
         </div>
         <div className="mt-16">
           <Link href="/portfolios" className="button secondary">
@@ -124,21 +147,14 @@ export function PortfolioContent({ id }: { id: string }) {
           <div className="eyebrow">Portfolio 360</div>
           <h1>{name}</h1>
           <p className="subtitle">
-            {isPaper ? "Carteira Paper" : "Carteira Live"} · {currency} · {positions.length} posições
+            {isPaper ? "Carteira Paper" : "Carteira Live"} · {currency} · {positions.length}{" "}
+            posições
           </p>
         </div>
         <div className="flex items-center gap-12">
-          <Badge tone={isPaper ? "warn" : "good"}>
-            {isPaper ? "Paper" : "Live"}
-          </Badge>
-          <AsOfIndicator
-            value={new Date().toLocaleString("pt-BR")}
-            freshness="Atual"
-          />
-          <button
-            className="button danger sm"
-            onClick={() => setShowConfirmDelete(true)}
-          >
+          <Badge tone={isPaper ? "warn" : "good"}>{isPaper ? "Paper" : "Live"}</Badge>
+          <AsOfIndicator value={new Date().toLocaleString("pt-BR")} freshness="Atual" />
+          <button className="button danger sm" onClick={() => setShowConfirmDelete(true)}>
             Excluir
           </button>
         </div>
@@ -214,11 +230,7 @@ export function PortfolioContent({ id }: { id: string }) {
             id: "risk",
             label: "Risco",
             content: (
-              <RiskTab
-                positions={positions}
-                totalValue={totalValue}
-                riskMetrics={riskMetrics}
-              />
+              <RiskTab positions={positions} totalValue={totalValue} riskMetrics={riskMetrics} />
             ),
           },
           {
@@ -237,15 +249,23 @@ export function PortfolioContent({ id }: { id: string }) {
                         const currentPrice = pos.current_price ?? pos.avg_cost_per_share;
                         const value = pos.quantity * currentPrice;
                         const weight = totalValue > 0 ? (value / totalValue) * 100 : 0;
-                        const colors = ["var(--accent)", "var(--blue)", "var(--amber)", "var(--red)", "#9b59b6", "#1abc9c"];
+                        const colors = [
+                          "var(--accent)",
+                          "var(--blue)",
+                          "var(--amber)",
+                          "var(--red)",
+                          "#9b59b6",
+                          "#1abc9c",
+                        ];
                         const colorIndex = idx % colors.length;
                         return (
                           <div key={pos.id} className="flex items-center gap-12 distribution-row">
-                            <div className="distribution-swatch" style={{ background: colors[colorIndex] }} />
+                            <div
+                              className="distribution-swatch"
+                              style={{ background: colors[colorIndex] }}
+                            />
                             <span className="flex-1 fw-500">{pos.ticker_symbol}</span>
-                            <span className="info-value">
-                              {fmt.format(value)}
-                            </span>
+                            <span className="info-value">{fmt.format(value)}</span>
                             <span className="info-value-muted w-50 text-right">
                               {weight.toFixed(1)}%
                             </span>
@@ -261,45 +281,30 @@ export function PortfolioContent({ id }: { id: string }) {
           {
             id: "riskLimits",
             label: "Limites",
-            content: (
-              <LimitsTab
-                riskMetrics={riskMetrics}
-                positionsLength={positions.length}
-              />
-            ),
+            content: <LimitsTab riskMetrics={riskMetrics} positionsLength={positions.length} />,
           },
           {
             id: "theses",
             label: "Teses",
-            content: (
-              <ThesesTab theses={theses} isLoading={thesesLoading} />
-            ),
+            content: <ThesesTab theses={theses} isLoading={thesesLoading} />,
           },
           {
             id: "recommendations",
             label: "Recomendações",
-            content: (
-              <RecommendationsTab recommendations={recommendations} />
-            ),
+            content: <RecommendationsTab recommendations={recommendations} />,
           },
           {
             id: "audit",
             label: "Auditoria",
-            content: (
-              <AuditTab
-                auditEntries={auditEntries}
-                auditLoading={auditLoading}
-              />
-            ),
+            content: <AuditTab auditEntries={auditEntries} auditLoading={auditLoading} />,
           },
         ]}
       />
 
       <footer className="mt-12 page-footer">
         <p>
-          <strong>Moeda:</strong> {currency} ·
-          <strong> Tipo:</strong> {isPaper ? "Paper Trading" : "Live"} ·
-          <strong> Posições:</strong> {positions.length} ·
+          <strong>Moeda:</strong> {currency} ·<strong> Tipo:</strong>{" "}
+          {isPaper ? "Paper Trading" : "Live"} ·<strong> Posições:</strong> {positions.length} ·
           <strong> NAV:</strong> {fmt.format(totalValue)}
         </p>
       </footer>

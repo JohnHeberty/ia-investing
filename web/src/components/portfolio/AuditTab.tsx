@@ -30,7 +30,10 @@ export function AuditTab({ auditEntries, auditLoading }: AuditTabProps) {
       ) : auditEntries.length === 0 ? (
         <div className="state-panel mt-12" data-state="empty">
           <strong>Nenhum registro</strong>
-          <p>Ações realizadas nesta carteira aparecerão aqui quando conectadas ao ledger de auditoria.</p>
+          <p>
+            Ações realizadas nesta carteira aparecerão aqui quando conectadas ao ledger de
+            auditoria.
+          </p>
         </div>
       ) : (
         <div className="mt-12">
@@ -40,17 +43,22 @@ export function AuditTab({ auditEntries, auditLoading }: AuditTabProps) {
                 className={`audit-dot ${entry.action.includes("create") ? "create" : entry.action.includes("delete") ? "delete" : "update"}`}
               />
               <div className="audit-detail">
-                <div className="audit-action">
-                  {actionLabels[entry.action] || entry.action}
-                </div>
+                <div className="audit-action">{actionLabels[entry.action] || entry.action}</div>
                 <div className="audit-meta">
-                  {entry.resource_type}{entry.resource_id ? ` · ${entry.resource_id.toString().slice(0, 8)}…` : ""}
+                  {entry.resource_type}
+                  {entry.resource_id ? ` · ${entry.resource_id.toString().slice(0, 8)}…` : ""}
                 </div>
                 {entry.changes && Object.keys(entry.changes).length > 0 && (
-                  <div className="audit-meta" style={{ marginTop: 2, fontFamily: "var(--font-mono)" }}>
+                  <div
+                    className="audit-meta"
+                    style={{ marginTop: 2, fontFamily: "var(--font-mono)" }}
+                  >
                     {Object.entries(entry.changes).map(([key, val]) => (
                       <span key={key} style={{ marginRight: 8 }}>
-                        {key}: {typeof val === "object" && val !== null && "after" in (val as Record<string, unknown>)
+                        {key}:{" "}
+                        {typeof val === "object" &&
+                        val !== null &&
+                        "after" in (val as Record<string, unknown>)
                           ? String((val as Record<string, unknown>).after ?? "—")
                           : String(val)}
                       </span>

@@ -11,7 +11,8 @@ import hashlib
 import json
 import logging
 from datetime import timedelta
-from typing import Any
+from decimal import Decimal
+from typing import Any, cast
 from uuid import UUID
 
 import sqlalchemy as sa
@@ -174,7 +175,7 @@ async def fetch_and_persist_news_items(
 
     async def _safe_fetch(fetch_fn: Any, symbol: str) -> list[NewsArticle]:
         try:
-            return await fetch_fn(symbol, max_results=max_results // len(tickers) + 5)
+            return cast(list[NewsArticle], await fetch_fn(symbol, max_results=max_results // len(tickers) + 5))
         except Exception as exc:
             logger.warning("Failed to fetch %s for %s: %s", fetch_fn.__name__, symbol, exc)
             return []
@@ -357,7 +358,7 @@ async def analyze_news_item(
         session.add(impact)
 
     item.is_processed = True
-    item.sentiment_score = analysis.materiality_score
+    item.sentiment_score = Decimal(str(analysis.materiality_score))
     await session.flush()
 
     logger.info(

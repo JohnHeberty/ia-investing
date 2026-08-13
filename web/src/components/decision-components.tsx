@@ -102,7 +102,10 @@ export function ScenarioWaterfall({ scenarios }: { scenarios: ScenarioEntry[] })
           const width = (Math.abs(scenario.impact) / maxAbs) * 100;
           const isPositive = scenario.impact >= 0;
           return (
-            <div key={scenario.name} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}>
+            <div
+              key={scenario.name}
+              style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12 }}
+            >
               <span style={{ minWidth: 140, color: "var(--muted)" }}>{scenario.name}</span>
               <div style={{ flex: 1, position: "relative", height: 16 }}>
                 <div
@@ -167,24 +170,45 @@ export function ApprovalCard({
   };
   const { label, tone } = statusConfig[status];
   return (
-    <article className="card card-pad" style={{ borderLeft: `3px solid var(--${tone === "good" ? "accent" : tone === "warn" ? "amber" : tone === "bad" ? "red" : "muted"})` }}>
+    <article
+      className="card card-pad"
+      style={{
+        borderLeft: `3px solid var(--${tone === "good" ? "accent" : tone === "warn" ? "amber" : tone === "bad" ? "red" : "muted"})`,
+      }}
+    >
       <div className="card-title">
         <h3 style={{ fontSize: 14 }}>{title}</h3>
-        <span className="badge" data-tone={tone}>{label}</span>
+        <span className="badge" data-tone={tone}>
+          {label}
+        </span>
       </div>
       <p style={{ color: "var(--muted)", fontSize: 12, marginBottom: 12 }}>{description}</p>
       <div style={{ display: "flex", gap: 16, fontSize: 11, color: "var(--muted)" }}>
-        <span>Solicitado por: <strong style={{ color: "var(--text)" }}>{requestedBy}</strong></span>
+        <span>
+          Solicitado por: <strong style={{ color: "var(--text)" }}>{requestedBy}</strong>
+        </span>
         <span>{requestedAt}</span>
       </div>
       {decidedBy && (
-        <div style={{ display: "flex", gap: 16, fontSize: 11, color: "var(--muted)", marginTop: 4 }}>
-          <span>Decidido por: <strong style={{ color: "var(--text)" }}>{decidedBy}</strong></span>
+        <div
+          style={{ display: "flex", gap: 16, fontSize: 11, color: "var(--muted)", marginTop: 4 }}
+        >
+          <span>
+            Decidido por: <strong style={{ color: "var(--text)" }}>{decidedBy}</strong>
+          </span>
           <span>{decidedAt}</span>
         </div>
       )}
       {reason && (
-        <p style={{ fontSize: 12, marginTop: 8, padding: 8, background: "var(--surface-2)", borderRadius: 6 }}>
+        <p
+          style={{
+            fontSize: 12,
+            marginTop: 8,
+            padding: 8,
+            background: "var(--surface-2)",
+            borderRadius: 6,
+          }}
+        >
           Razão: {reason}
         </p>
       )}

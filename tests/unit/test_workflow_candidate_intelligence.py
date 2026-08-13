@@ -2,11 +2,22 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from uuid import uuid4
 
 import pytest
 
+from ia_investing.orchestration.activities.candidate_intelligence import (
+    CandidateCheckpoint,
+    CandidateSourceValidationInput,
+    CandidateSourceValidationResult,
+    CandidateWorkflowInput,
+    CandidateWorkflowResult,
+    ExplorationFindings,
+    ExplorationShortlist,
+    ExplorationWorkflowInput,
+    ExplorationWorkflowResult,
+)
 from workflows.candidate_intelligence import (
     AGENT_RETRY,
     FAST_RETRY,
@@ -15,19 +26,6 @@ from workflows.candidate_intelligence import (
     CandidateAnalysisWorkflow,
     CandidateSourceValidationWorkflow,
     ScheduledEquityExplorationWorkflow,
-)
-
-from ia_investing.orchestration.activities.candidate_intelligence import (
-    CandidateCheckpoint,
-    CandidateSourceValidationInput,
-    CandidateSourceValidationResult,
-    CandidateWorkflowInput,
-    CandidateWorkflowResult,
-    ExplorationShortlist,
-    ExplorationWorkflowInput,
-    ExplorationWorkflowResult,
-    ExplorationFindings,
-    ExplorationShortlist,
 )
 
 
@@ -59,7 +57,7 @@ class TestCandidateDataclasses:
             candidate_id=uuid4(),
             analysis_run_id=uuid4(),
             organization_id=uuid4(),
-            data_as_of=datetime.now(timezone.utc),
+            data_as_of=datetime.now(UTC),
         )
         assert inp.allow_incomplete is False
         assert inp.correlation_id is None
@@ -70,7 +68,7 @@ class TestCandidateDataclasses:
             candidate_id=cid,
             analysis_run_id=uuid4(),
             organization_id=uuid4(),
-            data_as_of=datetime.now(timezone.utc),
+            data_as_of=datetime.now(UTC),
             allow_incomplete=True,
             correlation_id=uuid4(),
         )
@@ -134,7 +132,7 @@ class TestCandidateDataclasses:
         inp = ExplorationWorkflowInput(
             exploration_run_id=uuid4(),
             organization_id=uuid4(),
-            data_as_of=datetime.now(timezone.utc),
+            data_as_of=datetime.now(UTC),
         )
         assert inp.correlation_id is None
 
@@ -152,7 +150,7 @@ class TestCandidateDataclasses:
         cmd = ExplorationWorkflowInput(
             exploration_run_id=uuid4(),
             organization_id=uuid4(),
-            data_as_of=datetime.now(timezone.utc),
+            data_as_of=datetime.now(UTC),
         )
         sl = ExplorationShortlist(
             command=cmd,
@@ -166,7 +164,7 @@ class TestCandidateDataclasses:
         cmd = ExplorationWorkflowInput(
             exploration_run_id=uuid4(),
             organization_id=uuid4(),
-            data_as_of=datetime.now(timezone.utc),
+            data_as_of=datetime.now(UTC),
         )
         sl = ExplorationShortlist(
             command=cmd,

@@ -37,7 +37,9 @@ export function useInstrument(instrumentId: string | null) {
     queryFn: async () => {
       if (!instrumentId) return null;
       const asOf = new Date().toISOString().slice(0, 10);
-      return await bffFetch<Record<string, unknown>>(`/api/v1/instruments/resolve?query=${encodeURIComponent(instrumentId)}&as_of=${asOf}`);
+      return await bffFetch<Record<string, unknown>>(
+        `/api/v1/instruments/resolve?query=${encodeURIComponent(instrumentId)}&as_of=${asOf}`,
+      );
     },
     enabled: !!instrumentId,
     staleTime: 60_000,
@@ -61,8 +63,7 @@ export function useInstrument(instrumentId: string | null) {
         observed_price: raw.observed_price != null ? String(raw.observed_price) : null,
         safety_margin: raw.safety_margin != null ? String(raw.safety_margin) : null,
         evidence_coverage: raw.evidence_coverage != null ? String(raw.evidence_coverage) : null,
-        material_claims:
-          typeof raw.material_claims === "number" ? raw.material_claims : 0,
+        material_claims: typeof raw.material_claims === "number" ? raw.material_claims : 0,
         data_sources: Array.isArray(raw.data_sources)
           ? (raw.data_sources as Array<Record<string, unknown>>).map((s) => ({
               id: String(s.id ?? ""),

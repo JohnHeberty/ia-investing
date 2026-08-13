@@ -54,6 +54,7 @@ class TestGetTemporalClient:
 
         with patch("apps.api.dependencies.get_settings", return_value=mock_settings):
             import apps.api.dependencies as deps
+
             deps._temporal_client = None
             with patch("apps.api.dependencies.Client") as MockClient:
                 MockClient.connect = AsyncMock(return_value=mock_client)
@@ -64,6 +65,7 @@ class TestGetTemporalClient:
     async def test_caches_client(self) -> None:
         mock_client = AsyncMock()
         import apps.api.dependencies as deps
+
         deps._temporal_client = mock_client
         result = await get_temporal_client()
         assert result is mock_client

@@ -5,12 +5,8 @@ import { useParams } from "next/navigation";
 import { Database, ExternalLink } from "lucide-react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
-import { ConfidenceBar, EvidenceTag, FreshnessPill } from "@/components/evidence-tags";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
+import { ConfidenceBar, EvidenceTag } from "@/components/evidence-tags";
 import { SourceDrawer, type SourceEntry } from "@/components/source-drawer";
 import { useInstrument } from "@/hooks/use-instrument";
 import { useUrlState, filterPresets } from "@/hooks/use-url-state";
@@ -18,7 +14,7 @@ import { useUrlState, filterPresets } from "@/hooks/use-url-state";
 function AssetContent() {
   const params = useParams();
   const assetId = typeof params.id === "string" ? params.id : null;
-  const [urlState] = useUrlState(filterPresets.asset);
+  useUrlState(filterPresets.asset);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const { instrument, isLoading, isError, dataState } = useInstrument(assetId);
@@ -81,12 +77,8 @@ function AssetContent() {
     );
   }
 
-  const safetyMargin = instrument.safety_margin
-    ? parseFloat(instrument.safety_margin)
-    : null;
-  const evidencePct = instrument.evidence_coverage
-    ? parseInt(instrument.evidence_coverage, 10)
-    : 0;
+  const safetyMargin = instrument.safety_margin ? parseFloat(instrument.safety_margin) : null;
+  const evidencePct = instrument.evidence_coverage ? parseInt(instrument.evidence_coverage, 10) : 0;
   const isStale = dataState === "stale";
 
   const sources: SourceEntry[] = instrument.data_sources.map((s) => ({
@@ -106,8 +98,8 @@ function AssetContent() {
             {instrument.ticker} · {instrument.name}
           </h1>
           <p className="subtitle">
-            {instrument.exchange} · {instrument.listing} ·{" "}
-            {instrument.instrument_type} · válido no as_of selecionado
+            {instrument.exchange} · {instrument.listing} · {instrument.instrument_type} · válido no
+            as_of selecionado
           </p>
         </div>
         <AsOfIndicator
@@ -128,14 +120,15 @@ function AssetContent() {
 
       {isStale && (
         <div className="mb-12">
-          <StaleWarning
-            lastUpdated={instrument.valid_as_of}
-            source="instruments/resolve"
-          />
+          <StaleWarning lastUpdated={instrument.valid_as_of} source="instruments/resolve" />
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores do ativo" aria-live="polite">
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Indicadores do ativo"
+        aria-live="polite"
+      >
         <Metric
           label="Valor justo"
           value={instrument.fair_value ?? "—"}
@@ -205,14 +198,12 @@ function AssetContent() {
                         : "var(--red)",
                 }}
               />
-              <span className="progress-label">
-                {safetyMargin.toFixed(1)}%
-              </span>
+              <span className="progress-label">{safetyMargin.toFixed(1)}%</span>
             </div>
           </div>
           <p className="card-desc" style={{ marginTop: 8 }}>
-            Diferença entre valor justo e preço observado. Margem positiva indica subvalorização
-            no cenário base.
+            Diferença entre valor justo e preço observado. Margem positiva indica subvalorização no
+            cenário base.
           </p>
         </section>
       )}

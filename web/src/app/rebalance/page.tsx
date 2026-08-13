@@ -54,7 +54,11 @@ export default function RebalancePage() {
   const proposalDetailQuery = useRebalanceProposal(selectedProposalId ?? undefined);
 
   if (driftQuery.isError && proposalsQuery.isError) {
-    return <ErrorState message={driftQuery.error?.message ?? proposalsQuery.error?.message ?? "Erro desconhecido"} />;
+    return (
+      <ErrorState
+        message={driftQuery.error?.message ?? proposalsQuery.error?.message ?? "Erro desconhecido"}
+      />
+    );
   }
 
   const isLoading =
@@ -70,7 +74,10 @@ export default function RebalancePage() {
             <h1>Rebalanceamento</h1>
           </div>
         </header>
-        <ProposalDetail proposal={proposalDetailQuery.data} onBack={() => setSelectedProposalId(null)} />
+        <ProposalDetail
+          proposal={proposalDetailQuery.data}
+          onBack={() => setSelectedProposalId(null)}
+        />
       </main>
     );
   }
@@ -82,7 +89,8 @@ export default function RebalancePage() {
           <div className="eyebrow">Portfolio Intelligence</div>
           <h1>Rebalanceamento de carteiras</h1>
           <p className="subtitle">
-            Monitore desvios de alocação, proponha e execute rebalanceamentos, e acompanhe o histórico.
+            Monitore desvios de alocação, proponha e execute rebalanceamentos, e acompanhe o
+            histórico.
           </p>
         </div>
       </header>
@@ -100,13 +108,12 @@ export default function RebalancePage() {
           {portfoliosLoading && <option>Carregando...</option>}
           {!portfoliosLoading && portfolios.length === 0 && <option>Nenhuma carteira</option>}
           {portfolios.map((p) => (
-            <option key={p.id} value={p.id}>{p.name}</option>
+            <option key={p.id} value={p.id}>
+              {p.name}
+            </option>
           ))}
         </select>
-        <button
-          onClick={() => setShowProposeForm(true)}
-          className="button"
-        >
+        <button onClick={() => setShowProposeForm(true)} className="button">
           Propor rebalanceamento
         </button>
       </div>
@@ -119,7 +126,9 @@ export default function RebalancePage() {
 
       {!isLoading && driftQuery.data && (
         <section className="card card-pad" aria-live="polite">
-          <div className="card-title"><h2>Desvios atuais vs. alvo</h2></div>
+          <div className="card-title">
+            <h2>Desvios atuais vs. alvo</h2>
+          </div>
           <div className="drift-info">
             <div>
               <span className="text-muted">Desvio máximo: </span>
@@ -136,9 +145,13 @@ export default function RebalancePage() {
 
       {!isLoading && proposalsQuery.data && (
         <section className="card card-pad" aria-live="polite">
-          <div className="card-title"><h2>Propostas</h2></div>
+          <div className="card-title">
+            <h2>Propostas</h2>
+          </div>
           {proposalsQuery.data.length === 0 ? (
-            <p className="proposal-empty">Nenhuma proposta de rebalanceamento para esta carteira.</p>
+            <p className="proposal-empty">
+              Nenhuma proposta de rebalanceamento para esta carteira.
+            </p>
           ) : (
             <div className="flex flex-col gap-8">
               {proposalsQuery.data.map((p) => (
@@ -148,11 +161,10 @@ export default function RebalancePage() {
                   className="event proposal-btn"
                 >
                   <div>
-                    <div className="proposal-title">
-                      Proposta {p.id.slice(0, 8)}
-                    </div>
+                    <div className="proposal-title">Proposta {p.id.slice(0, 8)}</div>
                     <div className="proposal-meta">
-                      {p.rationale.slice(0, 100)}{p.rationale.length > 100 ? "..." : ""}
+                      {p.rationale.slice(0, 100)}
+                      {p.rationale.length > 100 ? "..." : ""}
                     </div>
                   </div>
                   <StatusBadge status={p.status} />
@@ -165,7 +177,9 @@ export default function RebalancePage() {
 
       {!isLoading && (
         <section className="card card-pad">
-          <div className="card-title"><h2>Histórico de rebalanceamentos</h2></div>
+          <div className="card-title">
+            <h2>Histórico de rebalanceamentos</h2>
+          </div>
           <ProposalTimeline items={proposalsQuery.data ?? []} />
         </section>
       )}

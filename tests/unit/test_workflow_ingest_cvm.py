@@ -28,8 +28,12 @@ class TestIngestCVMInput:
 
     def test_custom_values(self):
         inp = IngestCVMInput(
-            cnpj="456", year=2023, statement_type="BPP",
-            issuer_id="iss-1", scale_factor=100, schedule_id="sch-1",
+            cnpj="456",
+            year=2023,
+            statement_type="BPP",
+            issuer_id="iss-1",
+            scale_factor=100,
+            schedule_id="sch-1",
         )
         assert inp.issuer_id == "iss-1"
         assert inp.scale_factor == 100
@@ -51,8 +55,12 @@ class TestIngestCVMOutput:
 
     def test_with_values(self):
         out = IngestCVMOutput(
-            issuer_id="i", statement_type="DRE", year=2024,
-            records_inserted=10, validation_results=[], errors=["err"],
+            issuer_id="i",
+            statement_type="DRE",
+            year=2024,
+            records_inserted=10,
+            validation_results=[],
+            errors=["err"],
         )
         assert out.records_inserted == 10
         assert out.errors == ["err"]
@@ -62,8 +70,10 @@ class TestIngestCVMOutput:
 class FakeValidationResult:
     check_name: str = ""
     passed: bool = True
+    entity_type: str = "issuer"
+    entity_id: str = "test"
+    details: dict[str, Any] = field(default_factory=dict)
     severity: str = "error"
-    details: str = ""
 
 
 def _make_activities(
@@ -108,10 +118,10 @@ def _make_activities(
 class TestIngestCVMWorkflow:
     @pytest.mark.asyncio
     async def test_happy_path_no_errors(self):
-        acts, publish, record = _make_activities(
+        acts, publish, _record = _make_activities(
             download_result=[{"row": 1}],
             parse_result=[{"parsed": True}],
-            validate_result=[FakeValidationResult(check_name="rev", passed=True, severity="error", details="")],
+            validate_result=[FakeValidationResult(check_name="rev", passed=True, severity="error")],
             store_result=5,
         )
 
@@ -130,11 +140,16 @@ class TestIngestCVMWorkflow:
 
     @pytest.mark.asyncio
     async def test_validation_errors_populated(self):
-        acts, publish, record = _make_activities(
+        acts, _publish, _record = _make_activities(
             download_result=[{"row": 1}],
             parse_result=[{"parsed": True}],
             validate_result=[
-                FakeValidationResult(check_name="rev_check", passed=False, severity="error", details="Revenue mismatch"),
+                FakeValidationResult(
+                    check_name="rev_check",
+                    passed=False,
+                    severity="error",
+                    details={"message": "Revenue mismatch"},
+                ),
             ],
             store_result=3,
         )
@@ -154,15 +169,18 @@ class TestIngestCVMWorkflow:
 
     @pytest.mark.asyncio
     async def test_schedule_id_records_run(self):
-        acts, publish, record = _make_activities(store_result=0)
+        acts, _publish, record = _make_activities(store_result=0)
 
         async with await WorkflowEnvironment.start_local() as env:
             async with Worker(env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[IngestCVMWorkflow]):
                 await env.client.execute_workflow(
                     IngestCVMWorkflow.run,
                     IngestCVMInput(
-                        cnpj="789", year=2022, statement_type="DFC",
-                        issuer_id="iss-3", schedule_id="sch-99",
+                        cnpj="789",
+                        year=2022,
+                        statement_type="DFC",
+                        issuer_id="iss-3",
+                        schedule_id="sch-99",
                     ),
                     id="test-ingest-cvm-3",
                     task_queue=TASK_QUEUE,
@@ -173,7 +191,7 @@ class TestIngestCVMWorkflow:
 
     @pytest.mark.asyncio
     async def test_no_schedule_id_skips_record(self):
-        acts, publish, record = _make_activities(store_result=0)
+        acts, _publish, record = _make_activities(store_result=0)
 
         async with await WorkflowEnvironment.start_local() as env:
             async with Worker(env.client, task_queue=TASK_QUEUE, activities=acts, workflows=[IngestCVMWorkflow]):
@@ -188,11 +206,16 @@ class TestIngestCVMWorkflow:
 
     @pytest.mark.asyncio
     async def test_validation_severity_warning_not_error(self):
-        acts, publish, record = _make_activities(
+        acts, _publish, _record = _make_activities(
             download_result=[{"row": 1}],
             parse_result=[{"parsed": True}],
             validate_result=[
-                FakeValidationResult(check_name="warn_check", passed=False, severity="warning", details="Minor issue"),
+                FakeValidationResult(
+                    check_name="warn_check",
+                    passed=False,
+                    severity="warning",
+                    details={"message": "Minor issue"},
+                ),
             ],
             store_result=1,
         )
@@ -211,10 +234,10 @@ class TestIngestCVMWorkflow:
 
     @pytest.mark.asyncio
     async def test_multiple_validation_errors(self):
-        acts, publish, record = _make_activities(
+        acts, _publish, _record = _make_activities(
             validate_result=[
-                FakeValidationResult(check_name="c1", passed=False, severity="error", details="err1"),
-                FakeValidationResult(check_name="c2", passed=False, severity="error", details="err2"),
+                FakeValidationResult(check_name="c1", passed=False, severity="error", details={"message": "err1"}),
+                FakeValidationResult(check_name="c2", passed=False, severity="error", details={"message": "err2"}),
             ],
             store_result=0,
         )

@@ -11,6 +11,7 @@ from workflows._discover import DiscoverStocksWorkflow  # noqa: E402
 from workflows._dispatch_operations import DispatchOperationsWorkflow  # noqa: E402
 from workflows._extract_news import ExtractNewsInput, ExtractNewsWorkflow  # noqa: E402
 from workflows._ingest_cvm import IngestCVMInput, IngestCVMOutput, IngestCVMWorkflow  # noqa: E402
+from workflows._news_dedup import NewsDedupInput, NewsDedupWorkflow  # noqa: E402
 from workflows._paper_rebalance import PaperRebalanceInput, PaperRebalanceResult, PaperRebalanceWorkflow  # noqa: E402
 from workflows._paper_reconciliation import (  # noqa: E402
     PaperReconciliationInput,
@@ -55,6 +56,8 @@ __all__ = [
     "IngestCVMInput",
     "IngestCVMOutput",
     "IngestCVMWorkflow",
+    "NewsDedupInput",
+    "NewsDedupWorkflow",
     "PaperRebalanceInput",
     "PaperRebalanceResult",
     "PaperRebalanceWorkflow",

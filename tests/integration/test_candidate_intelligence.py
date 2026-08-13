@@ -13,10 +13,10 @@ Requires:
 from __future__ import annotations
 
 import hashlib
+from collections.abc import AsyncGenerator
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import AsyncGenerator
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 import pytest
 import pytest_asyncio
@@ -1408,11 +1408,6 @@ async def test_pipeline_persist_and_evaluate_readiness(engine: AsyncEngine) -> N
             lock_version=1,
         )
     """Persisting sources and evaluating readiness works end-to-end."""
-    from ia_investing.integrations.production_runtime import ProductionCandidateRuntime
-    from ia_investing.orchestration.activities.candidate_intelligence import (
-        CandidateWorkflowInput,
-        SourceDiscoveryCheckpoint,
-    )
 
     maker = async_sessionmaker(engine, expire_on_commit=False)
     db = DatabaseRuntime(engine=engine, sessions=maker)

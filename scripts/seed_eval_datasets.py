@@ -6,10 +6,10 @@ import asyncio
 from pathlib import Path
 
 import sqlalchemy as sa
+from ia_investing.ai.eval_datasets import EvalCaseFile, EvalDatasetFile, load_eval_dataset
 
 from database import session_scope
 from database.models.agent_runtime import AgentCapability, AgentEvalCase, AgentEvalDataset
-from ia_investing.ai.eval_datasets import EvalCaseFile, EvalDatasetFile, load_eval_dataset
 
 
 def _build_logical_id(capability: str, version: int) -> str:

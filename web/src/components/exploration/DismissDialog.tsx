@@ -19,7 +19,9 @@ export function DismissDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 50 }} />
+        <Dialog.Overlay
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 50 }}
+        />
         <Dialog.Content
           style={{
             position: "fixed",
@@ -34,7 +36,9 @@ export function DismissDialog({
             zIndex: 51,
           }}
         >
-          <Dialog.Title style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>Dispensar sugestão</Dialog.Title>
+          <Dialog.Title style={{ fontSize: 16, fontWeight: 600, color: "var(--text)" }}>
+            Dispensar sugestão
+          </Dialog.Title>
           <Dialog.Description style={{ marginTop: 8, fontSize: 14, color: "var(--muted)" }}>
             Informe o motivo da dispensa. Esta justificativa será registrada na auditoria.
           </Dialog.Description>
@@ -86,7 +90,15 @@ export function DismissDialog({
           <Dialog.Close asChild>
             <button
               aria-label="Fechar"
-              style={{ position: "absolute", top: 12, right: 12, background: "none", border: "none", color: "var(--muted)", cursor: "pointer" }}
+              style={{
+                position: "absolute",
+                top: 12,
+                right: 12,
+                background: "none",
+                border: "none",
+                color: "var(--muted)",
+                cursor: "pointer",
+              }}
             >
               <XCircle size={18} />
             </button>

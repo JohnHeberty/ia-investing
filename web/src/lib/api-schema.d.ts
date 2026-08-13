@@ -65,12 +65,23 @@ export interface paths {
   "/api/v1/audit/logs": {
     get: {
       parameters: { query?: { limit?: number; offset?: number } };
-      responses: { 200: { content: { "application/json": { items?: Record<string, unknown>[] } } } };
+      responses: {
+        200: { content: { "application/json": { items?: Record<string, unknown>[] } } };
+      };
     };
   };
   "/api/v1/audit/verify": {
     get: {
-      responses: { 200: { content: { "application/json": { verified?: boolean; tampered_entries?: Record<string, unknown>[] } } } };
+      responses: {
+        200: {
+          content: {
+            "application/json": {
+              verified?: boolean;
+              tampered_entries?: Record<string, unknown>[];
+            };
+          };
+        };
+      };
     };
   };
   "/api/v1/portfolio": {
@@ -79,7 +90,17 @@ export interface paths {
     };
     post: {
       parameters: { header: { "Idempotency-Key": string } };
-      requestBody: { content: { "application/json": { name: string; description?: string; is_paper_trading?: boolean; base_currency?: string; initial_capital?: number } } };
+      requestBody: {
+        content: {
+          "application/json": {
+            name: string;
+            description?: string;
+            is_paper_trading?: boolean;
+            base_currency?: string;
+            initial_capital?: number;
+          };
+        };
+      };
       responses: { 201: { content: { "application/json": Record<string, unknown> } } };
     };
   };
@@ -92,7 +113,17 @@ export interface paths {
   "/api/v1/portfolio/{portfolio_id}/positions": {
     post: {
       parameters: { path: { portfolio_id: string } };
-      requestBody: { content: { "application/json": { ticker_symbol: string; quantity: number; avg_cost_per_share: number; current_price?: number; issuer_id?: string } } };
+      requestBody: {
+        content: {
+          "application/json": {
+            ticker_symbol: string;
+            quantity: number;
+            avg_cost_per_share: number;
+            current_price?: number;
+            issuer_id?: string;
+          };
+        };
+      };
       responses: { 201: { content: { "application/json": Record<string, unknown> } } };
     };
   };
@@ -105,6 +136,7 @@ export interface paths {
 }
 
 export type webhooks = Record<string, never>;
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface components {}
 export type $defs = Record<string, never>;
 export type external = Record<string, never>;

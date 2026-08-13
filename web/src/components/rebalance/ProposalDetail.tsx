@@ -37,7 +37,13 @@ export function ProposalDetail({
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <button
           onClick={onBack}
-          style={{ fontSize: 14, color: "var(--blue)", background: "none", border: "none", cursor: "pointer" }}
+          style={{
+            fontSize: 14,
+            color: "var(--blue)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+          }}
         >
           &larr; Voltar para lista
         </button>
@@ -49,7 +55,16 @@ export function ProposalDetail({
           <h2>Proposta {proposal.id.slice(0, 8)}</h2>
         </div>
         <p style={{ marginTop: 8, fontSize: 14, color: "var(--muted)" }}>{proposal.rationale}</p>
-        <div style={{ marginTop: 16, display: "flex", flexWrap: "wrap", gap: 16, fontSize: 12, color: "var(--muted-2)" }}>
+        <div
+          style={{
+            marginTop: 16,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 16,
+            fontSize: 12,
+            color: "var(--muted-2)",
+          }}
+        >
           <span>Criada por: {proposal.created_by}</span>
           <span>Em: {dateTime.format(new Date(proposal.created_at))}</span>
           {proposal.approved_by && <span>Aprovada por: {proposal.approved_by}</span>}
@@ -58,15 +73,21 @@ export function ProposalDetail({
 
       {proposal.drift_analysis && (
         <section className="card card-pad">
-          <div className="card-title"><h3>Análise de desvio</h3></div>
+          <div className="card-title">
+            <h3>Análise de desvio</h3>
+          </div>
           <div style={{ marginBottom: 16, display: "flex", gap: 24, fontSize: 14 }}>
             <div>
               <span style={{ color: "var(--muted)" }}>Desvio máximo: </span>
-              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{pct(proposal.drift_analysis.max_drift)}</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>
+                {pct(proposal.drift_analysis.max_drift)}
+              </span>
             </div>
             <div>
               <span style={{ color: "var(--muted)" }}>Desvio total: </span>
-              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>{pct(proposal.drift_analysis.total_drift)}</span>
+              <span style={{ fontFamily: "var(--font-mono)", color: "var(--text)" }}>
+                {pct(proposal.drift_analysis.total_drift)}
+              </span>
             </div>
           </div>
           <DriftTable items={proposal.drift_analysis.items} />
@@ -74,7 +95,9 @@ export function ProposalDetail({
       )}
 
       <section className="card card-pad">
-        <div className="card-title"><h3>Trades</h3></div>
+        <div className="card-title">
+          <h3>Trades</h3>
+        </div>
         <TradesTable trades={proposal.trades} selected={selectedTrades} onToggle={toggleTrade} />
       </section>
 

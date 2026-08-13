@@ -13,11 +13,18 @@ from temporalio.client import (
 
 from apps.scheduler.temporal_schedules import (
     cvm_schedule_definition,
+    news_dedup_schedule_definition,
+    outbox_recovery_schedule_definition,
     paper_rebalance_schedule_definition,
     paper_reconciliation_schedule_definition,
     paper_valuation_schedule_definition,
     reconcile_schedules,
 )
+
+
+async def _empty_schedules():
+    for item in []:
+        yield item
 
 
 # ---------------------------------------------------------------------------
@@ -74,6 +81,7 @@ async def test_reconcile_creates_new_schedule() -> None:
     definition = cvm_schedule_definition(cnpj="1", issuer_id="issuer", year=2025)
     client = Mock()
     client.create_schedule = AsyncMock()
+    client.list_schedules = AsyncMock(return_value=_empty_schedules())
 
     result = await reconcile_schedules(client, [definition])
 
@@ -86,6 +94,7 @@ async def test_reconcile_updates_existing_schedule() -> None:
     definition = cvm_schedule_definition(cnpj="1", issuer_id="issuer", year=2025)
     client = Mock()
     client.create_schedule = AsyncMock(side_effect=ScheduleAlreadyRunningError())
+    client.list_schedules = AsyncMock(return_value=_empty_schedules())
     handle = Mock()
     handle.update = AsyncMock()
     client.get_schedule_handle.return_value = handle
@@ -94,6 +103,63 @@ async def test_reconcile_updates_existing_schedule() -> None:
 
     assert result == {definition.schedule_id: "updated"}
     handle.update.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_reconcile_deletes_only_stale_managed_schedules() -> None:
+    definition = outbox_recovery_schedule_definition()
+    client = Mock()
+    client.create_schedule = AsyncMock()
+    stale_handle = Mock(delete=AsyncMock())
+    custom_handle = Mock(delete=AsyncMock())
+    equity_handle = Mock(delete=AsyncMock())
+    client.get_schedule_handle.side_effect = lambda schedule_id: {
+        "news-collection-stale": stale_handle,
+        "custom-report": custom_handle,
+        "equity-exploration-org-daily": equity_handle,
+    }[schedule_id]
+
+    async def _items():
+        for schedule_id in ("news-collection-stale", "custom-report", "equity-exploration-org-daily"):
+            yield MagicMock(id=schedule_id)
+
+    client.list_schedules = AsyncMock(return_value=_items())
+
+    result = await reconcile_schedules(client, [definition])
+
+    assert result["news-collection-stale"] == "deleted"
+    stale_handle.delete.assert_awaited_once()
+    custom_handle.delete.assert_not_awaited()
+    equity_handle.delete.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_reconcile_propagates_cleanup_failure() -> None:
+    definition = outbox_recovery_schedule_definition()
+    client = Mock()
+    client.create_schedule = AsyncMock()
+    client.list_schedules = AsyncMock(side_effect=RuntimeError("Temporal unavailable"))
+
+    with pytest.raises(RuntimeError, match="Temporal unavailable"):
+        await reconcile_schedules(client, [definition])
+
+
+def test_schedule_definitions_validate_intervals_and_hashes() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        outbox_recovery_schedule_definition(every=timedelta(0))
+    with pytest.raises(ValueError, match="SHA-256"):
+        paper_rebalance_schedule_definition(
+            portfolio_id="portfolio-1",
+            portfolio_version_id="version-1",
+            input_sha256="z" * 64,
+        )
+
+
+def test_news_dedup_uses_dedicated_workflow() -> None:
+    definition = news_dedup_schedule_definition()
+
+    assert definition.schedule.action.workflow == "NewsDedupWorkflow"
+    assert definition.schedule_id == "news-dedup-cleanup"
 
 
 # ---------------------------------------------------------------------------
@@ -218,7 +284,7 @@ class TestEnrichSchedule:
     def test_known_prefix_operations(self) -> None:
         from apps.api.routes.schedules import _enrich_schedule
 
-        data = {"schedule_id": "outbox-dispatch-recovery"}
+        data = {"schedule_id": "operation-outbox-dispatch"}
         result = _enrich_schedule(data)
         assert result["category"] == "operations"
 
@@ -251,12 +317,12 @@ class TestEnrichSchedule:
         assert result["category"] == "other"
         assert result["description"] == "custom-schedule-xyz"
 
-    def test_is_default_always_false(self) -> None:
+    def test_managed_schedule_is_default(self) -> None:
         from apps.api.routes.schedules import _enrich_schedule
 
-        data = {"schedule_id": "test"}
+        data = {"schedule_id": "news-dedup-cleanup"}
         result = _enrich_schedule(data)
-        assert result["is_default"] is False
+        assert result["is_default"] is True
 
     def test_exact_match_without_trailing_dash(self) -> None:
         from apps.api.routes.schedules import _enrich_schedule
@@ -303,16 +369,6 @@ class TestScheduleSchemas:
             paused=False,
         )
         assert d.action is None
-
-    def test_create_schedule_request(self) -> None:
-        from apps.api.routes.schedules import CreateScheduleRequestV1
-
-        req = CreateScheduleRequestV1(
-            schedule_id="test-sched",
-            workflow_type="MyWorkflow",
-            every_hours=1,
-        )
-        assert req.task_queue == "research-agents"
 
     def test_update_interval_request(self) -> None:
         from apps.api.routes.schedules import UpdateIntervalRequestV1
@@ -483,9 +539,15 @@ class TestScheduleRoutes:
         )
 
         mock_client = MagicMock()
+        mock_client.namespace = "default"
         mock_handle = MagicMock()
+        description = MagicMock()
+        description.info.running_actions = []
+        description.schedule.action.task_queue = "research-agents"
+        mock_handle.describe = AsyncMock(return_value=description)
         mock_handle.trigger = AsyncMock()
         mock_client.get_schedule_handle.return_value = mock_handle
+        mock_client.workflow_service.describe_task_queue = AsyncMock(return_value=MagicMock(pollers=[MagicMock()]))
         app.dependency_overrides[get_temporal_client] = lambda: mock_client
 
         mock_session = AsyncMock()
@@ -496,6 +558,55 @@ class TestScheduleRoutes:
         resp = client.post("/api/v1/schedules/test-schedule/trigger")
         assert resp.status_code == 200
         assert "triggered" in resp.json()["message"]
+        assert resp.json()["triggered_at"] is not None
+
+    @pytest.mark.parametrize(
+        ("running_actions", "pollers", "expected_status", "expected_detail"),
+        [
+            ([MagicMock()], [MagicMock()], 409, "already has a running workflow"),
+            ([], [], 503, "No worker is polling task queue"),
+        ],
+    )
+    def test_trigger_schedule_rejects_unprocessable_action(
+        self,
+        running_actions: list[MagicMock],
+        pollers: list[MagicMock],
+        expected_status: int,
+        expected_detail: str,
+    ) -> None:
+        from fastapi import FastAPI
+        from fastapi.testclient import TestClient
+
+        from apps.api.dependencies import get_temporal_client
+        from apps.api.routes.schedules import router
+        from apps.api.security import AuthContext, get_auth_context
+        from database.core import get_async_session
+
+        app = FastAPI()
+        app.include_router(router)
+        app.dependency_overrides[get_auth_context] = lambda: AuthContext(
+            subject="test@test.com",
+            roles=frozenset({"admin"}),
+            permissions=frozenset({"schedules:manage"}),
+            authentication_method="test",
+            organization_id=None,
+        )
+
+        description = MagicMock()
+        description.info.running_actions = running_actions
+        description.schedule.action.task_queue = "research-agents"
+        mock_handle = MagicMock(describe=AsyncMock(return_value=description), trigger=AsyncMock())
+        mock_client = MagicMock(namespace="default")
+        mock_client.get_schedule_handle.return_value = mock_handle
+        mock_client.workflow_service.describe_task_queue = AsyncMock(return_value=MagicMock(pollers=pollers))
+        app.dependency_overrides[get_temporal_client] = lambda: mock_client
+        app.dependency_overrides[get_async_session] = lambda: AsyncMock()
+
+        response = TestClient(app, raise_server_exceptions=False).post("/api/v1/schedules/test-schedule/trigger")
+
+        assert response.status_code == expected_status
+        assert expected_detail in response.json()["detail"]
+        mock_handle.trigger.assert_not_awaited()
 
     def test_delete_schedule_success(self) -> None:
         from fastapi import FastAPI
@@ -531,7 +642,7 @@ class TestScheduleRoutes:
         assert resp.status_code == 200
         assert "deleted" in resp.json()["message"]
 
-    def test_create_schedule_no_interval(self) -> None:
+    def test_generic_schedule_creation_is_not_supported(self) -> None:
         from fastapi import FastAPI
         from fastapi.testclient import TestClient
 
@@ -552,74 +663,8 @@ class TestScheduleRoutes:
         app.dependency_overrides[get_temporal_client] = lambda: mock_client
 
         client = TestClient(app, raise_server_exceptions=False)
-        resp = client.post(
-            "/api/v1/schedules",
-            json={"schedule_id": "test", "workflow_type": "Wf"},
-        )
-        assert resp.status_code == 400
-
-    def test_create_schedule_already_exists(self) -> None:
-        from fastapi import FastAPI
-        from fastapi.testclient import TestClient
-
-        from apps.api.dependencies import get_temporal_client
-        from apps.api.routes.schedules import router
-        from apps.api.security import AuthContext, get_auth_context
-        from database.core import get_async_session
-
-        app = FastAPI()
-        app.include_router(router)
-        app.dependency_overrides[get_auth_context] = lambda: AuthContext(
-            subject="test@test.com",
-            roles=frozenset({"admin"}),
-            permissions=frozenset({"schedules:manage"}),
-            authentication_method="test",
-            organization_id=None,
-        )
-
-        mock_client = MagicMock()
-        mock_client.create_schedule = AsyncMock(side_effect=Exception("already exists"))
-        app.dependency_overrides[get_temporal_client] = lambda: mock_client
-
-        mock_session = AsyncMock()
-        mock_session.execute = AsyncMock(return_value=MagicMock(scalar_one_or_none=MagicMock(return_value=None)))
-        app.dependency_overrides[get_async_session] = lambda: mock_session
-
-        client = TestClient(app, raise_server_exceptions=False)
-        resp = client.post(
-            "/api/v1/schedules",
-            json={"schedule_id": "test", "workflow_type": "Wf", "every_hours": 1},
-        )
-        assert resp.status_code == 409
-
-    def test_create_schedule_temporal_error(self) -> None:
-        from fastapi import FastAPI
-        from fastapi.testclient import TestClient
-
-        from apps.api.dependencies import get_temporal_client
-        from apps.api.routes.schedules import router
-        from apps.api.security import AuthContext, get_auth_context
-
-        app = FastAPI()
-        app.include_router(router)
-        app.dependency_overrides[get_auth_context] = lambda: AuthContext(
-            subject="test@test.com",
-            roles=frozenset({"admin"}),
-            permissions=frozenset({"schedules:manage"}),
-            authentication_method="test",
-            organization_id=None,
-        )
-
-        mock_client = MagicMock()
-        mock_client.create_schedule = AsyncMock(side_effect=RPCError("fail", "internal", None))
-        app.dependency_overrides[get_temporal_client] = lambda: mock_client
-
-        client = TestClient(app, raise_server_exceptions=False)
-        resp = client.post(
-            "/api/v1/schedules",
-            json={"schedule_id": "test", "workflow_type": "Wf", "every_hours": 1},
-        )
-        assert resp.status_code == 502
+        resp = client.post("/api/v1/schedules", json={"schedule_id": "test"})
+        assert resp.status_code == 405
 
     def test_update_interval_no_time(self) -> None:
         from fastapi import FastAPI

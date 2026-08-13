@@ -3,11 +3,7 @@
 import { Suspense } from "react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
-import {
-  DataStatePanel,
-  LoadingSkeleton,
-  StaleWarning,
-} from "@/components/data-state-components";
+import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { useMacro } from "@/hooks/use-macro";
 
 function MacroContent() {
@@ -17,7 +13,6 @@ function MacroContent() {
     ipca,
     usdBrl,
     staleSeries,
-    missingSeries,
     totalSeries,
     isLoading,
     isError,
@@ -81,9 +76,7 @@ function MacroContent() {
             conhecida no as_of.
           </p>
         </div>
-        <AsOfIndicator
-          freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
-        />
+        <AsOfIndicator freshness={dataState === "stale" ? "Desatualizado" : "Atual"} />
       </div>
 
       {dataState === "stale" && (
@@ -92,7 +85,11 @@ function MacroContent() {
         </div>
       )}
 
-      <section className="grid grid-4 section-gap" aria-label="Indicadores macro" aria-live="polite">
+      <section
+        className="grid grid-4 section-gap"
+        aria-label="Indicadores macro"
+        aria-live="polite"
+      >
         <Metric
           label="SELIC"
           value={selicValue}
@@ -124,7 +121,9 @@ function MacroContent() {
         <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Séries monitoradas</h2>
-            <span>{totalSeries} série{totalSeries !== 1 ? "s" : ""}</span>
+            <span>
+              {totalSeries} série{totalSeries !== 1 ? "s" : ""}
+            </span>
           </div>
           <div className="table-wrap">
             <table className="table">
@@ -141,9 +140,7 @@ function MacroContent() {
                 {macroSeries.map((series) => (
                   <tr key={series.id}>
                     <td className="fw-600">{series.name}</td>
-                    <td className="numeric mono">
-                      {series.value ?? "—"}
-                    </td>
+                    <td className="numeric mono">{series.value ?? "—"}</td>
                     <td className="muted text-sm">{series.source}</td>
                     <td className="muted text-sm">{series.frequency}</td>
                     <td>

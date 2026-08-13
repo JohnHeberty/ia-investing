@@ -33,7 +33,7 @@ services:
   # ── PostgreSQL + pgvector ──────────────────────────────────────────
   postgres:
     image: pgvector/pgvector:0.8.1-pg17
-    profiles: [dev, test, observability]
+    profiles: [dev, test, observability, schedules]
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres-local-only}
@@ -100,7 +100,7 @@ services:
   # ── Temporal (workflow orchestration) ──────────────────────────────
   temporal:
     image: temporalio/auto-setup:1.27.2
-    profiles: [dev]
+    profiles: [dev, schedules]
     environment:
       DB: postgres12
       DB_PORT: 5432
@@ -139,8 +139,8 @@ services:
   # ── Alembic migrations ────────────────────────────────────────────
   migrate:
     <<: *app
-    profiles: [dev, test]
-    command: [alembic, upgrade, head]
+    profiles: [dev, test, schedules]
+    command: [sh, -c, "alembic upgrade head && python scripts/seed_initial_data.py"]
     depends_on:
       postgres: {condition: service_healthy}
     deploy:
@@ -277,7 +277,7 @@ services:
   # ── Scheduler ─────────────────────────────────────────────────────
   scheduler:
     <<: *app
-    profiles: [schedules]
+    profiles: [dev, schedules]
     command: [python, -m, apps.scheduler.main]
     environment:
       <<: *app-environment

@@ -3,43 +3,50 @@
 ## Design System
 
 ### Color Tokens (Dark Theme — Default)
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--bg` | `#07100e` | Page background |
-| `--surface` | `#0d1916` | Card/panel background |
-| `--surface-2` | `#12221d` | Elevated surface |
-| `--surface-3` | `#193029` | Hover/active surface |
-| `--line` | `#25443a` | Borders |
-| `--text` | `#edf7f1` | Primary text |
-| `--muted` | `#8eaaa0` | Secondary text |
-| `--accent` | `#5ee0a4` | Primary action/brand |
-| `--amber` | `#f4bd63` | Warning |
-| `--red` | `#ff857f` | Error/destructive |
-| `--blue` | `#76b6ff` | Info/link |
+
+| Token         | Value     | Usage                 |
+| ------------- | --------- | --------------------- |
+| `--bg`        | `#07100e` | Page background       |
+| `--surface`   | `#0d1916` | Card/panel background |
+| `--surface-2` | `#12221d` | Elevated surface      |
+| `--surface-3` | `#193029` | Hover/active surface  |
+| `--line`      | `#25443a` | Borders               |
+| `--text`      | `#edf7f1` | Primary text          |
+| `--muted`     | `#8eaaa0` | Secondary text        |
+| `--accent`    | `#5ee0a4` | Primary action/brand  |
+| `--amber`     | `#f4bd63` | Warning               |
+| `--red`       | `#ff857f` | Error/destructive     |
+| `--blue`      | `#76b6ff` | Info/link             |
 
 ### Light Theme
+
 Override via `data-theme="light"` on `:root`. All tokens remapped in `globals.css`.
 
 ### Typography
+
 - Font: `"Segoe UI", Inter, system-ui, sans-serif`
 - Mono: `"Cascadia Code", "SFMono-Regular", Consolas, monospace`
 - Scale: Use `rem` for font sizes. Base is 16px.
 
 ### Spacing
+
 8px grid: `4, 8, 12, 16, 24, 32, 48, 64`
 
 ### Border Radius
+
 - `--radius: 14px` for cards/panels
 - Use `8px` for buttons/inputs
 - Use `50%` for avatars/circles
 
 ### Breakpoints
+
 - `1100px` — Sidebar collapses to icons
 - `680px` — Bottom navigation replaces sidebar
 
 ## Component Guidelines
 
 ### Existing Components (globals.css)
+
 - `.shell` — App layout wrapper
 - `.sidebar` — Left navigation
 - `.brand` — Logo area
@@ -57,6 +64,7 @@ Override via `data-theme="light"` on `:root`. All tokens remapped in `globals.cs
 - `.event` / `.timeline` — Event items
 
 ### Libraries
+
 - `@radix-ui/react-dialog` — Modal dialogs
 - `@radix-ui/react-dropdown-menu` — Dropdown menus
 - `@radix-ui/react-tabs` — Tab panels
@@ -71,18 +79,21 @@ Override via `data-theme="light"` on `:root`. All tokens remapped in `globals.cs
 ## Coding Standards
 
 ### TypeScript
+
 - Strict mode enabled
 - Use interfaces for component props
 - Prefer `type` for unions/intersections
 - Export types alongside components
 
 ### React
+
 - Functional components only
 - Use hooks for state/side effects
 - Props destructuring in function signature
 - Memoize expensive computations
 
 ### CSS
+
 - Use CSS custom properties (no magic numbers)
 - Use `rem` for font sizes, `px` for borders/shadows
 - Follow the spacing scale (8px grid)
@@ -90,6 +101,7 @@ Override via `data-theme="light"` on `:root`. All tokens remapped in `globals.cs
 - Responsive at 1100px and 680px
 
 ### Forms
+
 - Use `react-hook-form` + `zod` for validation
 - Labels above inputs (never placeholder-only)
 - Validate on submit, then on blur
@@ -97,6 +109,7 @@ Override via `data-theme="light"` on `:root`. All tokens remapped in `globals.cs
 - Disable submit while loading
 
 ### State
+
 - Server state: `@tanstack/react-query`
 - UI state: `useState` / `useReducer`
 - URL state: Search params

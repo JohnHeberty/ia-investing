@@ -23,7 +23,9 @@ export function useQualityIncidents() {
   const query = useQuery({
     queryKey: queryKeys.qualityIncidents(),
     queryFn: async () => {
-      return await bffFetch<Array<Record<string, unknown>>>("/api/v1/quality/incidents?limit=200&offset=0");
+      return await bffFetch<Array<Record<string, unknown>>>(
+        "/api/v1/quality/incidents?limit=200&offset=0",
+      );
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
@@ -51,16 +53,21 @@ export function useQualityIncidents() {
     waiver_reason: item.waiver_reason ? String(item.waiver_reason) : null,
     waiver_expires_at: item.waiver_expires_at ? String(item.waiver_expires_at) : null,
   }));
-  const openIncidents = incidents.filter((incident) => ["open", "acknowledged"].includes(incident.status));
+  const openIncidents = incidents.filter((incident) =>
+    ["open", "acknowledged"].includes(incident.status),
+  );
 
-  const sources = Array.isArray(sourceHealthQuery.data)
-    ? sourceHealthQuery.data
-    : [];
+  const sources = Array.isArray(sourceHealthQuery.data) ? sourceHealthQuery.data : [];
   const healthySources = sources.filter((s) => s.status === "healthy").length;
   const staleSources = sources.filter((s) => s.status === "stale").length;
   const neverSucceededSources = sources.filter((s) => s.status === "never_succeeded").length;
 
-  const dataState: DataState = computeDataState(query.isLoading, query.isError, null, incidents.length > 0);
+  const dataState: DataState = computeDataState(
+    query.isLoading,
+    query.isError,
+    null,
+    incidents.length > 0,
+  );
 
   return {
     incidents,

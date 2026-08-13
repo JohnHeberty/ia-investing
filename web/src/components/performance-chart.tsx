@@ -19,7 +19,7 @@ export function PerformanceChart({ positions, currency = "BRL" }: PerformanceCha
     const tickers = positions.map((p) => p.ticker_symbol);
     const pnlValues = positions.map((p) => {
       const price = p.current_price ?? p.avg_cost_per_share;
-      return Number(((p.quantity * price) - (p.quantity * p.avg_cost_per_share)).toFixed(2));
+      return Number((p.quantity * price - p.quantity * p.avg_cost_per_share).toFixed(2));
     });
     const pnlPercents = positions.map((p) => {
       const cost = p.quantity * p.avg_cost_per_share;
@@ -34,7 +34,9 @@ export function PerformanceChart({ positions, currency = "BRL" }: PerformanceCha
         axisPointer: { type: "shadow" },
         formatter: (params: { dataIndex: number }[]) => {
           const idx = params[0].dataIndex;
-          const val = new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(pnlValues[idx]);
+          const val = new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(
+            pnlValues[idx],
+          );
           return `<strong>${tickers[idx]}</strong><br/>P&L: ${val}<br/>Retorno: ${pnlPercents[idx]}%`;
         },
       },
@@ -82,7 +84,11 @@ export function PerformanceChart({ positions, currency = "BRL" }: PerformanceCha
   }, [positions, currency]);
 
   if (positions.length === 0) {
-    return <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>Sem posições para exibir.</div>;
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: "var(--muted)" }}>
+        Sem posições para exibir.
+      </div>
+    );
   }
 
   return <div ref={chartRef} style={{ height: 300, width: "100%" }} />;

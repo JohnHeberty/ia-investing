@@ -9,6 +9,8 @@ from decimal import Decimal
 from typing import Any
 from uuid import uuid4
 
+from ia_investing.orchestration.activities.research_mock import run_filing_analyst, run_news_analyst
+
 from ia_investing.contracts.v1 import (
     CanonicalAnalysisV1,
     Claim,
@@ -27,7 +29,6 @@ from ia_investing.contracts.v1 import (
     ScreenFiltersV1,
 )
 from ia_investing.orchestration.activities.notifications import publish_event
-from ia_investing.orchestration.activities.research_mock import run_filing_analyst, run_news_analyst
 
 # ---------------------------------------------------------------------------
 # Helpers

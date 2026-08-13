@@ -68,7 +68,7 @@ class EvidenceRepository:
         query: str,
         as_of: datetime,
         embedding: list[float] | None = None,
-        minimum_score: float = 0.05,
+        minimum_score: float = 0.01,
         limit: int = 20,
     ) -> list[EvidenceReferenceV1]:
         require_aware(as_of, "as_of")

@@ -51,13 +51,13 @@ class HttpClient:
         max_retries: int = 3,
         retry_delay: float = 1.0,
     ) -> None:
+        self._client: httpx.AsyncClient | None = None
         if max_retries < 1:
             raise ValueError("max_retries must be >= 1")
         self.base_url = (base_url or "").rstrip("/")
         self._timeout = httpx.Timeout(timeout)
         self._max_retries = max_retries
         self._retry_delay = retry_delay
-        self._client: httpx.AsyncClient | None = None
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:

@@ -3,6 +3,7 @@ import { AsOfIndicator, Badge, Metric, StatePanel, DomainTabs } from "./domain";
 
 const meta: Meta = {
   title: "Domain/Base",
+  component: AsOfIndicator,
   tags: ["autodocs"],
 };
 export default meta;
@@ -20,35 +21,65 @@ export const StaleIndicator: AsOfStory = {
 /* ── Badge ── */
 type BadgeStory = StoryObj<typeof Badge>;
 
-export const Neutral: BadgeStory = { args: { children: "Simulado", tone: "neutral" } };
-export const Good: BadgeStory = { args: { children: "Aprovada", tone: "good" } };
-export const Warn: BadgeStory = { args: { children: "Atenção", tone: "warn" } };
-export const Bad: BadgeStory = { args: { children: "Inelegível", tone: "bad" } };
+export const Neutral: BadgeStory = {
+  args: { children: "Simulado", tone: "neutral" },
+  render: (args) => <Badge {...args} />,
+};
+export const Good: BadgeStory = {
+  args: { children: "Aprovada", tone: "good" },
+  render: (args) => <Badge {...args} />,
+};
+export const Warn: BadgeStory = {
+  args: { children: "Atenção", tone: "warn" },
+  render: (args) => <Badge {...args} />,
+};
+export const Bad: BadgeStory = {
+  args: { children: "Inelegível", tone: "bad" },
+  render: (args) => <Badge {...args} />,
+};
 
 /* ── Metric ── */
 type MetricStory = StoryObj<typeof Metric>;
 
 export const NAVMetric: MetricStory = {
   args: { label: "NAV Total", value: "R$ 142.8bi", note: "+2,3% no mês", tone: "positive" },
+  render: (args) => <Metric {...args} />,
 };
 export const RiskMetric: MetricStory = {
   args: { label: "VaR 95%", value: "3,2%", note: "Dentro do limite de 5%", tone: "" },
+  render: (args) => <Metric {...args} />,
 };
 export const NegativeMetric: MetricStory = {
   args: { label: "Drawdown", value: "-8,4%", note: "Máx. histórico: -12%", tone: "negative" },
+  render: (args) => <Metric {...args} />,
 };
 
 /* ── StatePanel ── */
 type StatePanelStory = StoryObj<typeof StatePanel>;
 
 export const DefaultPanel: StatePanelStory = {
-  args: { title: "Dados carregados", detail: "Todos os filtros aplicados com sucesso.", state: "empty" },
+  args: {
+    title: "Dados carregados",
+    detail: "Todos os filtros aplicados com sucesso.",
+    state: "empty",
+  },
+  render: (args) => <StatePanel {...args} />,
 };
 export const ErrorPanel: StatePanelStory = {
-  args: { title: "Erro de conexão", detail: "O serviço de dados está indisponível.", state: "error" },
+  args: {
+    title: "Erro de conexão",
+    detail: "O serviço de dados está indisponível.",
+    state: "error",
+  },
+  render: (args) => <StatePanel {...args} />,
 };
 export const StalePanel: StatePanelStory = {
-  args: { title: "Dados desatualizados", detail: "Última atualização há 48 horas.", state: "stale" },
+  args: {
+    title: "Dados desatualizados",
+    detail: "Última atualização há 48 horas.",
+    state: "stale",
+  },
+  render: (args) => <StatePanel {...args} />,
 };
 
 /* ── DomainTabs ── */
@@ -64,4 +95,5 @@ export const PortfolioTabs: TabsStory = {
       { id: "audit", label: "Auditoria", content: <p>Histórico de alterações.</p> },
     ],
   },
+  render: (args) => <DomainTabs {...args} />,
 };
