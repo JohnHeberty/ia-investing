@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
-from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -15,7 +13,6 @@ from ia_investing.orchestration.activities.operations import (
     fail_operation,
     set_operation_running,
 )
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -42,9 +39,13 @@ class TestSetState:
     async def test_set_state_with_provided_session(self, mock_session_scope, mock_session):
         await _set_state(VALID_ID, session=mock_session, state="running")
 
+        mock_session_scope.assert_not_called()
         mock_session.execute.assert_awaited_once()
         call_args = mock_session.execute.call_args
-        assert call_args[0][0].whereclause is not None
+        stmt = call_args[0][0]
+        assert stmt.whereclause is not None
+        compiled = stmt.compile(compile_kwargs={"literal_binds": True})
+        assert "running" in str(compiled)
 
     @pytest.mark.asyncio
     @patch("ia_investing.orchestration.activities.operations.session_scope")
@@ -58,6 +59,10 @@ class TestSetState:
 
         mock_session_scope.assert_called_once()
         mock_session.execute.assert_awaited_once()
+        call_args = mock_session.execute.call_args
+        stmt = call_args[0][0]
+        compiled = stmt.compile(compile_kwargs={"literal_binds": True})
+        assert "running" in str(compiled)
 
     @pytest.mark.asyncio
     async def test_set_state_invalid_uuid_raises(self, mock_session):

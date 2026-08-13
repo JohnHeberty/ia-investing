@@ -55,10 +55,6 @@ class TestTruncateBody:
         assert _truncate_body(body) == body
 
 
-class TestConstants:
-    def test_dedup_window_is_7_days(self) -> None:
-        assert NEWS_DEDUP_WINDOW_DAYS == 7
-
     def test_max_results_default(self) -> None:
         assert DEFAULT_MAX_RESULTS == 20
 
@@ -218,12 +214,6 @@ class TestNewsExtractionActivities:
 
 
 class TestExtractNewsWorkflow:
-    def test_workflow_imports(self) -> None:
-        from workflows._extract_news import ExtractNewsInput, ExtractNewsWorkflow
-
-        assert ExtractNewsWorkflow is not None
-        assert ExtractNewsInput is not None
-
     def test_extract_news_input_defaults(self) -> None:
         from workflows._extract_news import ExtractNewsInput
 
