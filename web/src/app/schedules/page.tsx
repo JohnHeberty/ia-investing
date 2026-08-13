@@ -224,7 +224,6 @@ function ScheduleRow({
             aria-label={schedule.paused ? "Retomar" : "Pausar"}
           >
             {isOwnMutating ? <RefreshCw size={12} className="animate-spin" /> : schedule.paused ? <Play size={12} /> : <Pause size={12} />}
-            {schedule.paused ? "Retomar" : "Pausar"}
           </button>
           <button
             className="button xs"
@@ -233,16 +232,13 @@ function ScheduleRow({
             disabled={isOwnMutating || isTriggerBusy}
             aria-label="Executar agora"
           >
-            <RefreshCw size={12} className={isTriggerBusy ? "animate-spin" : ""} />
-            {phase === "idle" ? "Executar"
-              : phase === "starting" ? "Iniciando..."
-              : phase === "completed" ? "Concluído!"
-              : phase === "failed" ? "Falhou!"
-              : "Sem resposta"}
+            {isTriggerBusy
+              ? <RefreshCw size={12} className="animate-spin" />
+              : <Play size={12} />}
           </button>
           {!schedule.is_default && (
             <button
-              className="button xs danger"
+              className="button xs"
               onClick={() => onDelete(schedule.schedule_id)}
               type="button"
               disabled={isOwnMutating}
