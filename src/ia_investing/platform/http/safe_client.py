@@ -163,7 +163,8 @@ class SafeHttpClient:
 
     async def get(self, url: str) -> ValidatedHttpResponse:
         await self.open()
-        assert self._client is not None
+        if self._client is None:
+            raise RuntimeError("HTTP client not initialized")
         requested_url = normalize_and_validate_url(url, self.policy)
         parsed = urlsplit(requested_url)
         host = parsed.hostname or ""
@@ -205,7 +206,8 @@ class SafeHttpClient:
         raise last_exc  # type: ignore[misc]
 
     async def _do_get(self, requested_url: str) -> ValidatedHttpResponse:
-        assert self._client is not None
+        if self._client is None:
+            raise RuntimeError("HTTP client not initialized")
         current_url = requested_url
         redirect_chain: list[str] = []
         all_ips: set[str] = set()

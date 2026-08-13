@@ -452,7 +452,8 @@ async def get_schedule(
         description = await handle.describe()
     except Exception as exc:
         _handle_temporal_error(exc, schedule_id)
-    assert description is not None
+    if description is None:
+        raise HTTPException(status_code=404, detail="schedule not found")
     data = _enrich_schedule(_parse_schedule_description(description))
     return ScheduleDetailV1(**data)
 

@@ -221,7 +221,8 @@ class ThesisService:
         version.approved_at = now
         version.review_decision_id = review_decision_id
         thesis = await self.session.get(ResearchThesis, version.thesis_id, with_for_update=True)
-        assert thesis is not None
+        if thesis is None:
+            raise LookupError("thesis not found")
         thesis.status = "active"
         thesis.lock_version += 1
         self.session.add(

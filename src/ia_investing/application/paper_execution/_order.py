@@ -64,7 +64,8 @@ class OrderService:
             )
             return existing, fills
         model_config = configuration(model)
-        assert intent.approval_decision is not None
+        if intent.approval_decision is None:
+            raise ValueError("intent has no approval decision")
         approved_at = datetime.fromisoformat(str(intent.approval_decision["decided_at"]))
         calendar_rows = list(
             (
@@ -240,7 +241,10 @@ class OrderService:
                 )
         intent.status = "completed" if result.status == "filled" else "submitted" if simulated_fills else "expired"
         intent.updated_at = datetime.now(UTC)
-        await record(self.session, intent, "PaperOrderSimulated", "paper_order.simulate", context.subject, correlation_id)
+        await record(
+            self.session, intent, "PaperOrderSimulated",
+            "paper_order.simulate", context.subject, correlation_id,
+        )
         order_event_type = {
             "accepted": "PaperOrderAccepted",
             "partially_filled": "PaperOrderPartiallyFilled",
