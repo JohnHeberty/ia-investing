@@ -146,6 +146,7 @@ class ScorecardCalculator:
                 weighted_sum += score * weight
                 covered_weight += weight
 
+        # overall_score is the raw weighted sum; coverage field records what fraction was available
         overall = round(weighted_sum, 4)
         eligibility = "blocked" if vetoes else "eligible"
 

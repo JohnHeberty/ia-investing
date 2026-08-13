@@ -26,12 +26,15 @@ class OutboxConsumer:
         *,
         poll_interval_seconds: float = 5.0,
         batch_size: int = 50,
+        max_retries: int = 5,
     ) -> None:
         self._session_factory = session_factory
         self._publisher = publisher
         self._poll_interval = poll_interval_seconds
         self._batch_size = batch_size
+        self._max_retries = max_retries
         self._running = False
+        self._retry_counts: dict[str, int] = {}
 
     async def run_forever(self) -> None:
         self._running = True
@@ -57,6 +60,10 @@ class OutboxConsumer:
 
             published_count = 0
             for event in events:
+                event_key = str(event.id)
+                if self._retry_counts.get(event_key, 0) >= self._max_retries:
+                    logger.warning("outbox_consumer skipping event %s after %d retries", event.id, self._max_retries)
+                    continue
                 try:
                     await self._publisher.publish(
                         event_type=event.event_type,
@@ -70,7 +77,8 @@ class OutboxConsumer:
                     )
                     published_count += 1
                 except Exception:
-                    logger.exception("Failed to publish event %s", event.id)
+                    self._retry_counts[event_key] = self._retry_counts.get(event_key, 0) + 1
+                    logger.exception("Failed to publish event %s (attempt %d/%d)", event.id, self._retry_counts[event_key], self._max_retries)
 
             await session.commit()
             logger.debug("outbox_consumer published %d/%d events", published_count, len(events))

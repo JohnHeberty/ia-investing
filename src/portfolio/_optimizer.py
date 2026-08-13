@@ -199,6 +199,11 @@ class PortfolioOptimizer:
             return self._failure_result("failed", "solver returned no weights")
 
         opt_weights = {assets[i]: round(float(opt_w[i]), 8) for i in range(n) if float(opt_w[i]) > WEIGHT_THRESHOLD}
+        # Preserve near-zero weights for completeness
+        for i in range(n):
+            w_val = float(opt_w[i])
+            if 0 < w_val <= WEIGHT_THRESHOLD and assets[i] not in opt_weights:
+                opt_weights[assets[i]] = round(w_val, 8)
 
         exp_ret = float(mu @ opt_w)
         exp_risk = float(np.sqrt(opt_w @ cov @ opt_w))

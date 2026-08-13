@@ -52,7 +52,7 @@ export function useMacro() {
   const macroData = macroQuery.data;
   const sources = Array.isArray(sourceHealthQuery.data) ? sourceHealthQuery.data : [];
 
-  const macroSeries: MacroSeries[] = macroData?.indicators.map((ind) => ({
+  const macroSeries: MacroSeries[] = macroData?.indicators?.map((ind) => ({
     id: ind.id,
     name: ind.indicator_name,
     value: ind.value !== null ? String(ind.value) : null,

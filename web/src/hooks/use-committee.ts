@@ -61,14 +61,16 @@ function proposalTitle(session: CommitteeSessionDetail): string {
 
 async function batchFetchDetails(
   sessions: CommitteeSessionListItem[],
+  signal?: AbortSignal,
 ): Promise<CommitteeSessionDetail[]> {
   const results: CommitteeSessionDetail[] = [];
   const concurrency = 5;
   for (let i = 0; i < sessions.length; i += concurrency) {
+    if (signal?.aborted) break;
     const batch = sessions.slice(i, i + concurrency);
     const settled = await Promise.allSettled(
       batch.map(async (session) => {
-        return await bffFetch<CommitteeSessionDetail>(`/api/v1/committee/sessions/${session.id}`);
+        return await bffFetch<CommitteeSessionDetail>(`/api/v1/committee/sessions/${session.id}`, { signal });
       }),
     );
     for (const result of settled) {
@@ -101,9 +103,9 @@ export function useCommittee() {
   const detailsQuery = useQuery({
     queryKey: [...queryKeys.committeeSessions(), "details", sessionIdsKey],
     enabled: Boolean(sessionsQuery.data),
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const sessions = (sessionsQuery.data ?? []) as unknown as CommitteeSessionListItem[];
-      return batchFetchDetails(sessions);
+      return batchFetchDetails(sessions, signal);
     },
     staleTime: 30_000,
     refetchOnWindowFocus: false,

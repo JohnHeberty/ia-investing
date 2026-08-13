@@ -168,6 +168,9 @@ export function useNewsValue(): NewsDataValue {
 
 /** @deprecated Use useNewsData() inside NewsDataProvider instead */
 export function useNews(): NewsDataValue {
+  if (process.env.NODE_ENV === "development") {
+    console.warn("useNews() is deprecated. Use useNewsData() inside NewsDataProvider instead.");
+  }
   return useNewsValue();
 }
 

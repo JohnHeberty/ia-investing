@@ -92,7 +92,7 @@ export function parseIntervalValue(every: string): { value: number; unit: string
   if (timeMatch) {
     const h = parseInt(timeMatch[1]);
     const m = parseInt(timeMatch[2]);
-    if (h >= 24 && h % 24 === 0) return { value: h / 24, unit: "days" };
+    if (h >= 24) return { value: h / 24, unit: "days" };
     if (h > 0 && m === 0) return { value: h, unit: "hours" };
     if (h === 0 && m > 0) return { value: m, unit: "minutes" };
     if (h > 0 && m > 0) return { value: h * 60 + m, unit: "minutes" };
@@ -307,7 +307,7 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
   }, [phase, description]);
 
   const trigger = useCallback(async () => {
-    const idempotencyKey = `trigger-${scheduleId}`;
+    const idempotencyKey = `trigger-${scheduleId}-${Date.now()}`;
     try {
       await bffFetch<{ schedule_id: string; message: string }>(
         `/api/v1/schedules/${scheduleId}/trigger`,
@@ -316,7 +316,7 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules() });
       queryClient.invalidateQueries({ queryKey: queryKeys.scheduleRuns(scheduleId, 20) });
 
-      lastRunAtRef.current = currentLastRunAt;
+      lastRunAtRef.current = currentLastRunAtRef.current;
       startedAtRef.current = Date.now();
       setPhase("starting");
       toast.success(`Execução iniciada — ${description}`);

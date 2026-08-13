@@ -73,7 +73,10 @@ async def store_financial_statements(
             raise ApplicationError("issuer_id must be a UUID", type="DataValidationError", non_retryable=True) from exc
 
         period_end = date.fromisoformat(str(records[0]["dt_referencia"]))
-        line_items = {str(record["cod_conta"]): record["valor"] for record in records}
+        line_items: dict[str, float] = {}
+        for record in records:
+            key = str(record["cod_conta"])
+            line_items[key] = line_items.get(key, 0.0) + float(record["valor"])
         values = {
             "issuer_id": issuer_uuid,
             "statement_type": statement_type,

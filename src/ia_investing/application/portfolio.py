@@ -95,7 +95,12 @@ class BackendPortfolioOptimizationService:
         prices: dict[UUID, dict[datetime, Decimal]] = {instrument_id: {} for instrument_id in investable}
         for instrument_id, bar_at, close_price in price_rows:
             prices[instrument_id][bar_at] = close_price
-        common_dates = sorted(set.intersection(*(set(series) for series in prices.values())))
+        if not prices or any(not s for s in prices.values()):
+            raise ValueError("insufficient aligned point-in-time price history")
+        non_empty_series = [set(series) for series in prices.values() if series]
+        if not non_empty_series:
+            raise ValueError("no price data available for any instrument")
+        common_dates = sorted(set.intersection(*non_empty_series))
         if len(common_dates) < 3:
             raise ValueError("insufficient aligned point-in-time price history")
         returns_data: dict[str, list[float]] = {}
@@ -158,6 +163,7 @@ class BackendPortfolioOptimizationService:
             await self.session.flush()
         except IntegrityError:
             await self.session.rollback()
+            # Re-read without FOR UPDATE — acceptable for idempotency (race yields same result)
             existing = (
                 await self.session.execute(
                     sa.select(OptimizationRun).where(

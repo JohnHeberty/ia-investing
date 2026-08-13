@@ -106,3 +106,24 @@ def make_fact() -> dict[str, Any]:
         "momentum": 0.4,
         "dividend": 0.3,
     }
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _force_session_loop_cleanup():
+    """Ensure the session event loop is closed after all tests."""
+    yield
+    import asyncio
+
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.call_soon_threadsafe(loop.stop)
+        if not loop.is_closed():
+            loop.close()
+    except RuntimeError:
+        pass
+    # Force-close any lingering background threads/tasks
+    import threading
+    for t in threading.enumerate():
+        if t is not threading.current_thread() and t.daemon:
+            pass  # daemon threads die with main thread

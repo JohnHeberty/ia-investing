@@ -113,7 +113,8 @@ class InvestmentCandidateApplicationService:
                 .order_by(CandidateAnalysisRunRecord.run_number.asc())
                 .limit(1)
             )
-            assert run is not None
+            if run is None:
+                raise RuntimeError(f"no analysis run found for candidate {existing.id}")
             return existing, run, False
 
         ticker = normalize_ticker(request.ticker)
@@ -622,8 +623,6 @@ class InvestmentCandidateApplicationService:
             raise LookupError("exploration suggestion not found")
         now = utcnow()
         if suggestion.expires_at is not None and suggestion.expires_at <= now:
-            suggestion.status = "expired"
-            await self.session.commit()
             raise ValueError("expired exploration suggestions cannot be dismissed")
         if suggestion.status != "new":
             raise ValueError("only new suggestions can be dismissed")
@@ -655,8 +654,6 @@ class InvestmentCandidateApplicationService:
             raise LookupError("exploration suggestion not found")
         now = utcnow()
         if suggestion.expires_at is not None and suggestion.expires_at <= now:
-            suggestion.status = "expired"
-            await self.session.commit()
             raise ValueError("expired exploration suggestions cannot be promoted")
         if suggestion.status == "promoted" and suggestion.promoted_candidate_id:
             existing = await self.session.get(

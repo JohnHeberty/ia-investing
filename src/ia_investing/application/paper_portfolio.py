@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import uuid
 from decimal import Decimal
 from typing import Any
@@ -10,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.portfolio import Portfolio, Position
 from ia_investing.market_data import get_current_price
+
+logger = logging.getLogger(__name__)
 
 
 class PaperPortfolioService:
@@ -211,12 +214,23 @@ class PaperPortfolioService:
 
         total_value = 0.0
         for pos in positions:
-            price = float(pos.current_price) if pos.current_price else float(pos.avg_cost_per_share)
+            if pos.current_price:
+                price = float(pos.current_price)
+            else:
+                logger.warning(
+                    "Position %s (%s) has no current_price, falling back to avg_cost_per_share",
+                    pos.id,
+                    pos.ticker_symbol,
+                )
+                price = float(pos.avg_cost_per_share)
             total_value += float(pos.quantity) * price
 
         for pos in positions:
             if total_value > 0:
-                price = float(pos.current_price) if pos.current_price else float(pos.avg_cost_per_share)
+                if pos.current_price:
+                    price = float(pos.current_price)
+                else:
+                    price = float(pos.avg_cost_per_share)
                 pos.weight_pct = (float(pos.quantity) * price) / total_value
             else:
                 pos.weight_pct = 0.0

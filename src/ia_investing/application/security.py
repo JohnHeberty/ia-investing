@@ -74,7 +74,7 @@ class PolicyEngine:
             return False
         if resource_attrs.owner_subject is not None and context.subject != resource_attrs.owner_subject:
             return False
-        return resource_attrs.environment != "live"
+        return resource_attrs.environment != "live"  # live access requires RBAC-level authorization
 
     def add_global_role(self, role: str, permissions: frozenset[str]) -> None:
         self._global_overrides[role] = permissions

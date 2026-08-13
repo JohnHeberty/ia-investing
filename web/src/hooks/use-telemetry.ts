@@ -17,9 +17,11 @@ export function usePageView() {
 }
 
 export function useClickTracking(target: string, metadata?: Record<string, unknown>) {
+  const metadataRef = useRef(metadata);
+  metadataRef.current = metadata;
   return useCallback(() => {
-    telemetry.track("click", target, metadata);
-  }, [target, metadata]);
+    telemetry.track("click", target, metadataRef.current);
+  }, [target]);
 }
 
 export function useFormTracking(formName: string) {

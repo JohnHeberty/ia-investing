@@ -66,14 +66,14 @@ const NavGroup = React.memo(function NavGroup({ label, items }: { label: string;
       {visible.map(([href, labelText, Icon]) => (
         <Link
           aria-current={
-            pathname === href || (href !== "/" && pathname.startsWith(href.split("/demo")[0]))
+            pathname === href || (href !== "/" && (pathname.startsWith(href + "/") || pathname === href))
               ? "page"
               : undefined
           }
           aria-label={labelText}
           className="nav-link"
           data-active={
-            pathname === href || (href !== "/" && pathname.startsWith(href.split("/demo")[0]))
+            pathname === href || (href !== "/" && (pathname.startsWith(href + "/") || pathname === href))
           }
           href={href as Route}
           key={href}

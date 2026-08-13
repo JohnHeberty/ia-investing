@@ -26,12 +26,14 @@ async function getEcharts() {
  */
 export function useEchart(buildOption: () => EChartOption | null, deps: unknown[]) {
   const chartRef = useRef<HTMLDivElement>(null);
+  const buildOptionRef = useRef(buildOption);
+  buildOptionRef.current = buildOption;
 
   useEffect(() => {
     const el = chartRef.current;
     if (!el) return;
 
-    const option = buildOption();
+    const option = buildOptionRef.current();
     if (!option) return;
 
     let disposed = false;

@@ -154,7 +154,7 @@ class OperationService:
                     Operation.operation_type == command.operation_type,
                     Operation.idempotency_key == idempotency_key,
                     Operation.organization_id == organization_id,
-                )
+                ).with_for_update()
             )
         ).scalar_one_or_none()
         if existing is not None:
@@ -198,7 +198,7 @@ class OperationService:
                         Operation.operation_type == command.operation_type,
                         Operation.idempotency_key == idempotency_key,
                         Operation.organization_id == organization_id,
-                    )
+                    ).with_for_update()
                 )
             ).scalar_one_or_none()
             if existing is not None:
@@ -208,6 +208,7 @@ class OperationService:
             raise
 
         if command.workflow_class is not None and command.workflow_id is not None:
+            operation = await self.session.merge(operation)
             try:
                 await self.temporal_client.start_workflow(
                     command.workflow_class.run,
@@ -224,7 +225,14 @@ class OperationService:
                 await self.session.commit()
                 raise
             operation.state = OperationState.RUNNING
-            await self.session.commit()
+            try:
+                await self.session.commit()
+            except Exception:
+                try:  # noqa: SIM105
+                    await self.temporal_client.get_workflow_handle(command.workflow_id).cancel()
+                except Exception:  # noqa: S110
+                    pass
+                raise
 
         return OperationAcceptedV1(operation_id=operation_id)
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -122,7 +122,10 @@ class RiskService:
             bars = sorted(latest_by_bar.values(), key=lambda item: item["bar_at"])
             if len(bars) < 2:
                 raise ValueError(f"risk history is missing for instrument {position.instrument_id}")
-            price_age_hours = Decimal(str((as_of - bars[-1]["bar_at"]).total_seconds())) / Decimal(3600)
+            bar_at = bars[-1]["bar_at"]
+            if isinstance(bar_at, date) and not isinstance(bar_at, datetime):
+                bar_at = datetime.combine(bar_at, datetime.min.time()).replace(tzinfo=UTC)
+            price_age_hours = Decimal(str((as_of - bar_at).total_seconds())) / Decimal(3600)
             if price_age_hours > max_price_age_hours:
                 raise ValueError(f"risk price is stale for instrument {position.instrument_id}")
             instrument_key = str(position.instrument_id)

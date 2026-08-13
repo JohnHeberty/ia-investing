@@ -105,6 +105,7 @@ class AgentRuntimeService:
             entity_id=run.id,
             correlation_id=run.id,
             details={"capability": capability, "agent_version_id": str(version.id)},
+            organization_id=organization_id,
         )
         await self.session.flush()
         return run
@@ -244,7 +245,7 @@ class AgentRuntimeService:
         if run is None or tool_call is None:
             raise RuntimeError("approval references an invalid run or tool call")
         if decision == "approved":
-            run.status = "queued"
+            run.status = "queued"  # workflow worker re-picks up the run
             tool_call.status = "approved"
         else:
             run.status = "failed"
@@ -260,6 +261,7 @@ class AgentRuntimeService:
             entity_id=approval.id,
             correlation_id=correlation_id,
             details={"decision": decision, "reason": reason, "run_id": str(run.id)},
+            organization_id=organization_id,
         )
         await self.session.flush()
         return approval
@@ -340,17 +342,18 @@ class AgentRuntimeService:
         entity_id: UUID,
         correlation_id: UUID,
         details: dict[str, object],
+        organization_id: UUID | None = None,
     ) -> None:
         self.session.add(
             await create_domain_audit_entry(
                 self.session,
                 tenant_id=organization_id or UUID(int=0),
-                actor_type="actor_type",
+                actor_type=actor_type,
                 actor_id=actor_id,
-                action="action",
-                entity_type="entity_type",
+                action=action,
+                entity_type=entity_type,
                 entity_id=entity_id,
                 correlation_id=correlation_id,
-                details={},
+                details=details,
             )
         )

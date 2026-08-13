@@ -318,11 +318,17 @@ class RebalanceService:
         model = result.scalar_one_or_none()
         if model is None:
             raise LookupError(f"Portfolio {portfolio_id} not found")
+        pos_result = await self._session.execute(
+            sa.select(Position.quantity, Position.current_price).where(Position.portfolio_id == portfolio_id)
+        )
+        nav = sum(
+            float(qty or 0) * float(price or 0) for qty, price in pos_result.all()
+        ) or 1_000_000.0
         return {
             "id": str(model.id),
             "name": model.name,
             "state": model.state,
-            "nav": 1_000_000.0,
+            "nav": nav,
         }
 
     async def _get_positions(self, portfolio_id: uuid.UUID) -> list[dict[str, Any]]:
@@ -447,11 +453,6 @@ class RebalanceService:
             "concentration_limit": float(MAX_CONCENTRATION_PCT),
             "sector_limit": float(MAX_SECTOR_PCT),
         }
-
-    def _get_portfolio_machine(self, portfolio_id: uuid.UUID) -> Any:
-        return create_portfolio_machine(
-            PortfolioMachineModel(state="monitoring", nav=1_000_000.0, compliance_passed=True)
-        )
 
     async def _load_portfolio(self, portfolio_id: uuid.UUID) -> ModelPortfolio | None:
         return await self._session.get(ModelPortfolio, portfolio_id)

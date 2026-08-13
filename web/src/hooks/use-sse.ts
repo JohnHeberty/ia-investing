@@ -52,6 +52,7 @@ export function useSSE(
     if (!url) return;
 
     let cancelled = false;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
 
     function connect(attempt: number) {
       if (cancelled) return;
@@ -109,7 +110,7 @@ export function useSSE(
         }
 
         setInternalState("reconnecting");
-        setTimeout(() => connect(nextRetry), intervalRef.current * Math.min(nextRetry, 5));
+        reconnectTimer = setTimeout(() => connect(nextRetry), intervalRef.current * Math.min(nextRetry, 5));
       };
     }
 
@@ -117,6 +118,7 @@ export function useSSE(
 
     return () => {
       cancelled = true;
+      if (reconnectTimer !== undefined) clearTimeout(reconnectTimer);
       eventSourceRef.current?.close();
       eventSourceRef.current = null;
     };

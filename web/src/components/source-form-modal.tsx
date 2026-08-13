@@ -52,7 +52,7 @@ export function SourceFormModal({
         setTrustLevel(3);
       }
     }
-  }, [open, source]);
+  }, [open, source?.id, source?.name, source?.source_type, source?.url_pattern, source?.trust_level]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.execution import Execution
 from database.models.operations import OperationDispatchOutbox
+from database.models.portfolio_models import Portfolio
 from ia_investing.application.audit_service import AuditService
 from ia_investing.domain.base_machine import InvalidTransitionError
 from ia_investing.domain.execution_machine import ExecutionMachineModel, create_execution_machine
@@ -144,9 +145,10 @@ class ExecutionService:
         result.dispatched_at = datetime.now(UTC)
 
         # write to operation dispatch outbox for broker/exchange
-        # TODO: organization_id should come from execution context, not nil UUID sentinel
+        portfolio = await self._session.get(Portfolio, execution.portfolio_id)
+        organization_id = portfolio.organization_id if portfolio and portfolio.organization_id else UUID(int=0)
         outbox = OperationDispatchOutbox(
-            organization_id=UUID(int=0),
+            organization_id=organization_id,
             operation_id=execution_id,
             topic="execution.dispatch",
             state="pending",

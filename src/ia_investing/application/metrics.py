@@ -101,7 +101,7 @@ class MetricService:
                 for code, fact in facts.items()
                 if fact.value_status in {"reported", "calculated"} and fact.value is not None
             }
-            coverage = Decimal(len(usable)) / Decimal(len(deps))
+            coverage = Decimal(len(usable)) / Decimal(len(deps)) if deps else Decimal("0")
         if len(usable) != len(deps):
             value = None
             status = "missing"

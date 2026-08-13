@@ -64,6 +64,9 @@ class Telemetry {
   startAutoFlush() {
     if (this.flushTimer) return;
     this.flushTimer = setInterval(() => this.flush(), this.config.flushInterval);
+    if (typeof document !== "undefined") {
+      document.addEventListener("visibilitychange", this._onVisibilityChange);
+    }
   }
 
   stopAutoFlush() {
@@ -71,7 +74,16 @@ class Telemetry {
       clearInterval(this.flushTimer);
       this.flushTimer = null;
     }
+    if (typeof document !== "undefined") {
+      document.removeEventListener("visibilitychange", this._onVisibilityChange);
+    }
   }
+
+  private _onVisibilityChange = () => {
+    if (document.visibilityState === "hidden") {
+      this.flush();
+    }
+  };
 
   destroy() {
     this.stopAutoFlush();
