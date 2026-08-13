@@ -42,7 +42,7 @@ class TestCandidateTenantScoping:
     def test_production_runtime_uses_candidate_repository():
         """All session.get() on tenant-owned entities must go through CandidateRepository."""
         runtime_path = (
-            pathlib.Path(__file__).parent.parent.parent.parent
+            pathlib.Path(__file__).parent.parent.parent.parent.parent
             / "src"
             / "ia_investing"
             / "integrations"
@@ -64,7 +64,7 @@ class TestCandidateTenantScoping:
     def test_candidate_repository_enforces_organization_id():
         """CandidateRepository methods must use organization_id in queries."""
         repo_path = (
-            pathlib.Path(__file__).parent.parent.parent.parent
+            pathlib.Path(__file__).parent.parent.parent.parent.parent
             / "src"
             / "ia_investing"
             / "application"
@@ -82,7 +82,7 @@ class TestCandidateTenantScoping:
     def test_no_direct_session_get_on_tenant_entities():
         """Direct session.get() on InvestmentCandidateRecord should not exist without repo."""
         runtime_path = (
-            pathlib.Path(__file__).parent.parent.parent.parent
+            pathlib.Path(__file__).parent.parent.parent.parent.parent
             / "src"
             / "ia_investing"
             / "integrations"
