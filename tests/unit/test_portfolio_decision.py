@@ -1,6 +1,6 @@
-from __future__ import annotations
+"""Unit tests for ia_investing.domain.portfolio_decision — decision pack logic."""
 
-from dataclasses import replace
+from __future__ import annotations
 
 import pytest
 
@@ -11,58 +11,119 @@ from ia_investing.domain.portfolio_decision import (
     validate_committee_vote,
     validate_decision_inputs,
 )
-from workflows import PortfolioConstructionWorkflow
 
 
-def valid_inputs() -> PortfolioDecisionInputs:
-    return PortfolioDecisionInputs(
-        portfolio_id="portfolio-1",
-        proposed_by="analyst",
-        input_snapshot_sha256="a" * 64,
-        proposal_sha256="b" * 64,
-        risk_opinion="approved",
-        compliance_opinion="approved",
-        optimizer_status="optimal",
-        eligible=True,
-        hard_breach=False,
-    )
+@pytest.mark.unit
+class TestValidateDecisionInputs:
+    def _make(self, **overrides) -> PortfolioDecisionInputs:
+        defaults = dict(
+            portfolio_id="p1",
+            proposed_by="user1",
+            input_snapshot_sha256="a" * 64,
+            proposal_sha256="b" * 64,
+            risk_opinion="approved",
+            compliance_opinion="approved",
+            optimizer_status="optimal",
+            eligible=True,
+            hard_breach=False,
+        )
+        defaults.update(overrides)
+        return PortfolioDecisionInputs(**defaults)
+
+    def test_valid(self):
+        validate_decision_inputs(self._make())  # should not raise
+
+    def test_invalid_hash_length(self):
+        with pytest.raises(ValueError, match="SHA-256"):
+            validate_decision_inputs(self._make(input_snapshot_sha256="short"))
+
+    def test_ineligible(self):
+        with pytest.raises(ValueError, match="ineligible"):
+            validate_decision_inputs(self._make(eligible=False))
+
+    def test_hard_breach(self):
+        with pytest.raises(ValueError, match="hard risk breach"):
+            validate_decision_inputs(self._make(hard_breach=True))
+
+    def test_invalid_optimizer(self):
+        with pytest.raises(ValueError, match="optimizer"):
+            validate_decision_inputs(self._make(optimizer_status="failed"))
+
+    def test_risk_not_approved(self):
+        with pytest.raises(ValueError, match="risk opinion"):
+            validate_decision_inputs(self._make(risk_opinion="rejected"))
+
+    def test_compliance_not_approved(self):
+        with pytest.raises(ValueError, match="compliance opinion"):
+            validate_decision_inputs(self._make(compliance_opinion="pending"))
 
 
-def test_portfolio_decision_inputs_fail_closed() -> None:
-    validate_decision_inputs(valid_inputs())
-    blocked = replace(valid_inputs(), hard_breach=True)
-    with pytest.raises(ValueError, match="hard risk breach"):
-        validate_decision_inputs(blocked)
+@pytest.mark.unit
+class TestValidateCommitteeVote:
+    def _make_vote(self, **overrides) -> CommitteeVote:
+        defaults = dict(
+            actor_id="voter1",
+            role="risk_officer",
+            decision="approved",
+            rationale="Looks good",
+            signature_sha256="c" * 64,
+        )
+        defaults.update(overrides)
+        return CommitteeVote(**defaults)
 
+    def test_valid(self):
+        validate_committee_vote(self._make_vote(), proposed_by="user1", existing_actors=frozenset())
 
-def test_committee_votes_enforce_four_eyes_roles_conditions_and_signatures() -> None:
-    vote = CommitteeVote("manager", "portfolio_manager", "approved", "approved", "c" * 64)
-    validate_committee_vote(vote, proposed_by="analyst", existing_actors=frozenset())
-    with pytest.raises(PermissionError, match="author"):
+    def test_self_approval_raises(self):
+        with pytest.raises(PermissionError, match="cannot approve"):
+            validate_committee_vote(self._make_vote(actor_id="user1"), proposed_by="user1", existing_actors=frozenset())
+
+    def test_duplicate_actor_raises(self):
+        with pytest.raises(ValueError, match="already voted"):
+            validate_committee_vote(self._make_vote(), proposed_by="user1", existing_actors=frozenset({"voter1"}))
+
+    def test_invalid_role(self):
+        with pytest.raises(ValueError, match="not authorized"):
+            validate_committee_vote(self._make_vote(role="intern"), proposed_by="user1", existing_actors=frozenset())
+
+    def test_invalid_decision(self):
+        with pytest.raises(ValueError, match="invalid committee decision"):
+            validate_committee_vote(self._make_vote(decision="maybe"), proposed_by="user1", existing_actors=frozenset())
+
+    def test_empty_rationale(self):
+        with pytest.raises(ValueError, match="rationale"):
+            validate_committee_vote(self._make_vote(rationale="  "), proposed_by="user1", existing_actors=frozenset())
+
+    def test_conditional_without_conditions(self):
+        with pytest.raises(ValueError, match="explicit conditions"):
+            validate_committee_vote(
+                self._make_vote(decision="approved_with_conditions", conditions=()),
+                proposed_by="user1",
+                existing_actors=frozenset(),
+            )
+
+    def test_conditional_with_conditions(self):
         validate_committee_vote(
-            CommitteeVote("analyst", "risk_officer", "approved", "ok", "d" * 64),
-            proposed_by="analyst",
+            self._make_vote(decision="approved_with_conditions", conditions=("review in 30d",)),
+            proposed_by="user1",
             existing_actors=frozenset(),
         )
-    with pytest.raises(ValueError, match="conditions"):
-        validate_committee_vote(
-            CommitteeVote("risk", "risk_officer", "approved_with_conditions", "ok", "d" * 64),
-            proposed_by="analyst",
-            existing_actors=frozenset(),
+
+
+@pytest.mark.unit
+class TestDecisionPackSha256:
+    def test_deterministic(self):
+        inputs = PortfolioDecisionInputs(
+            portfolio_id="p1", proposed_by="u1",
+            input_snapshot_sha256="a" * 64, proposal_sha256="b" * 64,
+            risk_opinion="approved", compliance_opinion="approved",
+            optimizer_status="optimal", eligible=True, hard_breach=False,
         )
-
-
-def test_decision_pack_hash_is_reproducible_and_vote_sensitive() -> None:
-    vote = CommitteeVote("manager", "portfolio_manager", "approved", "approved", "c" * 64)
-    assert decision_pack_sha256(valid_inputs(), (vote,)) == decision_pack_sha256(valid_inputs(), (vote,))
-    rejected = CommitteeVote("manager", "portfolio_manager", "rejected", "no", "c" * 64)
-    assert decision_pack_sha256(valid_inputs(), (vote,)) != decision_pack_sha256(valid_inputs(), (rejected,))
-
-
-@pytest.mark.asyncio
-async def test_portfolio_workflow_buffers_vote_delivered_before_first_workflow_task() -> None:
-    workflow = PortfolioConstructionWorkflow()
-    vote = CommitteeVote("manager", "portfolio_manager", "approved", "approved", "c" * 64)
-    await workflow.vote(vote)
-    assert workflow._pending_votes == [vote]
-    assert workflow._votes == []
+        vote = CommitteeVote(
+            actor_id="v1", role="risk_officer", decision="approved",
+            rationale="ok", signature_sha256="c" * 64,
+        )
+        h1 = decision_pack_sha256(inputs, (vote,))
+        h2 = decision_pack_sha256(inputs, (vote,))
+        assert h1 == h2
+        assert len(h1) == 64

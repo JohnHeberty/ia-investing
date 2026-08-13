@@ -10,8 +10,22 @@ from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import Worker
 
 from workflows._extract_news import ExtractNewsInput, ExtractNewsWorkflow
+from workflows._schedule_run import _format_error_chain
 
 TASK_QUEUE = "test-extract-news"
+
+
+def test_schedule_error_preserves_root_cause() -> None:
+    try:
+        try:
+            raise ModuleNotFoundError("No module named 'defusedxml'")
+        except ModuleNotFoundError as exc:
+            raise RuntimeError("Activity task failed") from exc
+    except RuntimeError as exc:
+        message = _format_error_chain(exc)
+
+    assert "RuntimeError: Activity task failed" in message
+    assert "ModuleNotFoundError: No module named 'defusedxml'" in message
 
 
 @pytest.mark.unit

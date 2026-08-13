@@ -117,6 +117,24 @@ class TestNewsExtractionActivities:
 
         assert callable(batch_analyze_news)
 
+    def test_batch_analysis_uses_valid_issuer_scoped_postgres_query(self) -> None:
+        from sqlalchemy.dialects import postgresql
+
+        from ia_investing.orchestration.activities.news_extraction import (
+            _pending_news_item_ids_statement,
+        )
+
+        statement = _pending_news_item_ids_statement(
+            "00000000-0000-0000-0000-000000000002",
+            10,
+        )
+        sql = str(statement.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+
+        assert "EXISTS" in sql
+        assert "news_entity_links.issuer_id" in sql
+        assert "DISTINCT" not in sql
+        assert "ORDER BY news_items.created_at DESC" in sql
+
     def test_detect_event_duplicates_exists(self) -> None:
         from ia_investing.orchestration.activities.news_extraction import detect_event_duplicates
 

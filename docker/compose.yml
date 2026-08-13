@@ -208,6 +208,7 @@ services:
       migrate: {condition: service_completed_successfully}
       minio-init: {condition: service_completed_successfully}
       temporal: {condition: service_healthy}
+    healthcheck: {disable: true}
     deploy:
       resources:
         limits: { memory: 512M, cpus: "1.0" }
@@ -240,6 +241,7 @@ services:
       migrate: {condition: service_completed_successfully}
       temporal: {condition: service_healthy}
       litellm: {condition: service_healthy}
+    healthcheck: {disable: true}
     deploy:
       resources:
         limits: { memory: 512M, cpus: "1.0" }
@@ -269,6 +271,7 @@ services:
       migrate: {condition: service_completed_successfully}
       temporal: {condition: service_healthy}
       litellm: {condition: service_healthy}
+    healthcheck: {disable: true}
     deploy:
       resources:
         limits: { memory: 512M, cpus: "1.0" }

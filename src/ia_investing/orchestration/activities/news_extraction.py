@@ -14,6 +14,23 @@ from ia_investing.orchestration.activities._telemetry import activity_span
 logger = logging.getLogger(__name__)
 
 
+def _pending_news_item_ids_statement(issuer_id: str, limit: int) -> Any:
+    import sqlalchemy as sa
+
+    from database.models.news import NewsEntityLink, NewsItem
+
+    statement = sa.select(NewsItem.id).where(NewsItem.is_processed.is_(False))
+    if issuer_id:
+        issuer_link = sa.exists(
+            sa.select(NewsEntityLink.id).where(
+                NewsEntityLink.news_item_id == NewsItem.id,
+                NewsEntityLink.issuer_id == UUID(issuer_id),
+            )
+        )
+        statement = statement.where(issuer_link)
+    return statement.order_by(NewsItem.created_at.desc()).limit(limit)
+
+
 @activity.defn(name="fetch_news_items")
 async def fetch_news_items(params: dict[str, Any]) -> list[dict[str, Any]]:
     """Fetch RSS news items for an issuer and persist to DB."""
@@ -44,23 +61,15 @@ async def analyze_single_news_item(news_item_id: str) -> dict[str, Any]:
 async def batch_analyze_news(params: dict[str, Any]) -> dict[str, Any]:
     """Analyze unprocessed news items for an issuer."""
     with activity_span("batch_analyze_news"):
-        import sqlalchemy as sa
-
         from database.core import session_scope
-        from database.models.news import NewsEntityLink, NewsItem
         from ia_investing.news.service import analyze_news_item
 
         issuer_id = params.get("issuer_id", "")
         limit = params.get("limit", 10)
 
         async with session_scope() as session:
-            statement = sa.select(NewsItem.id).where(NewsItem.is_processed.is_(False))
-            if issuer_id:
-                statement = statement.join(
-                    NewsEntityLink,
-                    NewsEntityLink.news_item_id == NewsItem.id,
-                ).where(NewsEntityLink.issuer_id == UUID(issuer_id))
-            result = await session.execute(statement.distinct().order_by(NewsItem.created_at.desc()).limit(limit))
+            statement = _pending_news_item_ids_statement(issuer_id, limit)
+            result = await session.execute(statement)
             item_ids = list(result.scalars().all())
             total = len(item_ids)
 

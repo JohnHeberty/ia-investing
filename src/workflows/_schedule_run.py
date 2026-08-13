@@ -51,5 +51,17 @@ async def fail_schedule_run(schedule_id: str, exc: BaseException) -> None:
     await complete_schedule_run(
         schedule_id,
         status="failed",
-        error_message=f"{type(exc).__name__}: {exc}"[:2000],
+        error_message=_format_error_chain(exc),
     )
+
+
+def _format_error_chain(exc: BaseException) -> str:
+    """Keep the actionable Temporal/activity cause instead of only its wrapper."""
+    parts: list[str] = []
+    current: BaseException | None = exc
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen:
+        seen.add(id(current))
+        parts.append(f"{type(current).__name__}: {current}")
+        current = current.__cause__ or current.__context__
+    return " <- ".join(parts)[:2000]
