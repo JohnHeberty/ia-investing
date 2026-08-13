@@ -24,8 +24,8 @@ const nextConfig: NextConfig = {
           key: "Content-Security-Policy",
           value: [
             "default-src 'self'",
-            // unsafe-inline kept for Next.js CSS-in-JS and echarts; unsafe-eval removed (not needed)
-            "script-src 'self' 'unsafe-inline'",
+            // unsafe-inline for CSS; unsafe-eval only in dev (React devtools need eval)
+            `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
             "style-src 'self' 'unsafe-inline'",
             "img-src 'self' data: blob:",
             "font-src 'self' data:",
