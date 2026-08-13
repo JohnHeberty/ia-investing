@@ -23,6 +23,7 @@ export interface ScheduleSummary {
   } | null;
   state: { paused: boolean; remaining_actions: number } | null;
   last_run_at: string | null;
+  running_workflows: number;
 }
 
 export interface ScheduleRun {
@@ -147,16 +148,21 @@ export function useSchedules() {
 
   const reconcileMutation = useMutation({
     mutationFn: async () => {
-      return await bffFetch<ReconcileResult>(
-        "/api/v1/schedules/reconcile",
-        { method: "POST", headers: { "Idempotency-Key": `reconcile-${Date.now()}` } },
-      );
+      return await bffFetch<ReconcileResult>("/api/v1/schedules/reconcile", {
+        method: "POST",
+        headers: { "Idempotency-Key": `reconcile-${Date.now()}` },
+      });
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.schedules() }),
   });
 
   const updateIntervalMutation = useMutation({
-    mutationFn: async ({ scheduleId, everyMinutes, everyHours, everyDays }: {
+    mutationFn: async ({
+      scheduleId,
+      everyMinutes,
+      everyHours,
+      everyDays,
+    }: {
       scheduleId: string;
       everyMinutes?: number;
       everyHours?: number;
@@ -190,7 +196,12 @@ export function useSchedules() {
   const activeCount = items.filter((s) => !s.paused).length;
   const pausedCount = items.filter((s) => s.paused).length;
 
-  const dataState: DataState = computeDataState(query.isLoading, query.isError, null, items.length > 0);
+  const dataState: DataState = computeDataState(
+    query.isLoading,
+    query.isError,
+    null,
+    items.length > 0,
+  );
 
   return {
     items,
@@ -209,8 +220,12 @@ export function useSchedules() {
     updateInterval: updateIntervalMutation.mutateAsync,
     reconcile: reconcileMutation.mutateAsync,
     reconcileResult: reconcileMutation.data,
-    isMutating: pauseMutation.isPending || resumeMutation.isPending
-      || deleteMutation.isPending || reconcileMutation.isPending || updateIntervalMutation.isPending,
+    isMutating:
+      pauseMutation.isPending ||
+      resumeMutation.isPending ||
+      deleteMutation.isPending ||
+      reconcileMutation.isPending ||
+      updateIntervalMutation.isPending,
     isReconciling: reconcileMutation.isPending,
     parseDuration,
   };
@@ -220,7 +235,9 @@ export function useScheduleRuns(scheduleId: string | null) {
   const query = useQuery({
     queryKey: queryKeys.scheduleRuns(scheduleId ?? "", 20),
     queryFn: async ({ signal }) => {
-      return await bffFetch<ScheduleRun[]>(`/api/v1/schedules/${scheduleId}/runs?limit=20`, { signal });
+      return await bffFetch<ScheduleRun[]>(`/api/v1/schedules/${scheduleId}/runs?limit=20`, {
+        signal,
+      });
     },
     enabled: !!scheduleId,
     staleTime: 10_000,
@@ -229,7 +246,12 @@ export function useScheduleRuns(scheduleId: string | null) {
   });
 
   const items = Array.isArray(query.data) ? query.data : [];
-  const dataState: DataState = computeDataState(query.isLoading, query.isError, null, items.length > 0);
+  const dataState: DataState = computeDataState(
+    query.isLoading,
+    query.isError,
+    null,
+    items.length > 0,
+  );
 
   return {
     runs: items,
@@ -244,44 +266,45 @@ export function useScheduleRuns(scheduleId: string | null) {
 export type TriggerPhase = "idle" | "starting" | "completed" | "failed" | "timeout";
 
 const TRIGGER_POLL_MS = 3_000;
-const TRIGGER_TIMEOUT_MS = 60_000;
+const TRIGGER_START_TIMEOUT_MS = 60_000;
+const TRIGGER_RUN_TIMEOUT_MS = 10 * 60_000;
 
-export function useScheduleTrigger(scheduleId: string, description: string, items: ScheduleSummary[]) {
+export function selectTriggeredRun(runs: ScheduleRun[], triggeredAt: number): ScheduleRun | undefined {
+  return runs.find((run) => new Date(run.started_at).getTime() >= triggeredAt);
+}
+
+export function useScheduleTrigger(scheduleId: string, description: string) {
   const queryClient = useQueryClient();
   const [phase, setPhase] = useState<TriggerPhase>("idle");
-  const lastRunAtRef = useRef<string | null>(null);
   const startedAtRef = useRef<number>(0);
-
-  const schedule = items.find((s) => s.schedule_id === scheduleId);
-  const currentLastRunAt = schedule?.last_run_at ?? null;
-  const currentLastRunAtRef = useRef(currentLastRunAt);
-  currentLastRunAtRef.current = currentLastRunAt;
+  const observedRunRef = useRef(false);
 
   useEffect(() => {
     if (phase !== "starting") return;
 
     const interval = setInterval(async () => {
-      if (Date.now() - startedAtRef.current > TRIGGER_TIMEOUT_MS) {
-        setPhase("timeout");
-        clearInterval(interval);
-        return;
+      try {
+        const runs = await bffFetch<ScheduleRun[]>(`/api/v1/schedules/${scheduleId}/runs?limit=5`);
+        const triggeredRun = selectTriggeredRun(runs, startedAtRef.current);
+        observedRunRef.current ||= triggeredRun !== undefined;
+        if (triggeredRun?.status === "failed") {
+          setPhase("failed");
+          clearInterval(interval);
+          return;
+        }
+        if (triggeredRun?.status === "completed") {
+          setPhase("completed");
+          clearInterval(interval);
+          return;
+        }
+      } catch {
+        // Network error — will retry on next tick
       }
 
-      const latest = currentLastRunAtRef.current;
-      if (latest && latest !== lastRunAtRef.current) {
-        try {
-          const runs = await bffFetch<ScheduleRun[]>(
-            `/api/v1/schedules/${scheduleId}/runs?limit=1`,
-          );
-          const first = runs[0];
-          if (first) {
-            setPhase(first.status === "failed" ? "failed" : "completed");
-            clearInterval(interval);
-            return;
-          }
-        } catch {
-          // Network error — will retry on next tick
-        }
+      const timeout = observedRunRef.current ? TRIGGER_RUN_TIMEOUT_MS : TRIGGER_START_TIMEOUT_MS;
+      if (Date.now() - startedAtRef.current > timeout) {
+        setPhase("timeout");
+        clearInterval(interval);
       }
     }, TRIGGER_POLL_MS);
 
@@ -307,24 +330,32 @@ export function useScheduleTrigger(scheduleId: string, description: string, item
   }, [phase, description]);
 
   const trigger = useCallback(async () => {
-    const idempotencyKey = `trigger-${scheduleId}-${Date.now()}`;
+    const requestedAt = Date.now();
+    const idempotencyKey = `trigger-${scheduleId}-${requestedAt}`;
+    startedAtRef.current = requestedAt;
+    observedRunRef.current = false;
     try {
-      await bffFetch<{ schedule_id: string; message: string }>(
+      const response = await bffFetch<{
+        schedule_id: string;
+        message: string;
+        triggered_at: string | null;
+      }>(
         `/api/v1/schedules/${scheduleId}/trigger`,
         { method: "POST", headers: { "Idempotency-Key": idempotencyKey } },
       );
       queryClient.invalidateQueries({ queryKey: queryKeys.schedules() });
       queryClient.invalidateQueries({ queryKey: queryKeys.scheduleRuns(scheduleId, 20) });
 
-      lastRunAtRef.current = currentLastRunAtRef.current;
-      startedAtRef.current = Date.now();
+      if (response.triggered_at) {
+        startedAtRef.current = new Date(response.triggered_at).getTime();
+      }
       setPhase("starting");
       toast.success(`Execução iniciada — ${description}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Erro desconhecido";
       toast.error(`Falha ao iniciar execução — ${description}: ${msg}`);
     }
-  }, [scheduleId, description, currentLastRunAt, queryClient]);
+  }, [scheduleId, description, queryClient]);
 
   return { trigger, phase };
 }

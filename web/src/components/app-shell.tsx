@@ -53,7 +53,13 @@ const operations: NavItem[] = [
   ["/schedules", "Agendamentos", Clock, "schedules:read"],
 ];
 
-const NavGroup = React.memo(function NavGroup({ label, items }: { label: string; items: NavItem[] }) {
+const NavGroup = React.memo(function NavGroup({
+  label,
+  items,
+}: {
+  label: string;
+  items: NavItem[];
+}) {
   const pathname = usePathname();
   const { can } = usePermissions();
 
@@ -66,14 +72,16 @@ const NavGroup = React.memo(function NavGroup({ label, items }: { label: string;
       {visible.map(([href, labelText, Icon]) => (
         <Link
           aria-current={
-            pathname === href || (href !== "/" && (pathname.startsWith(href + "/") || pathname === href))
+            pathname === href ||
+            (href !== "/" && (pathname.startsWith(href + "/") || pathname === href))
               ? "page"
               : undefined
           }
           aria-label={labelText}
           className="nav-link"
           data-active={
-            pathname === href || (href !== "/" && (pathname.startsWith(href + "/") || pathname === href))
+            pathname === href ||
+            (href !== "/" && (pathname.startsWith(href + "/") || pathname === href))
           }
           href={href as Route}
           key={href}
@@ -210,10 +218,20 @@ export function AppShell({ children }: { children: ReactNode }) {
             Organização / <strong>Brasil Long Only</strong>
           </div>
           <div className="top-actions">
-            <button className="icon-button" aria-label="Pesquisar" onClick={handleSearch} type="button">
+            <button
+              className="icon-button"
+              aria-label="Pesquisar"
+              onClick={handleSearch}
+              type="button"
+            >
               <Search size={15} />
             </button>
-            <button className="icon-button" aria-label="Notificações" onClick={handleNotifications} type="button">
+            <button
+              className="icon-button"
+              aria-label="Notificações"
+              onClick={handleNotifications}
+              type="button"
+            >
               <Bell size={15} />
             </button>
             <button

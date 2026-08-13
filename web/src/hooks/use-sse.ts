@@ -37,10 +37,18 @@ export function useSSE(
   const intervalRef = useRef(reconnectIntervalMs);
   const onFallbackRef = useRef(onFallback);
 
-  useEffect(() => { onEventRef.current = onEvent; }, [onEvent]);
-  useEffect(() => { maxAttemptsRef.current = maxReconnectAttempts; }, [maxReconnectAttempts]);
-  useEffect(() => { intervalRef.current = reconnectIntervalMs; }, [reconnectIntervalMs]);
-  useEffect(() => { onFallbackRef.current = onFallback; }, [onFallback]);
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
+  useEffect(() => {
+    maxAttemptsRef.current = maxReconnectAttempts;
+  }, [maxReconnectAttempts]);
+  useEffect(() => {
+    intervalRef.current = reconnectIntervalMs;
+  }, [reconnectIntervalMs]);
+  useEffect(() => {
+    onFallbackRef.current = onFallback;
+  }, [onFallback]);
 
   const disconnect = useCallback(() => {
     eventSourceRef.current?.close();
@@ -110,7 +118,10 @@ export function useSSE(
         }
 
         setInternalState("reconnecting");
-        reconnectTimer = setTimeout(() => connect(nextRetry), intervalRef.current * Math.min(nextRetry, 5));
+        reconnectTimer = setTimeout(
+          () => connect(nextRetry),
+          intervalRef.current * Math.min(nextRetry, 5),
+        );
       };
     }
 

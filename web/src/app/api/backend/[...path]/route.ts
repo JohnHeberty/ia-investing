@@ -19,7 +19,10 @@ async function proxy(request: NextRequest, context: RouteContext) {
   const isAuthRoute = path[2] === "auth";
 
   if (!hasSessionCookie && !isAuthRoute) {
-    return NextResponse.json({ error: "Authentication required (no ia_session cookie in proxy)" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Authentication required (no ia_session cookie in proxy)" },
+      { status: 401 },
+    );
   }
 
   const execute = () => {
@@ -56,7 +59,10 @@ async function proxy(request: NextRequest, context: RouteContext) {
   outgoingHeaders.delete("transfer-encoding");
 
   const setCookies = response.headers.getSetCookie();
-  const res = new NextResponse(response.body, { status: response.status, headers: outgoingHeaders });
+  const res = new NextResponse(response.body, {
+    status: response.status,
+    headers: outgoingHeaders,
+  });
 
   // Forward CSRF token from backend to client
   for (const raw of setCookies) {

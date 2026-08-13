@@ -110,7 +110,7 @@ class PaperPortfolioService:
                 if price_data and price_data.get("price"):
                     current_price = float(price_data["price"])
             except Exception:
-                pass
+                logger.warning("Unable to refresh market price for %s", ticker_symbol, exc_info=True)
 
         position = Position(
             portfolio_id=portfolio_id,
@@ -153,7 +153,7 @@ class PaperPortfolioService:
                     if price_data and price_data.get("price"):
                         current_price = float(price_data["price"])
                 except Exception:
-                    pass
+                    logger.warning("Unable to refresh market price for %s", ticker_symbol, exc_info=True)
         if quantity is not None:
             position.quantity = Decimal(str(quantity))
         if avg_cost_per_share is not None:
@@ -227,13 +227,10 @@ class PaperPortfolioService:
 
         for pos in positions:
             if total_value > 0:
-                if pos.current_price:
-                    price = float(pos.current_price)
-                else:
-                    price = float(pos.avg_cost_per_share)
-                pos.weight_pct = (float(pos.quantity) * price) / total_value
+                price = float(pos.current_price) if pos.current_price else float(pos.avg_cost_per_share)
+                pos.weight_pct = Decimal(str((float(pos.quantity) * price) / total_value))
             else:
-                pos.weight_pct = 0.0
+                pos.weight_pct = Decimal("0")
 
         await self._session.flush()
 

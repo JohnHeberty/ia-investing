@@ -11,10 +11,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.models.portfolio import Portfolio, Position
 from database.models.portfolio_mandates import ModelPortfolio
 from database.models.rebalance import DriftSnapshot, RebalanceProposal, RebalanceTrade
-from ia_investing.domain.portfolio_machine import (
-    PortfolioMachineModel,
-    create_portfolio_machine,
-)
 
 TRANSACTION_COST_BPS = Decimal("0.0010")
 TAX_RATE = Decimal("0.0003")
@@ -142,13 +138,6 @@ class RebalanceService:
         if proposal.status != "draft":
             raise ValueError(f"Cannot approve proposal with status '{proposal.status}'")
 
-        portfolio = await self._load_portfolio(proposal.portfolio_id)
-        state = portfolio.state if portfolio else "monitoring"
-        nav = float(portfolio.nav) if portfolio and portfolio.nav else 0.0
-        machine = create_portfolio_machine(PortfolioMachineModel(state=state, nav=nav, compliance_passed=True))
-        machine.approve_rebalance()
-        await self._update_portfolio_state(proposal.portfolio_id, machine.model.state)
-
         proposal.status = "approved"
         proposal.approved_by = approver_id
         proposal.approval_notes = notes
@@ -165,12 +154,6 @@ class RebalanceService:
             raise ValueError(f"Cannot execute trades on proposal with status '{proposal.status}'")
 
         if proposal.status == "approved":
-            portfolio = await self._load_portfolio(proposal.portfolio_id)
-            state = portfolio.state if portfolio else "monitoring"
-            nav = float(portfolio.nav) if portfolio and portfolio.nav else 0.0
-            machine = create_portfolio_machine(PortfolioMachineModel(state=state, nav=nav, compliance_passed=True))
-            machine.approve_rebalance()
-            await self._update_portfolio_state(proposal.portfolio_id, "rebalancing")
             proposal.status = "in_progress"
 
         result = await self._session.execute(
@@ -194,13 +177,6 @@ class RebalanceService:
         proposal = await self._get_proposal(proposal_id)
         if proposal.status not in ("approved", "in_progress"):
             raise ValueError(f"Cannot complete proposal with status '{proposal.status}'")
-
-        portfolio = await self._load_portfolio(proposal.portfolio_id)
-        state = portfolio.state if portfolio else "monitoring"
-        nav = float(portfolio.nav) if portfolio and portfolio.nav else 0.0
-        machine = create_portfolio_machine(PortfolioMachineModel(state=state, nav=nav, compliance_passed=True))
-        machine.approve_rebalance()
-        await self._update_portfolio_state(proposal.portfolio_id, "monitoring")
 
         proposal.status = "completed"
         proposal.completed_at = datetime.now(UTC)
@@ -321,9 +297,7 @@ class RebalanceService:
         pos_result = await self._session.execute(
             sa.select(Position.quantity, Position.current_price).where(Position.portfolio_id == portfolio_id)
         )
-        nav = sum(
-            float(qty or 0) * float(price or 0) for qty, price in pos_result.all()
-        ) or 1_000_000.0
+        nav = sum(float(qty or 0) * float(price or 0) for qty, price in pos_result.all()) or 1_000_000.0
         return {
             "id": str(model.id),
             "name": model.name,

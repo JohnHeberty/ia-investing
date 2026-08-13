@@ -32,14 +32,14 @@ class CalibrationStatusResponse(BaseModel):
 
     components: dict[str, Any]
     gate_status: dict[str, Any]
-    uncalibrated: list[str]
+    uncalibrated: list[dict[str, Any]]
 
 
 class ComponentStatusResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     component: str
-    calibration_score: float
+    calibration_score: dict[str, Any]
     drift: dict[str, Any]
     reliability: list[dict[str, Any]]
     gate: dict[str, Any]
@@ -70,6 +70,7 @@ class OverrideActiveResponse(BaseModel):
 
 @router.get("/status", response_model=CalibrationStatusResponse)
 async def get_calibration_status(
+    _auth: AuthContext = Depends(require_permission("calibration:read")),
     engine: CalibrationEngine = Depends(_get_engine),
     gate: ProductionGate = Depends(_get_gate),
 ) -> CalibrationStatusResponse:
@@ -85,6 +86,7 @@ async def get_calibration_status(
 @router.get("/status/{component}", response_model=ComponentStatusResponse)
 async def get_component_status(
     component: str,
+    _auth: AuthContext = Depends(require_permission("calibration:read")),
     engine: CalibrationEngine = Depends(_get_engine),
     gate: ProductionGate = Depends(_get_gate),
 ) -> ComponentStatusResponse:
@@ -108,6 +110,7 @@ async def get_component_status(
 @router.get("/reliability/{component}", response_model=list[dict[str, Any]])
 async def get_reliability(
     component: str,
+    _auth: AuthContext = Depends(require_permission("calibration:read")),
     engine: CalibrationEngine = Depends(_get_engine),
 ) -> list[dict[str, Any]]:
     try:

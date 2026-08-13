@@ -53,10 +53,13 @@ function mapStatus(session: CommitteeSessionDetail): CommitteeDecision["status"]
 }
 
 function proposalTitle(session: CommitteeSessionDetail): string {
-  const title = session.agenda?.title ?? session.agenda?.case_title ?? session.agenda?.proposal_title;
+  const title =
+    session.agenda?.title ?? session.agenda?.case_title ?? session.agenda?.proposal_title;
   if (typeof title === "string" && title.trim()) return title;
   const thesisCount = Array.isArray(session.thesis_ids) ? session.thesis_ids.length : 0;
-  return thesisCount > 0 ? `Comitê — ${thesisCount} tese${thesisCount === 1 ? "" : "s"}` : "Sessão do comitê";
+  return thesisCount > 0
+    ? `Comitê — ${thesisCount} tese${thesisCount === 1 ? "" : "s"}`
+    : "Sessão do comitê";
 }
 
 async function batchFetchDetails(
@@ -70,7 +73,9 @@ async function batchFetchDetails(
     const batch = sessions.slice(i, i + concurrency);
     const settled = await Promise.allSettled(
       batch.map(async (session) => {
-        return await bffFetch<CommitteeSessionDetail>(`/api/v1/committee/sessions/${session.id}`, { signal });
+        return await bffFetch<CommitteeSessionDetail>(`/api/v1/committee/sessions/${session.id}`, {
+          signal,
+        });
       }),
     );
     for (const result of settled) {
@@ -88,7 +93,8 @@ export function useCommittee() {
     queryFn: async () => {
       const raw = await bffFetch<unknown>("/api/v1/committee/sessions?limit=50&offset=0");
       if (Array.isArray(raw)) return raw as CommitteeSessionListItem[];
-      if (raw && typeof raw === "object" && "items" in raw) return (raw as { items: CommitteeSessionListItem[] }).items;
+      if (raw && typeof raw === "object" && "items" in raw)
+        return (raw as { items: CommitteeSessionListItem[] }).items;
       return [] as CommitteeSessionListItem[];
     },
     staleTime: 30_000,
@@ -96,7 +102,10 @@ export function useCommittee() {
   });
 
   const sessionIdsKey = useMemo(
-    () => (sessionsQuery.data as unknown as CommitteeSessionListItem[] | undefined)?.map((s) => s.id).join(",") ?? "",
+    () =>
+      (sessionsQuery.data as unknown as CommitteeSessionListItem[] | undefined)
+        ?.map((s) => s.id)
+        .join(",") ?? "",
     [sessionsQuery.data],
   );
 
@@ -124,9 +133,15 @@ export function useCommittee() {
           ? agenda.summary
           : "Decision pack com tese, valuation, risco, evidências e proposta.",
       status: mapStatus(session),
-      requestedBy: typeof agenda.requested_by === "string" ? agenda.requested_by : "investment-research",
+      requestedBy:
+        typeof agenda.requested_by === "string" ? agenda.requested_by : "investment-research",
       requestedAt: session.created_at ?? session.scheduled_at ?? "",
-      decidedBy: typeof agenda.decided_by === "string" ? agenda.decided_by : typeof agenda.requested_by === "string" ? agenda.requested_by : undefined,
+      decidedBy:
+        typeof agenda.decided_by === "string"
+          ? agenda.decided_by
+          : typeof agenda.requested_by === "string"
+            ? agenda.requested_by
+            : undefined,
       decidedAt: session.published_at ?? undefined,
       reason: session.rationale ?? undefined,
       conditions,
@@ -143,7 +158,10 @@ export function useCommittee() {
       decision.decidedAt &&
       new Date(decision.decidedAt).toDateString() === new Date().toDateString(),
   );
-  const totalConflicts = decisions.reduce((total, decision) => total + decision.conflictsDeclared, 0);
+  const totalConflicts = decisions.reduce(
+    (total, decision) => total + decision.conflictsDeclared,
+    0,
+  );
   const quorumRequired = pendingDecisions.length
     ? Math.max(...pendingDecisions.map((decision) => decision.quorumRequired))
     : 0;

@@ -5,8 +5,25 @@ import { toast } from "sonner";
 
 import { Badge, Metric } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
-import { useScheduleRuns, useSchedules, useScheduleTrigger, parseIntervalValue, type ScheduleSummary } from "@/hooks/use-schedules";
-import { Pause, Play, RefreshCw, Trash2, Clock, ChevronDown, ChevronRight, Pencil, Check, X } from "lucide-react";
+import {
+  useScheduleRuns,
+  useSchedules,
+  useScheduleTrigger,
+  parseIntervalValue,
+  type ScheduleSummary,
+} from "@/hooks/use-schedules";
+import {
+  Pause,
+  Play,
+  RefreshCw,
+  Trash2,
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  Pencil,
+  Check,
+  X,
+} from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
   news: "Notícias",
@@ -28,8 +45,8 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 const WORKFLOW_LABELS: Record<string, string> = {
   "news-collection-": "ExtractNewsWorkflow",
-  "news-dedup-cleanup": "DispatchOperationsWorkflow",
-  "outbox-dispatch-recovery": "DispatchOperationsWorkflow",
+  "news-dedup-cleanup": "NewsDedupWorkflow",
+  "operation-outbox-dispatch": "DispatchOperationsWorkflow",
   "cvm-dfp-": "IngestCVMWorkflow",
   "paper-reconciliation-": "PaperReconciliationWorkflow",
   "paper-valuation-": "PaperValuationWorkflow",
@@ -50,7 +67,10 @@ function IntervalEditor({
   parseDuration,
 }: {
   schedule: ScheduleSummary;
-  onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => Promise<void>;
+  onUpdateInterval: (
+    scheduleId: string,
+    value: { everyMinutes?: number; everyHours?: number; everyDays?: number },
+  ) => Promise<void>;
   parseDuration: (every: string) => string;
 }) {
   const [editing, setEditing] = useState(false);
@@ -69,9 +89,11 @@ function IntervalEditor({
 
   const save = useCallback(async () => {
     const payload =
-      unit === "days" ? { everyDays: value } :
-      unit === "hours" ? { everyHours: value } :
-      { everyMinutes: value };
+      unit === "days"
+        ? { everyDays: value }
+        : unit === "hours"
+          ? { everyHours: value }
+          : { everyMinutes: value };
     setSaving(true);
     try {
       await onUpdateInterval(schedule.schedule_id, payload);
@@ -86,6 +108,14 @@ function IntervalEditor({
   const cancel = useCallback(() => {
     setEditing(false);
   }, []);
+
+  if (schedule.is_default) {
+    return (
+      <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
+        {interval ? parseDuration(interval) : "—"}
+      </span>
+    );
+  }
 
   if (editing) {
     return (
@@ -139,7 +169,9 @@ function IntervalEditor({
       className="flex items-center gap-4 cursor-pointer"
       style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}
       onClick={startEdit}
-      onKeyDown={(e) => { if (e.key === "Enter") startEdit(); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") startEdit();
+      }}
       role="button"
       tabIndex={0}
       aria-label="Editar intervalo"
@@ -152,7 +184,6 @@ function IntervalEditor({
 
 function ScheduleRow({
   schedule,
-  items,
   onTogglePause,
   onDelete,
   onUpdateInterval,
@@ -160,16 +191,21 @@ function ScheduleRow({
   isOwnMutating,
 }: {
   schedule: ScheduleSummary;
-  items: ScheduleSummary[];
   onTogglePause: (scheduleId: string, paused: boolean) => void;
   onDelete: (scheduleId: string) => void;
-  onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => Promise<void>;
+  onUpdateInterval: (
+    scheduleId: string,
+    value: { everyMinutes?: number; everyHours?: number; everyDays?: number },
+  ) => Promise<void>;
   parseDuration: (every: string) => string;
   isOwnMutating: boolean;
 }) {
-  const { trigger, phase } = useScheduleTrigger(schedule.schedule_id, schedule.description, items);
+  const { trigger, phase } = useScheduleTrigger(schedule.schedule_id, schedule.description);
   const nextRun = schedule.next_action_time
-    ? new Date(schedule.next_action_time).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+    ? new Date(schedule.next_action_time).toLocaleString("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
     : null;
 
   const isTriggerBusy = phase !== "idle";
@@ -178,16 +214,14 @@ function ScheduleRow({
     <tr>
       <td>
         <div className="flex-col gap-4">
-          <span className="fw-500" style={{ fontSize: 13 }}>{schedule.description || schedule.schedule_id}</span>
-          <span className="text-xs muted mono">
-            {schedule.schedule_id}
+          <span className="fw-500" style={{ fontSize: 13 }}>
+            {schedule.description || schedule.schedule_id}
           </span>
+          <span className="text-xs muted mono">{schedule.schedule_id}</span>
         </div>
       </td>
       <td>
-        <span className="text-sm muted mono">
-          {getWorkflowLabel(schedule.schedule_id)}
-        </span>
+        <span className="text-sm muted mono">{getWorkflowLabel(schedule.schedule_id)}</span>
       </td>
       <td>
         <Badge tone={schedule.paused ? "warn" : "good"}>
@@ -203,7 +237,10 @@ function ScheduleRow({
       </td>
       <td className="text-sm mono">
         {schedule.last_run_at
-          ? new Date(schedule.last_run_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+          ? new Date(schedule.last_run_at).toLocaleString("pt-BR", {
+              dateStyle: "short",
+              timeStyle: "short",
+            })
           : "—"}
       </td>
       <td className="text-sm">
@@ -223,7 +260,13 @@ function ScheduleRow({
             disabled={isOwnMutating}
             aria-label={schedule.paused ? "Retomar" : "Pausar"}
           >
-            {isOwnMutating ? <RefreshCw size={16} className="animate-spin" /> : schedule.paused ? <Play size={16} /> : <Pause size={16} />}
+            {isOwnMutating ? (
+              <RefreshCw size={16} className="animate-spin" />
+            ) : schedule.paused ? (
+              <Play size={16} />
+            ) : (
+              <Pause size={16} />
+            )}
           </button>
           <button
             className="button sm"
@@ -232,9 +275,7 @@ function ScheduleRow({
             disabled={isOwnMutating || isTriggerBusy}
             aria-label="Executar agora"
           >
-            {isTriggerBusy
-              ? <RefreshCw size={16} className="animate-spin" />
-              : <Play size={16} />}
+            {isTriggerBusy ? <RefreshCw size={16} className="animate-spin" /> : <Play size={16} />}
           </button>
           {!schedule.is_default && (
             <button
@@ -296,16 +337,26 @@ function RunsPanel({ scheduleId }: { scheduleId: string }) {
             {displayedRuns.map((run) => (
               <tr key={run.id}>
                 <td>
-                  <Badge tone={run.status === "completed" ? "good" : run.status === "failed" ? "bad" : "warn"}>
+                  <Badge
+                    tone={
+                      run.status === "completed" ? "good" : run.status === "failed" ? "bad" : "warn"
+                    }
+                  >
                     {run.status}
                   </Badge>
                 </td>
                 <td className="text-sm mono">
-                  {new Date(run.started_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
+                  {new Date(run.started_at).toLocaleString("pt-BR", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  })}
                 </td>
                 <td className="text-sm mono">
                   {run.finished_at
-                    ? new Date(run.finished_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+                    ? new Date(run.finished_at).toLocaleString("pt-BR", {
+                        dateStyle: "short",
+                        timeStyle: "short",
+                      })
                     : "—"}
                 </td>
                 <td className="text-sm truncate mono" style={{ maxWidth: 200 }}>
@@ -313,12 +364,18 @@ function RunsPanel({ scheduleId }: { scheduleId: string }) {
                     ? typeof run.result_summary === "object"
                       ? Object.entries(run.result_summary as Record<string, unknown>)
                           .slice(0, 3)
-                          .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
+                          .map(
+                            ([k, v]) =>
+                              `${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`,
+                          )
                           .join(", ")
                       : String(run.result_summary)
                     : "—"}
                 </td>
-                <td className="text-sm" style={{ color: run.error_message ? "var(--red)" : "var(--muted)" }}>
+                <td
+                  className="text-sm"
+                  style={{ color: run.error_message ? "var(--red)" : "var(--muted)" }}
+                >
                   {run.error_message ?? "—"}
                 </td>
               </tr>
@@ -343,7 +400,6 @@ function RunsPanel({ scheduleId }: { scheduleId: string }) {
 function CategoryGroup({
   category,
   schedules,
-  items,
   expandedCategories,
   toggleCategory,
   onTogglePause,
@@ -354,12 +410,14 @@ function CategoryGroup({
 }: {
   category: string;
   schedules: ScheduleSummary[];
-  items: ScheduleSummary[];
   expandedCategories: Set<string>;
   toggleCategory: (cat: string) => void;
   onTogglePause: (scheduleId: string, paused: boolean) => void;
   onDelete: (scheduleId: string) => void;
-  onUpdateInterval: (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => Promise<void>;
+  onUpdateInterval: (
+    scheduleId: string,
+    value: { everyMinutes?: number; everyHours?: number; everyDays?: number },
+  ) => Promise<void>;
   parseDuration: (every: string) => string;
   mutatingId: string | null;
 }) {
@@ -378,11 +436,7 @@ function CategoryGroup({
 
   return (
     <div className="card card-pad section-gap overflow-hidden">
-      <button
-        type="button"
-        onClick={() => toggleCategory(category)}
-        className="category-toggle"
-      >
+      <button type="button" onClick={() => toggleCategory(category)} className="category-toggle">
         {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
         <div
           className="category-dot"
@@ -418,7 +472,6 @@ function CategoryGroup({
                   <ScheduleRow
                     key={s.schedule_id}
                     schedule={s}
-                    items={items}
                     onTogglePause={onTogglePause}
                     onDelete={onDelete}
                     onUpdateInterval={onUpdateInterval}
@@ -431,7 +484,7 @@ function CategoryGroup({
           </div>
 
           <div className="mt-8">
-            {schedules.filter((s) => s.last_run_at).map((s) => (
+            {schedules.map((s) => (
               <div key={`runs-${s.schedule_id}`}>
                 <button
                   type="button"
@@ -440,7 +493,11 @@ function CategoryGroup({
                 >
                   <Clock size={12} />
                   Histórico de execuções — {s.description || s.schedule_id}
-                  {expandedRuns.has(s.schedule_id) ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                  {expandedRuns.has(s.schedule_id) ? (
+                    <ChevronDown size={12} />
+                  ) : (
+                    <ChevronRight size={12} />
+                  )}
                 </button>
                 {expandedRuns.has(s.schedule_id) && <RunsPanel scheduleId={s.schedule_id} />}
               </div>
@@ -454,7 +511,6 @@ function CategoryGroup({
 
 export default function SchedulesPage() {
   const {
-    items,
     grouped,
     activeCount,
     pausedCount,
@@ -469,13 +525,13 @@ export default function SchedulesPage() {
     deleteSchedule,
     updateInterval,
     reconcile,
-    reconcileResult,
-    isMutating,
     isReconciling,
     parseDuration,
   } = useSchedules();
 
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(["news", "portfolio", "data", "operations", "research", "other"]));
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    new Set(["news", "portfolio", "data", "operations", "research", "other"]),
+  );
   const [reconcileMsg, setReconcileMsg] = useState<string | null>(null);
   const [mutatingId, setMutatingId] = useState<string | null>(null);
 
@@ -488,41 +544,53 @@ export default function SchedulesPage() {
     });
   }, []);
 
-  const handleTogglePause = useCallback(async (scheduleId: string, paused: boolean) => {
-    setMutatingId(scheduleId);
-    try {
-      if (paused) await resume(scheduleId);
-      else await pause(scheduleId);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro desconhecido";
-      toast.error(`Falha ao ${paused ? "retomar" : "pausar"} agendamento: ${msg}`);
-    } finally {
-      setMutatingId(null);
-    }
-  }, [pause, resume]);
+  const handleTogglePause = useCallback(
+    async (scheduleId: string, paused: boolean) => {
+      setMutatingId(scheduleId);
+      try {
+        if (paused) await resume(scheduleId);
+        else await pause(scheduleId);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Erro desconhecido";
+        toast.error(`Falha ao ${paused ? "retomar" : "pausar"} agendamento: ${msg}`);
+      } finally {
+        setMutatingId(null);
+      }
+    },
+    [pause, resume],
+  );
 
-  const handleDelete = useCallback(async (scheduleId: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
-    setMutatingId(scheduleId);
-    try {
-      await deleteSchedule(scheduleId);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro desconhecido";
-      toast.error(`Falha ao excluir agendamento: ${msg}`);
-    } finally {
-      setMutatingId(null);
-    }
-  }, [deleteSchedule]);
+  const handleDelete = useCallback(
+    async (scheduleId: string) => {
+      if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
+      setMutatingId(scheduleId);
+      try {
+        await deleteSchedule(scheduleId);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Erro desconhecido";
+        toast.error(`Falha ao excluir agendamento: ${msg}`);
+      } finally {
+        setMutatingId(null);
+      }
+    },
+    [deleteSchedule],
+  );
 
-  const handleUpdateInterval = useCallback(async (scheduleId: string, value: { everyMinutes?: number; everyHours?: number; everyDays?: number }) => {
-    try {
-      await updateInterval({ scheduleId, ...value });
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro desconhecido";
-      toast.error(`Falha ao atualizar intervalo: ${msg}`);
-      throw err;
-    }
-  }, [updateInterval]);
+  const handleUpdateInterval = useCallback(
+    async (
+      scheduleId: string,
+      value: { everyMinutes?: number; everyHours?: number; everyDays?: number },
+    ) => {
+      try {
+        await updateInterval({ scheduleId, ...value });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Erro desconhecido";
+        toast.error(`Falha ao atualizar intervalo: ${msg}`);
+        throw err;
+      }
+    },
+    [updateInterval],
+  );
 
   const handleReconcile = useCallback(async () => {
     setReconcileMsg(null);
@@ -550,11 +618,19 @@ export default function SchedulesPage() {
             <p className="subtitle">Gerenciar cron jobs e periodicidades do sistema.</p>
           </div>
         </div>
-      <section className="grid grid-4 section-gap" aria-live="polite">
-          <div className="card metric"><LoadingSkeleton lines={4} /></div>
-          <div className="card metric"><LoadingSkeleton lines={4} /></div>
-          <div className="card metric"><LoadingSkeleton lines={4} /></div>
-          <div className="card metric"><LoadingSkeleton lines={4} /></div>
+        <section className="grid grid-4 section-gap" aria-live="polite">
+          <div className="card metric">
+            <LoadingSkeleton lines={4} />
+          </div>
+          <div className="card metric">
+            <LoadingSkeleton lines={4} />
+          </div>
+          <div className="card metric">
+            <LoadingSkeleton lines={4} />
+          </div>
+          <div className="card metric">
+            <LoadingSkeleton lines={4} />
+          </div>
         </section>
       </>
     );
@@ -589,9 +665,7 @@ export default function SchedulesPage() {
         <div>
           <div className="eyebrow">Infraestrutura</div>
           <h1>Agendamentos</h1>
-          <p className="subtitle">
-            Cron jobs e periodicidades gerenciados pelo Temporal.
-          </p>
+          <p className="subtitle">Cron jobs e periodicidades gerenciados pelo Temporal.</p>
         </div>
       </div>
 
@@ -615,11 +689,7 @@ export default function SchedulesPage() {
           {isReconciling ? "Reconciliando..." : "Reconciliar"}
         </button>
       </div>
-      {reconcileMsg && (
-        <div className="text-sm text-accent text-right mb-16">
-          {reconcileMsg}
-        </div>
-      )}
+      {reconcileMsg && <div className="text-sm text-accent text-right mb-16">{reconcileMsg}</div>}
 
       {count === 0 ? (
         <DataStatePanel
@@ -634,7 +704,6 @@ export default function SchedulesPage() {
               key={category}
               category={category}
               schedules={schedules}
-              items={items}
               expandedCategories={expandedCategories}
               toggleCategory={toggleCategory}
               onTogglePause={handleTogglePause}

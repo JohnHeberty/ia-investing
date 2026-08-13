@@ -2,10 +2,7 @@ import { getCsrfToken } from "./csrf";
 
 const apiBase = "/api/backend";
 
-async function api<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${apiBase}/api/v1${path}`;
   const method = (options.method ?? "GET").toUpperCase();
   const headers: Record<string, string> = {
@@ -24,9 +21,7 @@ async function api<T>(
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { detail?: string }).detail ?? `API error: ${response.status}`,
-    );
+    throw new Error((body as { detail?: string }).detail ?? `API error: ${response.status}`);
   }
   if (response.status === 204) return null as unknown as T;
   try {
@@ -199,9 +194,7 @@ export async function getCandidate(id: string): Promise<{ data: CandidateDetail;
   });
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new Error(
-      (body as { detail?: string }).detail ?? `API error: ${response.status}`,
-    );
+    throw new Error((body as { detail?: string }).detail ?? `API error: ${response.status}`);
   }
   let data: CandidateDetail;
   try {
@@ -271,10 +264,7 @@ export function promoteExplorationSuggestion(id: string): Promise<Candidate> {
   });
 }
 
-export function dismissExplorationSuggestion(
-  id: string,
-  reason: string,
-): Promise<void> {
+export function dismissExplorationSuggestion(id: string, reason: string): Promise<void> {
   return api<void>(`/exploration-runs/suggestions/${id}/dismissal`, {
     method: "POST",
     body: JSON.stringify({ reason }),
@@ -313,12 +303,9 @@ export function resolveCandidateGap(
   etag: string,
   notes: string,
 ): Promise<CandidateGap> {
-  return api<CandidateGap>(
-    `/investment-candidates/${candidateId}/gaps/${gapId}/resolution`,
-    {
-      method: "POST",
-      headers: { "If-Match": etag },
-      body: JSON.stringify({ notes }),
-    },
-  );
+  return api<CandidateGap>(`/investment-candidates/${candidateId}/gaps/${gapId}/resolution`, {
+    method: "POST",
+    headers: { "If-Match": etag },
+    body: JSON.stringify({ notes }),
+  });
 }

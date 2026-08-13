@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import hashlib
-import json
 import logging
 import re
 from datetime import UTC, datetime, timedelta
@@ -13,22 +11,24 @@ import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
+from temporalio.api.enums.v1 import TaskQueueType
+from temporalio.api.taskqueue.v1 import TaskQueue
+from temporalio.api.workflowservice.v1 import DescribeTaskQueueRequest
 from temporalio.client import (
     Client,
     RPCError,
-    Schedule,
-    ScheduleActionStartWorkflow,
     ScheduleIntervalSpec,
-    ScheduleOverlapPolicy,
-    SchedulePolicy,
     ScheduleSpec,
-    ScheduleState,
     ScheduleUpdate,
 )
 
-from apps.api.dependencies import get_async_session, get_temporal_client
+from apps.api.dependencies import get_temporal_client
 from apps.api.security import AuthContext, actor_uuid, require_permission
+from apps.scheduler.policy import is_managed_schedule_id
+from database.core import get_async_session
 from database.models.schedule_history import ScheduleRunHistory
+from ia_investing.application.audit_service import AuditService
+from ia_investing.settings import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -57,54 +57,21 @@ async def _log_schedule_audit(
     schedule_id: str,
     meta: dict[str, Any] | None = None,
 ) -> None:
-    from database.models.audit import AuditLogEntry
-
     tenant_id = auth.organization_id or UUID(int=0)
     audit_action = _SCHEDULE_AUDIT_MAP.get(action, "execute")
-
-    prev_hash_result = await session.execute(
-        sa.select(AuditLogEntry.hash)
-        .where(AuditLogEntry.tenant_id == tenant_id)
-        .order_by(AuditLogEntry.timestamp.desc())
-        .limit(1)
-    )
-    prev_hash = prev_hash_result.scalar_one_or_none()
-
-    now = datetime.now(UTC)
-    changes = meta or {}
-    metadata = {"schedule_id": schedule_id}
-    raw = (
-        str(prev_hash or "")
-        + now.isoformat()
-        + str(actor_uuid(auth) or "")
-        + audit_action
-        + "schedule"
-        + ""
-        + json.dumps(changes, sort_keys=True, default=str)
-        + json.dumps(metadata, sort_keys=True)
-    )
-    entry_hash = hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-    entry = AuditLogEntry(
-        tenant_id=tenant_id,
+    await AuditService(session, tenant_id).log(
         actor_id=actor_uuid(auth),
         action=audit_action,
         resource_type="schedule",
-        resource_id=None,
-        changes=changes,
-        meta_data=metadata,
-        http_method=action.upper() if action in ("pause", "resume", "trigger", "delete", "update") else None,
-        hash_prev=prev_hash,
-        hash=entry_hash,
-        timestamp=now,
+        changes=meta or {},
+        metadata={"schedule_id": schedule_id, "schedule_action": action},
     )
-    session.add(entry)
 
 
 SCHEDULE_META: dict[str, dict[str, str]] = {
     "news-collection-": {"category": "news", "description": "Coleta de noticias RSS"},
     "news-dedup-cleanup": {"category": "news", "description": "Limpeza de eventos duplicados"},
-    "outbox-dispatch-recovery": {"category": "operations", "description": "Recovery do outbox de operacoes"},
+    "operation-outbox-dispatch": {"category": "operations", "description": "Dispatch do outbox de operacoes"},
     "cvm-dfp-": {"category": "data", "description": "Ingestao de dados CVM"},
     "paper-reconciliation-": {"category": "portfolio", "description": "Reconciliacao diaria de paper trading"},
     "paper-valuation-": {"category": "portfolio", "description": "Publicacao diaria de NAV"},
@@ -123,7 +90,7 @@ def _enrich_schedule(data: dict[str, Any]) -> dict[str, Any]:
     else:
         data["category"] = "other"
         data["description"] = sid
-    data["is_default"] = False
+    data["is_default"] = is_managed_schedule_id(sid)
     return data
 
 
@@ -167,6 +134,7 @@ class ScheduleActionResponseV1(BaseModel):
 
     schedule_id: str
     message: str
+    triggered_at: datetime | None = None
 
 
 class DeleteScheduleResponseV1(BaseModel):
@@ -180,19 +148,6 @@ class UpdateIntervalRequestV1(BaseModel):
     every_minutes: int | None = Field(default=None, ge=1, le=10080)
     every_hours: int | None = Field(default=None, ge=1, le=720)
     every_days: int | None = Field(default=None, ge=1, le=365)
-
-
-class CreateScheduleRequestV1(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    schedule_id: str = Field(min_length=1, max_length=200, pattern=r"^[a-zA-Z0-9_-]+$")
-    workflow_type: str = Field(min_length=1, max_length=200)
-    task_queue: str = Field(default="research-agents", min_length=1, max_length=200)
-    input_data: dict[str, Any] = Field(default_factory=dict)
-    every_minutes: int | None = Field(default=None, ge=1, le=10080)
-    every_hours: int | None = Field(default=None, ge=1, le=720)
-    every_days: int | None = Field(default=None, ge=1, le=365)
-    paused: bool = False
 
 
 class ScheduleRunV1(BaseModel):
@@ -287,11 +242,7 @@ def _parse_schedule_description(description: Any) -> dict[str, Any]:
         "created_at": _safe_get(info_obj, "created_at"),
         "last_updated_at": _safe_get(info_obj, "last_updated_at"),
         "last_run_at": None,
-        "info": {
-            "running_workflows": _safe_get(info_obj, "running_workflows", 0),
-        }
-        if info_obj
-        else None,
+        "info": {"running_workflows": len(_safe_get(info_obj, "running_actions", []) or [])} if info_obj else None,
     }
 
     recent_actions = _safe_get(info_obj, "recent_actions", []) if info_obj else []
@@ -313,9 +264,17 @@ def _validate_schedule_id(schedule_id: str) -> str:
 def _handle_temporal_error(exc: Exception, schedule_id: str) -> None:
     if isinstance(exc, RPCError):
         from temporalio.service import RPCStatusCode
-        if exc.status == RPCStatusCode.NOT_FOUND:
+
+        status = exc.status
+        status_name = getattr(status, "name", str(status)).lower()
+        if status == RPCStatusCode.NOT_FOUND or status_name == "not_found":
             raise HTTPException(status_code=404, detail=f"Schedule not found: {schedule_id}") from exc
-        if exc.status in (RPCStatusCode.DEADLINE_EXCEEDED, RPCStatusCode.UNAVAILABLE):
+        if status == RPCStatusCode.ALREADY_EXISTS or status_name == "already_exists":
+            raise HTTPException(status_code=409, detail=f"Schedule already exists: {schedule_id}") from exc
+        if status in (RPCStatusCode.DEADLINE_EXCEEDED, RPCStatusCode.UNAVAILABLE) or status_name in {
+            "deadline_exceeded",
+            "unavailable",
+        }:
             raise HTTPException(status_code=503, detail=f"Temporal unavailable: {exc.status}") from exc
         raise HTTPException(status_code=502, detail=f"Temporal RPC error: {exc.status}") from exc
     logger.exception("Unexpected error for schedule %s", schedule_id)
@@ -331,7 +290,7 @@ async def list_schedules(
 ) -> list[ScheduleSummaryV1]:
     all_schedules: list[ScheduleSummaryV1] = []
     all_raw: list[dict[str, Any]] = []
-    iterator = await client.list_schedules()  # type: ignore[attr-defined]
+    iterator = await client.list_schedules()
     async for description in iterator:
         data = _enrich_schedule(_parse_schedule_description(description))
         all_raw.append(data)
@@ -356,61 +315,6 @@ async def list_schedules(
     return sliced
 
 
-@router.post("", response_model=ScheduleActionResponseV1, status_code=201)
-async def create_schedule(
-    body: CreateScheduleRequestV1,
-    _auth: AuthContext = Depends(require_permission("schedules:manage")),
-    client: Client = Depends(get_temporal_client),
-    session: AsyncSession = Depends(get_async_session),
-) -> ScheduleActionResponseV1:
-    if body.every_minutes is not None:
-        every = timedelta(minutes=body.every_minutes)
-    elif body.every_hours is not None:
-        every = timedelta(hours=body.every_hours)
-    elif body.every_days is not None:
-        every = timedelta(days=body.every_days)
-    else:
-        raise HTTPException(status_code=400, detail="Provide every_minutes, every_hours, or every_days")
-
-    schedule = Schedule(
-        action=ScheduleActionStartWorkflow(
-            body.workflow_type,
-            body.input_data,
-            id=f"{body.schedule_id}-workflow",
-            task_queue=body.task_queue,
-        ),
-        spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
-        policy=SchedulePolicy(
-            overlap=ScheduleOverlapPolicy.SKIP,
-            catchup_window=timedelta(hours=1),
-            pause_on_failure=True,
-        ),
-        state=ScheduleState(paused=body.paused),
-    )
-
-    try:
-        await client.create_schedule(body.schedule_id, schedule)
-    except Exception as exc:
-        if "already" in str(exc).lower():
-            raise HTTPException(status_code=409, detail=f"Schedule '{body.schedule_id}' already exists") from exc
-        _handle_temporal_error(exc, body.schedule_id)
-
-    await _log_schedule_audit(
-        session,
-        _auth,
-        "create",
-        body.schedule_id,
-        {
-            "workflow_type": body.workflow_type,
-            "task_queue": body.task_queue,
-            "interval": str(every),
-        },
-    )
-    await session.commit()
-    logger.info("Created schedule %s (workflow=%s)", body.schedule_id, body.workflow_type)
-    return ScheduleActionResponseV1(schedule_id=body.schedule_id, message=f"Schedule created: {body.workflow_type}")
-
-
 class ReconcileResponseV1(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -422,8 +326,9 @@ class ReconcileResponseV1(BaseModel):
 
 @router.post("/reconcile", response_model=ReconcileResponseV1)
 async def reconcile_schedules_endpoint(
-    _auth: AuthContext = Depends(require_permission("schedules:manage")),
+    auth: AuthContext = Depends(require_permission("schedules:manage")),
     client: Client = Depends(get_temporal_client),
+    session: AsyncSession = Depends(get_async_session),
 ) -> ReconcileResponseV1:
     if _reconcile_lock.locked():
         raise HTTPException(status_code=409, detail="Reconcile already in progress")
@@ -431,7 +336,10 @@ async def reconcile_schedules_endpoint(
     async with _reconcile_lock:
         from apps.scheduler.temporal_schedules import reconcile_configured_schedules
 
-        results = await reconcile_configured_schedules(client=client)
+        results = await reconcile_configured_schedules(client=client, settings=get_settings())
+
+    await _log_schedule_audit(session, auth, "update", "managed-schedules", {"results": results})
+    await session.commit()
 
     created = [k for k, v in results.items() if v == "created"]
     updated = [k for k, v in results.items() if v == "updated"]
@@ -506,6 +414,8 @@ async def update_schedule_interval(
     session: AsyncSession = Depends(get_async_session),
 ) -> ScheduleActionResponseV1:
     _validate_schedule_id(schedule_id)
+    if is_managed_schedule_id(schedule_id):
+        raise HTTPException(status_code=409, detail="Managed schedule interval is controlled by configuration")
     if body.every_minutes is not None:
         every = timedelta(minutes=body.every_minutes)
     elif body.every_hours is not None:
@@ -546,15 +456,45 @@ async def trigger_schedule(
     session: AsyncSession = Depends(get_async_session),
 ) -> ScheduleActionResponseV1:
     _validate_schedule_id(schedule_id)
+    triggered_at = datetime.now(UTC)
     try:
         handle = client.get_schedule_handle(schedule_id)
+        description = await handle.describe()
+        running_actions = _safe_get(_safe_get(description, "info"), "running_actions", []) or []
+        if running_actions:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Schedule already has a running workflow: {schedule_id}",
+            )
+
+        action = _safe_get(_safe_get(description, "schedule"), "action")
+        task_queue = _safe_get(action, "task_queue")
+        if task_queue:
+            pollers = await client.workflow_service.describe_task_queue(
+                DescribeTaskQueueRequest(
+                    namespace=client.namespace,
+                    task_queue=TaskQueue(name=task_queue),
+                    task_queue_type=TaskQueueType.TASK_QUEUE_TYPE_WORKFLOW,
+                )
+            )
+            if not pollers.pollers:
+                raise HTTPException(
+                    status_code=503,
+                    detail=f"No worker is polling task queue: {task_queue}",
+                )
         await handle.trigger()
+    except HTTPException:
+        raise
     except Exception as exc:
         _handle_temporal_error(exc, schedule_id)
     await _log_schedule_audit(session, _auth, "trigger", schedule_id)
     await session.commit()
     logger.info("Triggered schedule %s", schedule_id)
-    return ScheduleActionResponseV1(schedule_id=schedule_id, message="Schedule triggered successfully")
+    return ScheduleActionResponseV1(
+        schedule_id=schedule_id,
+        message="Schedule triggered successfully",
+        triggered_at=triggered_at,
+    )
 
 
 @router.delete("/{schedule_id}", response_model=DeleteScheduleResponseV1)
@@ -565,6 +505,8 @@ async def delete_schedule(
     session: AsyncSession = Depends(get_async_session),
 ) -> DeleteScheduleResponseV1:
     _validate_schedule_id(schedule_id)
+    if is_managed_schedule_id(schedule_id):
+        raise HTTPException(status_code=409, detail="Managed schedules cannot be deleted")
     try:
         handle = client.get_schedule_handle(schedule_id)
         await handle.delete()

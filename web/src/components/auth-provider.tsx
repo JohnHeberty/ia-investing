@@ -78,31 +78,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const login = useCallback(
-    async (email: string, returnTo?: string) => {
-      const params = new URLSearchParams();
-      if (returnTo) params.set("return_to", returnTo);
-      const qs = params.toString();
+  const login = useCallback(async (email: string, returnTo?: string) => {
+    const params = new URLSearchParams();
+    if (returnTo) params.set("return_to", returnTo);
+    const qs = params.toString();
 
-      const response = await fetch(`/api/auth/login${qs ? `?${qs}` : ""}`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
+    const response = await fetch(`/api/auth/login${qs ? `?${qs}` : ""}`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
 
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error((data as { error?: string }).error || "Login failed");
-      }
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error((data as { error?: string }).error || "Login failed");
+    }
 
-      const result = await response.json() as { return_to?: string };
-      setUser(null);
-      setLoading(true);
-      window.location.href = result.return_to || returnTo || "/";
-    },
-    [],
-  );
+    const result = (await response.json()) as { return_to?: string };
+    setUser(null);
+    setLoading(true);
+    window.location.href = result.return_to || returnTo || "/";
+  }, []);
 
   const logout = useCallback(async () => {
     try {

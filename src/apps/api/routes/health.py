@@ -33,12 +33,14 @@ async def deep_health() -> HealthCheckResponse:
         checks["database"] = f"error: {exc}"
 
     settings = get_settings()
+    client = HttpClient(timeout=5.0)
     try:
-        client = HttpClient(timeout=5.0)
         await client.get_text(f"{settings.storage_endpoint}/minio/health/live")
         checks["s3"] = "ok"
     except Exception as exc:
         checks["s3"] = f"error: {exc}"
+    finally:
+        await client.close()
 
     healthy = all(v == "ok" for v in checks.values())
     return HealthCheckResponse(status="healthy" if healthy else "degraded", checks=checks)

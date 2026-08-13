@@ -29,9 +29,7 @@ async def create_domain_audit_entry(
     This is a convenience wrapper for callers that previously used AuditLog directly.
     It computes the hash chain automatically.
     """
-    await session.execute(
-        sa.text("SELECT pg_advisory_xact_lock(hashtext(:tid))"), {"tid": str(tenant_id)}
-    )
+    await session.execute(sa.text("SELECT pg_advisory_xact_lock(hashtext(:tid))"), {"tid": str(tenant_id)})
     result = await session.execute(
         sa.select(AuditLogEntry.hash)
         .where(AuditLogEntry.tenant_id == tenant_id)

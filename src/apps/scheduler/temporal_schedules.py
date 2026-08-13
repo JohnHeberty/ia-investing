@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -13,10 +14,12 @@ from temporalio.client import (
     ScheduleOverlapPolicy,
     SchedulePolicy,
     ScheduleSpec,
+    ScheduleState,
     ScheduleUpdate,
 )
 from temporalio.contrib.opentelemetry import TracingInterceptor
 
+from apps.scheduler.policy import is_managed_schedule_id
 from ia_investing.orchestration.workflows import (  # type: ignore[attr-defined]
     DispatchOperationsWorkflow,
     ExtractNewsInput,
@@ -30,16 +33,24 @@ from ia_investing.orchestration.workflows import (  # type: ignore[attr-defined]
     PaperValuationInput,
     PaperValuationWorkflow,
 )
-from ia_investing.settings import get_settings
+from ia_investing.settings import Settings, get_settings
 from observability import setup_telemetry
+from workflows._news_dedup import NewsDedupInput, NewsDedupWorkflow
 
 logger = logging.getLogger(__name__)
+
+_SHA256_PATTERN = re.compile(r"^[0-9a-fA-F]{64}$")
 
 
 @dataclass(frozen=True, slots=True)
 class ScheduleDefinition:
     schedule_id: str
     schedule: Schedule
+
+
+def _validate_interval(every: timedelta) -> None:
+    if every <= timedelta(0):
+        raise ValueError("schedule interval must be positive")
 
 
 def cvm_schedule_definition(
@@ -51,6 +62,9 @@ def cvm_schedule_definition(
     every: timedelta = timedelta(days=1),
     task_queue: str = "data-ingestion",
 ) -> ScheduleDefinition:
+    _validate_interval(every)
+    if not cnpj or not issuer_id:
+        raise ValueError("CNPJ and issuer ID are required")
     schedule_id = f"cvm-dfp-{issuer_id}-{year}-{statement_type}".lower()
     workflow_input = IngestCVMInput(
         cnpj=cnpj,
@@ -74,6 +88,7 @@ def cvm_schedule_definition(
                 catchup_window=timedelta(hours=1),
                 pause_on_failure=True,
             ),
+            state=ScheduleState(paused=False),
         ),
     )
 
@@ -85,6 +100,7 @@ def paper_reconciliation_schedule_definition(
     every: timedelta = timedelta(days=1),
     task_queue: str = "portfolio-risk",
 ) -> ScheduleDefinition:
+    _validate_interval(every)
     if not portfolio_id or not organization_id:
         raise ValueError("portfolio and organization IDs are required")
     schedule_id = f"paper-reconciliation-{portfolio_id}".lower()
@@ -103,6 +119,7 @@ def paper_reconciliation_schedule_definition(
                 catchup_window=timedelta(hours=1),
                 pause_on_failure=True,
             ),
+            state=ScheduleState(paused=False),
         ),
     )
 
@@ -115,6 +132,7 @@ def paper_valuation_schedule_definition(
     every: timedelta = timedelta(days=1),
     task_queue: str = "portfolio-risk",
 ) -> ScheduleDefinition:
+    _validate_interval(every)
     if not portfolio_id or not portfolio_version_id or not organization_id:
         raise ValueError("portfolio, version, and organization IDs are required")
     schedule_id = f"paper-valuation-{portfolio_id}".lower()
@@ -133,6 +151,7 @@ def paper_valuation_schedule_definition(
                 catchup_window=timedelta(hours=1),
                 pause_on_failure=True,
             ),
+            state=ScheduleState(paused=False),
         ),
     )
 
@@ -146,7 +165,8 @@ def paper_rebalance_schedule_definition(
     every: timedelta = timedelta(days=7),
     task_queue: str = "portfolio-risk",
 ) -> ScheduleDefinition:
-    if not portfolio_id or not portfolio_version_id or len(input_sha256) != 64:
+    _validate_interval(every)
+    if not portfolio_id or not portfolio_version_id or not _SHA256_PATTERN.fullmatch(input_sha256):
         raise ValueError("portfolio, version, and a SHA-256 input hash are required")
     schedule_id = f"paper-rebalance-{portfolio_id}".lower()
     return ScheduleDefinition(
@@ -155,8 +175,11 @@ def paper_rebalance_schedule_definition(
             action=ScheduleActionStartWorkflow(
                 PaperRebalanceWorkflow.run,
                 PaperRebalanceInput(
-                    portfolio_id, portfolio_version_id, input_sha256,
-                    approval_timeout_seconds, schedule_id=schedule_id,
+                    portfolio_id,
+                    portfolio_version_id,
+                    input_sha256,
+                    approval_timeout_seconds,
+                    schedule_id=schedule_id,
                 ),
                 id=schedule_id,
                 task_queue=task_queue,
@@ -167,6 +190,7 @@ def paper_rebalance_schedule_definition(
                 catchup_window=timedelta(hours=1),
                 pause_on_failure=True,
             ),
+            state=ScheduleState(paused=False),
         ),
     )
 
@@ -179,6 +203,9 @@ def news_collection_schedule_definition(
     analyze_limit: int = 10,
     task_queue: str = "research-agents",
 ) -> ScheduleDefinition:
+    _validate_interval(every)
+    if not issuer_id:
+        raise ValueError("issuer ID is required")
     schedule_id = f"news-collection-{issuer_id}".lower()
     return ScheduleDefinition(
         schedule_id=schedule_id,
@@ -200,6 +227,7 @@ def news_collection_schedule_definition(
                 catchup_window=timedelta(hours=1),
                 pause_on_failure=False,
             ),
+            state=ScheduleState(paused=False),
         ),
     )
 
@@ -207,15 +235,24 @@ def news_collection_schedule_definition(
 def news_dedup_schedule_definition(
     *,
     every: timedelta = timedelta(hours=24),
+    lookback_hours: int = 24,
+    batch_size: int = 500,
     task_queue: str = "research-agents",
 ) -> ScheduleDefinition:
+    _validate_interval(every)
+    if lookback_hours < 1 or batch_size < 1:
+        raise ValueError("news dedup lookback and batch size must be positive")
     schedule_id = "news-dedup-cleanup"
     return ScheduleDefinition(
         schedule_id=schedule_id,
         schedule=Schedule(
             action=ScheduleActionStartWorkflow(
-                DispatchOperationsWorkflow.run,
-                {"batch_size": 50, "schedule_id": schedule_id},
+                NewsDedupWorkflow.run,
+                NewsDedupInput(
+                    schedule_id=schedule_id,
+                    lookback_hours=lookback_hours,
+                    batch_size=batch_size,
+                ),
                 id=schedule_id,
                 task_queue=task_queue,
             ),
@@ -225,16 +262,18 @@ def news_dedup_schedule_definition(
                 catchup_window=timedelta(hours=1),
                 pause_on_failure=True,
             ),
+            state=ScheduleState(paused=False),
         ),
     )
 
 
 def outbox_recovery_schedule_definition(
     *,
-    every: timedelta = timedelta(minutes=30),
+    every: timedelta = timedelta(minutes=1),
     task_queue: str = "research-agents",
 ) -> ScheduleDefinition:
-    schedule_id = "outbox-dispatch-recovery"
+    _validate_interval(every)
+    schedule_id = "operation-outbox-dispatch"
     return ScheduleDefinition(
         schedule_id=schedule_id,
         schedule=Schedule(
@@ -250,17 +289,14 @@ def outbox_recovery_schedule_definition(
                 catchup_window=timedelta(minutes=15),
                 pause_on_failure=True,
             ),
+            state=ScheduleState(paused=False),
         ),
     )
-
-
-_PRESERVE_PREFIXES = ("equity-exploration-",)
 
 
 async def reconcile_schedules(
     client: Client,
     definitions: list[ScheduleDefinition],
-    preserve_prefixes: tuple[str, ...] = _PRESERVE_PREFIXES,
 ) -> dict[str, str]:
     results: dict[str, str] = {}
     known_ids: set[str] = set()
@@ -279,28 +315,24 @@ async def reconcile_schedules(
             await handle.update(_updater)
             results[definition.schedule_id] = "updated"
 
-    # Delete stale schedules not in definitions (preserving externally managed prefixes)
-    try:
-        iterator = await client.list_schedules()  # type: ignore[attr-defined]
-        async for desc in iterator:
-            if desc.id in known_ids:
-                continue
-            if any(desc.id.startswith(p) for p in preserve_prefixes):
-                continue
-            try:
-                handle = client.get_schedule_handle(desc.id)
-                await handle.delete()
-                results[desc.id] = "deleted"
-            except Exception:
-                logger.warning("Failed to delete stale schedule %s", desc.id)
-    except Exception:
-        logger.warning("Failed to list schedules for stale cleanup")
+    # Only declaratively managed schedules may be removed. External, legacy, and
+    # organization-owned equity-exploration schedules are deliberately preserved.
+    iterator = await client.list_schedules()
+    async for desc in iterator:
+        if desc.id in known_ids or not is_managed_schedule_id(desc.id):
+            continue
+        handle = client.get_schedule_handle(desc.id)
+        await handle.delete()
+        results[desc.id] = "deleted"
 
     return results
 
 
-async def reconcile_configured_schedules(client: Client | None = None) -> dict[str, str]:
-    settings = get_settings()
+async def reconcile_configured_schedules(
+    client: Client | None = None,
+    settings: Settings | None = None,
+) -> dict[str, str]:
+    settings = settings or get_settings()
     if client is None:
         if settings.telemetry.enabled:
             setup_telemetry("ia-investing-scheduler", settings.telemetry.otlp_endpoint)

@@ -17,11 +17,9 @@ export function usePageView() {
 }
 
 export function useClickTracking(target: string, metadata?: Record<string, unknown>) {
-  const metadataRef = useRef(metadata);
-  metadataRef.current = metadata;
   return useCallback(() => {
-    telemetry.track("click", target, metadataRef.current);
-  }, [target]);
+    telemetry.track("click", target, metadata);
+  }, [target, metadata]);
 }
 
 export function useFormTracking(formName: string) {
@@ -29,8 +27,11 @@ export function useFormTracking(formName: string) {
     onSubmit: useCallback(() => {
       telemetry.track("form_submit", formName);
     }, [formName]),
-    onError: useCallback((errors: Record<string, unknown>) => {
-      telemetry.track("form_error", formName, { errors: Object.keys(errors) });
-    }, [formName]),
+    onError: useCallback(
+      (errors: Record<string, unknown>) => {
+        telemetry.track("form_error", formName, { errors: Object.keys(errors) });
+      },
+      [formName],
+    ),
   };
 }

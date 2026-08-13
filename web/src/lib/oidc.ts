@@ -192,11 +192,7 @@ export function safeReturnTo(url: string | null): string {
     const parsed = new URL(url, "http://localhost");
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "/";
     const allowedHosts = new Set(
-      [
-        "localhost",
-        "127.0.0.1",
-        process.env.NEXT_PUBLIC_APP_HOST,
-      ].filter(Boolean),
+      ["localhost", "127.0.0.1", process.env.NEXT_PUBLIC_APP_HOST].filter(Boolean),
     );
     if (parsed.hostname && !allowedHosts.has(parsed.hostname)) {
       return "/";

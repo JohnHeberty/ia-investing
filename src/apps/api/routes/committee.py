@@ -295,9 +295,9 @@ async def start_voting(
         resource_id=session_id,
         changes={"action": "start_voting"},
     )
-    return CommitteeVotingResponse(
-        id=str(session.id), state=session.state, proposals=session.agenda.get("proposals", [])
-    )
+    raw_proposals = (session.agenda or {}).get("proposals", [])
+    proposals = raw_proposals if isinstance(raw_proposals, list) else []
+    return CommitteeVotingResponse(id=str(session.id), state=session.state, proposals=proposals)
 
 
 @router.post("/sessions/{session_id}/vote", response_model=CommitteeVoteResponse)
@@ -385,7 +385,14 @@ async def publish_decision(
         session=service._session,
         tenant_id=auth.organization_id,
         actor_id=safe_uuid(auth.subject),
-        action="approve" if body.decision == "approve" else "reject",
+        action={
+            "approve": "approve",
+            "approve_with_conditions": "approve_with_conditions",
+            "reject": "reject",
+            "request_more_information": "request_more_information",
+            "defer": "defer",
+            "watchlist": "watchlist",
+        }[body.decision],
         resource_type="committee_decision",
         resource_id=session_id,
         changes={"decision": body.decision},
@@ -393,6 +400,6 @@ async def publish_decision(
     return CommitteePublishResponse(
         id=str(session.id),
         state=session.state,
-        decision=session.decision,
+        decision=session.decision or body.decision,
         published_at=session.published_at.isoformat() if session.published_at else None,
     )

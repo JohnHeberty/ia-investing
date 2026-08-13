@@ -88,11 +88,13 @@ async def create_agent_run(
     trace_id: Annotated[str | None, Header(alias="X-Trace-ID")] = None,
     session: AsyncSession = Depends(get_async_session),
 ) -> AgentRunV1:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
     current_span = trace.get_current_span()
     otel_trace_id = current_span.get_span_context().trace_id
     try:
         run = await AgentRuntimeService(session).create_run(
-            organization_id=auth.organization_id,  # type: ignore[arg-type]
+            organization_id=auth.organization_id,
             capability=body.capability,
             case_id=body.case_id,
             input_payload=body.input,
@@ -137,6 +139,8 @@ async def list_agent_runs(
     auth: AuthContext = Depends(require_permission("agent_runs:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[AgentRunV1]:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
     stmt = (
         sa.select(AgentRuntimeRun)
         .where(AgentRuntimeRun.organization_id == auth.organization_id)
@@ -156,6 +160,8 @@ async def get_agent_run(
     auth: AuthContext = Depends(require_permission("agent_runs:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> AgentRunV1:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
     run = await AgentRuntimeService(session).get_run(run_id, organization_id=auth.organization_id)
     if run is None:
         raise HTTPException(status_code=404, detail="agent run not found")
@@ -171,6 +177,8 @@ async def decide_agent_approval(
     correlation_id: UUID | None = Header(default=None, alias="X-Correlation-ID"),
     session: AsyncSession = Depends(get_async_session),
 ) -> ApprovalV1:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
     try:
         approval = await AgentRuntimeService(session).decide_approval(
             approval_id=approval_id,

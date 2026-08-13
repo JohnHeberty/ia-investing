@@ -27,7 +27,10 @@ async function getEcharts() {
 export function useEchart(buildOption: () => EChartOption | null, deps: unknown[]) {
   const chartRef = useRef<HTMLDivElement>(null);
   const buildOptionRef = useRef(buildOption);
-  buildOptionRef.current = buildOption;
+
+  useEffect(() => {
+    buildOptionRef.current = buildOption;
+  }, [buildOption]);
 
   useEffect(() => {
     const el = chartRef.current;
@@ -38,28 +41,32 @@ export function useEchart(buildOption: () => EChartOption | null, deps: unknown[
 
     let disposed = false;
 
-    getEcharts().then((mod) => {
-      if (disposed || !el) return;
+    getEcharts()
+      .then((mod) => {
+        if (disposed || !el) return;
 
-      const chart = mod.init(el);
-      chart.setOption(option);
+        const chart = mod.init(el);
+        chart.setOption(option);
 
-      const handleResize = () => chart.resize();
-      window.addEventListener("resize", handleResize);
+        const handleResize = () => chart.resize();
+        window.addEventListener("resize", handleResize);
 
-      el.__echartsCleanup = () => {
-        window.removeEventListener("resize", handleResize);
-        chart.dispose();
-      };
-    }).catch((err: unknown) => {
-      console.error("[useEchart] Failed to load echarts:", err);
-    });
+        el.__echartsCleanup = () => {
+          window.removeEventListener("resize", handleResize);
+          chart.dispose();
+        };
+      })
+      .catch((err: unknown) => {
+        console.error("[useEchart] Failed to load echarts:", err);
+      });
 
     return () => {
       disposed = true;
       el.__echartsCleanup?.();
       el.__echartsCleanup = undefined;
     };
+    // The caller controls chart rebuilds through the explicit dependency list.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
   return chartRef;

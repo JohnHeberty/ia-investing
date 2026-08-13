@@ -52,16 +52,17 @@ export function useMacro() {
   const macroData = macroQuery.data;
   const sources = Array.isArray(sourceHealthQuery.data) ? sourceHealthQuery.data : [];
 
-  const macroSeries: MacroSeries[] = macroData?.indicators?.map((ind) => ({
-    id: ind.id,
-    name: ind.indicator_name,
-    value: ind.value !== null ? String(ind.value) : null,
-    source: ind.source,
-    status: ind.value !== null ? "ok" : "missing",
-    lastUpdated: ind.published_at ?? ind.period_date,
-    frequency: ind.unit ?? "—",
-    unit: ind.unit ?? "",
-  })) ?? [];
+  const macroSeries: MacroSeries[] =
+    macroData?.indicators?.map((ind) => ({
+      id: ind.id,
+      name: ind.indicator_name,
+      value: ind.value !== null ? String(ind.value) : null,
+      source: ind.source,
+      status: ind.value !== null ? "ok" : "missing",
+      lastUpdated: ind.published_at ?? ind.period_date,
+      frequency: ind.unit ?? "—",
+      unit: ind.unit ?? "",
+    })) ?? [];
 
   const staleFromHealth = sources.filter(
     (s) => s.status === "stale" || s.status === "never_succeeded",
@@ -77,18 +78,19 @@ export function useMacro() {
   const ipca = _find(["ipca", "inflação"]);
   const usdBrl = _find(["usd", "dólar", "usdbrl"]);
 
-  const staleSeries = macroSeries.filter((s) => s.status === "stale").length +
-    (staleFromHealth > 0 ? 1 : 0);
+  const staleSeries =
+    macroSeries.filter((s) => s.status === "stale").length + (staleFromHealth > 0 ? 1 : 0);
   const missingSeries = macroSeries.filter((s) => s.status === "missing").length;
 
-  const latestAsOf = macroSeries.length > 0
-    ? macroSeries
-        .filter((s) => s.lastUpdated)
-        .reduce((latest, s) => {
-          const d = new Date(s.lastUpdated!).getTime();
-          return d > latest ? d : latest;
-        }, 0)
-    : null;
+  const latestAsOf =
+    macroSeries.length > 0
+      ? macroSeries
+          .filter((s) => s.lastUpdated)
+          .reduce((latest, s) => {
+            const d = new Date(s.lastUpdated!).getTime();
+            return d > latest ? d : latest;
+          }, 0)
+      : null;
 
   const dataState: DataState = computeDataState(
     macroQuery.isLoading,

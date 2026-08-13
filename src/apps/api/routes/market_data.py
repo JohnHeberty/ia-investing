@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -24,7 +25,7 @@ async def fetch_price(
     _auth: AuthContext = Depends(get_auth_context),
 ) -> dict[str, Any] | None:
     """Fetch current price for a single ticker."""
-    return get_current_price(ticker)
+    return await asyncio.to_thread(get_current_price, ticker)
 
 
 @router.post("/prices")
@@ -33,7 +34,7 @@ async def fetch_prices(
     _auth: AuthContext = Depends(get_auth_context),
 ) -> dict[str, Any]:
     """Fetch current prices for multiple tickers."""
-    return get_current_prices(tickers)
+    return await asyncio.to_thread(get_current_prices, tickers)
 
 
 @router.get("/history/{ticker}")
@@ -44,7 +45,7 @@ async def fetch_history(
     _auth: AuthContext = Depends(get_auth_context),
 ) -> list[dict[str, Any]]:
     """Fetch historical price data."""
-    return get_historical_prices(ticker, period=period, interval=interval)
+    return await asyncio.to_thread(get_historical_prices, ticker, period=period, interval=interval)
 
 
 @router.get("/fundamentals/{ticker}")
@@ -53,7 +54,7 @@ async def fetch_fundamentals(
     _auth: AuthContext = Depends(get_auth_context),
 ) -> dict[str, Any] | None:
     """Fetch fundamental data for a ticker."""
-    return get_fundamentals(ticker)
+    return await asyncio.to_thread(get_fundamentals, ticker)
 
 
 @router.get("/financials/{ticker}")
@@ -62,4 +63,4 @@ async def fetch_financials(
     _auth: AuthContext = Depends(get_auth_context),
 ) -> dict[str, Any] | None:
     """Fetch financial statements for a ticker."""
-    return get_financial_statements(ticker)
+    return await asyncio.to_thread(get_financial_statements, ticker)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import uuid
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,6 +38,8 @@ async def get_rebalance_service(
     session: AsyncSession = Depends(get_async_session),
     auth: AuthContext = Depends(require_permission("rebalance:*")),
 ) -> RebalanceService:
+    if auth.organization_id is None:
+        raise HTTPException(status_code=403, detail="organization context is required")
     return RebalanceService(session, organization_id=auth.organization_id)
 
 

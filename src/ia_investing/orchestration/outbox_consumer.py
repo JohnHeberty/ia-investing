@@ -78,7 +78,12 @@ class OutboxConsumer:
                     published_count += 1
                 except Exception:
                     self._retry_counts[event_key] = self._retry_counts.get(event_key, 0) + 1
-                    logger.exception("Failed to publish event %s (attempt %d/%d)", event.id, self._retry_counts[event_key], self._max_retries)
+                    logger.exception(
+                        "Failed to publish event %s (attempt %d/%d)",
+                        event.id,
+                        self._retry_counts[event_key],
+                        self._max_retries,
+                    )
 
             await session.commit()
             logger.debug("outbox_consumer published %d/%d events", published_count, len(events))

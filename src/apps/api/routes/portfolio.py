@@ -158,7 +158,7 @@ async def delete_portfolio(
             portfolio_id, organization_id=auth.organization_id
         )
     except RuntimeError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not deleted:
         raise HTTPException(status_code=404, detail="Portfolio not found")
     if auth.organization_id:
@@ -284,6 +284,8 @@ async def run_optimization(
         raise map_error(exc) from exc
     except ValueError as exc:
         raise map_error(exc) from exc
+    if run is None:
+        raise HTTPException(status_code=404, detail="Optimization run not found")
     await _audit._audit(
         session=session,
         tenant_id=auth.organization_id,

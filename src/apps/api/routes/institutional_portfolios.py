@@ -15,6 +15,7 @@ from apps.api.dependencies import get_operation_service
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from database.models.portfolio_domain import InstitutionalBacktestRun, ModelPortfolio
+from database.models.portfolio_optimization import BacktestConfig
 from ia_investing.application.backtests import InstitutionalBacktestService
 from ia_investing.application.institutional_portfolio import (
     InstitutionalPortfolioService,
@@ -684,6 +685,8 @@ async def list_backtests(
 ) -> list[BacktestRunV1]:
     stmt = (
         sa.select(InstitutionalBacktestRun)
+        .join(BacktestConfig, BacktestConfig.id == InstitutionalBacktestRun.config_id)
+        .where(BacktestConfig.organization_id == auth.organization_id)
         .order_by(InstitutionalBacktestRun.created_at.desc())
         .limit(limit)
         .offset(offset)

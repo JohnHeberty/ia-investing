@@ -5,6 +5,9 @@ from datetime import timedelta
 
 from temporalio import workflow
 
+with workflow.unsafe.imports_passed_through():
+    from workflows._schedule_run import complete_schedule_run, fail_schedule_run, start_schedule_run
+
 
 @dataclass(frozen=True, slots=True)
 class PaperRebalanceInput:
@@ -32,31 +35,28 @@ class PaperRebalanceWorkflow:
 
     @workflow.run
     async def run(self, command: PaperRebalanceInput) -> PaperRebalanceResult:
-        if command.approval_timeout_seconds <= 0:
-            raise ValueError("approval timeout must be positive")
+        await start_schedule_run(command.schedule_id)
         try:
-            await workflow.wait_condition(
-                lambda: self._state != "awaiting_approval",
-                timeout=timedelta(seconds=command.approval_timeout_seconds),
-            )
-        except TimeoutError:
-            self._state = "expired"
+            if command.approval_timeout_seconds <= 0:
+                raise ValueError("approval timeout must be positive")
+            try:
+                await workflow.wait_condition(
+                    lambda: self._state != "awaiting_approval",
+                    timeout=timedelta(seconds=command.approval_timeout_seconds),
+                )
+            except TimeoutError:
+                self._state = "expired"
+        except Exception as exc:
+            await fail_schedule_run(command.schedule_id, exc)
+            raise
 
-        if command.schedule_id:
-            await workflow.execute_activity(
-                "record_schedule_run",
-                {
-                    "schedule_id": command.schedule_id,
-                    "workflow_id": workflow.info().workflow_id,
-                    "status": "completed" if self._state == "approved_for_paper" else "failed",
-                    "started_at": workflow.info().start_time.isoformat(),
-                    "result_summary": {
-                        "portfolio_id": command.portfolio_id,
-                        "state": self._state,
-                    },
-                },
-                start_to_close_timeout=timedelta(seconds=10),
-            )
+        status = "completed" if self._state == "approved_for_paper" else "failed"
+        await complete_schedule_run(
+            command.schedule_id,
+            {"portfolio_id": command.portfolio_id, "state": self._state},
+            status=status,
+            error_message=None if status == "completed" else f"rebalance ended in state {self._state}",
+        )
 
         return PaperRebalanceResult(command.portfolio_id, command.portfolio_version_id, self._state)
 
