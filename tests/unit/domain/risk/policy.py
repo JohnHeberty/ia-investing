@@ -29,7 +29,7 @@ from ia_investing.domain.policy import (
     validate_policy_stage_transition,
 )
 
-FIXTURES = Path(__file__).parents[1] / "fixtures" / "policy"
+FIXTURES = Path(__file__).parents[3] / "fixtures" / "policy"
 
 
 class FixtureHttpClient:

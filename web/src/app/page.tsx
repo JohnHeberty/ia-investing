@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  BriefcaseBusiness,
+  Database,
+  Landmark,
+  Radar,
+  RefreshCw,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -188,37 +196,43 @@ export default function MissionControlPage() {
         <div className="grid grid-3 mt-16 gap-12">
           <Link href="/portfolios" className="no-underline text-inherit">
             <div className="card feature-tile">
-              <div className="fw-500 feature-tile-title">📊 Carteiras</div>
+              <BriefcaseBusiness className="feature-tile-icon" aria-hidden="true" />
+              <div className="fw-500 feature-tile-title">Carteiras</div>
               <div className="muted text-sm">Gerenciar carteiras e posições</div>
             </div>
           </Link>
           <Link href="/rebalance" className="no-underline text-inherit">
             <div className="card feature-tile">
-              <div className="fw-500 feature-tile-title">⚖️ Rebalance</div>
+              <RefreshCw className="feature-tile-icon" aria-hidden="true" />
+              <div className="fw-500 feature-tile-title">Rebalance</div>
               <div className="muted text-sm">Análise de drift e rebalanceamento</div>
             </div>
           </Link>
           <Link href="/risk" className="no-underline text-inherit">
             <div className="card feature-tile">
-              <div className="fw-500 feature-tile-title">🛡️ Risco</div>
+              <ShieldCheck className="feature-tile-icon" aria-hidden="true" />
+              <div className="fw-500 feature-tile-title">Risco</div>
               <div className="muted text-sm">Monitoramento de risco</div>
             </div>
           </Link>
           <Link href="/opportunities" className="no-underline text-inherit">
             <div className="card feature-tile">
-              <div className="fw-500 feature-tile-title">🎯 Oportunidades</div>
+              <Radar className="feature-tile-icon" aria-hidden="true" />
+              <div className="fw-500 feature-tile-title">Oportunidades</div>
               <div className="muted text-sm">Análise de candidatos</div>
             </div>
           </Link>
           <Link href="/committee" className="no-underline text-inherit">
             <div className="card feature-tile">
-              <div className="fw-500 feature-tile-title">🏛️ Comitê</div>
+              <Landmark className="feature-tile-icon" aria-hidden="true" />
+              <div className="fw-500 feature-tile-title">Comitê</div>
               <div className="muted text-sm">Decisões de investimento</div>
             </div>
           </Link>
           <Link href="/data-quality" className="no-underline text-inherit">
             <div className="card feature-tile">
-              <div className="fw-500 feature-tile-title">✅ Qualidade</div>
+              <Database className="feature-tile-icon" aria-hidden="true" />
+              <div className="fw-500 feature-tile-title">Qualidade</div>
               <div className="muted text-sm">Monitoramento de dados</div>
             </div>
           </Link>

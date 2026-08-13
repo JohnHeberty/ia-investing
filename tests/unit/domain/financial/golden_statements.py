@@ -14,7 +14,7 @@ import pytest
 
 from connectors.cvm._financials import FinancialEntry, StatementType, _parse, parse_value_status
 
-FIXTURES_DIR = Path(__file__).resolve().parent.parent / "fixtures" / "cvm"
+FIXTURES_DIR = Path(__file__).resolve().parents[3] / "fixtures" / "cvm"
 
 
 # ---------------------------------------------------------------------------

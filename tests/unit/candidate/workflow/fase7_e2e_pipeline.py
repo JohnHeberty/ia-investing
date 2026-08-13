@@ -30,7 +30,7 @@ from ia_investing.domain.policy_historical import (
     get_historical_outcomes,
 )
 
-FIXTURES = Path(__file__).parents[1] / "fixtures" / "policy"
+FIXTURES = Path(__file__).parents[3] / "fixtures" / "policy"
 
 
 # ── DOU XML parsing ──────────────────────────────────────────────────────────

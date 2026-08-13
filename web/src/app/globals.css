@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
-  --font-sans: "Segoe UI", Inter, system-ui, sans-serif;
-  --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --font-sans: var(--font-sans-loaded), "Segoe UI", system-ui, sans-serif;
+  --font-mono: var(--font-mono-loaded), "Cascadia Code", "SFMono-Regular", Consolas, monospace;
   --bg: #07100e;
   --surface: #0d1916;
   --surface-2: #12221d;
@@ -1400,10 +1400,6 @@ select:focus-visible {
 }
 
 /* ── Button sizes ── */
-.button.sm {
-  font-size: 11px;
-  padding: 7px 11px;
-}
 .btn-icon {
   min-width: 44px;
   min-height: 44px;
@@ -1460,9 +1456,6 @@ select:focus-visible {
 .mt-6 {
   margin-top: 6px;
 }
-.mb-4 {
-  margin-bottom: 4px;
-}
 
 /* ── Line Height ── */
 .lh-relaxed {
@@ -1511,43 +1504,14 @@ select:focus-visible {
 }
 
 /* ── Additional Utilities ── */
-.text-center {
-  text-align: center;
-}
-.text-muted {
-  color: var(--muted);
-}
-.text-accent {
-  color: var(--accent);
-}
-.text-red {
-  color: var(--red);
-}
-.text-green {
-  color: var(--green);
-}
 .overflow-hidden {
   overflow: hidden;
 }
 .overflow-y-auto {
   overflow-y: auto;
 }
-.overflow-x-auto {
-  overflow-x: auto;
-}
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.items-center {
-  align-items: center;
-}
 .justify-center {
   justify-content: center;
-}
-.justify-end {
-  justify-content: flex-end;
 }
 .w-full {
   width: 100%;
@@ -1583,10 +1547,6 @@ select:focus-visible {
 .button.md {
   font-size: 12px;
   padding: 6px 12px;
-}
-.button.danger {
-  background: var(--red);
-  color: white;
 }
 
 /* ── Schedule Category Dot ── */
@@ -1707,21 +1667,6 @@ select:focus-visible {
 }
 
 /* ── Additional Utility Classes ── */
-.text-center {
-  text-align: center;
-}
-.text-muted {
-  color: var(--muted);
-}
-.text-accent {
-  color: var(--accent);
-}
-.text-red {
-  color: var(--red);
-}
-.text-amber {
-  color: var(--amber);
-}
 .text-blue {
   color: var(--blue);
 }
@@ -1746,14 +1691,8 @@ select:focus-visible {
 .text-24 {
   font-size: 24px;
 }
-.fw-600 {
-  font-weight: 600;
-}
 .fw-650 {
   font-weight: 650;
-}
-.w-full {
-  width: 100%;
 }
 .w-12 {
   width: 12px;
@@ -1788,28 +1727,8 @@ select:focus-visible {
 .p-24 {
   padding: 24px;
 }
-.overflow-x-auto {
-  overflow-x: auto;
-}
-.overflow-hidden {
-  overflow: hidden;
-}
-.truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.hidden {
-  display: none;
-}
 .inline-flex {
   display: inline-flex;
-}
-.cursor-pointer {
-  cursor: pointer;
-}
-.border-none {
-  border: none;
 }
 .border-transparent {
   border: 1px solid transparent;
@@ -1886,12 +1805,6 @@ select:focus-visible {
 .flex-1 {
   flex: 1;
 }
-.absolute {
-  position: absolute;
-}
-.relative {
-  position: relative;
-}
 .transition-border {
   transition: border-color 0.2s;
 }
@@ -1906,6 +1819,12 @@ select:focus-visible {
 .feature-tile {
   padding: 16px;
   cursor: pointer;
+}
+.feature-tile-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--accent);
+  margin-bottom: 12px;
 }
 .feature-tile-title {
   margin-bottom: 4px;

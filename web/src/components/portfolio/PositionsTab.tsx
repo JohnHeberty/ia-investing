@@ -1,4 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import { Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { AddPositionForm } from "@/components/add-position-form";
 import type { PortfolioPosition } from "@/hooks/use-portfolios";
 
@@ -84,13 +85,14 @@ export function PositionsTab({
             recomendações.
           </span>
           <button
-            className="button sm"
+            className="button sm flex items-center gap-4"
             onClick={() => {
               refetchRecommendations();
               setNeedsRecalc(false);
             }}
           >
-            🔄 Recalcular
+            <RefreshCw className="w-12 h-12" aria-hidden="true" />
+            Recalcular
           </button>
         </div>
       )}
@@ -246,6 +248,7 @@ export function PositionsTab({
                     <div className="flex gap-4">
                       <button
                         className="button secondary sm"
+                        aria-label={`Editar posição ${pos.ticker_symbol}`}
                         onClick={() => {
                           setEditingPosition(pos.id);
                           setEditForm({
@@ -256,18 +259,19 @@ export function PositionsTab({
                           });
                         }}
                       >
-                        ✏️
+                        <Pencil className="w-12 h-12" aria-hidden="true" />
                       </button>
                       <button
                         className="button secondary sm"
                         style={{ color: "var(--red)" }}
+                        aria-label={`Excluir posição ${pos.ticker_symbol}`}
                         onClick={async () => {
                           if (!confirm(`Excluir posição ${pos.ticker_symbol}?`)) return;
                           await deletePosition.mutateAsync({ portfolioId, positionId: pos.id });
                           setNeedsRecalc(true);
                         }}
                       >
-                        🗑️
+                        <Trash2 className="w-12 h-12" aria-hidden="true" />
                       </button>
                     </div>
                   </td>

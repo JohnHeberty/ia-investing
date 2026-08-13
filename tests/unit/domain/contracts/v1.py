@@ -19,7 +19,7 @@ from ia_investing.contracts.v1 import (
     Inference,
 )
 
-FIXTURES = Path(__file__).parents[1] / "fixtures" / "contracts" / "v1"
+FIXTURES = Path(__file__).parents[3] / "fixtures" / "contracts" / "v1"
 
 
 def make_analysis() -> CanonicalAnalysisV1:

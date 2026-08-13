@@ -29,7 +29,7 @@ from ia_investing.application.financial_facts import (
     FinancialFactRepository,
 )
 
-FIXTURES_DIR = Path(__file__).resolve().parents[1] / "fixtures" / "cvm"
+FIXTURES_DIR = Path(__file__).resolve().parents[2] / "fixtures" / "cvm"
 
 # ---------------------------------------------------------------------------
 # Helpers

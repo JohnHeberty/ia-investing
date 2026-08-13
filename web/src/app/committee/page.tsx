@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense } from "react";
-import { ShieldCheck } from "lucide-react";
+import { AlertTriangle, ShieldCheck } from "lucide-react";
 
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
@@ -132,7 +132,7 @@ function CommitteeContent() {
               className="flex items-center gap-12 border-top text-sm"
               style={{ padding: "8px 0" }}
             >
-              <span className="text-amber">⚠</span>
+              <AlertTriangle size={14} className="text-amber" aria-hidden="true" />
               <span className="muted">
                 {totalConflicts} conflito{totalConflicts !== 1 ? "s" : ""} declarado
                 {totalConflicts !== 1 ? "s" : ""} — membro{totalConflicts !== 1 ? "s" : ""} impedido

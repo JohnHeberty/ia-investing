@@ -51,7 +51,7 @@ def test_mock_provider_deterministic_output() -> None:
     key = MockProvider.request_key("gpt-4", "You are a financial analyst.", payload)
     provider = MockProvider({key: {"answer": "Revenue is BRL 10B."}})
 
-    first_result = asyncio.get_event_loop().run_until_complete(
+    first_result = asyncio.run(
         provider.complete(
             model="gpt-4",
             instructions="You are a financial analyst.",
@@ -59,7 +59,7 @@ def test_mock_provider_deterministic_output() -> None:
             output_schema={},
         )
     )
-    second_result = asyncio.get_event_loop().run_until_complete(
+    second_result = asyncio.run(
         provider.complete(
             model="gpt-4",
             instructions="You are a financial analyst.",
