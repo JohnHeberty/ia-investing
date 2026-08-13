@@ -215,36 +215,36 @@ function ScheduleRow({
       </td>
       <td style={{ fontSize: 13 }}>{nextRun ?? "—"}</td>
       <td>
-        <div className="flex gap-6">
+        <div className="flex gap-8">
           <button
-            className="button xs"
+            className="button sm"
             onClick={() => onTogglePause(schedule.schedule_id, schedule.paused)}
             type="button"
             disabled={isOwnMutating}
             aria-label={schedule.paused ? "Retomar" : "Pausar"}
           >
-            {isOwnMutating ? <RefreshCw size={12} className="animate-spin" /> : schedule.paused ? <Play size={12} /> : <Pause size={12} />}
+            {isOwnMutating ? <RefreshCw size={16} className="animate-spin" /> : schedule.paused ? <Play size={16} /> : <Pause size={16} />}
           </button>
           <button
-            className="button xs"
+            className="button sm"
             onClick={() => trigger()}
             type="button"
             disabled={isOwnMutating || isTriggerBusy}
             aria-label="Executar agora"
           >
             {isTriggerBusy
-              ? <RefreshCw size={12} className="animate-spin" />
-              : <Play size={12} />}
+              ? <RefreshCw size={16} className="animate-spin" />
+              : <Play size={16} />}
           </button>
           {!schedule.is_default && (
             <button
-              className="button xs"
+              className="button sm"
               onClick={() => onDelete(schedule.schedule_id)}
               type="button"
               disabled={isOwnMutating}
               aria-label="Excluir"
             >
-              <Trash2 size={12} />
+              <Trash2 size={16} />
             </button>
           )}
         </div>
