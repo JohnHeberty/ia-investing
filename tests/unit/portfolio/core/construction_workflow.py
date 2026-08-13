@@ -13,7 +13,7 @@ from ia_investing.domain.portfolio_decision import (
 )
 
 # Load _scorecard directly from file to avoid cvxpy via portfolio/__init__.py
-_scorecard_path = Path(__file__).resolve().parents[3] / "src" / "portfolio" / "_scorecard.py"
+_scorecard_path = Path(__file__).resolve().parents[4] / "src" / "portfolio" / "_scorecard.py"
 _spec = importlib.util.spec_from_file_location("_scorecard", _scorecard_path)
 _scorecard = importlib.util.module_from_spec(_spec)  # type: ignore[arg-type]
 sys.modules["_scorecard"] = _scorecard
