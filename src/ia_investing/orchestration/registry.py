@@ -15,6 +15,7 @@ from ia_investing.orchestration.activities.candidate_intelligence import CANDIDA
 from ia_investing.orchestration.activities.data_ingestion import DATA_INGESTION_ACTIVITIES
 from ia_investing.orchestration.activities.news_extraction import NEWS_EXTRACTION_ACTIVITIES
 from ia_investing.orchestration.activities.notifications import NOTIFICATION_ACTIVITIES
+from ia_investing.orchestration.activities.policy_extraction import POLICY_EXTRACTION_ACTIVITIES
 from ia_investing.orchestration.activities.operation_dispatch import OPERATION_DISPATCH_ACTIVITIES
 from ia_investing.orchestration.activities.paper_operations import PAPER_OPERATION_ACTIVITIES
 from ia_investing.orchestration.activities.portfolio_construction import (
@@ -29,6 +30,7 @@ from workflows._news_dedup import NewsDedupWorkflow
 from workflows._paper_rebalance import PaperRebalanceWorkflow
 from workflows._paper_reconciliation import PaperReconciliationWorkflow
 from workflows._paper_valuation import PaperValuationWorkflow
+from workflows._policy_event import PolicyCollectionWorkflow, PolicyEventWorkflow
 from workflows._portfolio_construction import PortfolioConstructionWorkflow
 from workflows._portfolio_optimization import PortfolioOptimizationWorkflow
 from workflows._portfolio_ranking import PortfolioRankingWorkflow
@@ -78,12 +80,15 @@ CAPABILITIES: dict[str, CapabilityDefinition] = {
             DispatchOperationsWorkflow,
             ExtractNewsWorkflow,
             NewsDedupWorkflow,
+            PolicyCollectionWorkflow,
+            PolicyEventWorkflow,
             *_CANDIDATE_WORKFLOWS,
         ),
         activities=(
             AGENT_RUNTIME_ACTIVITIES
             + OPERATION_DISPATCH_ACTIVITIES
             + NEWS_EXTRACTION_ACTIVITIES
+            + POLICY_EXTRACTION_ACTIVITIES
             + _CANDIDATE_ACTIVITIES
             + SCHEDULE_HISTORY_ACTIVITIES
         ),

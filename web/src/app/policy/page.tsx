@@ -1,144 +1,66 @@
 "use client";
 
 import { Suspense } from "react";
-
-import { AsOfIndicator, Badge, Metric, StatePanel } from "@/components/domain";
+import { Gavel } from "lucide-react";
+import { PolicyDataContext, usePolicyData, usePolicyValue } from "@/hooks/use-policy";
+import { AsOfIndicator, Badge, DomainTabs, Metric, StatePanel } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
-import { usePolicy } from "@/hooks/use-policy";
 
-function PolicyContent() {
-  const {
-    policyEvents,
-    materialEvents,
-    monitoredObjects,
-    staleSources,
-    isLoading,
-    isError,
-    dataState,
-  } = usePolicy();
-
-  if (isLoading) {
-    return (
-      <>
-        <div className="page-head">
-          <div>
-            <div className="eyebrow">Policy intelligence</div>
-            <h1>Fato, chance e impacto separados.</h1>
-            <p className="subtitle">
-              Tracker legislativo versionado, com fonte oficial, diff, intervalo e caminho de
-              exposição.
-            </p>
-          </div>
-        </div>
-        <section className="grid grid-4">
-          <LoadingSkeleton lines={4} />
-          <LoadingSkeleton lines={4} />
-          <LoadingSkeleton lines={4} />
-          <LoadingSkeleton lines={4} />
-        </section>
-        <section className="section-gap">
-          <LoadingSkeleton lines={6} />
-        </section>
-      </>
-    );
-  }
-
-  if (isError) {
-    return (
-      <>
-        <div className="page-head">
-          <div>
-            <div className="eyebrow">Policy intelligence</div>
-            <h1>Erro ao carregar dados de política</h1>
-          </div>
-        </div>
-        <DataStatePanel
-          state="error"
-          title="Erro ao carregar dados de política"
-          detail="Não foi possível acessar os eventos políticos. Verifique a conexão com a API."
-        />
-      </>
-    );
-  }
-
-  const hasLiveEvents = policyEvents.length > 0;
+function TrackerTab() {
+  const { events, materialEvents, monitoredObjects, staleSources } = usePolicyData();
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Policy intelligence</div>
-          <h1>Fato, chance e impacto separados.</h1>
-          <p className="subtitle">
-            Tracker legislativo versionado, com fonte oficial, diff, intervalo e caminho de
-            exposição.
-          </p>
-        </div>
-        <AsOfIndicator
-          freshness={
-            dataState === "stale"
-              ? "Desatualizado"
-              : hasLiveEvents
-                ? "Atual"
-                : "Fixtures sintéticas"
-          }
-        />
-      </div>
-
-      {dataState === "stale" && (
-        <div className="section-gap">
-          <StaleWarning source="policy/events" />
-        </div>
-      )}
-
-      <section className="grid grid-4 section-gap" aria-live="polite">
+      <section className="grid grid-4 section-gap" aria-label="Metricas de politica" aria-live="polite">
         <Metric
           label="Eventos materiais"
-          value={hasLiveEvents ? String(materialEvents.length) : "—"}
-          note={materialEvents.length > 0 ? "aguarda revisão" : "dado ausente não vira zero"}
+          value={String(materialEvents.length)}
+          note={materialEvents.length > 0 ? "aguarda revisao" : "dado ausente nao vira zero"}
           tone={materialEvents.length > 0 ? "warning" : undefined}
         />
         <Metric
           label="Objetos monitorados"
-          value={hasLiveEvents ? String(monitoredObjects) : "—"}
-          note={
-            hasLiveEvents
-              ? `${monitoredObjects} objeto${monitoredObjects !== 1 ? "s" : ""}`
-              : "dado ausente não vira zero"
-          }
+          value={String(monitoredObjects)}
+          note={`${monitoredObjects} objeto${monitoredObjects !== 1 ? "s" : ""}`}
         />
         <Metric
           label="Diffs novos"
-          value={hasLiveEvents ? String(materialEvents.length) : "—"}
+          value={String(materialEvents.length)}
           note="texto versionado"
         />
         <Metric
           label="Fontes stale"
-          value={hasLiveEvents ? String(staleSources) : "—"}
-          note={staleSources > 0 ? "requer atenção" : "todas atualizadas"}
+          value={String(staleSources)}
+          note={staleSources > 0 ? "requer atencao" : "todas atualizadas"}
           tone={staleSources > 0 ? "warning" : "positive"}
         />
       </section>
 
-      <section className="card card-pad section-gap" aria-live="polite">
+      <div className="card card-pad section-gap" aria-live="polite">
         <div className="card-title">
           <h2>Legislative tracker</h2>
-          <span>estágio ≠ probabilidade ≠ impacto</span>
+          <span>estagio != probabilidade != impacto</span>
         </div>
-        {hasLiveEvents ? (
-          <div className="table-wrap">
+        {events.length === 0 ? (
+          <DataStatePanel
+            state="missing"
+            title="Nenhum evento politico registrado"
+            detail="Tracker legislativo vazio. Eventos sao adicionados quando ha materialidade identificada."
+          />
+        ) : (
+          <div className="overflow-x-auto">
             <table className="table">
               <thead>
                 <tr>
                   <th>Objeto oficial</th>
-                  <th>Estágio jurídico</th>
+                  <th>Estagio juridico</th>
                   <th>Probabilidade</th>
-                  <th>Exposição</th>
+                  <th>Exposicao</th>
                   <th>Controle</th>
                 </tr>
               </thead>
               <tbody>
-                {policyEvents.map((event) => (
+                {events.map((event) => (
                   <tr key={event.id}>
                     <td>{event.object_name || event.title}</td>
                     <td>
@@ -166,63 +88,260 @@ function PolicyContent() {
               </tbody>
             </table>
           </div>
-        ) : (
-          <DataStatePanel
-            state="missing"
-            title="Nenhum evento político registrado"
-            detail="Tracker legislativo vazio. Eventos são adicionados quando há materialidade identificada."
-          />
         )}
-      </section>
-
-      <section className="grid grid-3 section-gap">
-        <article className="card card-pad">
-          <h2>Timeline versionada</h2>
-          <p className="subtitle">
-            Apresentado → Comissão. Diff: 1 adição, 1 remoção. Fonte e knowledge_at preservados.
-          </p>
-        </article>
-        <article className="card card-pad">
-          <h2>Matriz de exposição</h2>
-          <p className="subtitle">
-            Evento → setor → driver → métrica → emissor → tese → carteira, com confiança por aresta.
-          </p>
-        </article>
-        <article className="card card-pad">
-          <h2>Corroboração</h2>
-          <p className="subtitle">
-            Materialidade combina exposição, freshness e fontes corroborantes; ausência não reduz
-            chance.
-          </p>
-        </article>
-      </section>
+      </div>
 
       <div className="section-gap">
         <StatePanel
-          title="Sem alteração automática"
-          detail="Impacto material pausa no Temporal; tese e carteira permanecem imutáveis até decisão humana autorizada."
+          title="Sem alteracao automatica"
+          detail="Impacto material pausa no Temporal; tese e carteira permanecem imutiveis ate decisao humana autorizada."
         />
       </div>
     </>
   );
 }
 
+function AlertsTab() {
+  const { alerts, activeAlerts } = usePolicyData();
+
+  return (
+    <>
+      <section className="grid grid-4 section-gap" aria-label="Metricas de alertas" aria-live="polite">
+        <Metric label="Total" value={String(alerts.length)} note="alertas emitidos" />
+        <Metric
+          label="Ativos"
+          value={String(activeAlerts)}
+          note="requer acao"
+          tone={activeAlerts > 0 ? "warning" : undefined}
+        />
+        <Metric
+          label="Reconhecidos"
+          value={String(alerts.filter((a) => a.acknowledged_at && !a.resolved_at).length)}
+          note="em investigacao"
+        />
+        <Metric
+          label="Resolvidos"
+          value={String(alerts.filter((a) => a.resolved_at).length)}
+          note="encerrados"
+        />
+      </section>
+
+      <div className="card card-pad section-gap" aria-live="polite">
+        <h2 className="mb-16">Alertas</h2>
+        {alerts.length === 0 ? (
+          <div className="subtitle">Nenhum alerta emitido ainda.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Titulo</th>
+                  <th>Tipo</th>
+                  <th>Severidade</th>
+                  <th>Disparado em</th>
+                  <th>Reconhecido</th>
+                  <th>Resolvido</th>
+                </tr>
+              </thead>
+              <tbody>
+                {alerts.map((alert) => (
+                  <tr key={alert.id}>
+                    <td>{alert.title}</td>
+                    <td>
+                      <Badge tone="neutral">{alert.alert_type}</Badge>
+                    </td>
+                    <td>
+                      <Badge
+                        tone={
+                          alert.severity === "critical"
+                            ? "bad"
+                            : alert.severity === "high"
+                              ? "warn"
+                              : alert.severity === "medium"
+                                ? "warn"
+                                : "neutral"
+                        }
+                      >
+                        {alert.severity}
+                      </Badge>
+                    </td>
+                    <td>
+                      {alert.fired_at
+                        ? new Date(alert.fired_at).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"}
+                    </td>
+                    <td>
+                      <Badge tone={alert.acknowledged_at ? "good" : "warn"}>
+                        {alert.acknowledged_at ? "Sim" : "Nao"}
+                      </Badge>
+                    </td>
+                    <td>
+                      <Badge tone={alert.resolved_at ? "good" : "neutral"}>
+                        {alert.resolved_at ? "Sim" : "Nao"}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function ForecastsTab() {
+  const { forecasts } = usePolicyData();
+
+  return (
+    <>
+      <section className="grid grid-4 section-gap" aria-label="Metricas de previsoes" aria-live="polite">
+        <Metric label="Previsoes" value={String(forecasts.length)} note="modelos ativos" />
+        <Metric
+          label="Prob. media"
+          value={
+            forecasts.length > 0
+              ? `${(forecasts.reduce((s, f) => s + f.probability, 0) / forecasts.length * 100).toFixed(0)}%`
+              : "—"
+          }
+          note="entre todas as previsoes"
+        />
+      </section>
+
+      <div className="card card-pad section-gap" aria-live="polite">
+        <h2 className="mb-16">Previsoes</h2>
+        {forecasts.length === 0 ? (
+          <div className="subtitle">Nenhuma previsao disponivel.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Objeto</th>
+                  <th>Resultado alvo</th>
+                  <th>Probabilidade</th>
+                  <th>Intervalo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {forecasts.map((f) => (
+                  <tr key={f.id}>
+                    <td>{f.policy_object_id}</td>
+                    <td>{f.target_outcome}</td>
+                    <td>
+                      <Badge tone={f.probability > 0.6 ? "good" : f.probability > 0.3 ? "warn" : "neutral"}>
+                        {(f.probability * 100).toFixed(0)}%
+                      </Badge>
+                    </td>
+                    <td className="mono">
+                      {f.interval_low !== null && f.interval_high !== null
+                        ? `${(f.interval_low * 100).toFixed(0)}% – ${(f.interval_high * 100).toFixed(0)}%`
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+function GraphTab() {
+  return (
+    <div className="grid grid-3 section-gap">
+      <article className="card card-pad">
+        <h2>Timeline versionada</h2>
+        <p className="subtitle">
+          Apresentado {'->'} Comissao. Diff: 1 adicao, 1 remocao. Fonte e knowledge_at preservados.
+        </p>
+      </article>
+      <article className="card card-pad">
+        <h2>Matriz de exposicao</h2>
+        <p className="subtitle">
+          Evento {'->'} setor {'->'} driver {'->'} metrica {'->'} emissor {'->'} tese {'->'} carteira, com confianca por aresta.
+        </p>
+      </article>
+      <article className="card card-pad">
+        <h2>Corroboracao</h2>
+        <p className="subtitle">
+          Materialidade combina exposicao, freshness e fontes corroborantes; ausencia nao reduz chance.
+        </p>
+      </article>
+    </div>
+  );
+}
+
+function PolicyContent() {
+  const policyValue = usePolicyData();
+
+  if (policyValue.isLoading) {
+    return <LoadingSkeleton lines={8} />;
+  }
+
+  if (policyValue.isError) {
+    return (
+      <DataStatePanel
+        state="error"
+        title="Erro ao carregar dados de politica"
+        detail={
+          policyValue.error instanceof Error
+            ? policyValue.error.message
+            : String(policyValue.error ?? "Erro desconhecido")
+        }
+      />
+    );
+  }
+
+  return (
+    <div className="section-gap">
+      <header className="page-head">
+        <div className="eyebrow">
+          <Gavel size={14} /> Policy Intelligence
+        </div>
+        <h1>Fato, chance e impacto separados.</h1>
+        <div className="subtitle">
+          Tracker legislativo versionado, com fonte oficial, diff, intervalo e caminho de exposicao.
+          <AsOfIndicator />
+        </div>
+      </header>
+
+      {policyValue.dataState === "stale" && <StaleWarning source="policy/events" />}
+
+      <DomainTabs
+        label="Politica"
+        tabs={[
+          { id: "tracker", label: "Tracker", content: <TrackerTab /> },
+          { id: "alertas", label: "Alertas", content: <AlertsTab /> },
+          { id: "previsoes", label: "Previsoes", content: <ForecastsTab /> },
+          { id: "grafo", label: "Grafo", content: <GraphTab /> },
+        ]}
+      />
+    </div>
+  );
+}
+
 export default function PolicyPage() {
   return (
-    <Suspense
-      fallback={
-        <>
-          <div className="page-head">
-            <div>
-              <div className="eyebrow">Policy intelligence</div>
-              <h1>Fato, chance e impacto separados.</h1>
-            </div>
-          </div>
-          <LoadingSkeleton lines={6} />
-        </>
-      }
-    >
-      <PolicyContent />
+    <Suspense fallback={<LoadingSkeleton lines={8} />}>
+      <PolicyDataProvider />
     </Suspense>
+  );
+}
+
+function PolicyDataProvider() {
+  const value = usePolicyValue();
+  return (
+    <PolicyDataContext.Provider value={value}>
+      <PolicyContent />
+    </PolicyDataContext.Provider>
   );
 }

@@ -8,6 +8,8 @@ from workflows import (
     PaperRebalanceWorkflow,
     PaperReconciliationWorkflow,
     PaperValuationWorkflow,
+    PolicyCollectionWorkflow,
+    PolicyEventWorkflow,
     PortfolioConstructionWorkflow,
     PortfolioOptimizationWorkflow,
     PortfolioRankingWorkflow,
@@ -39,6 +41,8 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
         DispatchOperationsWorkflow,
         ExtractNewsWorkflow,
         NewsDedupWorkflow,
+        PolicyCollectionWorkflow,
+        PolicyEventWorkflow,
         CandidateOutboxDispatchWorkflow,
         CandidateAnalysisWorkflow,
         CandidateSourceValidationWorkflow,
@@ -79,3 +83,5 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
         for activity in ACTIVITIES_BY_CAPABILITY[Capability.RESEARCH_AGENTS]
     }
     assert "record_schedule_run" in research_activities
+    assert "fetch_policy_objects" in research_activities
+    assert "ingest_policy_objects" in research_activities

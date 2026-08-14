@@ -32,6 +32,8 @@ from ia_investing.orchestration.workflows import (  # type: ignore[attr-defined]
     PaperReconciliationWorkflow,
     PaperValuationInput,
     PaperValuationWorkflow,
+    PolicyCollectionInput,
+    PolicyCollectionWorkflow,
 )
 from ia_investing.settings import Settings, get_settings
 from observability import setup_telemetry
@@ -294,6 +296,36 @@ def outbox_recovery_schedule_definition(
     )
 
 
+def policy_collection_schedule_definition(
+    *,
+    authority: str,
+    every: timedelta = timedelta(hours=6),
+    task_queue: str = "research-agents",
+) -> ScheduleDefinition:
+    _validate_interval(every)
+    if not authority:
+        raise ValueError("authority is required")
+    schedule_id = f"policy-collection-{authority}".lower()
+    return ScheduleDefinition(
+        schedule_id=schedule_id,
+        schedule=Schedule(
+            action=ScheduleActionStartWorkflow(
+                PolicyCollectionWorkflow.run,
+                PolicyCollectionInput(authority=authority, schedule_id=schedule_id),
+                id=schedule_id,
+                task_queue=task_queue,
+            ),
+            spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
+            policy=SchedulePolicy(
+                overlap=ScheduleOverlapPolicy.SKIP,
+                catchup_window=timedelta(hours=2),
+                pause_on_failure=True,
+            ),
+            state=ScheduleState(paused=False),
+        ),
+    )
+
+
 async def reconcile_schedules(
     client: Client,
     definitions: list[ScheduleDefinition],
@@ -416,6 +448,15 @@ async def reconcile_configured_schedules(
                     input_sha256=settings.scheduler.paper_rebalance_input_sha256 or "",
                 ),
             ]
+        )
+
+    # --- Policy collection per authority ---
+    for authority in settings.scheduler.policy_authorities:
+        definitions.append(
+            policy_collection_schedule_definition(
+                authority=authority,
+                every=timedelta(hours=settings.scheduler.policy_collection_interval_hours),
+            )
         )
 
     return await reconcile_schedules(client, definitions)

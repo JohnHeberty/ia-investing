@@ -19,7 +19,14 @@ from workflows._paper_reconciliation import (  # noqa: E402
     PaperReconciliationWorkflow,
 )
 from workflows._paper_valuation import PaperValuationInput, PaperValuationResult, PaperValuationWorkflow  # noqa: E402
-from workflows._policy_event import PolicyEventInput, PolicyEventResult, PolicyEventWorkflow  # noqa: E402
+from workflows._policy_event import (  # noqa: E402
+    PolicyCollectionInput,
+    PolicyCollectionResult,
+    PolicyCollectionWorkflow,
+    PolicyEventInput,
+    PolicyEventResult,
+    PolicyEventWorkflow,
+)
 from workflows._portfolio_construction import (  # noqa: E402
     PipelineConfig,
     PortfolioConstructionInput,
@@ -68,6 +75,9 @@ __all__ = [
     "PaperValuationResult",
     "PaperValuationWorkflow",
     "PipelineConfig",
+    "PolicyCollectionInput",
+    "PolicyCollectionResult",
+    "PolicyCollectionWorkflow",
     "PolicyEventInput",
     "PolicyEventResult",
     "PolicyEventWorkflow",

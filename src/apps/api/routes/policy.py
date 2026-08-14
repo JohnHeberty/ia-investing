@@ -5,15 +5,22 @@ from decimal import Decimal
 from typing import Annotated
 from uuid import UUID
 
+import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
+from database.models.policy_intelligence import PolicyStageEvent, RegulatoryAction
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.macro import MacroSeriesService
-from ia_investing.application.policy_intelligence import PolicyIngestionService, PolicyIntelligenceQueryService
+from ia_investing.application.policy_intelligence import (
+    PolicyAlertService,
+    PolicyIngestionService,
+    PolicyIntelligenceQueryService,
+    ProbabilityForecastService,
+)
 
 router = APIRouter(prefix="/api/v1/policy", tags=["policy-intelligence"])
 macro_router = APIRouter(prefix="/api/v1/macro", tags=["macro-intelligence"])
@@ -117,6 +124,58 @@ class PolicyObjectVersionV1(BaseModel):
     created: bool
 
 
+class PolicyAlertV1(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    policy_object_id: UUID
+    alert_type: str
+    severity: str
+    title: str
+    description: str | None = None
+    fired_at: datetime
+    acknowledged_at: datetime | None = None
+    acknowledged_by: str | None = None
+    resolved_at: datetime | None = None
+    resolved_by: str | None = None
+
+
+class PolicyAlertResolveRequest(BaseModel):
+    notes: str = Field(min_length=3, max_length=4000)
+
+
+class PolicyForecastV1(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    policy_object_id: UUID
+    target_outcome: str
+    probability: Decimal
+    interval_low: Decimal | None = None
+    interval_high: Decimal | None = None
+
+
+class PolicyStageEventV1(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    policy_object_id: UUID
+    stage: str
+    occurred_at: datetime
+    knowledge_at: datetime
+
+
+class RegulatoryActionV1(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    policy_object_id: UUID
+    action_type: str
+    title: str
+    issued_at: datetime
+    authority: str
+
+
 def require_policy_read(auth: AuthContext) -> None:
     if "policy:read" not in auth.permissions and "portfolio:read" not in auth.permissions:
         raise HTTPException(status_code=403, detail="permission required: policy:read")
@@ -189,6 +248,130 @@ async def get_policy_graph(
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="institutional organization context is required")
     return await PolicyIntelligenceQueryService(session).graph(organization_id=auth.organization_id, as_of=as_of)
+
+
+# ---------------------------------------------------------------------------
+# Alerts
+# ---------------------------------------------------------------------------
+
+
+@router.get("/alerts", response_model=list[PolicyAlertV1])
+async def list_alerts(
+    policy_object_id: UUID | None = None,
+    status: str = "active",
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[PolicyAlertV1]:
+    require_policy_read(auth)
+    service = PolicyAlertService(session)
+    alerts = await service.list_alerts(
+        policy_object_id=policy_object_id,
+        status=status,
+    )
+    return [PolicyAlertV1.model_validate(a) for a in alerts]
+
+
+@router.post("/alerts/{alert_id}/acknowledge", response_model=PolicyAlertV1)
+async def acknowledge_alert(
+    alert_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> PolicyAlertV1:
+    service = PolicyAlertService(session)
+    try:
+        alert = await service.acknowledge(alert_id=alert_id, actor=auth.subject)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return PolicyAlertV1.model_validate(alert)
+
+
+@router.post("/alerts/{alert_id}/resolve", response_model=PolicyAlertV1)
+async def resolve_alert(
+    alert_id: UUID,
+    body: PolicyAlertResolveRequest,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> PolicyAlertV1:
+    service = PolicyAlertService(session)
+    try:
+        alert = await service.resolve(
+            alert_id=alert_id,
+            actor=auth.subject,
+            notes=body.notes,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return PolicyAlertV1.model_validate(alert)
+
+
+# ---------------------------------------------------------------------------
+# Forecasts
+# ---------------------------------------------------------------------------
+
+
+@router.get("/forecasts", response_model=list[PolicyForecastV1])
+async def list_forecasts(
+    policy_object_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[PolicyForecastV1]:
+    require_policy_read(auth)
+    service = ProbabilityForecastService(session)
+    forecasts = await service.list_forecasts(policy_object_id=policy_object_id)
+    return [PolicyForecastV1.model_validate(f) for f in forecasts]
+
+
+# ---------------------------------------------------------------------------
+# Stages
+# ---------------------------------------------------------------------------
+
+
+@router.get("/stages/{policy_object_id}", response_model=list[PolicyStageEventV1])
+async def get_stages(
+    policy_object_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[PolicyStageEventV1]:
+    require_policy_read(auth)
+    stmt = (
+        sa.select(PolicyStageEvent)
+        .where(PolicyStageEvent.policy_object_id == policy_object_id)
+        .order_by(PolicyStageEvent.occurred_at)
+    )
+    events = list((await session.execute(stmt)).scalars())
+    return [PolicyStageEventV1.model_validate(e) for e in events]
+
+
+# ---------------------------------------------------------------------------
+# Regulatory Actions
+# ---------------------------------------------------------------------------
+
+
+@router.get("/regulatory-actions", response_model=list[RegulatoryActionV1])
+async def list_regulatory_actions(
+    policy_object_id: UUID | None = None,
+    authority: str | None = None,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[RegulatoryActionV1]:
+    require_policy_read(auth)
+    stmt = sa.select(RegulatoryAction)
+    if policy_object_id is not None:
+        stmt = stmt.where(RegulatoryAction.policy_object_id == policy_object_id)
+    if authority is not None:
+        stmt = stmt.where(RegulatoryAction.authority == authority)
+    stmt = stmt.order_by(RegulatoryAction.issued_at.desc())
+    actions = list((await session.execute(stmt)).scalars())
+    return [RegulatoryActionV1.model_validate(a) for a in actions]
+
+
+# ---------------------------------------------------------------------------
+# Macro series
+# ---------------------------------------------------------------------------
 
 
 @macro_router.post("/series", response_model=MacroDefinitionV1, status_code=201)

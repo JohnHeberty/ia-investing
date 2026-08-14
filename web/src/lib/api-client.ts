@@ -55,6 +55,9 @@ function k(prefix: string, ...rest: unknown[]): unknown[] {
 
 export const queryKeys = {
   policyEvents: () => k("policyEvents"),
+  policyAlerts: () => k("policyAlerts"),
+  policyForecasts: () => k("policyForecasts"),
+  policySources: () => k("policySources"),
   modelPortfolios: (params?: { state?: string; limit?: number }) => k("modelPortfolios", params),
   modelPortfolio: (id: string) => k("modelPortfolio", id),
   agentRuns: (params?: { status?: string; agent_name?: string }) => k("agentRuns", params),

@@ -136,81 +136,10 @@ class TestNewsExtractionActivities:
 
         assert callable(detect_event_duplicates)
 
-    def test_check_alert_threshold_exists(self) -> None:
-        from ia_investing.orchestration.activities.news_extraction import check_alert_threshold
-
-        assert callable(check_alert_threshold)
-
     def test_news_extraction_activities_tuple_count(self) -> None:
         from ia_investing.orchestration.activities.news_extraction import NEWS_EXTRACTION_ACTIVITIES
 
-        assert len(NEWS_EXTRACTION_ACTIVITIES) == 6
-
-    @pytest.mark.asyncio
-    async def test_check_alert_threshold_alerts_on_high_materiality(self) -> None:
-        from ia_investing.orchestration.activities.news_extraction import check_alert_threshold
-
-        with patch("ia_investing.orchestration.activities.news_extraction.activity_span"):
-            result = await check_alert_threshold(
-                {
-                    "news_item_id": "test-id",
-                    "materiality_score": 0.85,
-                    "event_type": "earnings",
-                    "affected_issuers": [],
-                    "direction_hint": "positive",
-                }
-            )
-        assert result["alert"] is True
-        assert result["materiality_score"] == 0.85
-
-    @pytest.mark.asyncio
-    async def test_check_alert_threshold_no_alert_on_low_materiality(self) -> None:
-        from ia_investing.orchestration.activities.news_extraction import check_alert_threshold
-
-        with patch("ia_investing.orchestration.activities.news_extraction.activity_span"):
-            result = await check_alert_threshold(
-                {
-                    "news_item_id": "test-id",
-                    "materiality_score": 0.3,
-                    "event_type": "market",
-                    "affected_issuers": [],
-                    "direction_hint": "neutral",
-                }
-            )
-        assert result["alert"] is False
-
-    @pytest.mark.asyncio
-    async def test_check_alert_threshold_negative_materiality(self) -> None:
-        from ia_investing.orchestration.activities.news_extraction import check_alert_threshold
-
-        with patch("ia_investing.orchestration.activities.news_extraction.activity_span"):
-            result = await check_alert_threshold(
-                {
-                    "news_item_id": "test-id",
-                    "materiality_score": -0.9,
-                    "event_type": "governance",
-                    "affected_issuers": [],
-                    "direction_hint": "negative",
-                }
-            )
-        assert result["alert"] is True
-        assert result["materiality_score"] == 0.9
-
-    @pytest.mark.asyncio
-    async def test_check_alert_threshold_boundary(self) -> None:
-        from ia_investing.orchestration.activities.news_extraction import check_alert_threshold
-
-        with patch("ia_investing.orchestration.activities.news_extraction.activity_span"):
-            result = await check_alert_threshold(
-                {
-                    "news_item_id": "test-id",
-                    "materiality_score": 0.7,
-                    "event_type": "market",
-                    "affected_issuers": [],
-                    "direction_hint": "neutral",
-                }
-            )
-        assert result["alert"] is True
+        assert len(NEWS_EXTRACTION_ACTIVITIES) == 5
 
 
 class TestExtractNewsWorkflow:

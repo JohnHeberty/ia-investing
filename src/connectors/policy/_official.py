@@ -3,13 +3,16 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 from urllib.parse import urlparse
 
 from ..base import HttpClient, HttpClientProtocol
+
+logger = logging.getLogger(__name__)
 
 OFFICIAL_POLICY_HOSTS = frozenset(
     {
@@ -145,6 +148,70 @@ class OfficialPolicyClient:
             votes=tuple(parse_camara_vote(item) for item in _list_data(votes.json(), "votacoes")),
             raw_payloads=(detail, stages, actors, votes),
         )
+
+    async def senado_matters_batch(
+        self,
+        *,
+        matter_type: str | None = None,
+        since: date | None = None,
+        limit: int = 100,
+    ) -> list[OfficialPolicyRecord]:
+        """Fetch multiple matters from Senado API in a single call."""
+        url = "https://legis.senado.leg.br/dadosabertos/materia/lista"
+        params: dict[str, object] = {}
+        if matter_type is not None:
+            params["sigla"] = matter_type
+        if since is not None:
+            params["dataApresentacaoInicio"] = since.strftime("%d/%m/%Y")
+        params["itens"] = min(max(limit, 1), 250)
+
+        payload = await self._get(url, params=params, headers={"Accept": "application/json"})
+        document = payload.json()
+
+        materias = document.get("materias", document.get("materia", []))
+        if isinstance(materias, dict):
+            materias = [materias]
+        if not isinstance(materias, list):
+            raise ValueError("Senado batch response lacks the materias list")
+
+        records: list[OfficialPolicyRecord] = []
+        for item in materias:
+            if not isinstance(item, dict):
+                continue
+            try:
+                records.append(parse_senado_proposal(item))
+            except ValueError:
+                continue
+        return records
+
+    async def dou_acts_since(
+        self,
+        *,
+        since: date,
+        section: str | None = None,
+    ) -> list[FetchedOfficialPayload]:
+        """Fetch DOU acts since a given date using XML aggregation."""
+        from datetime import timedelta
+
+        payloads: list[FetchedOfficialPayload] = []
+        current = since
+        today = date.today()
+
+        while current <= today:
+            date_str = current.strftime("%Y-%m-%d")
+            # DOU XML URLs follow a known pattern
+            base = "https://www.in.gov.br/servicos/download"
+            params: dict[str, object] = {"date": date_str}
+            if section:
+                params["section"] = section
+            try:
+                payload = await self._get(base, params=params, media_type="application/xml")
+                payloads.append(payload)
+            except Exception:
+                logger.debug("DOU fetch failed for %s", date_str)
+            current += timedelta(days=1)
+
+        return payloads
 
     async def dou_xml(self, url: str) -> FetchedOfficialPayload:
         return await self._get(url, headers={"Accept": "application/xml"}, media_type="application/xml")

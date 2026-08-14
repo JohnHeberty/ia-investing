@@ -133,6 +133,9 @@ class SchedulerSettings(BaseModel):
     news_dedup_interval_hours: int = Field(default=24, ge=1, le=168)
     outbox_recovery_interval_minutes: int = Field(default=1, ge=1, le=1440)
 
+    policy_collection_interval_hours: int = Field(default=6, ge=1, le=168)
+    policy_authorities: list[str] = Field(default_factory=lambda: ["camara", "senado", "dou"])
+
 
 class WorkerSettings(BaseModel):
     capability: Literal[

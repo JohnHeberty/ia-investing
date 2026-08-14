@@ -3,18 +3,22 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime
-from uuid import UUID
+from decimal import Decimal
+from uuid import UUID, uuid4
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from database.models._utils import utcnow
 from database.models.policy_intelligence import (
+    PolicyAlert,
     PolicyGraphEdge,
     PolicyGraphNode,
     PolicyObject,
     PolicyObjectVersion,
     PolicyProbabilityForecast,
     PolicyStageEvent,
+    RegulatoryAction,
 )
 from ia_investing.domain.policy import canonical_policy_key, text_diff
 
@@ -231,3 +235,182 @@ class PolicyIntelligenceQueryService:
                 ).all()
             )
         return {"nodes": nodes, "edges": edges, "as_of": as_of}
+
+
+class RegulatoryActionService:
+    """Service for ingesting regulatory actions from government sources."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def ingest(
+        self,
+        *,
+        policy_object_id: UUID,
+        action_type: str,
+        title: str,
+        issued_at: datetime,
+        rectifies: bool = False,
+        authority: str,
+        external_id: str,
+        source_object_version_id: UUID,
+        content_sha256: str,
+        metadata_payload: dict[str, object],
+        knowledge_at: datetime,
+        actor_subject: str,
+        permissions: frozenset[str],
+    ) -> RegulatoryAction:
+        """Ingest a regulatory action (DOU act, BCB normative, etc.)."""
+        if "policy:write" not in permissions and "data:write" not in permissions:
+            raise PermissionError("permission required: policy:write or data:write")
+
+        policy_obj = await self.session.get(PolicyObject, policy_object_id)
+        if policy_obj is None:
+            raise LookupError(f"policy object not found: {policy_object_id}")
+
+        action = RegulatoryAction(
+            id=uuid4(),
+            policy_object_id=policy_object_id,
+            action_type=action_type,
+            external_id=external_id.strip(),
+            title=title.strip(),
+            description="",
+            issued_at=issued_at,
+            rectifies=rectifies,
+            authority=authority.strip(),
+            content_sha256=content_sha256,
+            metadata_payload=metadata_payload,
+            knowledge_at=knowledge_at,
+            source_object_version_id=source_object_version_id,
+        )
+        self.session.add(action)
+        await self.session.flush()
+        return action
+
+
+class ProbabilityForecastService:
+    """Service for creating and querying probability forecasts."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def create_forecast(
+        self,
+        *,
+        policy_object_id: UUID,
+        target_outcome: str,
+        probability: Decimal,
+        interval_low: Decimal | None = None,
+        interval_high: Decimal | None = None,
+        factors: dict[str, object] | None = None,
+        methodology_version: str,
+        features_sha256: str,
+        assumptions: list[str] | None = None,
+        predicted_at: datetime,
+        knowledge_cutoff: datetime,
+    ) -> PolicyProbabilityForecast:
+        """Create a probability forecast for a policy outcome."""
+        if not (Decimal("0") <= probability <= Decimal("1")):
+            raise ValueError("probability must be between 0 and 1")
+        if interval_low is None:
+            interval_low = probability
+        if interval_high is None:
+            interval_high = probability
+        if not (Decimal("0") <= interval_low <= probability <= interval_high <= Decimal("1")):
+            raise ValueError("interval must satisfy 0 <= low <= probability <= high <= 1")
+
+        forecast = PolicyProbabilityForecast(
+            id=uuid4(),
+            policy_object_id=policy_object_id,
+            target_outcome=target_outcome.strip(),
+            probability=probability,
+            interval_low=interval_low,
+            interval_high=interval_high,
+            factors=factors or {},
+            methodology_version=methodology_version.strip(),
+            features_sha256=features_sha256,
+            assumptions=assumptions or [],
+            predicted_at=predicted_at,
+            knowledge_cutoff=knowledge_cutoff,
+        )
+        self.session.add(forecast)
+        await self.session.flush()
+        return forecast
+
+    async def list_forecasts(
+        self,
+        *,
+        policy_object_id: UUID,
+    ) -> list[PolicyProbabilityForecast]:
+        """List forecasts for a policy object."""
+        stmt = (
+            sa.select(PolicyProbabilityForecast)
+            .where(PolicyProbabilityForecast.policy_object_id == policy_object_id)
+            .order_by(PolicyProbabilityForecast.predicted_at.desc())
+        )
+        return list((await self.session.execute(stmt)).scalars())
+
+
+class PolicyAlertService:
+    """Service for managing policy alerts."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def list_alerts(
+        self,
+        *,
+        policy_object_id: UUID | None = None,
+        status: str = "active",
+    ) -> list[PolicyAlert]:
+        """List alerts, optionally filtered by policy object and status."""
+        stmt = sa.select(PolicyAlert)
+        if policy_object_id is not None:
+            stmt = stmt.where(PolicyAlert.policy_object_id == policy_object_id)
+        if status == "active":
+            stmt = stmt.where(PolicyAlert.resolved_at.is_(None))
+        elif status == "acknowledged":
+            stmt = stmt.where(
+                PolicyAlert.acknowledged_at.isnot(None),
+                PolicyAlert.resolved_at.is_(None),
+            )
+        elif status == "resolved":
+            stmt = stmt.where(PolicyAlert.resolved_at.isnot(None))
+        stmt = stmt.order_by(PolicyAlert.fired_at.desc())
+        return list((await self.session.execute(stmt)).scalars())
+
+    async def acknowledge(
+        self,
+        *,
+        alert_id: UUID,
+        actor: str,
+    ) -> PolicyAlert:
+        """Acknowledge an alert."""
+        alert = await self.session.get(PolicyAlert, alert_id)
+        if alert is None:
+            raise LookupError(f"alert not found: {alert_id}")
+        if alert.acknowledged_at is not None:
+            raise ValueError("alert already acknowledged")
+        alert.acknowledged_at = utcnow()
+        alert.acknowledged_by = actor
+        await self.session.flush()
+        return alert
+
+    async def resolve(
+        self,
+        *,
+        alert_id: UUID,
+        actor: str,
+        notes: str,
+    ) -> PolicyAlert:
+        """Resolve an alert."""
+        alert = await self.session.get(PolicyAlert, alert_id)
+        if alert is None:
+            raise LookupError(f"alert not found: {alert_id}")
+        if alert.resolved_at is not None:
+            raise ValueError("alert already resolved")
+        alert.resolved_at = utcnow()
+        alert.resolved_by = actor
+        alert.resolution_notes = notes
+        await self.session.flush()
+        return alert

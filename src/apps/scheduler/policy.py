@@ -9,6 +9,7 @@ MANAGED_SCHEDULE_PREFIXES = (
     "paper-reconciliation-",
     "paper-valuation-",
     "paper-rebalance-",
+    "policy-collection-",
 )
 
 

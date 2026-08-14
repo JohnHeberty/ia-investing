@@ -120,6 +120,7 @@ from .policy_intelligence import (  # noqa: F401
     MacroObservationRevision,
     MacroSeriesDefinition,
     PolicyActor,
+    PolicyAlert,
     PolicyCorroboration,
     PolicyGraphEdge,
     PolicyGraphNode,

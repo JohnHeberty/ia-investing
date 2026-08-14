@@ -286,3 +286,23 @@ class PolicyGraphEdge(Base):
         sa.CheckConstraint("status IN ('draft', 'approved', 'retired')", name="status_values"),
         sa.CheckConstraint("valid_to IS NULL OR valid_to > valid_from", name="valid_window"),
     )
+
+
+class PolicyAlert(Base):
+    __tablename__ = "policy_alerts"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    policy_object_id: Mapped[UUID] = mapped_column(sa.ForeignKey("policy_objects.id"), index=True)
+    alert_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
+    severity: Mapped[str] = mapped_column(sa.String(20), nullable=False)
+    title: Mapped[str] = mapped_column(sa.String(500), nullable=False)
+    description: Mapped[str | None] = mapped_column(sa.Text)
+    details: Mapped[dict[str, object] | None] = mapped_column(JSONB)
+    fired_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    acknowledged_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    acknowledged_by: Mapped[str | None] = mapped_column(sa.String(200))
+    resolved_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    resolved_by: Mapped[str | None] = mapped_column(sa.String(200))
+    resolution_notes: Mapped[str | None] = mapped_column(sa.Text)
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)

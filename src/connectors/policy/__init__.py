@@ -1,3 +1,5 @@
+from ._bcb_sgs import BCBSGSClient, SGSObservation
+from ._ibge_sidra import IBGESIDRAClient, SIDRATableMetadata
 from ._official import (
     OFFICIAL_POLICY_HOSTS,
     FetchedOfficialPayload,
@@ -19,13 +21,17 @@ from ._official import (
 
 __all__ = [
     "OFFICIAL_POLICY_HOSTS",
+    "BCBSGSClient",
     "FetchedOfficialPayload",
+    "IBGESIDRAClient",
     "OfficialLegislativeBundle",
     "OfficialPolicyActorRecord",
     "OfficialPolicyClient",
     "OfficialPolicyRecord",
     "OfficialPolicyStageRecord",
     "OfficialPolicyVoteRecord",
+    "SGSObservation",
+    "SIDRATableMetadata",
     "parse_camara_actor",
     "parse_camara_proposal",
     "parse_camara_stage",
