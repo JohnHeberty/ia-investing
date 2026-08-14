@@ -5,9 +5,10 @@ from __future__ import annotations
 import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
-from uuid import uuid4
+from uuid import UUID
 
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from temporalio import activity
 
 from database.core import session_scope
@@ -24,6 +25,84 @@ try:
     from ia_investing.application.policy_intelligence import PolicyIngestionService
 except ImportError:
     PolicyIngestionService = None  # type: ignore[assignment]
+
+
+SYNTHETIC_SHA256 = "a" * 64
+
+
+async def _ensure_pipeline_source_version(session: AsyncSession) -> UUID:
+    """Ensure a 'pipeline' source object and version exist for automated collection.
+
+    Returns the source_object_version_id to use for ingested records.
+    """
+    from database.models.data_foundation import DataSource, SourceLicense, SourceObject, SourceObjectVersion
+
+    # Find or create the pipeline internal license
+    pipeline_license = await session.scalar(select(SourceLicense).where(SourceLicense.code == "pipeline-internal"))
+    if pipeline_license is None:
+        pipeline_license = SourceLicense(
+            code="pipeline-internal",
+            name="Pipeline Internal",
+            terms_url=None,
+            permits_redistribution=False,
+            retention_days=None,
+        )
+        session.add(pipeline_license)
+        await session.flush()
+
+    # Find or create the pipeline data source
+    pipeline_source = await session.scalar(select(DataSource).where(DataSource.code == "policy-pipeline"))
+    if pipeline_source is None:
+        pipeline_source = DataSource(
+            code="policy-pipeline",
+            name="Policy Collection Pipeline",
+            base_url="internal://policy-pipeline",
+            owner_role="system",
+            schema_version="1.0",
+            license_id=pipeline_license.id,
+            is_active=True,
+        )
+        session.add(pipeline_source)
+        await session.flush()
+
+    # Find or create the pipeline source object
+    pipeline_object = await session.scalar(
+        select(SourceObject).where(
+            SourceObject.source_id == pipeline_source.id,
+            SourceObject.logical_uri == "policy-pipeline://collection",
+        )
+    )
+    if pipeline_object is None:
+        pipeline_object = SourceObject(
+            source_id=pipeline_source.id,
+            logical_uri="policy-pipeline://collection",
+            object_type="pipeline",
+        )
+        session.add(pipeline_object)
+        await session.flush()
+
+    # Find or create the pipeline source object version (version 1)
+    pipeline_version = await session.scalar(
+        select(SourceObjectVersion).where(
+            SourceObjectVersion.source_object_id == pipeline_object.id,
+            SourceObjectVersion.version_number == 1,
+        )
+    )
+    if pipeline_version is None:
+        pipeline_version = SourceObjectVersion(
+            source_object_id=pipeline_object.id,
+            version_number=1,
+            content_sha256=SYNTHETIC_SHA256,
+            storage_key="policy-pipeline://v1",
+            size_bytes=0,
+            media_type="application/json",
+            published_at=datetime.now(UTC),
+            discovered_at=datetime.now(UTC),
+        )
+        session.add(pipeline_version)
+        await session.flush()
+
+    return pipeline_version.id
 
 
 @activity.defn(name="list_active_policy_sources")
@@ -103,7 +182,12 @@ async def _fetch_records(client: Any, authority: str, since: str | None) -> list
     return []
 
 
-async def _ingest_records(ingester: Any, authority: str, records: list[dict[str, Any]]) -> dict[str, int]:
+async def _ingest_records(
+    ingester: Any,
+    authority: str,
+    records: list[dict[str, Any]],
+    pipeline_version_id: UUID,
+) -> dict[str, int]:
     """Ingest fetched records into the database. Returns count ingested."""
     ingested = 0
     for record in records:
@@ -125,7 +209,7 @@ async def _ingest_records(ingester: Any, authority: str, records: list[dict[str,
                 metadata_payload=record.get("metadata", {}),
                 published_at=published_at,
                 knowledge_at=datetime.now(UTC),
-                source_object_version_id=record.get("source_object_version_id") or uuid4(),
+                source_object_version_id=pipeline_version_id,
                 permissions=frozenset({"policy:write", "data:write"}),
             )
             ingested += 1
@@ -165,7 +249,8 @@ async def collect_from_policy_source(params: dict[str, Any]) -> dict[str, Any]:
             if not records and authority not in ("camara", "senado", "dou"):
                 return {"status": "skipped", "reason": f"unknown authority: {authority}"}
 
-            ingested_result = await _ingest_records(ingester, authority, records)
+            pipeline_version_id = await _ensure_pipeline_source_version(session)
+            ingested_result = await _ingest_records(ingester, authority, records, pipeline_version_id)
 
             # Track partial failure: fetched records but none ingested
             if ingested_result["ingested"] == 0 and len(records) > 0:
