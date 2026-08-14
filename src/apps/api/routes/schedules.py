@@ -86,6 +86,8 @@ SCHEDULE_META: dict[str, dict[str, str]] = {
     "paper-valuation-": {"category": "portfolio", "description": "Publicacao diaria de NAV"},
     "paper-rebalance-": {"category": "portfolio", "description": "Rebalance semanal de paper trading"},
     "equity-exploration-": {"category": "research", "description": "Exploration periodica de acoes"},
+    "policy-source-collection": {"category": "policy", "description": "Coleta de fontes policy (Câmara, Senado, DOU, BCB, IBGE)"},
+    "policy-collection-": {"category": "policy", "description": "Coleta de eventos policy por autoridade"},
 }
 
 

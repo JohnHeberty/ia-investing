@@ -32,6 +32,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   portfolio: "Carteira",
   operations: "Operações",
   research: "Pesquisa",
+  policy: "Política",
   other: "Outros",
 };
 
@@ -41,6 +42,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   portfolio: "#f4bd63",
   operations: "#ff857f",
   research: "#c4b5fd",
+  policy: "#5ee0a4",
   other: "#8eaaa0",
 };
 
