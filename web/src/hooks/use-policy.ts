@@ -43,10 +43,13 @@ export interface PolicyForecast {
 export interface PolicySource {
   id: string;
   name: string;
+  authority: string;
   source_type: string | null;
   url_pattern: string | null;
   is_active: boolean | null;
   last_fetched_at: string | null;
+  last_fetch_error: string | null;
+  last_fetch_error_at: string | null;
 }
 
 export interface PolicyDataValue {
@@ -216,13 +219,14 @@ export function useSourceMutations() {
   const createMutation = useMutation({
     mutationFn: (data: {
       name: string;
+      authority?: string;
       source_type?: string;
       url_pattern?: string;
     }) =>
       bffFetch<PolicySource>("/api/v1/policy/sources", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, authority: data.authority ?? "camara" }),
       }),
     onSuccess: invalidate,
   });

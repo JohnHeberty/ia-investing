@@ -327,6 +327,7 @@ function SourcesTab() {
   const { sources } = usePolicyData();
   const { createMutation, deleteMutation } = useSourceMutations();
   const [newName, setNewName] = useState("");
+  const [newAuthority, setNewAuthority] = useState("camara");
   const [newType, setNewType] = useState("");
   const [newUrl, setNewUrl] = useState("");
 
@@ -337,12 +338,14 @@ function SourcesTab() {
     createMutation.mutate(
       {
         name: newName.trim(),
+        authority: newAuthority,
         ...(newType.trim() ? { source_type: newType.trim() } : {}),
         ...(newUrl.trim() ? { url_pattern: newUrl.trim() } : {}),
       },
       {
         onSuccess: () => {
           setNewName("");
+          setNewAuthority("camara");
           setNewType("");
           setNewUrl("");
         },
@@ -365,6 +368,18 @@ function SourcesTab() {
       <div className="card card-pad section-gap">
         <h2 className="mb-16">Nova Fonte</h2>
         <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ fontSize: 12, color: "var(--muted)" }}>Autoridade</label>
+            <select
+              className="input"
+              value={newAuthority}
+              onChange={(e) => setNewAuthority(e.target.value)}
+            >
+              <option value="camara">Câmara</option>
+              <option value="senado">Senado</option>
+              <option value="dou">DOU</option>
+            </select>
+          </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <label style={{ fontSize: 12, color: "var(--muted)" }}>Nome</label>
             <input
@@ -413,10 +428,12 @@ function SourcesTab() {
               <thead>
                 <tr>
                   <th>Nome</th>
+                  <th>Autoridade</th>
                   <th>Tipo</th>
                   <th>URL</th>
                   <th>Ativa</th>
                   <th>Ultima coleta</th>
+                  <th>Ultimo erro</th>
                   <th>Acoes</th>
                 </tr>
               </thead>
@@ -424,6 +441,9 @@ function SourcesTab() {
                 {sources.map((source) => (
                   <tr key={source.id}>
                     <td>{source.name}</td>
+                    <td>
+                      <Badge tone="neutral">{source.authority}</Badge>
+                    </td>
                     <td>
                       <Badge tone="neutral">{source.source_type ?? "—"}</Badge>
                     </td>
@@ -442,6 +462,15 @@ function SourcesTab() {
                             month: "short",
                           })
                         : "—"}
+                    </td>
+                    <td>
+                      {source.last_fetch_error ? (
+                        <span style={{ fontSize: 12, color: "var(--red)" }}>
+                          {source.last_fetch_error}
+                        </span>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td>
                       <button
