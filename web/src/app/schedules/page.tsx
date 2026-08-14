@@ -219,7 +219,7 @@ function ScheduleRow({
     <tr>
       <td>
         <div className="flex-col gap-4">
-          <span className="fw-500" style={{ fontSize: 13 }}>
+          <span className="fw-500 truncate" style={{ fontSize: 13, maxWidth: 320, display: "block" }}>
             {schedule.description || schedule.schedule_id}
           </span>
           <span className="text-xs muted mono">{schedule.schedule_id}</span>
