@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -138,7 +139,7 @@ def _build_record(d: dict[str, Any], authority: str, text_keys: tuple[str, ...] 
         "external_id": d.get("external_id", ""),
         "title": d.get("title", ""),
         "text_content": text_content,
-        "published_at": d.get("published_at", ""),
+        "published_at": d.get("published_at") or None,
         "authority": authority,
         "metadata": d,
     }
@@ -167,17 +168,24 @@ async def _fetch_records(client: Any, authority: str, since: str | None) -> list
         parsed = await client.senado_matters_batch(since=since_date)
         return [_build_record(_to_dict(p), authority, ("ementaMateria", "ementa")) for p in parsed]
     if authority == "dou":
+        from connectors.policy._official import parse_dou_xml
+
         since_date = datetime.fromisoformat(since).date() if since else datetime.now(UTC).date() - timedelta(days=7)
-        parsed = await client.dou_acts_since(since=since_date)
+        payloads = await client.dou_acts_since(since=since_date)
         records: list[dict[str, Any]] = []
-        for p in parsed:
-            d = _to_dict(p)
-            records.append(
-                {
-                    **_build_record(d, authority, ("conteudo", "ementa")),
-                    "external_id": d.get("external_id", d.get("identifier", "")),
-                }
-            )
+        for payload in payloads:
+            try:
+                parsed_records = parse_dou_xml(payload)
+                for r in parsed_records:
+                    d = dataclasses.asdict(r)
+                    records.append(
+                        {
+                            **_build_record(d, authority, ()),
+                            "external_id": r.external_id,
+                        }
+                    )
+            except Exception:
+                logger.debug("Failed to parse DOU XML payload from %s", payload.url)
         return records
     return []
 
@@ -193,13 +201,18 @@ async def _ingest_records(
     for record in records:
         try:
             published_at = record.get("published_at")
-            if isinstance(published_at, str) and published_at:
+            if isinstance(published_at, datetime):
+                pass  # already a datetime, keep as-is
+            elif isinstance(published_at, str) and published_at:
                 try:
                     published_at = datetime.fromisoformat(published_at)
                 except (ValueError, TypeError):
                     published_at = datetime.now(UTC)
-            elif published_at is None:
+            else:
                 published_at = datetime.now(UTC)
+            # Ensure timezone is present
+            if published_at.tzinfo is None:
+                published_at = published_at.replace(tzinfo=UTC)
             await ingester.ingest(
                 authority=authority,
                 object_type=record.get("object_type", "unknown"),
@@ -272,12 +285,22 @@ async def collect_from_policy_source(params: dict[str, Any]) -> dict[str, Any]:
             }
 
         except Exception as e:
-            # Update error tracking — store sanitized error, log full details server-side
+            # Sanitize error for storage
             error_type = type(e).__name__
-            source.last_fetch_error = f"{error_type}: {str(e)[:200]}"
-            source.last_fetch_error_at = datetime.now(UTC)
+            error_msg = f"{error_type}: {str(e)[:200]}"
+
+            # Only update source if session is still usable
+            try:
+                if session.is_active:
+                    source.last_fetch_error = error_msg
+                    source.last_fetch_error_at = datetime.now(UTC)
+                else:
+                    logger.error("Session inactive, cannot update source error tracking: %s", e)
+            except Exception:
+                logger.error("Failed to update source error tracking", exc_info=True)
+
             logger.error("Collection failed for source %s (%s)", source.id, authority, exc_info=True)
-            return {"status": "failed", "authority": authority, "error": str(e)[:200]}
+            return {"status": "failed", "authority": authority, "error": error_msg}
 
 
 POLICY_SOURCE_COLLECTION_ACTIVITIES = (list_active_policy_sources, collect_from_policy_source)

@@ -470,8 +470,20 @@ class TestCollectFromPolicySource:
         src = _make_source(authority="dou")
         _session, scope_cm = _mock_session_scope(sources=[src])
 
+        # Build valid XML that parse_dou_xml can parse
+        xml_body = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <root><item>
+            <titulo>Test DOU Act</titulo>
+            <orgao>DOU</orgao>
+            <tipo>normative</tipo>
+            <dataPublicacao>2026-01-15T00:00:00+00:00</dataPublicacao>
+            <id>dou-123</id>
+        </item></root>"""
         mock_payload = MagicMock()
-        mock_payload.model_dump.return_value = {"content": "dou act"}
+        mock_payload.body = xml_body
+        mock_payload.url = "https://www.in.gov.br/servicos/download?date=2026-01-15"
+        mock_payload.content_sha256 = "b" * 64
+
         mock_client = MagicMock()
         mock_client.dou_acts_since = AsyncMock(return_value=[mock_payload])
         mock_ingester = MagicMock()

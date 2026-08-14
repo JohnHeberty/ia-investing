@@ -154,10 +154,19 @@ class TestFetchPolicyObjectsActivity:
 
     @pytest.mark.asyncio
     async def test_camara_calls_correct_method(self):
+        from datetime import UTC
+
+        from connectors.policy._official import OfficialPolicyRecord
         from ia_investing.orchestration.activities.policy_extraction import fetch_policy_objects
 
-        mock_record = MagicMock()
-        mock_record.__dict__ = {"id": "1"}
+        mock_record = OfficialPolicyRecord(
+            authority="camara",
+            object_type="proposta",
+            external_id="1",
+            title="Test",
+            published_at=datetime.now(UTC),
+            metadata={},
+        )
         mock_client = MagicMock()
         mock_client.camara_proposals = AsyncMock(return_value=(MagicMock(), [mock_record], None))
 
@@ -176,10 +185,31 @@ class TestFetchPolicyObjectsActivity:
 
     @pytest.mark.asyncio
     async def test_senado_calls_correct_method(self):
+        from datetime import UTC
+
+        from connectors.policy._official import OfficialPolicyRecord
         from ia_investing.orchestration.activities.policy_extraction import fetch_policy_objects
 
+        records = [
+            OfficialPolicyRecord(
+                authority="senado",
+                object_type="projeto",
+                external_id="a",
+                title="Proposal A",
+                published_at=datetime.now(UTC),
+                metadata={},
+            ),
+            OfficialPolicyRecord(
+                authority="senado",
+                object_type="projeto",
+                external_id="b",
+                title="Proposal B",
+                published_at=datetime.now(UTC),
+                metadata={},
+            ),
+        ]
         mock_client = MagicMock()
-        mock_client.senado_matters_batch = AsyncMock(return_value=[{"id": "a"}, {"id": "b"}])
+        mock_client.senado_matters_batch = AsyncMock(return_value=records)
 
         with patch(
             "ia_investing.orchestration.activities.policy_extraction.OfficialPolicyClient",
@@ -194,8 +224,20 @@ class TestFetchPolicyObjectsActivity:
     async def test_dou_calls_correct_method(self):
         from ia_investing.orchestration.activities.policy_extraction import fetch_policy_objects
 
+        # Build valid XML that parse_dou_xml can parse
+        xml_body = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <root><item>
+            <titulo>Test DOU Act</titulo>
+            <orgao>DOU</orgao>
+            <tipo>normative</tipo>
+            <dataPublicacao>2026-01-15T00:00:00+00:00</dataPublicacao>
+            <id>dou-123</id>
+        </item></root>"""
         mock_payload = MagicMock()
-        mock_payload.model_dump.return_value = {"content": "dou act"}
+        mock_payload.body = xml_body
+        mock_payload.url = "https://www.in.gov.br/servicos/download?date=2026-01-15"
+        mock_payload.content_sha256 = "b" * 64
+
         mock_client = MagicMock()
         mock_client.dou_acts_since = AsyncMock(return_value=[mock_payload])
 
@@ -206,8 +248,9 @@ class TestFetchPolicyObjectsActivity:
             result = await fetch_policy_objects({"authority": "dou", "since": "2026-01-01"})
 
         assert result["count"] == 1
-        assert result["records"][0]["type"] == "dou_act"
-        assert result["records"][0]["payload"]["content"] == "dou act"
+        assert result["records"][0]["object_type"] == "normative"
+        assert result["records"][0]["external_id"] == "dou-123"
+        assert result["records"][0]["title"] == "Test DOU Act"
 
 
 @pytest.mark.unit

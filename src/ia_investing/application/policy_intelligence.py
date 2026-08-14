@@ -7,7 +7,6 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models._utils import utcnow
@@ -519,11 +518,7 @@ class PolicySourceService:
             url_pattern=url_pattern,
         )
         self.session.add(source)
-        try:
-            await self.session.flush()
-        except IntegrityError:
-            await self.session.rollback()
-            raise ValueError(f"active source already exists for authority: {authority}") from None
+        await self.session.flush()  # Let IntegrityError propagate if race occurs
         return source
 
     async def update_source(
@@ -573,9 +568,5 @@ class PolicySourceService:
                 self.session.add(source)
                 created += 1
         if created:
-            try:
-                await self.session.flush()
-            except IntegrityError:
-                await self.session.rollback()
-                return 0
+            await self.session.flush()
         return created

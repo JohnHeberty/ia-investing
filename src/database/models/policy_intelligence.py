@@ -292,7 +292,7 @@ class PolicyAlert(Base):
     __tablename__ = "policy_alerts"
 
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    policy_object_id: Mapped[UUID] = mapped_column(sa.ForeignKey("policy_objects.id"), index=True)
+    policy_object_id: Mapped[UUID] = mapped_column(sa.ForeignKey("policy_objects.id", ondelete="CASCADE"), index=True)
     alert_type: Mapped[str] = mapped_column(sa.String(50), nullable=False)
     severity: Mapped[str] = mapped_column(sa.String(20), nullable=False)
     title: Mapped[str] = mapped_column(sa.String(500), nullable=False)

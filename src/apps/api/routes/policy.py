@@ -8,6 +8,7 @@ from uuid import UUID
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, get_auth_context
@@ -439,6 +440,9 @@ async def create_source(
         )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except IntegrityError:
+        msg = f"active source already exists for authority: {body.authority}"
+        raise HTTPException(status_code=409, detail=msg) from None
     return PolicySourceV1.model_validate(source)
 
 
