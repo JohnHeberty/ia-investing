@@ -211,7 +211,7 @@ def require_policy_read(auth: AuthContext) -> None:
 
 
 def require_policy_write(auth: AuthContext) -> None:
-    if "policy:write" not in auth.permissions and "policy:read" not in auth.permissions:
+    if "policy:write" not in auth.permissions:
         raise HTTPException(status_code=403, detail="permission required: policy:write")
 
 

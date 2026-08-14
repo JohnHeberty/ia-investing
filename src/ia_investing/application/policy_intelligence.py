@@ -457,7 +457,11 @@ class PolicySourceService:
             url_pattern=url_pattern,
         )
         self.session.add(source)
-        await self.session.flush()
+        try:
+            await self.session.flush()
+        except IntegrityError:
+            await self.session.rollback()
+            raise ValueError(f"active source already exists for authority: {authority}") from None
         return source
 
     async def update_source(

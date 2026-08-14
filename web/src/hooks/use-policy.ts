@@ -2,6 +2,7 @@
 
 import { createContext, useContext } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { bffFetch, queryKeys } from "@/lib/api-client";
 import type { DataState } from "@/components/domain";
 import { computeDataState } from "@/lib/data-state";
@@ -260,6 +261,9 @@ export function useSourceMutations() {
     mutationFn: (id: string) =>
       bffFetch<void>(`/api/v1/policy/sources/${id}`, { method: "DELETE" }),
     onSuccess: invalidate,
+    onError: (error: Error) => {
+      toast.error(`Falha ao remover: ${error.message}`);
+    },
   });
 
   return { createMutation, updateMutation, deleteMutation };

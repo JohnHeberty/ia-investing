@@ -67,6 +67,7 @@ async def _fetch_records(
                 "text_content": text_content,
                 "published_at": d.get("published_at", ""),
                 "authority": authority,
+                "metadata": d,
             })
         return records
     if authority == "senado":
@@ -86,6 +87,7 @@ async def _fetch_records(
                 "text_content": text_content,
                 "published_at": d.get("published_at", ""),
                 "authority": authority,
+                "metadata": d,
             })
         return records
     if authority == "dou":
@@ -109,6 +111,7 @@ async def _fetch_records(
                 "text_content": text_content,
                 "published_at": d.get("published_at", ""),
                 "authority": authority,
+                "metadata": d,
             })
         return records
     return []
@@ -195,10 +198,11 @@ async def collect_from_policy_source(params: dict[str, Any]) -> dict[str, Any]:
             }
 
         except Exception as e:
-            # Update error tracking
-            source.last_fetch_error = str(e)[:500]
+            # Update error tracking — store sanitized error, log full details server-side
+            error_type = type(e).__name__
+            source.last_fetch_error = f"{error_type}: {str(e)[:200]}"
             source.last_fetch_error_at = datetime.now(UTC)
-            logger.error("Collection failed for source %s (%s): %s", source.id, authority, e)
+            logger.error("Collection failed for source %s (%s)", source.id, authority, exc_info=True)
             return {"status": "failed", "authority": authority, "error": str(e)[:200]}
 
 

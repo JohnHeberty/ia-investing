@@ -27,7 +27,7 @@ def _mock_auth() -> AuthContext:
     return AuthContext(
         subject="user@test.com",
         roles=frozenset({"admin"}),
-        permissions=frozenset({"policy:read", "portfolio:read"}),
+        permissions=frozenset({"policy:read", "policy:write", "portfolio:read"}),
         authentication_method="test",
         organization_id=uuid4(),
     )

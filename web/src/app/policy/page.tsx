@@ -510,9 +510,13 @@ function SourcesTab() {
             <button
               className="btn"
               type="button"
-              onClick={() => {
-                deleteMutation.mutate(confirmDelete);
-                setConfirmDelete(null);
+              onClick={async () => {
+                try {
+                  await deleteMutation.mutateAsync(confirmDelete);
+                  setConfirmDelete(null);
+                } catch {
+                  // Error is handled by onError in the mutation
+                }
               }}
             >
               Sim, remover
