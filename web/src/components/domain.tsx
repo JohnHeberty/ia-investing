@@ -69,10 +69,10 @@ export function StatePanel({
 
 export type DomainTab = { id: string; label: string; content: ReactNode };
 
-export function DomainTabs({ label, tabs }: { label: string; tabs: DomainTab[] }) {
+export function DomainTabs({ label, tabs, defaultValue }: { label: string; tabs: DomainTab[]; defaultValue?: string }) {
   if (!tabs.length) return null;
   return (
-    <Tabs.Root className="domain-tabs" defaultValue={tabs[0].id}>
+    <Tabs.Root className="domain-tabs" defaultValue={defaultValue ?? tabs[0].id}>
       <Tabs.List aria-label={label} className="tab-list" tabIndex={0}>
         {tabs.map((tab) => (
           <Tabs.Trigger className="tab-trigger" key={tab.id} value={tab.id}>
