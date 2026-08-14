@@ -59,7 +59,7 @@ class PortfolioCreatedResponse(BaseModel):
 
 
 class PortfolioListItem(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
+    model_config = ConfigDict(frozen=True)
 
     id: str
     name: str
