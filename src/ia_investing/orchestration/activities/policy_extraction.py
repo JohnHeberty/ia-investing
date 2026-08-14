@@ -44,7 +44,12 @@ async def fetch_policy_objects(params: dict[str, Any]) -> dict[str, Any]:
             _payload, parsed, _next = await client.camara_proposals(start=start, end=end)
             records = [r.__dict__ for r in parsed]
         elif authority == "senado":
-            records = await client.senado_matters_batch(since=since)
+            since_date = datetime.fromisoformat(since).date() if since else None
+            parsed = await client.senado_matters_batch(since=since_date)
+            records = [
+                p.model_dump() if hasattr(p, "model_dump") else (p.__dict__ if hasattr(p, "__dict__") else p)
+                for p in parsed
+            ]
         elif authority == "dou":
             payloads = await client.dou_acts_since(since=since)
             records = [{"type": "dou_act", "payload": p.model_dump()} for p in payloads]

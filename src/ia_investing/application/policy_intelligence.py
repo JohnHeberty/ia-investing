@@ -7,6 +7,7 @@ from decimal import Decimal
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models._utils import utcnow
@@ -440,6 +441,15 @@ class PolicySourceService:
         source_type: str | None = None,
         url_pattern: str | None = None,
     ) -> PolicySource:
+        existing = await self.session.execute(
+            sa.select(PolicySource).where(
+                PolicySource.authority == authority,
+                PolicySource.is_active == True,  # noqa: E712
+            )
+        )
+        if existing.scalars().first() is not None:
+            raise ValueError(f"active source already exists for authority: {authority}")
+
         source = PolicySource(
             name=name,
             authority=authority,
@@ -497,5 +507,9 @@ class PolicySourceService:
                 self.session.add(source)
                 created += 1
         if created:
-            await self.session.flush()
+            try:
+                await self.session.flush()
+            except IntegrityError:
+                await self.session.rollback()
+                return 0
         return created

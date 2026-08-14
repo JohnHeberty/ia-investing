@@ -210,6 +210,11 @@ def require_policy_read(auth: AuthContext) -> None:
         raise HTTPException(status_code=403, detail="permission required: policy:read")
 
 
+def require_policy_write(auth: AuthContext) -> None:
+    if "policy:write" not in auth.permissions and "policy:read" not in auth.permissions:
+        raise HTTPException(status_code=403, detail="permission required: policy:write")
+
+
 @router.post("/objects", response_model=PolicyObjectVersionV1, status_code=201)
 async def ingest_policy_object(
     body: PolicyObjectInputV1,
@@ -306,6 +311,7 @@ async def acknowledge_alert(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> PolicyAlertV1:
+    require_policy_write(auth)
     service = PolicyAlertService(session)
     try:
         alert = await service.acknowledge(alert_id=alert_id, actor=auth.subject)
@@ -323,6 +329,7 @@ async def resolve_alert(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> PolicyAlertV1:
+    require_policy_write(auth)
     service = PolicyAlertService(session)
     try:
         alert = await service.resolve(
@@ -420,14 +427,17 @@ async def create_source(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> PolicySourceV1:
-    require_policy_read(auth)
+    require_policy_write(auth)
     service = PolicySourceService(session)
-    source = await service.create_source(
-        name=body.name,
-        authority=body.authority,
-        source_type=body.source_type,
-        url_pattern=body.url_pattern,
-    )
+    try:
+        source = await service.create_source(
+            name=body.name,
+            authority=body.authority,
+            source_type=body.source_type,
+            url_pattern=body.url_pattern,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return PolicySourceV1.model_validate(source)
 
 
@@ -438,7 +448,7 @@ async def update_source(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> PolicySourceV1:
-    require_policy_read(auth)
+    require_policy_write(auth)
     service = PolicySourceService(session)
     try:
         source = await service.update_source(
@@ -460,7 +470,7 @@ async def delete_source(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> None:
-    require_policy_read(auth)
+    require_policy_write(auth)
     service = PolicySourceService(session)
     try:
         await service.delete_source(source_id)

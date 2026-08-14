@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { toast } from "sonner";
 import { Gavel } from "lucide-react";
 import { PolicyDataContext, usePolicyData, usePolicyValue, useAlertMutations, useSourceMutations } from "@/hooks/use-policy";
 import { AsOfIndicator, Badge, DomainTabs, Metric, StatePanel } from "@/components/domain";
@@ -24,9 +25,9 @@ function TrackerTab() {
           note={`${monitoredObjects} objeto${monitoredObjects !== 1 ? "s" : ""}`}
         />
         <Metric
-          label="Diffs novos"
-          value={String(materialEvents.length)}
-          note="texto versionado"
+          label="Com probabilidade"
+          value={String(events.filter((e) => e.probability !== "—").length)}
+          note="de todos os eventos"
         />
         <Metric
           label="Fontes stale"
@@ -195,7 +196,12 @@ function AlertsTab() {
                             className="btn"
                             type="button"
                             disabled={acknowledge.isPending}
-                            onClick={() => acknowledge.mutate(alert.id)}
+                            onClick={() =>
+                              acknowledge.mutate(alert.id, {
+                                onError: (error: Error) =>
+                                  toast.error(`Falha ao reconhecer: ${error.message}`),
+                              })
+                            }
                           >
                             Reconhecer
                           </button>
@@ -216,10 +222,16 @@ function AlertsTab() {
                               type="button"
                               disabled={resolve.isPending}
                               onClick={() =>
-                                resolve.mutate({
-                                  alertId: alert.id,
-                                  notes: resolveNotes[alert.id] ?? "",
-                                })
+                                resolve.mutate(
+                                  {
+                                    alertId: alert.id,
+                                    notes: resolveNotes[alert.id] ?? "",
+                                  },
+                                  {
+                                    onError: (error: Error) =>
+                                      toast.error(`Falha ao resolver: ${error.message}`),
+                                  },
+                                )
                               }
                             >
                               Resolver
@@ -330,6 +342,7 @@ function SourcesTab() {
   const [newAuthority, setNewAuthority] = useState("camara");
   const [newType, setNewType] = useState("");
   const [newUrl, setNewUrl] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
   const activeSources = sources.filter((s) => s.is_active).length;
 
@@ -477,11 +490,7 @@ function SourcesTab() {
                         className="btn"
                         type="button"
                         disabled={deleteMutation.isPending}
-                        onClick={() => {
-                          if (confirm(`Remover fonte "${source.name}"?`)) {
-                            deleteMutation.mutate(source.id);
-                          }
-                        }}
+                        onClick={() => setConfirmDelete(source.id)}
                       >
                         Remover
                       </button>
@@ -493,6 +502,31 @@ function SourcesTab() {
           </div>
         )}
       </div>
+
+      {confirmDelete && (
+        <div className="card card-pad section-gap" style={{ borderColor: "var(--red)" }}>
+          <p>Tem certeza que deseja remover esta fonte?</p>
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => {
+                deleteMutation.mutate(confirmDelete);
+                setConfirmDelete(null);
+              }}
+            >
+              Sim, remover
+            </button>
+            <button
+              className="btn"
+              type="button"
+              onClick={() => setConfirmDelete(null)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

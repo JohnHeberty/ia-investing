@@ -197,6 +197,9 @@ export function useAlertMutations() {
     mutationFn: (alertId: string) =>
       bffFetch(`/api/v1/policy/alerts/${alertId}/acknowledge`, { method: "POST" }),
     onSuccess: invalidate,
+    onError: (error: Error) => {
+      console.error("Failed to acknowledge alert:", error.message);
+    },
   });
 
   const resolve = useMutation({
@@ -206,6 +209,9 @@ export function useAlertMutations() {
         body: JSON.stringify({ notes }),
       }),
     onSuccess: invalidate,
+    onError: (error: Error) => {
+      console.error("Failed to resolve alert:", error.message);
+    },
   });
 
   return { acknowledge, resolve };

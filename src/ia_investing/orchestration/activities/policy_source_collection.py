@@ -53,26 +53,70 @@ async def _fetch_records(
         start = datetime.fromisoformat(since) if since else datetime.now(UTC) - timedelta(days=7)
         end = datetime.now(UTC)
         _payload, parsed, _next = await client.camara_proposals(start=start, end=end)
-        return [r.__dict__ for r in parsed]
+        records: list[dict[str, Any]] = []
+        for p in parsed:
+            d = p.model_dump() if hasattr(p, "model_dump") else p.__dict__
+            metadata = d.get("metadata", {})
+            text_content = ""
+            if isinstance(metadata, dict):
+                text_content = metadata.get("ementa", "") or metadata.get("indexacao", "") or ""
+            records.append({
+                "object_type": d.get("object_type", "proposal"),
+                "external_id": d.get("external_id", ""),
+                "title": d.get("title", ""),
+                "text_content": text_content,
+                "published_at": d.get("published_at", ""),
+                "authority": authority,
+            })
+        return records
     if authority == "senado":
-        parsed = await client.senado_matters_batch(
-            since=datetime.fromisoformat(since).date() if since else None,
-        )
-        return [r.__dict__ for r in parsed]
+        since_date = datetime.fromisoformat(since).date() if since else None
+        parsed = await client.senado_matters_batch(since=since_date)
+        records = []
+        for p in parsed:
+            d = p.model_dump() if hasattr(p, "model_dump") else p.__dict__
+            metadata = d.get("metadata", {})
+            text_content = ""
+            if isinstance(metadata, dict):
+                text_content = metadata.get("ementaMateria", "") or metadata.get("ementa", "") or ""
+            records.append({
+                "object_type": d.get("object_type", "matter"),
+                "external_id": d.get("external_id", ""),
+                "title": d.get("title", ""),
+                "text_content": text_content,
+                "published_at": d.get("published_at", ""),
+                "authority": authority,
+            })
+        return records
     if authority == "dou":
         since_date = (
             datetime.fromisoformat(since).date()
             if since
             else datetime.now(UTC).date() - timedelta(days=7)
         )
-        _payloads = await client.dou_acts_since(since=since_date)
-        return [{"type": "dou_act", "payload": p.model_dump()} for p in _payloads]
+        parsed = await client.dou_acts_since(since=since_date)
+        records = []
+        for p in parsed:
+            d = p.model_dump() if hasattr(p, "model_dump") else (p.__dict__ if hasattr(p, "__dict__") else p)
+            metadata = d.get("metadata", {})
+            text_content = ""
+            if isinstance(metadata, dict):
+                text_content = metadata.get("conteudo", "") or metadata.get("ementa", "") or ""
+            records.append({
+                "object_type": d.get("object_type", "dou_act"),
+                "external_id": d.get("external_id", d.get("identifier", "")),
+                "title": d.get("title", ""),
+                "text_content": text_content,
+                "published_at": d.get("published_at", ""),
+                "authority": authority,
+            })
+        return records
     return []
 
 
 async def _ingest_records(
     ingester: Any, authority: str, records: list[dict[str, Any]]
-) -> int:
+) -> dict[str, int]:
     """Ingest fetched records into the database. Returns count ingested."""
     ingested = 0
     for record in records:
@@ -95,7 +139,7 @@ async def _ingest_records(
             ingested += 1
         except Exception as e:
             logger.warning("Failed to ingest record from %s: %s", authority, e)
-    return ingested
+    return {"ingested": ingested}
 
 
 @activity.defn(name="collect_from_policy_source")
@@ -129,14 +173,26 @@ async def collect_from_policy_source(params: dict[str, Any]) -> dict[str, Any]:
             if not records and authority not in ("camara", "senado", "dou"):
                 return {"status": "skipped", "reason": f"unknown authority: {authority}"}
 
-            ingested = await _ingest_records(ingester, authority, records)
+            ingested_result = await _ingest_records(ingester, authority, records)
+
+            # Track partial failure: fetched records but none ingested
+            if ingested_result["ingested"] == 0 and len(records) > 0:
+                source.last_fetch_error = f"Fetched {len(records)} records but 0 ingested"
+                source.last_fetch_error_at = datetime.now(UTC)
+                await session.commit()
+                return {"status": "partial", "authority": authority, "fetched": len(records), "ingested": 0}
 
             # Update success tracking
             source.last_fetched_at = datetime.now(UTC)
             source.last_fetch_error = None
             source.last_fetch_error_at = None
 
-            return {"status": "completed", "authority": authority, "fetched": len(records), "ingested": ingested}
+            return {
+                "status": "completed",
+                "authority": authority,
+                "fetched": len(records),
+                "ingested": ingested_result["ingested"],
+            }
 
         except Exception as e:
             # Update error tracking
