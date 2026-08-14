@@ -69,30 +69,37 @@ const NavGroup = React.memo(function NavGroup({
   const visible = items.filter(([, , , permission]) => !permission || can(permission));
   if (visible.length === 0) return null;
 
+  // Build a set of all hrefs for parent detection
+  const allHrefs = new Set(visible.map(([href]) => href));
+
   return (
     <div className="nav-group">
       <div className="nav-label">{label}</div>
-      {visible.map(([href, labelText, Icon]) => (
-        <Link
-          aria-current={
-            pathname === href ||
-            (href !== "/" && (pathname.startsWith(href + "/") || pathname === href))
-              ? "page"
-              : undefined
-          }
-          aria-label={labelText}
-          className="nav-link"
-          data-active={
-            pathname === href ||
-            (href !== "/" && (pathname.startsWith(href + "/") || pathname === href))
-          }
-          href={href as Route}
-          key={href}
-        >
-          <Icon size={16} strokeWidth={1.7} aria-hidden="true" />
-          <span>{labelText}</span>
-        </Link>
-      ))}
+      {visible.map(([href, labelText, Icon]) => {
+        // Check if this href is a parent of any other visible item
+        const isParent = [...allHrefs].some(
+          (other) => other !== href && other.startsWith(href + "/"),
+        );
+
+        // Parent routes: exact match only
+        // Leaf routes: prefix match (handles dynamic segments like [id])
+        const isActive =
+          pathname === href || (!isParent && href !== "/" && pathname.startsWith(href + "/"));
+
+        return (
+          <Link
+            aria-current={isActive ? "page" : undefined}
+            aria-label={labelText}
+            className="nav-link"
+            data-active={isActive}
+            href={href as Route}
+            key={href}
+          >
+            <Icon size={16} strokeWidth={1.7} aria-hidden="true" />
+            <span>{labelText}</span>
+          </Link>
+        );
+      })}
     </div>
   );
 });
