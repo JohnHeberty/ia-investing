@@ -181,20 +181,25 @@ class PolicySourceV1(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     name: str
+    authority: str = "camara"
     source_type: str | None = None
     url_pattern: str | None = None
     is_active: bool = True
     last_fetched_at: datetime | None = None
+    last_fetch_error: str | None = None
+    last_fetch_error_at: datetime | None = None
 
 
 class PolicySourceCreateInput(BaseModel):
     name: str
+    authority: str = "camara"
     source_type: str | None = None
     url_pattern: str | None = None
 
 
 class PolicySourceUpdateInput(BaseModel):
     name: str | None = None
+    authority: str | None = None
     source_type: str | None = None
     url_pattern: str | None = None
     is_active: bool | None = None
@@ -419,6 +424,7 @@ async def create_source(
     service = PolicySourceService(session)
     source = await service.create_source(
         name=body.name,
+        authority=body.authority,
         source_type=body.source_type,
         url_pattern=body.url_pattern,
     )
@@ -438,6 +444,7 @@ async def update_source(
         source = await service.update_source(
             source_id=source_id,
             name=body.name,
+            authority=body.authority,
             source_type=body.source_type,
             url_pattern=body.url_pattern,
             is_active=body.is_active,

@@ -436,11 +436,13 @@ class PolicySourceService:
         self,
         *,
         name: str,
+        authority: str = "camara",
         source_type: str | None = None,
         url_pattern: str | None = None,
     ) -> PolicySource:
         source = PolicySource(
             name=name,
+            authority=authority,
             source_type=source_type,
             url_pattern=url_pattern,
         )
@@ -453,6 +455,7 @@ class PolicySourceService:
         *,
         source_id: UUID,
         name: str | None = None,
+        authority: str | None = None,
         source_type: str | None = None,
         url_pattern: str | None = None,
         is_active: bool | None = None,
@@ -460,6 +463,8 @@ class PolicySourceService:
         source = await self.get_source(source_id)
         if name is not None:
             source.name = name
+        if authority is not None:
+            source.authority = authority
         if source_type is not None:
             source.source_type = source_type
         if url_pattern is not None:
