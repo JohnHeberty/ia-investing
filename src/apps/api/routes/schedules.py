@@ -81,6 +81,7 @@ SCHEDULE_META: dict[str, dict[str, str]] = {
     "news-collection-": {"category": "news", "description": "Coleta de noticias RSS"},
     "news-dedup-cleanup": {"category": "news", "description": "Limpeza de eventos duplicados"},
     "operation-outbox-dispatch": {"category": "operations", "description": "Dispatch do outbox de operacoes"},
+    "outbox-dispatch-recovery": {"category": "operations", "description": "Recuperação de mensagens do outbox"},
     "cvm-dfp-": {"category": "data", "description": "Ingestao de dados CVM"},
     "paper-reconciliation-": {"category": "portfolio", "description": "Reconciliacao diaria de paper trading"},
     "paper-valuation-": {"category": "portfolio", "description": "Publicacao diaria de NAV"},
