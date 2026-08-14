@@ -527,7 +527,7 @@ export default function SchedulesPage() {
   } = useSchedules();
 
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(["news", "portfolio", "data", "operations", "research", "other"]),
+    new Set(["news", "portfolio", "data", "operations", "research", "policy", "other"]),
   );
   const [reconcileMsg, setReconcileMsg] = useState<string | null>(null);
   const [mutatingId, setMutatingId] = useState<string | null>(null);

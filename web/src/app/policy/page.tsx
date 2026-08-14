@@ -1,7 +1,6 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Gavel } from "lucide-react";
 import { PolicyDataContext, usePolicyData, usePolicyValue, useAlertMutations, useSourceMutations } from "@/hooks/use-policy";
@@ -541,8 +540,6 @@ function SourcesTab() {
 
 function PolicyContent() {
   const policyValue = usePolicyData();
-  const searchParams = useSearchParams();
-  const activeTab = searchParams.get("tab") ?? "tracker";
 
   if (policyValue.isLoading) {
     return <LoadingSkeleton lines={8} />;
@@ -579,7 +576,6 @@ function PolicyContent() {
 
       <DomainTabs
         label="Politica"
-        defaultValue={activeTab}
         tabs={[
           { id: "tracker", label: "Tracker", content: <TrackerTab /> },
           { id: "alertas", label: "Alertas", content: <AlertsTab /> },

@@ -2,7 +2,6 @@
 
 import {
   Activity,
-  Bell,
   BriefcaseBusiness,
   ChartNoAxesCombined,
   CircleGauge,
@@ -23,7 +22,7 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { Route } from "next";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth-provider";
 import { NotificationBell } from "@/components/notification-bell";
@@ -43,8 +42,6 @@ const primary: NavItem[] = [
 
 const operations: NavItem[] = [
   ["/policy", "Política", Gavel, "policy:read"],
-  ["/policy?tab=alertas", "Alertas", Bell, "policy:read"],
-  ["/policy?tab=fontes", "Fontes", Database, "policy:read"],
   ["/macro", "Macro", TrendingUp, "macro:read"],
   ["/news", "Noticias", Newspaper, "news:read"],
   ["/paper", "Paper trading", BriefcaseBusiness, "portfolio:read"],
@@ -66,7 +63,6 @@ const NavGroup = React.memo(function NavGroup({
   "data-group"?: string;
 }) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { can } = usePermissions();
 
   const visible = items.filter(([, , , permission]) => !permission || can(permission));
@@ -79,29 +75,15 @@ const NavGroup = React.memo(function NavGroup({
     <div className="nav-group" data-group={dataGroup} role="group" aria-label={label}>
       <div className="nav-label">{label}</div>
       {visible.map(([href, labelText, Icon]) => {
-        // Parse href to get path and query params
-        const [hrefPath, hrefQuery] = href.split("?");
-        const hrefSearchParams = new URLSearchParams(hrefQuery);
-
         // Check if this href is a parent of any other visible item
-        const isParent = [...allHrefs].some((other) => {
-          const [otherPath] = other.split("?");
-          return other !== href && otherPath.startsWith(hrefPath + "/");
-        });
-
-        // Check if current pathname matches href path
-        const pathMatches = pathname === hrefPath;
-
-        // Check if current search params match href query params
-        const queryMatches = [...hrefSearchParams.entries()].every(
-          ([key, value]) => searchParams.get(key) === value,
+        const isParent = [...allHrefs].some(
+          (other) => other !== href && other.startsWith(href + "/"),
         );
 
         // Parent routes: exact match only
         // Leaf routes: prefix match (handles dynamic segments like [id])
-        const isActive = pathMatches
-          ? queryMatches || hrefSearchParams.size === 0
-          : !isParent && hrefPath !== "/" && pathname.startsWith(hrefPath + "/");
+        const isActive =
+          pathname === href || (!isParent && href !== "/" && pathname.startsWith(href + "/"));
 
         return (
           <Link
