@@ -2,7 +2,6 @@
 
 import {
   Activity,
-  Bell,
   BriefcaseBusiness,
   ChartNoAxesCombined,
   CircleGauge,
@@ -43,8 +42,6 @@ const primary: NavItem[] = [
 
 const operations: NavItem[] = [
   ["/policy", "Política", Gavel, "policy:read"],
-  ["/policy/alerts", "Alertas", Bell, "policy:read"],
-  ["/policy/sources", "Fontes Pol.", Database, "policy:read"],
   ["/macro", "Macro", TrendingUp, "macro:read"],
   ["/news", "Noticias", Newspaper, "news:read"],
   ["/paper", "Paper trading", BriefcaseBusiness, "portfolio:read"],

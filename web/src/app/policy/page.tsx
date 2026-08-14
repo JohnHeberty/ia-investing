@@ -1,12 +1,10 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { Gavel } from "lucide-react";
-import { PolicyDataContext, usePolicyData, usePolicyValue } from "@/hooks/use-policy";
+import { PolicyDataContext, usePolicyData, usePolicyValue, useAlertMutations, useSourceMutations } from "@/hooks/use-policy";
 import { AsOfIndicator, Badge, DomainTabs, Metric, StatePanel } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
-import Link from "next/link";
-import type { Route } from "next";
 
 function TrackerTab() {
   const { events, materialEvents, monitoredObjects, staleSources } = usePolicyData();
@@ -105,6 +103,8 @@ function TrackerTab() {
 
 function AlertsTab() {
   const { alerts, activeAlerts } = usePolicyData();
+  const { acknowledge, resolve } = useAlertMutations();
+  const [resolveNotes, setResolveNotes] = useState<Record<string, string>>({});
 
   return (
     <>
@@ -143,6 +143,7 @@ function AlertsTab() {
                   <th>Disparado em</th>
                   <th>Reconhecido</th>
                   <th>Resolvido</th>
+                  <th>Acoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -186,6 +187,46 @@ function AlertsTab() {
                       <Badge tone={alert.resolved_at ? "good" : "neutral"}>
                         {alert.resolved_at ? "Sim" : "Nao"}
                       </Badge>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        {!alert.acknowledged_at && (
+                          <button
+                            className="btn"
+                            type="button"
+                            disabled={acknowledge.isPending}
+                            onClick={() => acknowledge.mutate(alert.id)}
+                          >
+                            Reconhecer
+                          </button>
+                        )}
+                        {!alert.resolved_at && (
+                          <div style={{ display: "flex", gap: 4 }}>
+                            <input
+                              className="input"
+                              placeholder="Notas"
+                              style={{ fontSize: 12, width: 120 }}
+                              value={resolveNotes[alert.id] ?? ""}
+                              onChange={(e) =>
+                                setResolveNotes((prev) => ({ ...prev, [alert.id]: e.target.value }))
+                              }
+                            />
+                            <button
+                              className="btn"
+                              type="button"
+                              disabled={resolve.isPending}
+                              onClick={() =>
+                                resolve.mutate({
+                                  alertId: alert.id,
+                                  notes: resolveNotes[alert.id] ?? "",
+                                })
+                              }
+                            >
+                              Resolver
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -284,7 +325,30 @@ function GraphTab() {
 
 function SourcesTab() {
   const { sources } = usePolicyData();
+  const { createMutation, deleteMutation } = useSourceMutations();
+  const [newName, setNewName] = useState("");
+  const [newType, setNewType] = useState("");
+  const [newUrl, setNewUrl] = useState("");
+
   const activeSources = sources.filter((s) => s.is_active).length;
+
+  const handleCreate = () => {
+    if (!newName.trim()) return;
+    createMutation.mutate(
+      {
+        name: newName.trim(),
+        ...(newType.trim() ? { source_type: newType.trim() } : {}),
+        ...(newUrl.trim() ? { url_pattern: newUrl.trim() } : {}),
+      },
+      {
+        onSuccess: () => {
+          setNewName("");
+          setNewType("");
+          setNewUrl("");
+        },
+      },
+    );
+  };
 
   return (
     <>
@@ -298,13 +362,49 @@ function SourcesTab() {
         />
       </section>
 
-      <div className="card card-pad section-gap" aria-live="polite">
-        <div className="card-title">
-          <h2>Fontes de Dados</h2>
-          <Link href={"/policy/sources" as Route} className="text-accent" style={{ fontSize: 14 }}>
-            Gerenciar fontes →
-          </Link>
+      <div className="card card-pad section-gap">
+        <h2 className="mb-16">Nova Fonte</h2>
+        <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ fontSize: 12, color: "var(--muted)" }}>Nome</label>
+            <input
+              className="input"
+              placeholder="Ex: DOU"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ fontSize: 12, color: "var(--muted)" }}>Tipo</label>
+            <input
+              className="input"
+              placeholder="Ex: gazette"
+              value={newType}
+              onChange={(e) => setNewType(e.target.value)}
+            />
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            <label style={{ fontSize: 12, color: "var(--muted)" }}>URL padrao</label>
+            <input
+              className="input"
+              placeholder="https://..."
+              value={newUrl}
+              onChange={(e) => setNewUrl(e.target.value)}
+            />
+          </div>
+          <button
+            className="btn"
+            type="button"
+            disabled={!newName.trim() || createMutation.isPending}
+            onClick={handleCreate}
+          >
+            Adicionar
+          </button>
         </div>
+      </div>
+
+      <div className="card card-pad section-gap" aria-live="polite">
+        <h2 className="mb-16">Fontes</h2>
         {sources.length === 0 ? (
           <div className="subtitle">Nenhuma fonte cadastrada.</div>
         ) : (
@@ -317,6 +417,7 @@ function SourcesTab() {
                   <th>URL</th>
                   <th>Ativa</th>
                   <th>Ultima coleta</th>
+                  <th>Acoes</th>
                 </tr>
               </thead>
               <tbody>
@@ -341,6 +442,20 @@ function SourcesTab() {
                             month: "short",
                           })
                         : "—"}
+                    </td>
+                    <td>
+                      <button
+                        className="btn"
+                        type="button"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => {
+                          if (confirm(`Remover fonte "${source.name}"?`)) {
+                            deleteMutation.mutate(source.id);
+                          }
+                        }}
+                      >
+                        Remover
+                      </button>
                     </td>
                   </tr>
                 ))}
