@@ -5,6 +5,8 @@ import { Gavel } from "lucide-react";
 import { PolicyDataContext, usePolicyData, usePolicyValue } from "@/hooks/use-policy";
 import { AsOfIndicator, Badge, DomainTabs, Metric, StatePanel } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
+import Link from "next/link";
+import type { Route } from "next";
 
 function TrackerTab() {
   const { events, materialEvents, monitoredObjects, staleSources } = usePolicyData();
@@ -280,6 +282,77 @@ function GraphTab() {
   );
 }
 
+function SourcesTab() {
+  const { sources } = usePolicyData();
+  const activeSources = sources.filter((s) => s.is_active).length;
+
+  return (
+    <>
+      <section className="grid grid-4 section-gap" aria-label="Metricas de fontes" aria-live="polite">
+        <Metric label="Total" value={String(sources.length)} note="fontes cadastradas" />
+        <Metric label="Ativas" value={String(activeSources)} note="coletando dados" />
+        <Metric
+          label="Inativas"
+          value={String(sources.length - activeSources)}
+          note="pausadas"
+        />
+      </section>
+
+      <div className="card card-pad section-gap" aria-live="polite">
+        <div className="card-title">
+          <h2>Fontes de Dados</h2>
+          <Link href={"/policy/sources" as Route} className="text-accent" style={{ fontSize: 14 }}>
+            Gerenciar fontes →
+          </Link>
+        </div>
+        {sources.length === 0 ? (
+          <div className="subtitle">Nenhuma fonte cadastrada.</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Tipo</th>
+                  <th>URL</th>
+                  <th>Ativa</th>
+                  <th>Ultima coleta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sources.map((source) => (
+                  <tr key={source.id}>
+                    <td>{source.name}</td>
+                    <td>
+                      <Badge tone="neutral">{source.source_type ?? "—"}</Badge>
+                    </td>
+                    <td className="max-w-320 truncate mono" style={{ fontSize: 12 }}>
+                      {source.url_pattern ?? "—"}
+                    </td>
+                    <td>
+                      <Badge tone={source.is_active ? "good" : "neutral"}>
+                        {source.is_active ? "Sim" : "Nao"}
+                      </Badge>
+                    </td>
+                    <td>
+                      {source.last_fetched_at
+                        ? new Date(source.last_fetched_at).toLocaleDateString("pt-BR", {
+                            day: "2-digit",
+                            month: "short",
+                          })
+                        : "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
 function PolicyContent() {
   const policyValue = usePolicyData();
 
@@ -322,6 +395,7 @@ function PolicyContent() {
           { id: "tracker", label: "Tracker", content: <TrackerTab /> },
           { id: "alertas", label: "Alertas", content: <AlertsTab /> },
           { id: "previsoes", label: "Previsoes", content: <ForecastsTab /> },
+          { id: "fontes", label: "Fontes", content: <SourcesTab /> },
           { id: "grafo", label: "Grafo", content: <GraphTab /> },
         ]}
       />
