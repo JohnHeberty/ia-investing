@@ -187,6 +187,46 @@ async def _fetch_records(client: Any, authority: str, since: str | None) -> list
             except Exception:
                 logger.debug("Failed to parse DOU XML payload from %s", payload.url)
         return records
+    if authority == "bcb":
+        from ia_investing.connectors.policy._bcb_sgs import BCBSGSClient
+
+        bcb_client = BCBSGSClient()
+        # Fetch SELIC rate (series 432) as a representative macro indicator
+        observations = await bcb_client.fetch_series(series_code=432, since=since or "")
+        return [
+            _build_record(
+                {
+                    "title": f"BCB SGS - Series {obs.series_code}",
+                    "object_type": "macro_observation",
+                    "external_id": f"bcb-{obs.series_code}-{obs.date}",
+                    "published_at": obs.date.isoformat() if hasattr(obs.date, "isoformat") else str(obs.date),
+                    "value": obs.value,
+                },
+                authority,
+                (),
+            )
+            for obs in observations
+        ]
+    if authority == "ibge":
+        from ia_investing.connectors.policy._ibge_sidra import IBGESIDRAClient
+
+        ibge_client = IBGESIDRAClient()
+        # Fetch IPCA table (table 1737) as a representative indicator
+        data = await ibge_client.fetch_table(table_id=1737)
+        return [
+            _build_record(
+                {
+                    "title": "IBGE SIDRA - Table 1737 (IPCA)",
+                    "object_type": "macro_observation",
+                    "external_id": f"ibge-1737-{item.get('D6N', '')}",
+                    "published_at": item.get("D3N", ""),
+                    "value": item.get("V", ""),
+                },
+                authority,
+                (),
+            )
+            for item in data
+        ]
     return []
 
 
