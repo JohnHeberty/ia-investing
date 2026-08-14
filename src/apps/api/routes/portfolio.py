@@ -122,7 +122,7 @@ async def create_portfolio(
     return PortfolioCreatedResponse(**{k: d.get(k) for k in ("id", "name", "is_paper_trading", "base_currency")})
 
 
-@router.get("", response_model=list[dict[str, Any]])
+@router.get("")
 async def list_portfolios(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
