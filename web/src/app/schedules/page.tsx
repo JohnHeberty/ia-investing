@@ -114,14 +114,6 @@ function IntervalEditor({
     setEditing(false);
   }, []);
 
-  if (schedule.is_default) {
-    return (
-      <span style={{ fontFamily: "var(--font-mono)", fontSize: 13 }}>
-        {interval ? parseDuration(interval) : "—"}
-      </span>
-    );
-  }
-
   if (editing) {
     return (
       <div className="flex items-center gap-4">
