@@ -78,17 +78,17 @@ async def _log_schedule_audit(
 
 
 SCHEDULE_META: dict[str, dict[str, str]] = {
-    "news-collection-": {"category": "news", "description": "Coleta de noticias RSS"},
-    "news-dedup-cleanup": {"category": "news", "description": "Limpeza de eventos duplicados"},
-    "operation-outbox-dispatch": {"category": "operations", "description": "Dispatch do outbox de operacoes"},
-    "outbox-dispatch-recovery": {"category": "operations", "description": "Recuperação de mensagens do outbox"},
-    "cvm-dfp-": {"category": "data", "description": "Ingestao de dados CVM"},
-    "paper-reconciliation-": {"category": "portfolio", "description": "Reconciliacao diaria de paper trading"},
-    "paper-valuation-": {"category": "portfolio", "description": "Publicacao diaria de NAV"},
-    "paper-rebalance-": {"category": "portfolio", "description": "Rebalance semanal de paper trading"},
-    "equity-exploration-": {"category": "research", "description": "Exploration periodica de acoes"},
-    "policy-source-collection": {"category": "policy", "description": "Coleta de fontes policy (Câmara, Senado, DOU, BCB, IBGE)"},
-    "policy-collection-": {"category": "policy", "description": "Coleta de eventos policy por autoridade"},
+    "news-collection-": {"category": "news", "description": "Coleta automatizada de notícias de feeds RSS e sites de notícias financeiras"},
+    "news-dedup-cleanup": {"category": "news", "description": "Limpeza periódica de notícias duplicadas no banco de dados"},
+    "operation-outbox-dispatch": {"category": "operations", "description": "Envio de ordens e operações pendentes para execução"},
+    "outbox-dispatch-recovery": {"category": "operations", "description": "Recuperação de operações que falharam no envio original"},
+    "cvm-dfp-": {"category": "data", "description": "Importação automatizada de dados financeiros da CVM (DFPs, demonstrativos)"},
+    "paper-reconciliation-": {"category": "portfolio", "description": "Verificação diária de consistência entre posições simuladas e registros"},
+    "paper-valuation-": {"category": "portfolio", "description": "Publicação diária do valor patrimonial (NAV) das carteiras simuladas"},
+    "paper-rebalance-": {"category": "portfolio", "description": "Rebalanceamento semanal automático das carteiras simuladas"},
+    "equity-exploration-": {"category": "research", "description": "Análise periódica de oportunidades de investimento em ações"},
+    "policy-source-collection": {"category": "policy", "description": "Coleta legislativa de Câmara, Senado, DOU, Banco Central e IBGE"},
+    "policy-collection-": {"category": "policy", "description": "Coleta de eventos regulatórios por autoridade governamental"},
 }
 
 
