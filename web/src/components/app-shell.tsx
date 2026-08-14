@@ -215,9 +215,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </nav>
       <main className="main">
-        {process.env.NEXT_PUBLIC_ENABLE_DEMO_DATA === "true" && (
-          <div className="demo-banner">Dados de demonstração — nenhuma decisão ou ordem real</div>
-        )}
         <header className="topbar">
           <div className="breadcrumb">
             Organização / <strong>Brasil Long Only</strong>

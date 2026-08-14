@@ -196,6 +196,9 @@ a {
   flex-direction: column;
 }
 .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   height: 67px;
   min-height: 67px;
   border-bottom: 1px solid var(--line-soft);
