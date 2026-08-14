@@ -46,6 +46,59 @@ def upgrade() -> None:
     op.create_index("ix_policy_alerts_policy_object_id", "policy_alerts", ["policy_object_id"])
     op.create_index("ix_policy_alerts_fired_at", "policy_alerts", ["fired_at"])
 
+    # Create policy_stage_events if it does not exist yet
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'policy_stage_events') THEN
+                CREATE TABLE policy_stage_events (
+                    id UUID PRIMARY KEY,
+                    policy_object_id UUID NOT NULL REFERENCES policy_objects(id) ON DELETE CASCADE,
+                    stage VARCHAR(80) NOT NULL,
+                    occurred_at TIMESTAMPTZ NOT NULL,
+                    knowledge_at TIMESTAMPTZ NOT NULL,
+                    evidence_id UUID NOT NULL REFERENCES research_evidence(id) ON DELETE RESTRICT,
+                    metadata_payload JSONB NOT NULL
+                );
+            END IF;
+        END
+        $$;
+        """
+    )
+
+    # Create regulatory_actions if it does not exist yet
+    op.execute(
+        """
+        DO $$
+        BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'regulatory_actions') THEN
+                CREATE TABLE regulatory_actions (
+                    id UUID PRIMARY KEY,
+                    policy_object_id UUID NOT NULL REFERENCES policy_objects(id) ON DELETE CASCADE,
+                    authority VARCHAR(100) NOT NULL,
+                    action_type VARCHAR(50) NOT NULL,
+                    external_id VARCHAR(150) NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT NOT NULL DEFAULT '',
+                    issued_at TIMESTAMPTZ NOT NULL,
+                    effective_at TIMESTAMPTZ,
+                    expires_at TIMESTAMPTZ,
+                    parent_action_id UUID REFERENCES regulatory_actions(id) ON DELETE SET NULL,
+                    rectifies BOOLEAN NOT NULL DEFAULT FALSE,
+                    content_sha256 VARCHAR(64) NOT NULL,
+                    metadata_payload JSONB NOT NULL,
+                    knowledge_at TIMESTAMPTZ NOT NULL,
+                    source_object_version_id UUID NOT NULL REFERENCES source_object_versions(id) ON DELETE RESTRICT,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+                    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                );
+            END IF;
+        END
+        $$;
+        """
+    )
+
     op.create_index(
         "ix_policy_stage_events_object_stage",
         "policy_stage_events",

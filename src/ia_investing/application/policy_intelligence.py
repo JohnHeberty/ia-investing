@@ -17,6 +17,7 @@ from database.models.policy_intelligence import (
     PolicyObject,
     PolicyObjectVersion,
     PolicyProbabilityForecast,
+    PolicySource,
     PolicyStageEvent,
     RegulatoryAction,
 )
@@ -340,14 +341,13 @@ class ProbabilityForecastService:
     async def list_forecasts(
         self,
         *,
-        policy_object_id: UUID,
+        policy_object_id: UUID | None = None,
     ) -> list[PolicyProbabilityForecast]:
-        """List forecasts for a policy object."""
-        stmt = (
-            sa.select(PolicyProbabilityForecast)
-            .where(PolicyProbabilityForecast.policy_object_id == policy_object_id)
-            .order_by(PolicyProbabilityForecast.predicted_at.desc())
-        )
+        """List forecasts, optionally filtered by policy object."""
+        stmt = sa.select(PolicyProbabilityForecast)
+        if policy_object_id is not None:
+            stmt = stmt.where(PolicyProbabilityForecast.policy_object_id == policy_object_id)
+        stmt = stmt.order_by(PolicyProbabilityForecast.predicted_at.desc())
         return list((await self.session.execute(stmt)).scalars())
 
 
@@ -414,3 +414,62 @@ class PolicyAlertService:
         alert.resolution_notes = notes
         await self.session.flush()
         return alert
+
+
+class PolicySourceService:
+    """CRUD service for policy sources."""
+
+    def __init__(self, session: AsyncSession) -> None:
+        self.session = session
+
+    async def list_sources(self) -> list[PolicySource]:
+        stmt = sa.select(PolicySource).order_by(PolicySource.name)
+        return list((await self.session.execute(stmt)).scalars())
+
+    async def get_source(self, source_id: UUID) -> PolicySource:
+        source = await self.session.get(PolicySource, source_id)
+        if source is None:
+            raise LookupError(f"source not found: {source_id}")
+        return source
+
+    async def create_source(
+        self,
+        *,
+        name: str,
+        source_type: str | None = None,
+        url_pattern: str | None = None,
+    ) -> PolicySource:
+        source = PolicySource(
+            name=name,
+            source_type=source_type,
+            url_pattern=url_pattern,
+        )
+        self.session.add(source)
+        await self.session.flush()
+        return source
+
+    async def update_source(
+        self,
+        *,
+        source_id: UUID,
+        name: str | None = None,
+        source_type: str | None = None,
+        url_pattern: str | None = None,
+        is_active: bool | None = None,
+    ) -> PolicySource:
+        source = await self.get_source(source_id)
+        if name is not None:
+            source.name = name
+        if source_type is not None:
+            source.source_type = source_type
+        if url_pattern is not None:
+            source.url_pattern = url_pattern
+        if is_active is not None:
+            source.is_active = is_active
+        await self.session.flush()
+        return source
+
+    async def delete_source(self, source_id: UUID) -> None:
+        source = await self.get_source(source_id)
+        await self.session.delete(source)
+        await self.session.flush()

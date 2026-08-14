@@ -306,3 +306,16 @@ class PolicyAlert(Base):
     resolution_notes: Mapped[str | None] = mapped_column(sa.Text)
     created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class PolicySource(Base):
+    __tablename__ = "policy_sources"
+
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    name: Mapped[str] = mapped_column(sa.String(200))
+    source_type: Mapped[str | None] = mapped_column(sa.String(100))
+    url_pattern: Mapped[str | None] = mapped_column(sa.Text)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    last_fetched_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), default=utcnow, onupdate=utcnow)

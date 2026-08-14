@@ -19,6 +19,7 @@ from ia_investing.application.policy_intelligence import (
     PolicyAlertService,
     PolicyIngestionService,
     PolicyIntelligenceQueryService,
+    PolicySourceService,
     ProbabilityForecastService,
 )
 
@@ -176,6 +177,29 @@ class RegulatoryActionV1(BaseModel):
     authority: str
 
 
+class PolicySourceV1(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: UUID
+    name: str
+    source_type: str | None = None
+    url_pattern: str | None = None
+    is_active: bool = True
+    last_fetched_at: datetime | None = None
+
+
+class PolicySourceCreateInput(BaseModel):
+    name: str
+    source_type: str | None = None
+    url_pattern: str | None = None
+
+
+class PolicySourceUpdateInput(BaseModel):
+    name: str | None = None
+    source_type: str | None = None
+    url_pattern: str | None = None
+    is_active: bool | None = None
+
+
 def require_policy_read(auth: AuthContext) -> None:
     if "policy:read" not in auth.permissions and "portfolio:read" not in auth.permissions:
         raise HTTPException(status_code=403, detail="permission required: policy:read")
@@ -315,7 +339,7 @@ async def resolve_alert(
 
 @router.get("/forecasts", response_model=list[PolicyForecastV1])
 async def list_forecasts(
-    policy_object_id: UUID,
+    policy_object_id: UUID | None = None,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[PolicyForecastV1]:
@@ -367,6 +391,74 @@ async def list_regulatory_actions(
     stmt = stmt.order_by(RegulatoryAction.issued_at.desc())
     actions = list((await session.execute(stmt)).scalars())
     return [RegulatoryActionV1.model_validate(a) for a in actions]
+
+
+# ---------------------------------------------------------------------------
+# Sources
+# ---------------------------------------------------------------------------
+
+
+@router.get("/sources", response_model=list[PolicySourceV1])
+async def list_sources(
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> list[PolicySourceV1]:
+    require_policy_read(auth)
+    service = PolicySourceService(session)
+    sources = await service.list_sources()
+    return [PolicySourceV1.model_validate(s) for s in sources]
+
+
+@router.post("/sources", response_model=PolicySourceV1, status_code=201)
+async def create_source(
+    body: PolicySourceCreateInput,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> PolicySourceV1:
+    require_policy_read(auth)
+    service = PolicySourceService(session)
+    source = await service.create_source(
+        name=body.name,
+        source_type=body.source_type,
+        url_pattern=body.url_pattern,
+    )
+    return PolicySourceV1.model_validate(source)
+
+
+@router.put("/sources/{source_id}", response_model=PolicySourceV1)
+async def update_source(
+    source_id: UUID,
+    body: PolicySourceUpdateInput,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> PolicySourceV1:
+    require_policy_read(auth)
+    service = PolicySourceService(session)
+    try:
+        source = await service.update_source(
+            source_id=source_id,
+            name=body.name,
+            source_type=body.source_type,
+            url_pattern=body.url_pattern,
+            is_active=body.is_active,
+        )
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return PolicySourceV1.model_validate(source)
+
+
+@router.delete("/sources/{source_id}", status_code=204)
+async def delete_source(
+    source_id: UUID,
+    auth: AuthContext = Depends(get_auth_context),
+    session: AsyncSession = Depends(get_async_session),
+) -> None:
+    require_policy_read(auth)
+    service = PolicySourceService(session)
+    try:
+        await service.delete_source(source_id)
+    except LookupError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 # ---------------------------------------------------------------------------

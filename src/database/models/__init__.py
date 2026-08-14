@@ -127,6 +127,7 @@ from .policy_intelligence import (  # noqa: F401
     PolicyObject,
     PolicyObjectVersion,
     PolicyProbabilityForecast,
+    PolicySource,
     PolicyStageEvent,
     PolicyVote,
     RegulatoryAction,
