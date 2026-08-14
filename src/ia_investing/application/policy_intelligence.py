@@ -126,13 +126,12 @@ class PolicyIntelligenceQueryService:
             .subquery()
         )
         latest_stage_time = (
-            sa.text(
-                "SELECT DISTINCT ON (policy_object_id) policy_object_id, knowledge_at "
-                "FROM policy_stage_events "
-                "WHERE knowledge_at <= :as_of "
-                "ORDER BY policy_object_id, knowledge_at DESC"
+            sa.select(
+                PolicyStageEvent.policy_object_id,
+                sa.func.max(PolicyStageEvent.knowledge_at).label("knowledge_at"),
             )
-            .params(as_of=as_of)
+            .where(PolicyStageEvent.knowledge_at <= as_of)
+            .group_by(PolicyStageEvent.policy_object_id)
             .subquery()
         )
         query = (
