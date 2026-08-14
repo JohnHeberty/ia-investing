@@ -5,6 +5,8 @@ import { Suspense } from "react";
 import { AsOfIndicator, Badge, Metric } from "@/components/domain";
 import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data-state-components";
 import { ScenarioWaterfall, type ScenarioEntry } from "@/components/decision-components";
+import type { DataState } from "@/components/domain";
+import { computeDataState } from "@/lib/data-state";
 import { useSourceHealthSummary } from "@/hooks/use-source-health-summary";
 import { useRiskOverview } from "@/hooks/use-risk-overview";
 
@@ -20,6 +22,9 @@ function RiskContent() {
   } = useSourceHealthSummary();
 
   const { overview, isLoading: riskLoading, isError: riskError } = useRiskOverview();
+
+  const riskAsOf = overview?.snapshots?.[0]?.as_of ?? null;
+  const riskDataState: DataState = computeDataState(riskLoading, riskError, riskAsOf, !!overview);
 
   const isLoading = sourceLoading || riskLoading;
   const isError = sourceError || riskError;
@@ -108,13 +113,13 @@ function RiskContent() {
                 })
               : undefined
           }
-          freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
+          freshness={riskDataState === "stale" ? "Desatualizado" : "Atual"}
         />
       </div>
 
-      {dataState === "stale" && (
+      {riskDataState === "stale" && (
         <div className="section-gap">
-          <StaleWarning source="sources/health" />
+          <StaleWarning source="risk/overview" />
         </div>
       )}
 

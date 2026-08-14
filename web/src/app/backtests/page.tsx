@@ -7,7 +7,8 @@ import { DataStatePanel, LoadingSkeleton, StaleWarning } from "@/components/data
 import { useBacktests } from "@/hooks/use-backtests";
 
 function BacktestsContent() {
-  const { runs, completedRuns, pitGatePass, isLoading, isError, dataState, count } = useBacktests();
+  const { runs, completedRuns, pitGatePass, isLoading, isError, dataState, count, hasMore, loadMore } =
+    useBacktests();
 
   if (isLoading) {
     return (
@@ -170,7 +171,9 @@ function BacktestsContent() {
         <article className="card card-pad">
           <div className="card-title">
             <h2>Estratégia vs benchmark</h2>
-            <Badge tone="good">Saudável</Badge>
+            <Badge tone={hasRuns && pitGatePass ? "good" : "neutral"}>
+              {hasRuns ? (pitGatePass ? "Saudável" : "Revisar") : "Sem dados"}
+            </Badge>
           </div>
           <p className="card-desc">
             Benchmark permanece fora do universo investível e usa série própria.
@@ -179,7 +182,9 @@ function BacktestsContent() {
         <article className="card card-pad">
           <div className="card-title">
             <h2>Baselines e ablações</h2>
-            <Badge tone="good">Saudável</Badge>
+            <Badge tone={hasRuns && completedRuns > 0 ? "good" : "neutral"}>
+              {hasRuns && completedRuns > 0 ? "Saudável" : "Sem dados"}
+            </Badge>
           </div>
           <p className="card-desc">
             Equal weight, quantitativo sem agents e ablações isolam contribuição incremental.
@@ -188,13 +193,34 @@ function BacktestsContent() {
         <article className="card card-pad">
           <div className="card-title">
             <h2>Custos e eventos</h2>
-            <Badge tone="warn">Atenção</Badge>
+            <Badge
+              tone={
+                hasRuns && runs.some((r) => r.totalCost !== "—" && Number(r.totalCost) > 0)
+                  ? "warn"
+                  : "neutral"
+              }
+            >
+              {hasRuns
+                ? runs.some((r) => r.totalCost !== "—" && Number(r.totalCost) > 0)
+                  ? "Atenção"
+                  : "Saudável"
+                : "Sem dados"}
+            </Badge>
           </div>
           <p className="card-desc">
             Resultados evidenciam efeito de slippage, impostos e corporate actions.
           </p>
         </article>
       </section>
+
+      {/* Load more */}
+      {hasRuns && hasMore && (
+        <div className="section-gap" style={{ textAlign: "center" }}>
+          <button className="btn" type="button" onClick={loadMore} disabled={isLoading}>
+            Carregar mais
+          </button>
+        </div>
+      )}
     </>
   );
 }

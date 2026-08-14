@@ -146,7 +146,7 @@ function AgentsContent() {
         <section className="card card-pad section-gap" aria-live="polite">
           <div className="card-title">
             <h2>Runs recentes</h2>
-            <span>{count} execuções</span>
+            <span>{Math.min(count, 10)} de {count} execuções</span>
           </div>
           <div className="table-wrap">
             <table className="table">

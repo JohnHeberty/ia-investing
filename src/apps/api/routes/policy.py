@@ -416,10 +416,12 @@ async def list_regulatory_actions(
 async def list_sources(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
 ) -> list[PolicySourceV1]:
     require_policy_read(auth)
     service = PolicySourceService(session)
-    sources = await service.list_sources()
+    sources = await service.list_sources(limit=limit, offset=offset)
     return [PolicySourceV1.model_validate(s) for s in sources]
 
 

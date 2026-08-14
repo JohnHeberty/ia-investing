@@ -24,12 +24,37 @@ async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
     throw new Error((body as { detail?: string }).detail ?? `API error: ${response.status}`);
   }
   if (response.status === 204) return null as unknown as T;
-  try {
-    return (await response.json()) as T;
-  } catch {
-    throw new Error(`API error: ${response.status}: Response body is not valid JSON`);
+    try {
+      return (await response.json()) as T;
+    } catch {
+      throw new Error(`API error: ${response.status}: Response body is not valid JSON`);
+    }
   }
-}
+
+  /** Like api() but returns the raw Response for header access (e.g. ETag). */
+  async function rawApi(path: string, options: RequestInit = {}): Promise<Response> {
+    const url = `${apiBase}/api/v1${path}`;
+    const method = (options.method ?? "GET").toUpperCase();
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(options.headers as Record<string, string>),
+    };
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+      const token = getCsrfToken();
+      if (token) headers["x-csrf-token"] = token;
+    }
+    const response = await fetch(url, {
+      ...options,
+      credentials: "include",
+      headers,
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error((body as { detail?: string }).detail ?? `API error: ${response.status}`);
+    }
+    return response;
+  }
 
 export type CandidateStatus =
   | "suggested"
@@ -187,15 +212,7 @@ export function addCandidateSource(
 }
 
 export async function getCandidate(id: string): Promise<{ data: CandidateDetail; etag: string }> {
-  const url = `${apiBase}/api/v1/investment-candidates/${id}`;
-  const response = await fetch(url, {
-    credentials: "include",
-    headers: { Accept: "application/json" },
-  });
-  if (!response.ok) {
-    const body = await response.json().catch(() => ({}));
-    throw new Error((body as { detail?: string }).detail ?? `API error: ${response.status}`);
-  }
+  const response = await rawApi(`/investment-candidates/${id}`);
   let data: CandidateDetail;
   try {
     data = (await response.json()) as CandidateDetail;

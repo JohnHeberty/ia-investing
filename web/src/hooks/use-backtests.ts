@@ -1,10 +1,13 @@
 "use client";
 
+import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import type { DataState } from "@/components/domain";
 import { bffFetch, queryKeys } from "@/lib/api-client";
 import { computeDataState } from "@/lib/data-state";
+
+const PAGE_SIZE = 50;
 
 export interface BacktestRun {
   id: string;
@@ -18,10 +21,15 @@ export interface BacktestRun {
 }
 
 export function useBacktests() {
+  const [page, setPage] = useState(0);
+  const offset = page * PAGE_SIZE;
+
   const query = useQuery({
-    queryKey: queryKeys.backtests(),
+    queryKey: [...queryKeys.backtests(), { offset, limit: PAGE_SIZE }],
     queryFn: async () => {
-      return await bffFetch<Array<Record<string, unknown>>>("/api/v1/backtests?limit=100&offset=0");
+      return await bffFetch<Array<Record<string, unknown>>>(
+        `/api/v1/backtests?limit=${PAGE_SIZE}&offset=${offset}`,
+      );
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
@@ -60,12 +68,26 @@ export function useBacktests() {
 
   const completedRuns = runs.filter((run) => run.status === "succeeded").length;
   const pitGatePass = runs.length > 0 && runs.every((run) => run.pitGate === "100%");
+
+  const latestAsOf =
+    runs.length > 0
+      ? runs.reduce((latest, r) => {
+          const d = new Date(r.createdAt).getTime();
+          return d > latest ? d : latest;
+        }, 0)
+      : null;
+
   const dataState: DataState = computeDataState(
     query.isLoading,
     query.isError,
-    null,
+    latestAsOf ? new Date(latestAsOf).toISOString() : null,
     runs.length > 0,
   );
+
+  const hasMore = runs.length === PAGE_SIZE;
+  const loadMore = useCallback(() => {
+    if (hasMore && !query.isLoading) setPage((p) => p + 1);
+  }, [hasMore, query.isLoading]);
 
   return {
     runs,
@@ -77,5 +99,8 @@ export function useBacktests() {
     dataState,
     refetch: query.refetch,
     count: runs.length,
+    hasMore,
+    loadMore,
+    page,
   };
 }

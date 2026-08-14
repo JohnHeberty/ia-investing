@@ -683,9 +683,11 @@ async def list_backtests(
     offset: int = Query(default=0, ge=0),
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
-    ) -> list[BacktestRunV1]:
+) -> list[BacktestRunV1]:
     if "backtests:read" not in auth.permissions and "portfolio:read" not in auth.permissions:
         raise HTTPException(status_code=403, detail="permission required: backtests:read")
+    # JOIN is required: strategy_name lives on BacktestConfig, not InstitutionalBacktestRun.
+    # We select it as a scalar projection to avoid loading the full config ORM object.
     stmt = (
         sa.select(InstitutionalBacktestRun, BacktestConfig.strategy_name)
         .join(BacktestConfig, BacktestConfig.id == InstitutionalBacktestRun.config_id)

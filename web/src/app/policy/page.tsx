@@ -220,7 +220,10 @@ function AlertsTab() {
                             <button
                               className="btn"
                               type="button"
-                              disabled={resolve.isPending}
+                              disabled={
+                                resolve.isPending ||
+                                (resolveNotes[alert.id] ?? "").trim().length < 3
+                              }
                               onClick={() =>
                                 resolve.mutate(
                                   {
@@ -514,8 +517,8 @@ function SourcesTab() {
                 try {
                   await deleteMutation.mutateAsync(confirmDelete);
                   setConfirmDelete(null);
-                } catch {
-                  // Error is handled by onError in the mutation
+                } catch (err) {
+                  console.error("Failed to delete source", err);
                 }
               }}
             >

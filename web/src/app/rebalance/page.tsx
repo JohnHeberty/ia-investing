@@ -63,7 +63,8 @@ export default function RebalancePage() {
 
   const isLoading =
     (driftQuery.isPending && driftQuery.fetchStatus !== "idle") ||
-    (proposalsQuery.isPending && proposalsQuery.fetchStatus !== "idle");
+    (proposalsQuery.isPending && proposalsQuery.fetchStatus !== "idle") ||
+    (proposalDetailQuery.isPending && proposalDetailQuery.fetchStatus !== "idle");
 
   if (selectedProposalId && proposalDetailQuery.data) {
     return (
@@ -107,6 +108,7 @@ export default function RebalancePage() {
         <select
           className="select-styled"
           value={effectiveId}
+          aria-label="Selecionar carteira"
           onChange={(e) => {
             setSelectedPortfolioId(e.target.value);
             setSelectedProposalId(null);

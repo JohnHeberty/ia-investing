@@ -22,7 +22,8 @@ export default function ExplorationPage() {
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [submittingRun, setSubmittingRun] = useState(false);
+  const [submittingSchedule, setSubmittingSchedule] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [workingSuggestion, setWorkingSuggestion] = useState<string | null>(null);
   const [dismissTarget, setDismissTarget] = useState<string | null>(null);
@@ -48,14 +49,14 @@ export default function ExplorationPage() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitting(true);
+    setSubmittingRun(true);
     setError(null);
     setSuccess(null);
     const form = new FormData(event.currentTarget);
     const strategies = form.getAll("strategy").map(String);
     if (!strategies.length) {
       setError("Selecione ao menos uma estratégia.");
-      setSubmitting(false);
+      setSubmittingRun(false);
       return;
     }
     try {
@@ -72,20 +73,20 @@ export default function ExplorationPage() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao iniciar exploração");
     } finally {
-      setSubmitting(false);
+      setSubmittingRun(false);
     }
   }
 
   async function createSchedule(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSubmitting(true);
+    setSubmittingSchedule(true);
     setError(null);
     setSuccess(null);
     const form = new FormData(event.currentTarget);
     const strategies = form.getAll("schedule_strategy").map(String);
     if (!strategies.length) {
       setError("Selecione ao menos uma estratégia para o agendamento.");
-      setSubmitting(false);
+      setSubmittingSchedule(false);
       return;
     }
     try {
@@ -103,7 +104,7 @@ export default function ExplorationPage() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao criar agendamento");
     } finally {
-      setSubmitting(false);
+      setSubmittingSchedule(false);
     }
   }
 
@@ -171,8 +172,8 @@ export default function ExplorationPage() {
       )}
       {success && <div className={styles.success}>{success}</div>}
 
-      <ExplorationForm onSubmit={submit} submitting={submitting} />
-      <ScheduleForm onSubmit={createSchedule} submitting={submitting} />
+      <ExplorationForm onSubmit={submit} submitting={submittingRun} />
+      <ScheduleForm onSubmit={createSchedule} submitting={submittingSchedule} />
 
       <section className="card card-pad section-gap">
         <div className="card-title">

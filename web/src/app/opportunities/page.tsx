@@ -234,7 +234,7 @@ function OpportunitiesContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {cases.slice(0, 12).map((c) => (
+                  {cases.map((c) => (
                     <CaseCard key={c.id} caseItem={c} />
                   ))}
                 </tbody>

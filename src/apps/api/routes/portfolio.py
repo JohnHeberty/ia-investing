@@ -128,11 +128,11 @@ async def list_portfolios(
     session: AsyncSession = Depends(get_async_session),
     limit: int = Query(100, ge=1, le=500),
     offset: int = Query(0, ge=0),
-) -> list[dict[str, Any]]:
+) -> list[PortfolioListItem]:
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="organization context is required")
     all_items = await PaperPortfolioService(session).list_all(organization_id=auth.organization_id)
-    return all_items[offset : offset + limit]
+    return [PortfolioListItem(**item) for item in all_items[offset : offset + limit]]
 
 
 @router.get("/{portfolio_id}", response_model=dict[str, Any])

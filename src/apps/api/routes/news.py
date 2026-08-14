@@ -10,6 +10,7 @@ from uuid import UUID
 import sqlalchemy as sa
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, ConfigDict
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api.security import AuthContext, require_permission
@@ -135,7 +136,7 @@ async def get_news_items(
         items, total = await list_news_items(
             session, issuer_id=issuer_id, is_processed=is_processed, limit=limit, offset=offset
         )
-    except Exception:
+    except SQLAlchemyError:
         logger.exception("Failed to list news items")
         raise HTTPException(status_code=500, detail="Failed to load news items") from None
     return NewsListResponseV1(
@@ -186,7 +187,7 @@ async def fetch_news(
 ) -> FetchResponseV1:
     try:
         persisted = await fetch_and_persist_news_items(issuer_id, session, max_results=max_results)
-    except Exception:
+    except (SQLAlchemyError, OSError):
         logger.exception("Failed to fetch news for issuer %s", issuer_id)
         raise HTTPException(status_code=502, detail="Failed to fetch news from external source") from None
     return FetchResponseV1(persisted=persisted, count=len(persisted))
@@ -200,7 +201,7 @@ async def analyze_news(
 ) -> AnalyzeResponseV1:
     try:
         result = await analyze_news_item(item_id, session)
-    except Exception:
+    except (SQLAlchemyError, ValueError):
         logger.exception("Failed to analyze news item %s", item_id)
         raise HTTPException(status_code=502, detail="LLM analysis service temporarily unavailable") from None
     if result is None:

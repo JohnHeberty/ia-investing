@@ -485,8 +485,8 @@ class PolicySourceService:
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
-    async def list_sources(self) -> list[PolicySource]:
-        stmt = sa.select(PolicySource).order_by(PolicySource.name)
+    async def list_sources(self, limit: int = 100, offset: int = 0) -> list[PolicySource]:
+        stmt = sa.select(PolicySource).order_by(PolicySource.name).offset(offset).limit(limit)
         return list((await self.session.execute(stmt)).scalars())
 
     async def get_source(self, source_id: UUID) -> PolicySource:

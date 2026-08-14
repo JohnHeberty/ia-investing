@@ -196,7 +196,14 @@ async def _ingest_records(
     records: list[dict[str, Any]],
     pipeline_version_id: UUID,
 ) -> dict[str, int]:
-    """Ingest fetched records into the database. Returns count ingested."""
+    """Ingest fetched records into the database. Returns count ingested.
+
+    Known limitation: each ingester.ingest() call executes 2-3 DB queries
+    (SELECT for existing object, SELECT for existing version, INSERT new version),
+    resulting in O(n) query round-trips for n records.  Acceptable for the current
+    batch sizes (typically < 100 records per source per fetch window).  If batch
+    sizes grow, consider a bulk-upsert path with ON CONFLICT handling.
+    """
     ingested = 0
     for record in records:
         try:
@@ -269,7 +276,6 @@ async def collect_from_policy_source(params: dict[str, Any]) -> dict[str, Any]:
             if ingested_result["ingested"] == 0 and len(records) > 0:
                 source.last_fetch_error = f"Fetched {len(records)} records but 0 ingested"
                 source.last_fetch_error_at = datetime.now(UTC)
-                await session.commit()
                 return {"status": "partial", "authority": authority, "fetched": len(records), "ingested": 0}
 
             # Update success tracking

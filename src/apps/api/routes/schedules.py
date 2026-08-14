@@ -184,6 +184,60 @@ def _safe_str(obj: Any, attr: str) -> str | None:
     return str(val) if val else None
 
 
+def _parse_next_action_time(description: Any, info_obj: Any) -> str | None:
+    """Extract the next action time from schedule_state or info."""
+    schedule_state = _safe_get(description, "schedule_state")
+    if schedule_state and _safe_get(schedule_state, "next_action_time"):
+        return schedule_state.next_action_time
+    if info_obj and _safe_get(info_obj, "next_action_times"):
+        times = info_obj.next_action_times
+        return times[0] if times else None
+    return None
+
+
+def _parse_spec(spec_obj: Any) -> dict[str, Any] | None:
+    """Parse schedule spec (intervals, calendars, cron expressions)."""
+    if not spec_obj:
+        return None
+    raw_intervals = _safe_get(spec_obj, "intervals") or []
+    intervals = [
+        {
+            "every": str(iv.every),
+            "offset": str(iv.offset) if iv.offset else None,
+        }
+        for iv in raw_intervals
+    ]
+    return {
+        "intervals": intervals,
+        "calendars": list(_safe_get(spec_obj, "calendars", []) or []),
+        "cron_expressions": list(_safe_get(spec_obj, "cron_expressions", []) or []),
+    }
+
+
+def _parse_action(action_obj: Any) -> dict[str, Any] | None:
+    """Parse schedule action (workflow type, task queue)."""
+    if not action_obj:
+        return None
+    return {
+        "type": type(action_obj).__name__,
+        "workflow": {
+            "workflow_type": _safe_get(action_obj, "workflow"),
+            "task_queue": _safe_get(action_obj, "task_queue"),
+        },
+    }
+
+
+def _parse_policy(policy_obj: Any) -> dict[str, Any] | None:
+    """Parse schedule policy (overlap, catchup, pause-on-failure)."""
+    if not policy_obj:
+        return None
+    return {
+        "overlap": _safe_str(policy_obj, "overlap"),
+        "catchup_window": _safe_str(policy_obj, "catchup_window"),
+        "pause_on_failure": _safe_get(policy_obj, "pause_on_failure"),
+    }
+
+
 def _parse_schedule_description(description: Any) -> dict[str, Any]:
     sched = description.schedule
     spec_obj = _safe_get(sched, "spec")
@@ -193,73 +247,30 @@ def _parse_schedule_description(description: Any) -> dict[str, Any]:
     info_obj = _safe_get(description, "info")
 
     paused = _safe_get(state_obj, "paused", False) if state_obj else False
+    next_action_time = _parse_next_action_time(description, info_obj)
 
-    next_action_time = None
-    schedule_state = _safe_get(description, "schedule_state")
-    if schedule_state and _safe_get(schedule_state, "next_action_time"):
-        next_action_time = schedule_state.next_action_time
-    elif info_obj and _safe_get(info_obj, "next_action_times"):
-        next_action_time = info_obj.next_action_times[0] if info_obj.next_action_times else None
+    recent_actions = _safe_get(info_obj, "recent_actions", []) if info_obj else []
+    last_run_at = _safe_get(recent_actions[-1], "started_at") if recent_actions else None
 
-    intervals = []
-    raw_intervals = _safe_get(spec_obj, "intervals") if spec_obj else None
-    if raw_intervals:
-        for interval in raw_intervals:
-            intervals.append(
-                {
-                    "every": str(interval.every),
-                    "offset": str(interval.offset) if interval.offset else None,
-                }
-            )
-
-    result: dict[str, Any] = {
+    return {
         "schedule_id": description.id,
         "status": _safe_get(description, "status", "running"),
         "paused": paused,
         "next_action_time": next_action_time,
-        "spec": {
-            "intervals": intervals,
-            "calendars": list(_safe_get(spec_obj, "calendars", []) or []),
-            "cron_expressions": list(_safe_get(spec_obj, "cron_expressions", []) or []),
-        }
-        if spec_obj
-        else None,
+        "spec": _parse_spec(spec_obj),
         "state": {
             "paused": paused,
             "remaining_actions": _safe_get(state_obj, "remaining_actions", 0),
         }
         if state_obj
         else None,
-        "action": {
-            "type": type(action_obj).__name__ if action_obj else None,
-            "workflow": {
-                "workflow_type": _safe_get(action_obj, "workflow"),
-                "task_queue": _safe_get(action_obj, "task_queue"),
-            }
-            if action_obj
-            else None,
-        }
-        if action_obj
-        else None,
-        "policy": {
-            "overlap": _safe_str(policy_obj, "overlap"),
-            "catchup_window": _safe_str(policy_obj, "catchup_window"),
-            "pause_on_failure": _safe_get(policy_obj, "pause_on_failure"),
-        }
-        if policy_obj
-        else None,
+        "action": _parse_action(action_obj),
+        "policy": _parse_policy(policy_obj),
         "created_at": _safe_get(info_obj, "created_at"),
         "last_updated_at": _safe_get(info_obj, "last_updated_at"),
-        "last_run_at": None,
+        "last_run_at": last_run_at,
         "info": {"running_workflows": len(_safe_get(info_obj, "running_actions", []) or [])} if info_obj else None,
     }
-
-    recent_actions = _safe_get(info_obj, "recent_actions", []) if info_obj else []
-    if recent_actions:
-        last_action = recent_actions[-1]
-        result["last_run_at"] = _safe_get(last_action, "started_at")
-
-    return result
 
 
 def _validate_schedule_id(schedule_id: str) -> str:
@@ -482,6 +493,10 @@ async def trigger_schedule(
         handle = client.get_schedule_handle(schedule_id)
         description = await handle.describe()
         running_actions = _safe_get(_safe_get(description, "info"), "running_actions", []) or []
+        # NOTE: TOCTOU — the running_actions check and handle.trigger() below are not atomic.
+        # Two concurrent trigger requests could both pass this guard. This is low-risk because
+        # Temporal schedules deduplicate workflow starts at the server level, and the worst
+        # case is a benign "already started" error on one of the concurrent requests.
         if running_actions:
             raise HTTPException(
                 status_code=409,

@@ -309,7 +309,7 @@ export function useScheduleTrigger(scheduleId: string, description: string) {
     }, TRIGGER_POLL_MS);
 
     return () => clearInterval(interval);
-  }, [phase, scheduleId]);
+  }, [phase, scheduleId, description]);
 
   useEffect(() => {
     if (phase === "completed") {

@@ -24,6 +24,7 @@ import {
   Check,
   X,
 } from "lucide-react";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 const CATEGORY_LABELS: Record<string, string> = {
   news: "Notícias",
@@ -535,6 +536,7 @@ export default function SchedulesPage() {
   );
   const [reconcileMsg, setReconcileMsg] = useState<string | null>(null);
   const [mutatingId, setMutatingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const toggleCategory = useCallback((cat: string) => {
     setExpandedCategories((prev) => {
@@ -562,20 +564,25 @@ export default function SchedulesPage() {
   );
 
   const handleDelete = useCallback(
-    async (scheduleId: string) => {
-      if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
-      setMutatingId(scheduleId);
-      try {
-        await deleteSchedule(scheduleId);
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Erro desconhecido";
-        toast.error(`Falha ao excluir agendamento: ${msg}`);
-      } finally {
-        setMutatingId(null);
-      }
+    (scheduleId: string) => {
+      setConfirmDeleteId(scheduleId);
     },
-    [deleteSchedule],
+    [],
   );
+
+  const confirmDelete = useCallback(async () => {
+    if (!confirmDeleteId) return;
+    setConfirmDeleteId(null);
+    setMutatingId(confirmDeleteId);
+    try {
+      await deleteSchedule(confirmDeleteId);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Falha ao excluir agendamento: ${msg}`);
+    } finally {
+      setMutatingId(null);
+    }
+  }, [confirmDeleteId, deleteSchedule]);
 
   const handleUpdateInterval = useCallback(
     async (
@@ -716,6 +723,17 @@ export default function SchedulesPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDeleteId(null);
+        }}
+        title="Excluir agendamento"
+        description="Tem certeza que deseja excluir este agendamento? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        onConfirm={confirmDelete}
+      />
     </Suspense>
   );
 }

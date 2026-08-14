@@ -613,28 +613,40 @@ async def delete_news_source(session: AsyncSession, source_id: UUID) -> bool:
 
 
 async def get_news_stats(session: AsyncSession) -> dict[str, Any]:
-    """Get aggregated news statistics using separate subqueries to avoid cartesian products."""
-    total_items = (await session.execute(sa.select(sa.func.count(NewsItem.id)))).scalar() or 0
-    processed_items = (
-        await session.execute(sa.select(sa.func.count(NewsItem.id)).where(NewsItem.is_processed.is_(True)))
-    ).scalar() or 0
-
-    total_events = (await session.execute(sa.select(sa.func.count(DetectedEvent.id)))).scalar() or 0
-    positive_events = (
+    """Get aggregated news statistics in a single query using PostgreSQL FILTER clauses."""
+    row = (
         await session.execute(
-            sa.select(sa.func.count(DetectedEvent.id)).where(DetectedEvent.direction_hint == "positive")
+            sa.select(
+                sa.func.count(NewsItem.id).label("total_items"),
+                sa.func.count(NewsItem.id).filter(NewsItem.is_processed.is_(True)).label("processed_items"),
+                sa.func.count(DetectedEvent.id).label("total_events"),
+                sa.func.count(DetectedEvent.id).filter(DetectedEvent.direction_hint == "positive").label(
+                    "positive_events"
+                ),
+                sa.func.count(DetectedEvent.id).filter(DetectedEvent.direction_hint == "negative").label(
+                    "negative_events"
+                ),
+                sa.func.count(EventImpact.id).label("total_impacts"),
+                sa.func.count(NewsSource.id).filter(NewsSource.is_active.is_(True)).label("active_sources"),
+            ).select_from(
+                sa.outerjoin(
+                    sa.outerjoin(
+                        sa.outerjoin(NewsItem, DetectedEvent, DetectedEvent.news_item_id == NewsItem.id),
+                        EventImpact,
+                        EventImpact.event_id == DetectedEvent.id,
+                    ),
+                    NewsSource,
+                    NewsSource.id == NewsItem.source_id,
+                )
+            )
         )
-    ).scalar() or 0
-    negative_events = (
-        await session.execute(
-            sa.select(sa.func.count(DetectedEvent.id)).where(DetectedEvent.direction_hint == "negative")
-        )
-    ).scalar() or 0
+    ).one()
 
-    total_impacts = (await session.execute(sa.select(sa.func.count(EventImpact.id)))).scalar() or 0
-    active_sources = (
-        await session.execute(sa.select(sa.func.count(NewsSource.id)).where(NewsSource.is_active.is_(True)))
-    ).scalar() or 0
+    total_items = row.total_items or 0
+    processed_items = row.processed_items or 0
+    total_events = row.total_events or 0
+    positive_events = row.positive_events or 0
+    negative_events = row.negative_events or 0
 
     return {
         "total_items": total_items,
@@ -644,8 +656,8 @@ async def get_news_stats(session: AsyncSession) -> dict[str, Any]:
         "positive_events": positive_events,
         "negative_events": negative_events,
         "neutral_events": total_events - positive_events - negative_events,
-        "total_impacts": total_impacts,
-        "active_sources": active_sources,
+        "total_impacts": row.total_impacts or 0,
+        "active_sources": row.active_sources or 0,
     }
 
 

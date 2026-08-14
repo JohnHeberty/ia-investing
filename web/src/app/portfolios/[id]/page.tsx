@@ -98,7 +98,7 @@ function computeRiskMetrics(
 }
 
 export function PortfolioContent({ id }: { id: string }) {
-  const { portfolio, isLoading, isError } = usePortfolioDetail(id);
+  const { portfolio, isLoading, isError, error } = usePortfolioDetail(id);
   const { recommendations, refetch: refetchRecommendations } = usePortfolioRecommendations(id);
   const { theses, isLoading: thesesLoading } = usePortfolioTheses(id);
   const { entries: auditEntries, isLoading: auditLoading } = useAuditLogs("portfolio", id);
@@ -161,18 +161,21 @@ export function PortfolioContent({ id }: { id: string }) {
   }
 
   if (isError || !portfolio) {
+    const isNotFound = error instanceof Error && error.message.includes("404");
     return (
       <>
         <div className="page-head">
           <div>
             <div className="eyebrow">Portfolio 360</div>
-            <h1>Carteira não encontrada</h1>
+            <h1>{isNotFound ? "Carteira não encontrada" : "Erro ao carregar carteira"}</h1>
           </div>
         </div>
         <div className="state-panel" data-state="error">
-          <strong>Erro ao carregar carteira</strong>
+          <strong>{isNotFound ? "Carteira não encontrada" : "Erro ao carregar carteira"}</strong>
           <p>
-            Não foi possível acessar os dados desta carteira. Verifique o ID ou tente novamente.
+            {isNotFound
+              ? "A carteira solicitada não existe ou foi removida. Verifique o ID e tente novamente."
+              : "Não foi possível acessar os dados desta carteira. Verifique a conexão com a API e tente novamente."}
           </p>
         </div>
         <div className="mt-16">

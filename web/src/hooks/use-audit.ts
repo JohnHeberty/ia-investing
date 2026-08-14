@@ -71,6 +71,9 @@ export function useAudit() {
   const isError = logsQuery.isError || integrityQuery.isError;
   const dataState: DataState = computeDataState(isLoading, isError, null, auditEvents.length > 0);
 
+  const logsError = logsQuery.error ?? null;
+  const integrityError = integrityQuery.error ?? null;
+
   return {
     auditEvents,
     totalEvents,
@@ -80,7 +83,9 @@ export function useAudit() {
     integrityFailures,
     isLoading,
     isError,
-    error: logsQuery.error ?? integrityQuery.error,
+    logsError,
+    integrityError,
+    error: logsError ?? integrityError,
     dataState,
     refetch: () => {
       void logsQuery.refetch();

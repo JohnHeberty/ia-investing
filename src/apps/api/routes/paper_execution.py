@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api._context import context_from
 from apps.api._errors import map_error
-from apps.api.security import AuthContext, get_auth_context, safe_uuid
+from apps.api.security import AuthContext, get_auth_context, require_permission, safe_uuid
 from database.core import get_async_session
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.paper_execution import PaperExecutionService
@@ -355,25 +355,23 @@ async def simulate_trade_intent(
 
 @router.get("/trade-intents", response_model=list[TradeIntentV1])
 async def list_trade_intents(
-    auth: AuthContext = Depends(get_auth_context),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    _auth: AuthContext = Depends(require_permission("portfolio:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[TradeIntentV1]:
-    context = context_from(auth)
-    if "portfolio:read" not in context.permissions:
-        raise HTTPException(status_code=403, detail="permission required: portfolio:read")
-    rows = await PaperExecutionService(session).list_trade_intents(context.organization_id)
-    return [TradeIntentV1.model_validate(row) for row in rows]
+    context = context_from(_auth)
+    all_rows = await PaperExecutionService(session).list_trade_intents(context.organization_id)
+    return [TradeIntentV1.model_validate(row) for row in all_rows[offset : offset + limit]]
 
 
 @router.get("/orders/{order_id}", response_model=SimulationResponseV1)
 async def get_paper_order(
     order_id: UUID,
-    auth: AuthContext = Depends(get_auth_context),
+    _auth: AuthContext = Depends(require_permission("portfolio:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> SimulationResponseV1:
-    context = context_from(auth)
-    if "portfolio:read" not in context.permissions:
-        raise HTTPException(status_code=403, detail="permission required: portfolio:read")
+    context = context_from(_auth)
     result = await PaperExecutionService(session).get_order_with_intent(order_id, context.organization_id)
     if result is None:
         raise HTTPException(status_code=404, detail="paper order not found")
@@ -594,23 +592,28 @@ async def decide_challenger_evaluation(
 @router.get("/portfolios/{portfolio_id}/post-mortems", response_model=list[PostMortemV1])
 async def list_paper_post_mortems(
     portfolio_id: UUID,
-    auth: AuthContext = Depends(get_auth_context),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    _auth: AuthContext = Depends(require_permission("portfolio:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[PostMortemV1]:
-    rows = await PaperExecutionService(session).list_post_mortems(portfolio_id)
-    return [PostMortemV1.model_validate(r) for r in rows]
+    all_rows = await PaperExecutionService(session).list_post_mortems(portfolio_id, limit=limit + offset)
+    return [PostMortemV1.model_validate(r) for r in all_rows[offset:]]
 
 
 @router.get("/challenger-evaluations", response_model=list[ChallengerV1])
 async def list_challenger_evaluations(
-    auth: AuthContext = Depends(get_auth_context),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
+    _auth: AuthContext = Depends(require_permission("portfolio:read")),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[ChallengerV1]:
-    ctx = context_from(auth)
-    rows = await PaperExecutionService(session).list_challenger_evaluations(
+    ctx = context_from(_auth)
+    all_rows = await PaperExecutionService(session).list_challenger_evaluations(
         organization_id=ctx.organization_id,
+        limit=limit + offset,
     )
-    return [ChallengerV1.model_validate(r) for r in rows]
+    return [ChallengerV1.model_validate(r) for r in all_rows[offset:]]
 
 
 @router.get("/dashboard")
