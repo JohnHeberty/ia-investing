@@ -38,6 +38,10 @@ from ia_investing.orchestration.workflows import (  # type: ignore[attr-defined]
 from ia_investing.settings import Settings, get_settings
 from observability import setup_telemetry
 from workflows._news_dedup import NewsDedupInput, NewsDedupWorkflow
+from workflows._policy_source_collection import (
+    PolicySourceCollectionInput,
+    PolicySourceCollectionWorkflow,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -326,6 +330,33 @@ def policy_collection_schedule_definition(
     )
 
 
+def policy_source_collection_schedule_definition(
+    *,
+    every: timedelta = timedelta(hours=6),
+    task_queue: str = "research-agents",
+) -> ScheduleDefinition:
+    _validate_interval(every)
+    schedule_id = "policy-source-collection"
+    return ScheduleDefinition(
+        schedule_id=schedule_id,
+        schedule=Schedule(
+            action=ScheduleActionStartWorkflow(
+                PolicySourceCollectionWorkflow.run,
+                PolicySourceCollectionInput(schedule_id=schedule_id),
+                id=schedule_id,
+                task_queue=task_queue,
+            ),
+            spec=ScheduleSpec(intervals=[ScheduleIntervalSpec(every=every)]),
+            policy=SchedulePolicy(
+                overlap=ScheduleOverlapPolicy.SKIP,
+                catchup_window=timedelta(hours=2),
+                pause_on_failure=True,
+            ),
+            state=ScheduleState(paused=False),
+        ),
+    )
+
+
 async def reconcile_schedules(
     client: Client,
     definitions: list[ScheduleDefinition],
@@ -450,13 +481,11 @@ async def reconcile_configured_schedules(
             ]
         )
 
-    # --- Policy collection per authority ---
-    for authority in settings.scheduler.policy_authorities:
-        definitions.append(
-            policy_collection_schedule_definition(
-                authority=authority,
-                every=timedelta(hours=settings.scheduler.policy_collection_interval_hours),
-            )
+    # --- Policy source collection (DB-driven) ---
+    definitions.append(
+        policy_source_collection_schedule_definition(
+            every=timedelta(hours=settings.scheduler.policy_source_collection_interval_hours),
         )
+    )
 
     return await reconcile_schedules(client, definitions)

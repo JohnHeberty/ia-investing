@@ -156,8 +156,10 @@ class TestFetchPolicyObjectsActivity:
     async def test_camara_calls_correct_method(self):
         from ia_investing.orchestration.activities.policy_extraction import fetch_policy_objects
 
+        mock_record = MagicMock()
+        mock_record.__dict__ = {"id": "1"}
         mock_client = MagicMock()
-        mock_client.camara_proposals = AsyncMock(return_value=[{"id": "1"}])
+        mock_client.camara_proposals = AsyncMock(return_value=(MagicMock(), [mock_record], None))
 
         with patch(
             "ia_investing.orchestration.activities.policy_extraction.OfficialPolicyClient",
@@ -167,7 +169,10 @@ class TestFetchPolicyObjectsActivity:
 
         assert result["authority"] == "camara"
         assert result["count"] == 1
-        mock_client.camara_proposals.assert_awaited_once_with(since=None)
+        mock_client.camara_proposals.assert_awaited_once()
+        call_kwargs = mock_client.camara_proposals.call_args.kwargs
+        assert "start" in call_kwargs
+        assert "end" in call_kwargs
 
     @pytest.mark.asyncio
     async def test_senado_calls_correct_method(self):

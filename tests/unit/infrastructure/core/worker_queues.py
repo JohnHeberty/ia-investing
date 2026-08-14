@@ -15,6 +15,7 @@ from workflows import (
     PortfolioRankingWorkflow,
     RunAgentWorkflow,
 )
+from workflows._policy_source_collection import PolicySourceCollectionWorkflow
 from workflows.candidate_dispatch import CandidateOutboxDispatchWorkflow
 from workflows.candidate_intelligence import (
     AutonomousEquityExplorationWorkflow,
@@ -43,6 +44,7 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
         NewsDedupWorkflow,
         PolicyCollectionWorkflow,
         PolicyEventWorkflow,
+        PolicySourceCollectionWorkflow,
         CandidateOutboxDispatchWorkflow,
         CandidateAnalysisWorkflow,
         CandidateSourceValidationWorkflow,
@@ -85,3 +87,5 @@ def test_workflows_are_registered_on_expected_capabilities() -> None:
     assert "record_schedule_run" in research_activities
     assert "fetch_policy_objects" in research_activities
     assert "ingest_policy_objects" in research_activities
+    assert "list_active_policy_sources" in research_activities
+    assert "collect_from_policy_source" in research_activities

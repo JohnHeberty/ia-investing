@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import uuid4
 
@@ -39,7 +39,10 @@ async def fetch_policy_objects(params: dict[str, Any]) -> dict[str, Any]:
         client = OfficialPolicyClient()
 
         if authority == "camara":
-            records = await client.camara_proposals(since=since)
+            start = datetime.fromisoformat(since) if since else datetime.now(UTC) - timedelta(days=7)
+            end = datetime.now(UTC)
+            _payload, parsed, _next = await client.camara_proposals(start=start, end=end)
+            records = [r.__dict__ for r in parsed]
         elif authority == "senado":
             records = await client.senado_matters_batch(since=since)
         elif authority == "dou":

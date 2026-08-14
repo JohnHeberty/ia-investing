@@ -473,3 +473,24 @@ class PolicySourceService:
         source = await self.get_source(source_id)
         await self.session.delete(source)
         await self.session.flush()
+
+    async def ensure_default_sources(self, authorities: list[str]) -> int:
+        """Seed default sources for authorities that have no active source. Returns count created."""
+        stmt = sa.select(PolicySource.authority).where(PolicySource.is_active)
+        result = await self.session.execute(stmt)
+        active_authorities = {row[0] for row in result}
+
+        created = 0
+        for auth in authorities:
+            if auth not in active_authorities:
+                source = PolicySource(
+                    name=auth.title(),
+                    authority=auth,
+                    source_type=auth,
+                    is_active=True,
+                )
+                self.session.add(source)
+                created += 1
+        if created:
+            await self.session.flush()
+        return created
