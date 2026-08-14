@@ -26,6 +26,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import React, { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@/components/auth-provider";
+import { NotificationBell } from "@/components/notification-bell";
 import { usePermissions } from "@/hooks/use-permissions";
 
 type NavItem = readonly [string, string, LucideIcon, string | null];
@@ -133,10 +134,6 @@ export function AppShell({ children }: { children: ReactNode }) {
     router.push("/opportunities/candidates");
   }, [router]);
 
-  const handleNotifications = useCallback(() => {
-    router.push("/audit");
-  }, [router]);
-
   // Login page: minimal layout without sidebar/topbar
   if (isLoginPage) {
     return (
@@ -228,14 +225,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             >
               <Search size={15} />
             </button>
-            <button
-              className="icon-button"
-              aria-label="Notificações"
-              onClick={handleNotifications}
-              type="button"
-            >
-              <Bell size={15} />
-            </button>
+            <NotificationBell />
             <button
               className="icon-button"
               aria-label="Alternar tema claro ou escuro"

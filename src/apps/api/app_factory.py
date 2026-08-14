@@ -20,6 +20,7 @@ from apps.api.routes.audit import router as audit_router
 from apps.api.routes.auth import router as auth_router
 from apps.api.routes.committee import router as committee_router
 from apps.api.routes.events import router as events_router
+from apps.api.routes.events_stream import router as events_stream_router
 from apps.api.routes.executions import router as executions_router
 from apps.api.routes.financials import router as financials_router
 from apps.api.routes.health import router as health_router
@@ -119,6 +120,7 @@ _AUTH_ROUTERS = [
     executions_router,
     rebalance_router,
     risk_overview_router,
+    events_stream_router,
 ]
 
 
