@@ -1104,7 +1104,7 @@ select:focus-visible {
     overflow-y: visible;
   }
   .brand,
-  .nav-group:nth-of-type(2),
+  .nav-group[data-group="operations"],
   .sidebar-foot {
     display: none;
   }

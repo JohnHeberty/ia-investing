@@ -38,7 +38,7 @@ const primary: NavItem[] = [
   ["/opportunities/candidates", "Candidatos", Search, null],
   ["/opportunities/exploration", "Exploração", Radar, null],
   ["/risk", "Risco", ShieldCheck, null],
-  ["/committee", "Comitê", Landmark, "committee:*"],
+  ["/committee", "Comitê", Landmark, "committee:read"],
 ];
 
 const operations: NavItem[] = [
@@ -48,7 +48,7 @@ const operations: NavItem[] = [
   ["/macro", "Macro", TrendingUp, "macro:read"],
   ["/news", "Noticias", Newspaper, "news:read"],
   ["/paper", "Paper trading", BriefcaseBusiness, "portfolio:read"],
-  ["/rebalance", "Rebalance", RefreshCw, "rebalance:*"],
+  ["/rebalance", "Rebalance", RefreshCw, "rebalance:read"],
   ["/agents", "Agents", Activity, "agent_runs:read"],
   ["/data-quality", "Qualidade", Database, "quality_incidents:manage"],
   ["/backtests", "Backtests", ChartNoAxesCombined, null],
@@ -59,9 +59,11 @@ const operations: NavItem[] = [
 const NavGroup = React.memo(function NavGroup({
   label,
   items,
+  "data-group": dataGroup,
 }: {
   label: string;
   items: NavItem[];
+  "data-group"?: string;
 }) {
   const pathname = usePathname();
   const { can } = usePermissions();
@@ -73,7 +75,7 @@ const NavGroup = React.memo(function NavGroup({
   const allHrefs = new Set(visible.map(([href]) => href));
 
   return (
-    <div className="nav-group">
+    <div className="nav-group" data-group={dataGroup} role="group" aria-label={label}>
       <div className="nav-label">{label}</div>
       {visible.map(([href, labelText, Icon]) => {
         // Check if this href is a parent of any other visible item
@@ -160,7 +162,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="shell">
-      <aside className="sidebar" aria-label="Navegação principal">
+      <nav className="sidebar" aria-label="Navegação principal">
         <Link href="/" className="brand">
           <div className="brand-mark">IA</div>
           <div className="brand-copy">
@@ -168,8 +170,8 @@ export function AppShell({ children }: { children: ReactNode }) {
             <span>institutional research</span>
           </div>
         </Link>
-        <NavGroup label="Decisão" items={primary} />
-        <NavGroup label="Operações" items={operations} />
+        <NavGroup label="Decisão" items={primary} data-group="decision" />
+        <NavGroup label="Operações" items={operations} data-group="operations" />
         <div className="sidebar-foot">
           <div className="environment">● Paper environment</div>
           <div className="identity">
@@ -192,7 +194,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
           {user && (
             <button
-              className="nav-link"
+              className="nav-link nav-logout"
               onClick={handleLogout}
               type="button"
               aria-label="Sair"
@@ -214,7 +216,7 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
           )}
         </div>
-      </aside>
+      </nav>
       <main className="main">
         {process.env.NEXT_PUBLIC_ENABLE_DEMO_DATA === "true" && (
           <div className="demo-banner">Dados de demonstração — nenhuma decisão ou ordem real</div>
