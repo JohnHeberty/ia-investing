@@ -1,4 +1,5 @@
 """Workflow that collects policy data from all active DB-driven sources."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

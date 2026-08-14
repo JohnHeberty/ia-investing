@@ -236,6 +236,9 @@ export function useSourceMutations() {
         body: JSON.stringify({ ...data, authority: data.authority ?? "camara" }),
       }),
     onSuccess: invalidate,
+    onError: (error: Error) => {
+      toast.error(`Falha ao criar fonte: ${error.message}`);
+    },
   });
 
   const updateMutation = useMutation({
@@ -255,6 +258,9 @@ export function useSourceMutations() {
         body: JSON.stringify(data),
       }),
     onSuccess: invalidate,
+    onError: (error: Error) => {
+      toast.error(`Falha ao atualizar fonte: ${error.message}`);
+    },
   });
 
   const deleteMutation = useMutation({

@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from apps.api.security import AuthContext, get_auth_context
 from database.core import get_async_session
 from database.models.policy_intelligence import PolicyStageEvent, RegulatoryAction
-from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.macro import MacroSeriesService
 from ia_investing.application.policy_intelligence import (
     PolicyAlertService,
@@ -25,7 +24,6 @@ from ia_investing.application.policy_intelligence import (
 
 router = APIRouter(prefix="/api/v1/policy", tags=["policy-intelligence"])
 macro_router = APIRouter(prefix="/api/v1/macro", tags=["macro-intelligence"])
-_audit = AuditMixin()
 
 
 class MacroDefinitionInputV1(BaseModel):
@@ -293,6 +291,7 @@ async def get_policy_graph(
 async def list_alerts(
     policy_object_id: UUID | None = None,
     status: str = "active",
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[PolicyAlertV1]:
@@ -302,7 +301,7 @@ async def list_alerts(
         policy_object_id=policy_object_id,
         status=status,
     )
-    return [PolicyAlertV1.model_validate(a) for a in alerts]
+    return [PolicyAlertV1.model_validate(a) for a in alerts[:limit]]
 
 
 @router.post("/alerts/{alert_id}/acknowledge", response_model=PolicyAlertV1)
@@ -352,13 +351,14 @@ async def resolve_alert(
 @router.get("/forecasts", response_model=list[PolicyForecastV1])
 async def list_forecasts(
     policy_object_id: UUID | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[PolicyForecastV1]:
     require_policy_read(auth)
     service = ProbabilityForecastService(session)
     forecasts = await service.list_forecasts(policy_object_id=policy_object_id)
-    return [PolicyForecastV1.model_validate(f) for f in forecasts]
+    return [PolicyForecastV1.model_validate(f) for f in forecasts[:limit]]
 
 
 # ---------------------------------------------------------------------------
@@ -391,6 +391,7 @@ async def get_stages(
 async def list_regulatory_actions(
     policy_object_id: UUID | None = None,
     authority: str | None = None,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> list[RegulatoryActionV1]:
@@ -400,7 +401,7 @@ async def list_regulatory_actions(
         stmt = stmt.where(RegulatoryAction.policy_object_id == policy_object_id)
     if authority is not None:
         stmt = stmt.where(RegulatoryAction.authority == authority)
-    stmt = stmt.order_by(RegulatoryAction.issued_at.desc())
+    stmt = stmt.order_by(RegulatoryAction.issued_at.desc()).limit(limit)
     actions = list((await session.execute(stmt)).scalars())
     return [RegulatoryActionV1.model_validate(a) for a in actions]
 

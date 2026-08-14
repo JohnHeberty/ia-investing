@@ -61,7 +61,7 @@ async def get_portfolio_recommendations(
         rows = result.fetchall()
     except Exception:
         logger.exception("Failed to fetch portfolio %s", portfolio_id)
-        raise HTTPException(status_code=500, detail="Failed to load portfolio data")
+        raise HTTPException(status_code=500, detail="Failed to load portfolio data") from None
 
     if not rows:
         raise HTTPException(status_code=404, detail="Portfolio not found")
@@ -228,7 +228,7 @@ async def get_portfolio_theses(
         rows = result.fetchall()
     except Exception:
         logger.exception("Failed to fetch theses for portfolio %s", portfolio_id)
-        raise HTTPException(status_code=500, detail="Failed to load portfolio theses")
+        raise HTTPException(status_code=500, detail="Failed to load portfolio theses") from None
 
     theses = [
         PortfolioThesisItem(

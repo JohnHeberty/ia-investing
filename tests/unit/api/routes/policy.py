@@ -212,7 +212,9 @@ class TestListAlerts:
 
 class TestAcknowledgeAlert:
     def test_not_found(self, client: TestClient, mock_session_dep: AsyncMock) -> None:
-        mock_session_dep.get.return_value = None
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session_dep.execute.return_value = mock_result
 
         resp = client.post(f"/api/v1/policy/alerts/{uuid4()}/acknowledge")
         assert resp.status_code == 404
@@ -231,7 +233,9 @@ class TestAcknowledgeAlert:
         mock_alert.acknowledged_by = None
         mock_alert.resolved_at = None
         mock_alert.resolved_by = None
-        mock_session_dep.get.return_value = mock_alert
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_alert
+        mock_session_dep.execute.return_value = mock_result
 
         resp = client.post(f"/api/v1/policy/alerts/{alert_id}/acknowledge")
         assert resp.status_code == 200
@@ -242,7 +246,9 @@ class TestAcknowledgeAlert:
         alert_id = uuid4()
         mock_alert = MagicMock()
         mock_alert.acknowledged_at = datetime.now(UTC)
-        mock_session_dep.get.return_value = mock_alert
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_alert
+        mock_session_dep.execute.return_value = mock_result
 
         resp = client.post(f"/api/v1/policy/alerts/{alert_id}/acknowledge")
         assert resp.status_code == 409
@@ -255,7 +261,9 @@ class TestAcknowledgeAlert:
 
 class TestResolveAlert:
     def test_not_found(self, client: TestClient, mock_session_dep: AsyncMock) -> None:
-        mock_session_dep.get.return_value = None
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        mock_session_dep.execute.return_value = mock_result
 
         resp = client.post(
             f"/api/v1/policy/alerts/{uuid4()}/resolve",
@@ -278,7 +286,9 @@ class TestResolveAlert:
         mock_alert.resolved_at = None
         mock_alert.resolved_by = None
         mock_alert.resolution_notes = None
-        mock_session_dep.get.return_value = mock_alert
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = mock_alert
+        mock_session_dep.execute.return_value = mock_result
 
         resp = client.post(
             f"/api/v1/policy/alerts/{alert_id}/resolve",

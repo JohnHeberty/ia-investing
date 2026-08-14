@@ -79,7 +79,9 @@ class TestRegulatoryActionServiceIngest:
         session.add.assert_called_once()
         session.flush.assert_awaited_once()
 
-    async def test_permission_denied(self, session: AsyncMock, policy_object_id: UUID, source_object_version_id: UUID) -> None:
+    async def test_permission_denied(
+        self, session: AsyncMock, policy_object_id: UUID, source_object_version_id: UUID
+    ) -> None:
         svc = RegulatoryActionService(session)
         with pytest.raises(PermissionError, match="policy:write"):
             await svc.ingest(
@@ -97,7 +99,9 @@ class TestRegulatoryActionServiceIngest:
                 permissions=frozenset(),
             )
 
-    async def test_permission_data_write_accepted(self, session: AsyncMock, policy_object_id: UUID, source_object_version_id: UUID) -> None:
+    async def test_permission_data_write_accepted(
+        self, session: AsyncMock, policy_object_id: UUID, source_object_version_id: UUID
+    ) -> None:
         session.get.return_value = MagicMock(spec=PolicyObject)
 
         svc = RegulatoryActionService(session)
@@ -117,7 +121,9 @@ class TestRegulatoryActionServiceIngest:
         )
         assert isinstance(result, RegulatoryAction)
 
-    async def test_policy_object_not_found(self, session: AsyncMock, policy_object_id: UUID, source_object_version_id: UUID) -> None:
+    async def test_policy_object_not_found(
+        self, session: AsyncMock, policy_object_id: UUID, source_object_version_id: UUID
+    ) -> None:
         session.get.return_value = None
 
         svc = RegulatoryActionService(session)
@@ -299,7 +305,9 @@ class TestPolicyAlertServiceListAlerts:
 class TestPolicyAlertServiceAcknowledge:
     async def test_happy_path(self, session: AsyncMock) -> None:
         alert = _make_alert()
-        session.get.return_value = alert
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = alert
+        session.execute.return_value = mock_result
 
         svc = PolicyAlertService(session)
         result = await svc.acknowledge(alert_id=alert.id, actor="analyst@example.com")
@@ -310,14 +318,18 @@ class TestPolicyAlertServiceAcknowledge:
 
     async def test_already_acknowledged(self, session: AsyncMock) -> None:
         alert = _make_alert(acknowledged_at=_now)
-        session.get.return_value = alert
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = alert
+        session.execute.return_value = mock_result
 
         svc = PolicyAlertService(session)
         with pytest.raises(ValueError, match="alert already acknowledged"):
             await svc.acknowledge(alert_id=alert.id, actor="user")
 
     async def test_not_found(self, session: AsyncMock) -> None:
-        session.get.return_value = None
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        session.execute.return_value = mock_result
 
         svc = PolicyAlertService(session)
         with pytest.raises(LookupError, match="alert not found"):
@@ -328,7 +340,9 @@ class TestPolicyAlertServiceAcknowledge:
 class TestPolicyAlertServiceResolve:
     async def test_happy_path(self, session: AsyncMock) -> None:
         alert = _make_alert()
-        session.get.return_value = alert
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = alert
+        session.execute.return_value = mock_result
 
         svc = PolicyAlertService(session)
         result = await svc.resolve(
@@ -344,14 +358,18 @@ class TestPolicyAlertServiceResolve:
 
     async def test_already_resolved(self, session: AsyncMock) -> None:
         alert = _make_alert(resolved_at=_now)
-        session.get.return_value = alert
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = alert
+        session.execute.return_value = mock_result
 
         svc = PolicyAlertService(session)
         with pytest.raises(ValueError, match="alert already resolved"):
             await svc.resolve(alert_id=alert.id, actor="user", notes="n/a")
 
     async def test_not_found(self, session: AsyncMock) -> None:
-        session.get.return_value = None
+        mock_result = MagicMock()
+        mock_result.scalar_one_or_none.return_value = None
+        session.execute.return_value = mock_result
 
         svc = PolicyAlertService(session)
         with pytest.raises(LookupError, match="alert not found"):

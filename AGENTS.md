@@ -74,6 +74,15 @@ Integramos um overlay externo de ~9k linhas (47 arquivos) chamado **Candidate In
 ### Limitação conhecida
 Testes de integração asyncpg falham no Windows com `ConnectionResetError: [WinError 64]` — pré-existente.
 
+## Error Handling Policy
+
+When encountering lint errors, type errors, test failures, or code quality issues during any task:
+- **Fix immediately** — do not leave pre-existing errors unfixed when you touch a file
+- **Fix what you touch** — if a file has errors and you modify it, fix all errors in that file
+- **Fix nearby** — if you spot errors in adjacent code while working, fix them too
+- **Run `ruff check src/` and `ruff format --check src/` before committing** — zero errors, zero reformatting needed
+- **Run `npx tsc --noEmit` in `web/` before committing frontend changes** — zero type errors
+
 ## Context Management
 
 - Use `compress` tool after every 3 function calls to keep context efficient

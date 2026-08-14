@@ -218,7 +218,6 @@ async def deduplicate_recent_events(params: dict[str, Any]) -> dict[str, int]:
             return {"scanned": len(rows), "duplicates_created": inserted}
 
 
-
 NEWS_EXTRACTION_ACTIVITIES = (
     fetch_news_items,
     analyze_single_news_item,

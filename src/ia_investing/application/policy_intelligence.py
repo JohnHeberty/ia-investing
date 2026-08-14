@@ -179,10 +179,70 @@ class PolicyIntelligenceQueryService:
         ]
 
     async def detail(self, policy_object_id: UUID, *, as_of: datetime) -> dict[str, object]:
-        events = await self.events(as_of=as_of, limit=500)
-        summary = next((item for item in events if item["id"] == policy_object_id), None)
-        if summary is None:
+        if as_of.tzinfo is None:
+            raise ValueError("as_of must include timezone information")
+        # Query the latest version directly instead of fetching all events
+        latest_version_subq = (
+            sa.select(
+                PolicyObjectVersion.policy_object_id,
+                sa.func.max(PolicyObjectVersion.version).label("version"),
+            )
+            .where(
+                PolicyObjectVersion.policy_object_id == policy_object_id,
+                PolicyObjectVersion.knowledge_at <= as_of,
+            )
+            .group_by(PolicyObjectVersion.policy_object_id)
+            .subquery()
+        )
+        latest_stage_time = (
+            sa.select(
+                PolicyStageEvent.policy_object_id,
+                sa.func.max(PolicyStageEvent.knowledge_at).label("knowledge_at"),
+            )
+            .where(
+                PolicyStageEvent.policy_object_id == policy_object_id,
+                PolicyStageEvent.knowledge_at <= as_of,
+            )
+            .group_by(PolicyStageEvent.policy_object_id)
+            .subquery()
+        )
+        query = (
+            sa.select(PolicyObject, PolicyObjectVersion, PolicyStageEvent)
+            .join(latest_version_subq, latest_version_subq.c.policy_object_id == PolicyObject.id)
+            .join(
+                PolicyObjectVersion,
+                sa.and_(
+                    PolicyObjectVersion.policy_object_id == PolicyObject.id,
+                    PolicyObjectVersion.version == latest_version_subq.c.version,
+                ),
+            )
+            .outerjoin(latest_stage_time, latest_stage_time.c.policy_object_id == PolicyObject.id)
+            .outerjoin(
+                PolicyStageEvent,
+                sa.and_(
+                    PolicyStageEvent.policy_object_id == PolicyObject.id,
+                    PolicyStageEvent.knowledge_at == latest_stage_time.c.knowledge_at,
+                ),
+            )
+            .where(PolicyObject.id == policy_object_id)
+        )
+        row = (await self.session.execute(query)).one_or_none()
+        if row is None:
             raise LookupError("policy object not found at cutoff")
+        obj, version, stage_event = row
+        summary = {
+            "id": obj.id,
+            "authority": obj.authority,
+            "object_type": obj.object_type,
+            "external_id": obj.external_id,
+            "title": obj.title,
+            "version": version.version,
+            "text_sha256": version.text_sha256,
+            "published_at": version.published_at,
+            "knowledge_at": version.knowledge_at,
+            "stage": stage_event.stage if stage_event else None,
+            "as_of": as_of,
+        }
         versions = (
             await self.session.scalars(
                 sa.select(PolicyObjectVersion)
@@ -387,7 +447,8 @@ class PolicyAlertService:
         actor: str,
     ) -> PolicyAlert:
         """Acknowledge an alert."""
-        alert = await self.session.get(PolicyAlert, alert_id)
+        stmt = sa.select(PolicyAlert).where(PolicyAlert.id == alert_id).with_for_update()
+        alert = (await self.session.execute(stmt)).scalar_one_or_none()
         if alert is None:
             raise LookupError(f"alert not found: {alert_id}")
         if alert.acknowledged_at is not None:
@@ -405,7 +466,8 @@ class PolicyAlertService:
         notes: str,
     ) -> PolicyAlert:
         """Resolve an alert."""
-        alert = await self.session.get(PolicyAlert, alert_id)
+        stmt = sa.select(PolicyAlert).where(PolicyAlert.id == alert_id).with_for_update()
+        alert = (await self.session.execute(stmt)).scalar_one_or_none()
         if alert is None:
             raise LookupError(f"alert not found: {alert_id}")
         if alert.resolved_at is not None:

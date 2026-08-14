@@ -1,6 +1,8 @@
-"""Risk overview and macro indicators endpoints — exposes real data from
-institutional_risk_snapshots, risk_breaches, stress_scenarios, stress_results,
-macro_indicators, and institutional_risk_policies.
+"""Risk overview and macro indicators endpoints.
+
+Exposes real data from institutional_risk_snapshots, risk_breaches,
+stress_scenarios, stress_results, macro_indicators, and
+institutional_risk_policies.
 
 Note: Macro indicators are global (not org-filtered) because macro data
 (SELIC, IPCA, USD/BRL) is shared across all organizations.
@@ -133,7 +135,7 @@ async def get_risk_overview(
         snapshot_rows = snapshots_result.fetchall()
     except Exception:
         logger.exception("Failed to fetch risk snapshots for org %s", auth.organization_id)
-        raise HTTPException(status_code=500, detail="Failed to load risk data")
+        raise HTTPException(status_code=500, detail="Failed to load risk data") from None
 
     snapshots = []
     snapshot_ids = []
@@ -159,17 +161,15 @@ async def get_risk_overview(
     async def _fetch_breaches() -> list[dict]:
         if not snapshot_ids:
             return []
-        placeholders = ", ".join(f":sid{i}" for i in range(len(snapshot_ids)))
-        params = {f"sid{i}": str(sid) for i, sid in enumerate(snapshot_ids)}
         result = await session.execute(
-            text(f"""
+            text("""
                 SELECT id, risk_snapshot_id, limit_name, limit_type,
                        observed_value, limit_value, status
                 FROM risk_breaches
-                WHERE risk_snapshot_id IN ({placeholders})
+                WHERE risk_snapshot_id = ANY(:snapshot_ids::uuid[])
                 ORDER BY created_at DESC
             """),
-            params,
+            {"snapshot_ids": [str(sid) for sid in snapshot_ids]},
         )
         return [
             {
