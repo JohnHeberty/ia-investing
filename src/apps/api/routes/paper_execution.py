@@ -372,12 +372,12 @@ async def get_paper_order(
     session: AsyncSession = Depends(get_async_session),
 ) -> SimulationResponseV1:
     context = context_from(auth)
+    if "portfolio:read" not in context.permissions:
+        raise HTTPException(status_code=403, detail="permission required: portfolio:read")
     result = await PaperExecutionService(session).get_order_with_intent(order_id, context.organization_id)
     if result is None:
         raise HTTPException(status_code=404, detail="paper order not found")
     order, _intent = result
-    if "portfolio:read" not in context.permissions:
-        raise HTTPException(status_code=403, detail="permission required: portfolio:read")
     fills = await PaperExecutionService(session).list_fills_for_order(order.id)
     return SimulationResponseV1(
         order=PaperOrderV1.model_validate(order),

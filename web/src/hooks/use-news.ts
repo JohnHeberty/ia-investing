@@ -139,8 +139,9 @@ export function useNewsValue(): NewsDataValue {
   const positiveEvents = events.filter((e) => e.direction_hint === "positive").length;
   const negativeEvents = events.filter((e) => e.direction_hint === "negative").length;
 
-  const isLoading = itemsQuery.isLoading || eventsQuery.isLoading;
-  const isError = itemsQuery.isError || eventsQuery.isError;
+    const isLoading =
+      itemsQuery.isLoading || eventsQuery.isLoading || sourcesQuery.isLoading || statsQuery.isLoading;
+    const isError = itemsQuery.isError || eventsQuery.isError || sourcesQuery.isError || statsQuery.isError;
   const dataState: DataState = computeDataState(
     isLoading,
     isError,

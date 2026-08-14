@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -126,10 +126,13 @@ async def create_portfolio(
 async def list_portfolios(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
+    limit: int = Query(100, ge=1, le=500),
+    offset: int = Query(0, ge=0),
 ) -> list[dict[str, Any]]:
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="organization context is required")
-    return await PaperPortfolioService(session).list_all(organization_id=auth.organization_id)
+    all_items = await PaperPortfolioService(session).list_all(organization_id=auth.organization_id)
+    return all_items[offset : offset + limit]
 
 
 @router.get("/{portfolio_id}", response_model=dict[str, Any])

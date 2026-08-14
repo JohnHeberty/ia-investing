@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, RefreshCw } from "lucide-react";
 import { CandidateStatusBadge } from "@/components/candidates/candidate-status";
 import { CandidateTabs } from "@/components/candidates/CandidateTabs";
@@ -20,10 +21,8 @@ type Tab = "overview" | "sources" | "gaps" | "analysis" | "timeline";
 
 export default function CandidateDetailPage() {
   const params = useParams<{ id: string }>();
-  const [detail, setDetail] = useState<CandidateDetail | null>(null);
-  const [etag, setEtag] = useState("");
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("overview");
-  const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [pipelineLoading, setPipelineLoading] = useState(false);
   const [pipelineResult, setPipelineResult] = useState<PipelineResult | null>(null);
@@ -32,31 +31,24 @@ export default function CandidateDetailPage() {
   const [resolveNotes, setResolveNotes] = useState("");
   const [resolving, setResolving] = useState(false);
 
-  const load = useCallback(
-    async (silent = false) => {
-      if (!silent) setLoading(true);
-      setError(null);
-      try {
-        const result = await getCandidate(params.id);
-        setDetail(result.data);
-        setEtag(result.etag);
-      } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "Falha ao carregar candidato");
-      } finally {
-        if (!silent) setLoading(false);
-      }
+  const candidateQuery = useQuery({
+    queryKey: ["candidate", params.id],
+    queryFn: async () => {
+      const result = await getCandidate(params.id);
+      return result;
     },
-    [params.id],
-  );
+    staleTime: 30_000,
+    enabled: !!params.id,
+  });
 
-  useEffect(() => {
-    queueMicrotask(() => void load());
-  }, [load]);
+  const detail = candidateQuery.data?.data ?? null;
+  const etag = candidateQuery.data?.etag ?? "";
 
   const openGaps = useMemo(
     () => (detail?.gaps ?? []).filter((gap) => gap.status === "open") ?? [],
     [detail],
   );
+
   const shouldPoll = Boolean(
     (detail?.sources ?? []).some((source) => source.status === "discovered") ||
     (detail?.analysis_runs ?? []).some(
@@ -65,12 +57,12 @@ export default function CandidateDetailPage() {
   );
 
   useEffect(() => {
-    if (!shouldPoll) return undefined;
+    if (!shouldPoll || !params.id) return undefined;
     const timer = window.setInterval(() => {
-      void load(true);
+      void candidateQuery.refetch();
     }, 10_000);
     return () => window.clearInterval(timer);
-  }, [load, shouldPoll]);
+  }, [shouldPoll, params.id, candidateQuery]);
 
   async function reanalyze() {
     if (!detail) return;
@@ -78,7 +70,7 @@ export default function CandidateDetailPage() {
     setError(null);
     try {
       await requestCandidateReanalysis(detail.candidate.id, etag, false);
-      await load();
+      await candidateQuery.refetch();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao solicitar nova análise");
     } finally {
@@ -94,7 +86,7 @@ export default function CandidateDetailPage() {
     try {
       const result = await runCandidatePipeline(detail.candidate.id);
       setPipelineResult(result);
-      await load();
+      await candidateQuery.refetch();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao executar pipeline");
     } finally {
@@ -110,7 +102,7 @@ export default function CandidateDetailPage() {
       await resolveCandidateGap(detail.candidate.id, gapId, etag, resolveNotes);
       setEditingGapId(null);
       setResolveNotes("");
-      await load();
+      await candidateQuery.refetch();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao resolver lacuna");
     } finally {
@@ -118,17 +110,19 @@ export default function CandidateDetailPage() {
     }
   }
 
-  if (loading)
+  if (candidateQuery.isLoading)
     return (
       <div className="state-panel">
         <strong>Carregando investigação</strong>Consultando fontes, lacunas e execuções.
       </div>
     );
-  if (error && !detail)
+  if (candidateQuery.isError && !detail)
     return (
       <div className="state-panel" data-state="error">
         <strong>Não foi possível abrir o candidato</strong>
-        {error}
+        {candidateQuery.error instanceof Error
+          ? candidateQuery.error.message
+          : "Erro ao carregar candidato"}
       </div>
     );
   if (!detail) return null;
@@ -282,7 +276,7 @@ export default function CandidateDetailPage() {
           setResolveNotes("");
         }}
         onNotesChange={setResolveNotes}
-        load={load}
+        load={() => candidateQuery.refetch().then(() => undefined)}
       />
     </>
   );

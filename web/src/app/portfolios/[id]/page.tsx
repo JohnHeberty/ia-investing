@@ -26,6 +26,55 @@ import { ThesesTab } from "@/components/portfolio/ThesesTab";
 import { AuditTab } from "@/components/portfolio/AuditTab";
 import { ConfirmDeleteModal } from "@/components/portfolio/ConfirmDeleteModal";
 
+interface PortfolioHeaderProps {
+  name: string;
+  isPaper: boolean;
+  currency: string;
+  positionsLength: number;
+  onDelete: () => void;
+}
+
+function PortfolioHeader({ name, isPaper, currency, positionsLength, onDelete }: PortfolioHeaderProps) {
+  return (
+    <div className="page-head">
+      <div>
+        <div className="eyebrow">Portfolio 360</div>
+        <h1>{name}</h1>
+        <p className="subtitle">
+          {isPaper ? "Carteira Paper" : "Carteira Live"} · {currency} · {positionsLength} posições
+        </p>
+      </div>
+      <div className="flex items-center gap-12">
+        <Badge tone={isPaper ? "warn" : "good"}>{isPaper ? "Paper" : "Live"}</Badge>
+        <AsOfIndicator value={new Date().toLocaleString("pt-BR")} freshness="Atual" />
+        <button className="button danger sm" onClick={onDelete}>
+          Excluir
+        </button>
+      </div>
+    </div>
+  );
+}
+
+interface PortfolioFooterProps {
+  currency: string;
+  isPaper: boolean;
+  positionsLength: number;
+  totalValue: number;
+  fmt: Intl.NumberFormat;
+}
+
+function PortfolioFooter({ currency, isPaper, positionsLength, totalValue, fmt }: PortfolioFooterProps) {
+  return (
+    <footer className="mt-12 page-footer">
+      <p>
+        <strong>Moeda:</strong> {currency} ·<strong> Tipo:</strong>{" "}
+        {isPaper ? "Paper Trading" : "Live"} ·<strong> Posições:</strong> {positionsLength} ·
+        <strong> NAV:</strong> {fmt.format(totalValue)}
+      </p>
+    </footer>
+  );
+}
+
 function computeRiskMetrics(
   positions: Array<{
     ticker_symbol: string;
@@ -142,23 +191,13 @@ export function PortfolioContent({ id }: { id: string }) {
 
   return (
     <>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">Portfolio 360</div>
-          <h1>{name}</h1>
-          <p className="subtitle">
-            {isPaper ? "Carteira Paper" : "Carteira Live"} · {currency} · {positions.length}{" "}
-            posições
-          </p>
-        </div>
-        <div className="flex items-center gap-12">
-          <Badge tone={isPaper ? "warn" : "good"}>{isPaper ? "Paper" : "Live"}</Badge>
-          <AsOfIndicator value={new Date().toLocaleString("pt-BR")} freshness="Atual" />
-          <button className="button danger sm" onClick={() => setShowConfirmDelete(true)}>
-            Excluir
-          </button>
-        </div>
-      </div>
+      <PortfolioHeader
+        name={name}
+        isPaper={isPaper}
+        currency={currency}
+        positionsLength={positions.length}
+        onDelete={() => setShowConfirmDelete(true)}
+      />
 
       <ConfirmDeleteModal
         show={showConfirmDelete}
@@ -301,13 +340,13 @@ export function PortfolioContent({ id }: { id: string }) {
         ]}
       />
 
-      <footer className="mt-12 page-footer">
-        <p>
-          <strong>Moeda:</strong> {currency} ·<strong> Tipo:</strong>{" "}
-          {isPaper ? "Paper Trading" : "Live"} ·<strong> Posições:</strong> {positions.length} ·
-          <strong> NAV:</strong> {fmt.format(totalValue)}
-        </p>
-      </footer>
+      <PortfolioFooter
+        currency={currency}
+        isPaper={isPaper}
+        positionsLength={positions.length}
+        totalValue={totalValue}
+        fmt={fmt}
+      />
     </>
   );
 }

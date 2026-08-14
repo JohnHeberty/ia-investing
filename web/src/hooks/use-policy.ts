@@ -92,7 +92,7 @@ function usePolicyQueries() {
 
   const alertsQuery = useQuery({
     queryKey: queryKeys.policyAlerts(),
-    queryFn: () => bffFetch<PolicyAlert[]>("/api/v1/policy/alerts"),
+      queryFn: () => bffFetch<PolicyAlert[]>("/api/v1/policy/alerts?status=all"),
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });
@@ -142,9 +142,12 @@ export function usePolicyValue(): PolicyDataValue {
     (e) => e.control === "Revisão humana" || e.control === "Pausado",
   );
   const monitoredObjects = new Set(events.map((e) => e.object_id)).size;
-  const staleSources = events.filter(
-    (e) => e.control === "Stale" || e.control === "Desatualizado",
-  ).length;
+    const staleSources = sources.filter(
+      (s) =>
+        s.last_fetch_error ||
+        (s.last_fetched_at &&
+          Date.now() - new Date(s.last_fetched_at).getTime() > 24 * 60 * 60 * 1000),
+    ).length;
   const activeAlerts = alerts.filter((a) => !a.resolved_at).length;
 
   const latestAsOf =

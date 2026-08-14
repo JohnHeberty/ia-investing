@@ -65,7 +65,12 @@ export function useQualityIncidents() {
   const dataState: DataState = computeDataState(
     query.isLoading,
     query.isError,
-    null,
+    incidents.length > 0
+      ? incidents.reduce((latest, i) => {
+          const ts = i.updated_at || i.created_at;
+          return ts > latest ? ts : latest;
+        }, "")
+      : null,
     incidents.length > 0,
   );
 

@@ -108,8 +108,8 @@ export function useMacro() {
     missingSeries,
     totalSeries: macroSeries.length,
     isLoading: macroQuery.isLoading,
-    isError: macroQuery.isError,
-    error: macroQuery.error,
+      isError: macroQuery.isError || sourceHealthQuery.isError,
+      error: macroQuery.error ?? sourceHealthQuery.error,
     dataState,
     refetch: macroQuery.refetch,
   };

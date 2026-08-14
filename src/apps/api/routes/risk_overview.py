@@ -129,8 +129,9 @@ async def get_risk_overview(
                 JOIN model_portfolios mp ON mp.id = v.portfolio_id
                 WHERE mp.organization_id = :org_id
                 ORDER BY v.portfolio_id, s.as_of DESC
+                LIMIT :limit
             """),
-            {"org_id": str(auth.organization_id)},
+            {"org_id": str(auth.organization_id), "limit": _MAX_SNAPSHOTS},
         )
         snapshot_rows = snapshots_result.fetchall()
     except Exception:
@@ -219,25 +220,26 @@ async def get_risk_overview(
         breach_rows, stress_rows = [], []
 
     breach_by_snapshot: dict[UUID, int] = {}
+    breaches_by_sid: dict[UUID, list[dict]] = {}
     for b in breach_rows:
         sid = b["snapshot_id"]
         breach_by_snapshot[sid] = breach_by_snapshot.get(sid, 0) + 1
+        breaches_by_sid.setdefault(sid, []).append(b)
 
     breaches = []
     for snap in snapshots:
         snap.breach_count = breach_by_snapshot.get(snap.id, 0)
-        for b in breach_rows:
-            if b["snapshot_id"] == snap.id:
-                breaches.append(
-                    RiskBreachItem(
-                        id=b["id"],
-                        limit_name=b["limit_name"],
-                        limit_type=b["limit_type"],
-                        observed_value=b["observed_value"],
-                        limit_value=b["limit_value"],
-                        status=b["status"],
-                    )
+        for b in breaches_by_sid.get(snap.id, []):
+            breaches.append(
+                RiskBreachItem(
+                    id=b["id"],
+                    limit_name=b["limit_name"],
+                    limit_type=b["limit_type"],
+                    observed_value=b["observed_value"],
+                    limit_value=b["limit_value"],
+                    status=b["status"],
                 )
+            )
 
     hard_breaches = [b for b in breaches if b.limit_type == "hard" and b.status == "open"]
     soft_breaches = [b for b in breaches if b.limit_type == "soft" and b.status == "open"]
@@ -345,9 +347,9 @@ async def get_macro_indicators(
             )
             for row in result.fetchall()
         ]
-    except Exception:
-        logger.exception("Failed to fetch macro indicators")
-        indicators = []
+    except Exception as e:
+        logger.error("Failed to fetch macro indicators: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to fetch macro indicators") from e
 
     def _find(patterns: list[str]) -> MacroIndicatorItem | None:
         for ind in indicators:

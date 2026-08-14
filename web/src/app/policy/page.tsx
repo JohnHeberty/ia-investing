@@ -252,7 +252,7 @@ function AlertsTab() {
 }
 
 function ForecastsTab() {
-  const { forecasts } = usePolicyData();
+  const { forecasts, events } = usePolicyData();
 
   return (
     <>
@@ -287,7 +287,7 @@ function ForecastsTab() {
               <tbody>
                 {forecasts.map((f) => (
                   <tr key={f.id}>
-                    <td>{f.policy_object_id}</td>
+                    <td>{events.find((e) => e.object_id === f.policy_object_id)?.object_name || f.policy_object_id}</td>
                     <td>{f.target_outcome}</td>
                     <td>
                       <Badge tone={f.probability > 0.6 ? "good" : f.probability > 0.3 ? "warn" : "neutral"}>

@@ -82,6 +82,14 @@ export default function RebalancePage() {
     );
   }
 
+  if (selectedProposalId && proposalDetailQuery.isError) {
+    return (
+      <ErrorState
+        message={proposalDetailQuery.error?.message ?? "Erro ao carregar detalhes da proposta"}
+      />
+    );
+  }
+
   return (
     <main className="flex flex-col gap-24">
       <header className="page-head">

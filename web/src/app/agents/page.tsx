@@ -94,7 +94,7 @@ function AgentsContent() {
         <Metric
           label="Taxa de sucesso"
           value={`${successRate}%`}
-          note="últimos 7 dias"
+          note={`${completedRuns}/${count} run${count !== 1 ? "s" : ""}`}
           tone={successRate >= 95 ? "positive" : successRate >= 80 ? "warning" : "negative"}
         />
         <Metric

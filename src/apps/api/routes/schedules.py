@@ -34,6 +34,11 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/schedules", tags=["schedules"])
 
+# NOTE: This lock only prevents concurrent reconcile requests within a single
+# worker process.  In a multi-worker deployment (e.g., uvicorn with workers > 1),
+# each worker has its own lock instance and concurrent reconcile requests across
+# workers will NOT be serialized.  Use a distributed lock (e.g., Redis-based or
+# database advisory lock) for cross-worker mutual exclusion.
 _reconcile_lock = asyncio.Lock()
 
 _SCHEDULE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9_-]+$")
@@ -292,6 +297,10 @@ async def list_schedules(
     _auth: AuthContext = Depends(require_permission("schedules:read")),
     client: Client = Depends(get_temporal_client),
 ) -> list[ScheduleSummaryV1]:
+    # NOTE: Temporal's list_schedules API does not support server-side pagination.
+    # All schedules are fetched into memory, then sliced.  For large schedule counts
+    # this endpoint will be slow and memory-hungry; consider cursor-based pagination
+    # if the number of schedules grows beyond ~500.
     all_schedules: list[ScheduleSummaryV1] = []
     all_raw: list[dict[str, Any]] = []
     iterator = await client.list_schedules()
@@ -342,8 +351,12 @@ async def reconcile_schedules_endpoint(
 
         results = await reconcile_configured_schedules(client=client, settings=get_settings())
 
-    await _log_schedule_audit(session, auth, "update", "managed-schedules", {"results": results})
-    await session.commit()
+    try:
+        await _log_schedule_audit(session, auth, "update", "managed-schedules", {"results": results})
+        await session.commit()
+    except Exception:
+        logger.exception("Failed to persist audit log for reconcile (Temporal already applied)")
+        await session.rollback()
 
     created = [k for k, v in results.items() if v == "created"]
     updated = [k for k, v in results.items() if v == "updated"]
@@ -384,6 +397,10 @@ async def pause_schedule(
         await handle.pause()
     except Exception as exc:
         _handle_temporal_error(exc, schedule_id)
+    # NOTE: Temporal has already applied the pause.  If _log_schedule_audit or
+    # session.commit() fails here, the schedule is paused in Temporal but the
+    # audit record is lost.  A compensating action or outbox pattern would be
+    # needed to guarantee consistency across both systems.
     await _log_schedule_audit(session, _auth, "pause", schedule_id)
     await session.commit()
     logger.info("Paused schedule %s", schedule_id)

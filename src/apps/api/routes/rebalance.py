@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api._errors import map_error
-from apps.api.security import AuthContext, require_permission
+from apps.api.security import AuthContext, get_auth_context, require_permission
 from database.core import get_async_session
 from ia_investing.application._audit_mixin import AuditMixin
 from ia_investing.application.rebalance_service import RebalanceService
@@ -36,7 +36,7 @@ class CancelRequest(BaseModel):
 
 async def get_rebalance_service(
     session: AsyncSession = Depends(get_async_session),
-    auth: AuthContext = Depends(require_permission("rebalance:*")),
+    auth: AuthContext = Depends(get_auth_context),
 ) -> RebalanceService:
     if auth.organization_id is None:
         raise HTTPException(status_code=403, detail="organization context is required")

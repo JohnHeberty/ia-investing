@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Radar, RefreshCw } from "lucide-react";
 import {
   createExplorationRun,
@@ -10,8 +11,6 @@ import {
   getExplorationRun,
   listExplorationRuns,
   promoteExplorationSuggestion,
-  type ExplorationDetail,
-  type ExplorationRun,
 } from "@/lib/candidate-api";
 import styles from "@/components/candidates/candidate-intelligence.module.css";
 import { ExplorationForm } from "@/components/exploration/ExplorationForm";
@@ -20,35 +19,32 @@ import { SuggestionCard } from "@/components/exploration/SuggestionCard";
 import { DismissDialog } from "@/components/exploration/DismissDialog";
 
 export default function ExplorationPage() {
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [runs, setRuns] = useState<ExplorationRun[]>([]);
-  const [selected, setSelected] = useState<ExplorationDetail | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [workingSuggestion, setWorkingSuggestion] = useState<string | null>(null);
   const [dismissTarget, setDismissTarget] = useState<string | null>(null);
   const [dismissReason, setDismissReason] = useState("");
 
-  const refresh = useCallback(async (preferredId?: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const nextRuns = await listExplorationRuns();
-      setRuns(nextRuns);
-      const runId = preferredId ?? nextRuns[0]?.id;
-      if (runId) setSelected(await getExplorationRun(runId));
-      else setSelected(null);
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Falha ao consultar explorações");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const runsQuery = useQuery({
+    queryKey: ["exploration-runs"],
+    queryFn: () => listExplorationRuns(),
+    staleTime: 30_000,
+  });
 
-  useEffect(() => {
-    queueMicrotask(() => void refresh());
-  }, [refresh]);
+  const runs = runsQuery.data ?? [];
+  const effectiveSelectedId = selectedId ?? runs[0]?.id ?? null;
+
+  const selectedQuery = useQuery({
+    queryKey: ["exploration-run", effectiveSelectedId],
+    queryFn: () => getExplorationRun(effectiveSelectedId!),
+    staleTime: 30_000,
+    enabled: !!effectiveSelectedId,
+  });
+
+  const selected = selectedQuery.data ?? null;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -71,7 +67,8 @@ export default function ExplorationPage() {
       setSuccess(
         `Exploração ${run.id} enfileirada. Nenhuma sugestão entra diretamente em carteira.`,
       );
-      await refresh(run.id);
+      setSelectedId(run.id);
+      await queryClient.invalidateQueries({ queryKey: ["exploration-runs"] });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao iniciar exploração");
     } finally {
@@ -118,7 +115,8 @@ export default function ExplorationPage() {
       setSuccess(
         `${candidate.ticker} foi promovida para candidato e entrou no fluxo completo de investigação.`,
       );
-      await refresh(selected?.run.id);
+      await queryClient.invalidateQueries({ queryKey: ["exploration-runs"] });
+      await queryClient.invalidateQueries({ queryKey: ["exploration-run", effectiveSelectedId] });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao promover sugestão");
     } finally {
@@ -138,7 +136,8 @@ export default function ExplorationPage() {
     try {
       await dismissExplorationSuggestion(dismissTarget, dismissReason.trim());
       setSuccess("Sugestão dispensada com justificativa registrada.");
-      await refresh(selected?.run.id);
+      await queryClient.invalidateQueries({ queryKey: ["exploration-runs"] });
+      await queryClient.invalidateQueries({ queryKey: ["exploration-run", effectiveSelectedId] });
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Falha ao dispensar sugestão");
     } finally {
@@ -181,21 +180,21 @@ export default function ExplorationPage() {
           <button
             className="button secondary"
             type="button"
-            onClick={() => void refresh()}
-            disabled={loading}
+            onClick={() => void queryClient.invalidateQueries({ queryKey: ["exploration-runs"] })}
+            disabled={runsQuery.isFetching}
           >
             <RefreshCw size={14} /> Atualizar
           </button>
         </div>
-        {loading && <p className="subtitle">Carregando execuções...</p>}
-        {!loading && !runs.length && <p className="subtitle">Nenhuma exploração executada.</p>}
+        {runsQuery.isLoading && <p className="subtitle">Carregando execuções...</p>}
+        {!runsQuery.isLoading && !runs.length && <p className="subtitle">Nenhuma exploração executada.</p>}
         {!!runs.length && (
           <div className={styles.toolbar}>
             <label className={styles.field}>
               <span>Execução</span>
               <select
-                value={selected?.run.id ?? ""}
-                onChange={(event) => void refresh(event.target.value)}
+                value={effectiveSelectedId ?? ""}
+                onChange={(event) => setSelectedId(event.target.value)}
               >
                 {runs.map((run) => (
                   <option key={run.id} value={run.id}>

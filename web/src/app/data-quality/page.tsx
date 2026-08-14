@@ -19,6 +19,7 @@ function DataQualityContent() {
     isError,
     dataState,
     count,
+    openIncidents: openIncidentsList,
   } = useQualityIncidents();
 
   if (isLoading) {
@@ -65,7 +66,7 @@ function DataQualityContent() {
     (i) => i.status === "open" && i.severity === "high",
   ).length;
   const totalIncidents = count;
-  const openIncidents = incidents.filter((i) => i.status === "open").length;
+  const openIncidents = openIncidentsList.length;
 
   return (
     <>

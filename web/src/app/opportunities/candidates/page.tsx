@@ -1,11 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Plus, Radar, RefreshCw } from "lucide-react";
 import { CandidateCreateForm } from "@/components/candidates/candidate-create-form";
 import { CandidateStatusBadge } from "@/components/candidates/candidate-status";
-import { listCandidates, type Candidate, type CandidateStatus } from "@/lib/candidate-api";
+import { listCandidates, type CandidateStatus } from "@/lib/candidate-api";
 import styles from "@/components/candidates/candidate-intelligence.module.css";
 
 const filterOptions: Array<[CandidateStatus | "", string]> = [
@@ -20,28 +21,19 @@ const filterOptions: Array<[CandidateStatus | "", string]> = [
 ];
 
 export default function CandidateQueuePage() {
-  const [items, setItems] = useState<Candidate[]>([]);
   const [status, setStatus] = useState<CandidateStatus | "">("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  const candidatesQuery = useQuery({
+    queryKey: ["candidates", status],
+    queryFn: async () => {
       const result = await listCandidates(status || undefined);
-      setItems(Array.isArray(result) ? result : (result.items ?? []));
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "Falha ao carregar candidatos");
-    } finally {
-      setLoading(false);
-    }
-  }, [status]);
+      return Array.isArray(result) ? result : (result.items ?? []);
+    },
+    staleTime: 30_000,
+  });
 
-  useEffect(() => {
-    queueMicrotask(() => void load());
-  }, [load]);
+  const items = candidatesQuery.data ?? [];
 
   const metrics = useMemo(
     () => ({
@@ -117,18 +109,24 @@ export default function CandidateQueuePage() {
                 </option>
               ))}
             </select>
-            <button className="button secondary" onClick={() => void load()} disabled={loading}>
+            <button
+              className="button secondary"
+              onClick={() => void candidatesQuery.refetch()}
+              disabled={candidatesQuery.isFetching}
+            >
               <RefreshCw size={14} /> Atualizar
             </button>
           </div>
         </div>
 
-        {error && (
+        {candidatesQuery.isError && (
           <div className={`${styles.error} section-gap`} role="alert">
-            {error}
+            {candidatesQuery.error instanceof Error
+              ? candidatesQuery.error.message
+              : "Falha ao carregar candidatos"}
           </div>
         )}
-        {loading ? (
+        {candidatesQuery.isLoading ? (
           <div className="state-panel section-gap">
             <strong>Carregando candidatos</strong>Consultando o estado operacional e as lacunas.
           </div>
