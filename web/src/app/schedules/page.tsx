@@ -47,16 +47,16 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 const WORKFLOW_LABELS: Record<string, string> = {
-  "news-collection-": "Coleta de Notícias",
-  "news-dedup-cleanup": "Limpeza de Duplicatas",
-  "operation-outbox-dispatch": "Envio de Operações",
-  "outbox-dispatch-recovery": "Recuperação de Operações",
-  "policy-source-collection": "Coleta de Fontes Policy",
-  "cvm-dfp-": "Importação CVM",
-  "paper-reconciliation-": "Reconciliação Paper",
-  "paper-valuation-": "Publicação NAV",
-  "paper-rebalance-": "Rebalance Paper",
-  "equity-exploration-": "Exploração de Ações",
+  "news-collection-": "Coletar Notícias",
+  "news-dedup-cleanup": "Limpar Duplicatas",
+  "operation-outbox-dispatch": "Enviar Operações",
+  "outbox-dispatch-recovery": "Reenviar Operações",
+  "policy-source-collection": "Coletar Políticas",
+  "cvm-dfp-": "Importar CVM",
+  "paper-reconciliation-": "Reconciliar Carteira",
+  "paper-valuation-": "Publicar NAV",
+  "paper-rebalance-": "Rebalancear Carteira",
+  "equity-exploration-": "Explorar Ações",
 };
 
 function getWorkflowLabel(scheduleId: string): string {

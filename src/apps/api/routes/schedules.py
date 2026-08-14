@@ -78,17 +78,17 @@ async def _log_schedule_audit(
 
 
 SCHEDULE_META: dict[str, dict[str, str]] = {
-    "news-collection-": {"category": "news", "description": "Coleta RSS"},
-    "news-dedup-cleanup": {"category": "news", "description": "Deduplicação"},
-    "operation-outbox-dispatch": {"category": "operations", "description": "Envio ordens"},
-    "outbox-dispatch-recovery": {"category": "operations", "description": "Retry operações"},
-    "cvm-dfp-": {"category": "data", "description": "Import CVM"},
-    "paper-reconciliation-": {"category": "portfolio", "description": "Reconciliação"},
-    "paper-valuation-": {"category": "portfolio", "description": "Publicação NAV"},
-    "paper-rebalance-": {"category": "portfolio", "description": "Rebalance"},
-    "equity-exploration-": {"category": "research", "description": "Exploração ações"},
-    "policy-source-collection": {"category": "policy", "description": "Coleta policy"},
-    "policy-collection-": {"category": "policy", "description": "Eventos policy"},
+    "news-collection-": {"category": "news", "description": "Coleta notícias"},
+    "news-dedup-cleanup": {"category": "news", "description": "Limpar duplicatas"},
+    "operation-outbox-dispatch": {"category": "operations", "description": "Enviar ordens"},
+    "outbox-dispatch-recovery": {"category": "operations", "description": "Reenviar ordens"},
+    "cvm-dfp-": {"category": "data", "description": "Importar CVM"},
+    "paper-reconciliation-": {"category": "portfolio", "description": "Reconciliar carteira"},
+    "paper-valuation-": {"category": "portfolio", "description": "Publicar NAV"},
+    "paper-rebalance-": {"category": "portfolio", "description": "Rebalancear carteira"},
+    "equity-exploration-": {"category": "research", "description": "Explorar ações"},
+    "policy-source-collection": {"category": "policy", "description": "Coletar políticas"},
+    "policy-collection-": {"category": "policy", "description": "Coletar leis"},
 }
 
 
