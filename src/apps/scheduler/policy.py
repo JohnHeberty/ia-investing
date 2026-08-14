@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-MANAGED_SCHEDULE_EXACT_IDS = frozenset({"news-dedup-cleanup", "operation-outbox-dispatch"})
+MANAGED_SCHEDULE_EXACT_IDS = frozenset({"news-dedup-cleanup", "operation-outbox-dispatch", "policy-source-collection"})
 MANAGED_SCHEDULE_PREFIXES = (
     "news-collection-",
     "cvm-dfp-",

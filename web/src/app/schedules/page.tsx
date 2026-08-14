@@ -47,6 +47,7 @@ const WORKFLOW_LABELS: Record<string, string> = {
   "news-collection-": "ExtractNewsWorkflow",
   "news-dedup-cleanup": "NewsDedupWorkflow",
   "operation-outbox-dispatch": "DispatchOperationsWorkflow",
+  "policy-source-collection": "PolicySourceCollectionWorkflow",
   "cvm-dfp-": "IngestCVMWorkflow",
   "paper-reconciliation-": "PaperReconciliationWorkflow",
   "paper-valuation-": "PaperValuationWorkflow",
