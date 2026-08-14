@@ -97,13 +97,17 @@ function RiskContent() {
           </p>
         </div>
         <AsOfIndicator
-          value={new Date().toLocaleString("pt-BR", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          value={
+            overview?.snapshots?.[0]?.as_of
+              ? new Date(overview.snapshots[0].as_of).toLocaleString("pt-BR", {
+                  day: "2-digit",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : undefined
+          }
           freshness={dataState === "stale" ? "Desatualizado" : "Atual"}
         />
       </div>

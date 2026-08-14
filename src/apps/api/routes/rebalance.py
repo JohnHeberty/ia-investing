@@ -51,7 +51,7 @@ class RebalanceProposalCreatedResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     id: str
-    state: str
+    status: str
     portfolio_id: str
     target_allocations: dict[str, float]
     rationale: str
@@ -62,7 +62,7 @@ class RebalanceProposalDetailResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     id: str
-    state: str
+    status: str
     portfolio_id: str
     target_allocations: dict[str, float]
     rationale: str
@@ -73,7 +73,7 @@ class RebalanceProposalActionResponse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     id: str
-    state: str
+    status: str
 
 
 @router.get("/{portfolio_id}/drift", response_model=dict[str, Any])

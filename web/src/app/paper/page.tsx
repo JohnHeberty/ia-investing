@@ -114,7 +114,7 @@ function PaperContent() {
                   <th>Versão aprovada</th>
                   <th>Estado</th>
                   <th className="numeric">Fill</th>
-                  <th>Reconciliação</th>
+
                 </tr>
               </thead>
               <tbody>
@@ -145,23 +145,6 @@ function PaperContent() {
                     </td>
                     <td className="numeric">
                       {order.fillQuantity} / {order.fillTotal}
-                    </td>
-                    <td>
-                      <Badge
-                        tone={
-                          order.reconciliation === "matched"
-                            ? "good"
-                            : order.reconciliation === "break"
-                              ? "bad"
-                              : "warn"
-                        }
-                      >
-                        {order.reconciliation === "matched"
-                          ? "Matched"
-                          : order.reconciliation === "break"
-                            ? "Break aberto"
-                            : order.reconciliation}
-                      </Badge>
                     </td>
                   </tr>
                 ))}

@@ -57,12 +57,16 @@ async def _log_schedule_audit(
     schedule_id: str,
     meta: dict[str, Any] | None = None,
 ) -> None:
+    import hashlib
+
     tenant_id = auth.organization_id or UUID(int=0)
     audit_action = _SCHEDULE_AUDIT_MAP.get(action, "execute")
+    resource_uuid = UUID(hashlib.md5(schedule_id.encode(), usedforsecurity=False).hexdigest())
     await AuditService(session, tenant_id).log(
         actor_id=actor_uuid(auth),
         action=audit_action,
         resource_type="schedule",
+        resource_id=resource_uuid,
         changes=meta or {},
         metadata={"schedule_id": schedule_id, "schedule_action": action},
     )

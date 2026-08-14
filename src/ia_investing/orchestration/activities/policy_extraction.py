@@ -48,7 +48,7 @@ async def fetch_policy_objects(params: dict[str, Any]) -> dict[str, Any]:
             parsed = await client.senado_matters_batch(since=since_date)
             records = [dataclasses.asdict(p) for p in parsed]
         elif authority == "dou":
-            from connectors.policy._official import parse_dou_xml
+            from ia_investing.connectors.policy._official import parse_dou_xml
 
             since_date = datetime.fromisoformat(since).date() if since else datetime.now(UTC).date() - timedelta(days=7)
             payloads = await client.dou_acts_since(since=since_date)

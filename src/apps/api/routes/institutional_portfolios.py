@@ -346,6 +346,7 @@ class BacktestRunV1(BaseModel):
 
     id: UUID
     config_id: UUID
+    strategy_name: str
     code_version: str
     data_snapshot_sha256: str
     status: str
@@ -682,9 +683,11 @@ async def list_backtests(
     offset: int = Query(default=0, ge=0),
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
-) -> list[BacktestRunV1]:
+    ) -> list[BacktestRunV1]:
+    if "backtests:read" not in auth.permissions and "portfolio:read" not in auth.permissions:
+        raise HTTPException(status_code=403, detail="permission required: backtests:read")
     stmt = (
-        sa.select(InstitutionalBacktestRun)
+        sa.select(InstitutionalBacktestRun, BacktestConfig.strategy_name)
         .join(BacktestConfig, BacktestConfig.id == InstitutionalBacktestRun.config_id)
         .where(BacktestConfig.organization_id == auth.organization_id)
         .order_by(InstitutionalBacktestRun.created_at.desc())
@@ -692,8 +695,21 @@ async def list_backtests(
         .offset(offset)
     )
     result = await session.execute(stmt)
-    runs = result.scalars().all()
-    return [BacktestRunV1.model_validate(r) for r in runs]
+    rows = result.all()
+    return [
+        BacktestRunV1(
+            id=run.id,
+            config_id=run.config_id,
+            strategy_name=strategy_name,
+            code_version=run.code_version,
+            data_snapshot_sha256=run.data_snapshot_sha256,
+            status=run.status,
+            result_sha256=run.result_sha256,
+            results=run.results,
+            created_at=run.created_at,
+        )
+        for run, strategy_name in rows
+    ]
 
 
 @router.post("/backtests", response_model=OperationAcceptedV1, status_code=202)
@@ -705,6 +721,8 @@ async def run_institutional_backtest(
     session: AsyncSession = Depends(get_async_session),
     service: OperationService = Depends(get_operation_service),
 ) -> OperationAcceptedV1:
+    if "backtests:manage" not in auth.permissions and "backtests:write" not in auth.permissions:
+        raise HTTPException(status_code=403, detail="permission required: backtests:manage")
     try:
         payload = {
             "start_date": body.start_date.isoformat(),

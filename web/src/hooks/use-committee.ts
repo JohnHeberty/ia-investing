@@ -68,6 +68,7 @@ async function batchFetchDetails(
 ): Promise<CommitteeSessionDetail[]> {
   const results: CommitteeSessionDetail[] = [];
   const concurrency = 5;
+  let failedCount = 0;
   for (let i = 0; i < sessions.length; i += concurrency) {
     if (signal?.aborted) break;
     const batch = sessions.slice(i, i + concurrency);
@@ -81,8 +82,13 @@ async function batchFetchDetails(
     for (const result of settled) {
       if (result.status === "fulfilled") {
         results.push(result.value);
+      } else {
+        failedCount += 1;
       }
     }
+  }
+  if (failedCount > 0) {
+    console.warn(`Failed to load ${failedCount} session details`);
   }
   return results;
 }

@@ -90,8 +90,9 @@ async def get_audit_entry(
 async def verify_audit_chain(
     from_id: UUID | None = Query(default=None),
     to_id: UUID | None = Query(default=None),
+    limit: int = Query(default=1000, le=10000),
     _auth: AuthContext = Depends(require_permission("audit:read")),
     service: AuditService = Depends(get_audit_service),
 ) -> ChainVerificationResultV1:
-    tampered = await service.verify_chain(from_id=from_id, to_id=to_id)
+    tampered = await service.verify_chain(from_id=from_id, to_id=to_id, limit=limit)
     return ChainVerificationResultV1(tampered_entries=tampered, verified=len(tampered) == 0)

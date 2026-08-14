@@ -6,7 +6,7 @@ from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Header, HTTPException
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from apps.api._errors import map_error
@@ -32,8 +32,8 @@ class PortfolioCreate(BaseModel):
 class PositionCreate(BaseModel):
     issuer_id: str | None = None
     ticker_symbol: str
-    quantity: float
-    avg_cost_per_share: float
+    quantity: float = Field(gt=0)
+    avg_cost_per_share: float = Field(gt=0)
     current_price: float | None = None
 
 

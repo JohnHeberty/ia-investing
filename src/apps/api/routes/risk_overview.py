@@ -320,6 +320,8 @@ async def get_macro_indicators(
     auth: AuthContext = Depends(get_auth_context),
     session: AsyncSession = Depends(get_async_session),
 ) -> MacroIndicatorsResponse:
+    if "policy:read" not in auth.permissions and "macro:read" not in auth.permissions:
+        raise HTTPException(status_code=403, detail="permission required: macro:read")
 
     try:
         result = await session.execute(

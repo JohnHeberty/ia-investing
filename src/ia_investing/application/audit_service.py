@@ -186,6 +186,7 @@ class AuditService:
         self,
         from_id: UUID | None = None,
         to_id: UUID | None = None,
+        limit: int = 1000,
     ) -> list[dict[str, Any]]:
         stmt = (
             sa.select(AuditLogEntry)
@@ -197,6 +198,7 @@ class AuditService:
         if to_id is not None:
             stmt = stmt.where(AuditLogEntry.id <= to_id)
 
+        stmt = stmt.limit(limit)
         result = await self._session.execute(stmt)
         entries = list(result.scalars().all())
 

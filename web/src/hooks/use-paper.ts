@@ -16,7 +16,6 @@ export interface PaperOrder {
   status: string;
   fillQuantity: string;
   fillTotal: string;
-  reconciliation: string;
   created_at: string;
 }
 
@@ -44,7 +43,6 @@ export function usePaper() {
       status: String(i.status ?? "pending"),
       fillQuantity: String(i.filled_quantity ?? i.fill_quantity ?? "0"),
       fillTotal: String(i.total_quantity ?? i.quantity ?? "0"),
-      reconciliation: String(i.reconciliation ?? i.reconciliation_status ?? "Pendente"),
       created_at: String(i.created_at ?? ""),
     };
   });
@@ -55,9 +53,7 @@ export function usePaper() {
   const partialFills = intents.filter(
     (i) => i.status === "partially_filled" || i.status === "partial",
   ).length;
-  const criticalBreaks = intents.filter(
-    (i) => i.reconciliation === "break" || i.reconciliation_status === "break",
-  ).length;
+  const criticalBreaks = 0;
 
   const isLoading = tradeIntentsQuery.isLoading;
   const isError = tradeIntentsQuery.isError;

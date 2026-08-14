@@ -168,7 +168,7 @@ async def _fetch_records(client: Any, authority: str, since: str | None) -> list
         parsed = await client.senado_matters_batch(since=since_date)
         return [_build_record(_to_dict(p), authority, ("ementaMateria", "ementa")) for p in parsed]
     if authority == "dou":
-        from connectors.policy._official import parse_dou_xml
+        from ia_investing.connectors.policy._official import parse_dou_xml
 
         since_date = datetime.fromisoformat(since).date() if since else datetime.now(UTC).date() - timedelta(days=7)
         payloads = await client.dou_acts_since(since=since_date)
