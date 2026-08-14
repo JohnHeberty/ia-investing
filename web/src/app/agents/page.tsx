@@ -194,7 +194,7 @@ function AgentsContent() {
                     <td className="numeric mono">
                       {run.duration_ms != null ? `${(run.duration_ms / 1000).toFixed(1)}s` : "—"}
                     </td>
-                    <td className="numeric mono">US$ {parseFloat(run.cost_usd).toFixed(4)}</td>
+                    <td className="numeric mono">US$ {(parseFloat(run.cost_usd) || 0).toFixed(4)}</td>
                     <td className="numeric mono">
                       {(run.prompt_tokens + run.completion_tokens).toLocaleString("pt-BR")}
                     </td>

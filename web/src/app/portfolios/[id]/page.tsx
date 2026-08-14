@@ -169,7 +169,7 @@ export function PortfolioContent({ id }: { id: string }) {
           router.push("/portfolios");
         }}
         isPending={deletePortfolio.isPending}
-        error={deletePortfolio.error as Error | null}
+        error={deletePortfolio.error instanceof Error ? deletePortfolio.error : null}
       />
 
       <PortfolioMetrics

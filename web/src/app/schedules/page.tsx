@@ -670,7 +670,7 @@ export default function SchedulesPage() {
         </div>
       </div>
 
-      {dataState === "stale" && <StaleWarning />}
+      {dataState === "stale" && <StaleWarning source="schedules" />}
 
       <section className="grid grid-4 section-gap">
         <Metric label="Total" value={String(count)} note="schedules" />
