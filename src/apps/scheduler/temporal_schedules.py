@@ -422,19 +422,24 @@ async def reconcile_configured_schedules(
     import sqlalchemy as sa
 
     from database.core import session_scope
-    from database.models.catalog import Ticker
+    from database.models.catalog import Issuer, Ticker
 
     async with session_scope() as session:
-        issuer_ids = (
-            (await session.execute(sa.select(Ticker.issuer_id).where(Ticker.issuer_id.is_not(None)).distinct()))
-            .scalars()
-            .all()
-        )
+        issuer_rows = (
+            await session.execute(
+                sa.select(Ticker.issuer_id, Issuer.name_pt)
+                .join(Issuer, Issuer.id == Ticker.issuer_id)
+                .where(Ticker.issuer_id.is_not(None))
+                .distinct()
+            )
+        ).all()
 
-    for issuer_id in issuer_ids:
+    for issuer_id, issuer_name in issuer_rows:
+        # Create readable slug from issuer name
+        slug = issuer_name.lower().replace(" ", "-").replace(".", "")[:30]
         definitions.append(
             news_collection_schedule_definition(
-                issuer_id=str(issuer_id),
+                issuer_id=f"{slug}-{str(issuer_id)[:8]}",
                 every=timedelta(hours=settings.scheduler.news_collection_interval_hours),
             )
         )
