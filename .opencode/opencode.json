@@ -1,24 +1,24 @@
 {
     "$schema": "https://opencode.ai/config.json",
     "lsp": true,
-    "model": "qwen-local/ornith",
-    "small_model": "qwen-local/ornith",
+    "model": "llama/qwen3.6-27b",
+    "small_model": "llama/qwen3.6-27b",
     "provider": {
-        "litellm": {
+        "llama": {
             "npm": "@ai-sdk/openai-compatible",
-            "name": "LiteLLM Gateway",
+            "name": "Qwen3.6-27B Q4_K_M+MTP (llama.cpp)",
             "options": {
-                "baseURL": "https://llm.loadstask.com/v1",
-                "apiKey": "sk-litellm-master"
+                "baseURL": "http://100.102.127.47:8080/v1"
             },
             "models": {
-                "ornith": {
-                    "name": "Ornith 35B Q4_K_M (llama.cpp)",
+                "qwen3.6-27b": {
+                    "name": "Qwen3.6 27B Q8_0 (llama.cpp, 256k)",
                     "limit": {
-                        "context": 131072,
-                        "output": 32768
+                        "context": 196608,
+                        "output": 65536
                     },
                     "reasoning": true,
+                    "vision": false,
                     "interleaved": {
                         "field": "reasoning_content"
                     }
@@ -32,15 +32,14 @@
         "opencode-websearch-cited",
         "opencode-mem",
         "@ramtinj95/opencode-tokenscope",
-        "opencode-reflection"
+        "opencode-reflection",
+        "@dv.nghiem/flowdeck"
     ],
+    "default_agent": "orchestrator",
     "compaction": {
         "auto": true,
-        "prune": false,
-        "keep": {
-            "tokens": 16000
-        },
-        "buffer": 24000
+        "prune": true,
+        "reserved": 16384
     },
     "watcher": {
         "ignore": [
@@ -49,9 +48,8 @@
             "dist/**",
             "build/**",
             ".git/**",
-            "__pycache__/",
-            "*.pyc",
-            ".ipynb_checkpoints/",
+            ".next/**",
+            ".nuxt/**",
             "coverage/**",
             "logs/**",
             "*.log",
@@ -93,6 +91,17 @@
             "url": "https://mcp.context7.com/mcp",
             "enabled": true,
             "timeout": 30000
+        },
+        "vision": {
+            "type": "local",
+            "command": ["npx", "-y", "@erickstryck/simple-vision-mcp"],
+            "environment": {
+                "VISION_API_KEY": "no-key-needed",
+                "VISION_BASE_URL": "http://100.102.127.47:8081/v1",
+                "VISION_MODEL": "/root/qwen3/data/models/qwen3-vl-4b-vision/Qwen3VL-4B-Instruct-Q4_K_M.gguf"
+            },
+            "enabled": true,
+            "timeout": 120000
         }
     },
     "skills": {
